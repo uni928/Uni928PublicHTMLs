@@ -79,7 +79,7 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script>
-const DB_NAME='shortcut-db2' + getParam("key");const STORE='shortcuts';let dbPromise;
+let DB_NAME='shortcut-db2' + getParam("key");let STORE='shortcuts' + getParam("key");let dbPromise;
 function openDB(){if(!dbPromise){dbPromise=new Promise((res,rej)=>{const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=e=>{const db=e.target.result;const st=db.createObjectStore(STORE,{keyPath:'id',autoIncrement:true});st.createIndex('by_order','order');st.createIndex('by_url','url',{unique:true});};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}return dbPromise;}
 async function txStore(mode='readonly'){const db=await openDB();const tx=db.transaction(STORE,mode);return{tx,st:tx.objectStore(STORE)};}
 async function getAll(){const{st}=await txStore();return new Promise(r=>{const i=st.index('by_order');const out=[];i.openCursor().onsuccess=e=>{const c=e.target.result;if(c){out.push(c.value);c.continue();}else r(out);};});}
