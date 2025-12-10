@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>ファイル探索アシスタント</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg: #050816;
+      --bg-soft: rgba(15, 23, 42, 0.9);
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.15);
+      --accent-strong: #0ea5e9;
+      --text: #e5e7eb;
+      --text-muted: #9ca3af;
+      --border: rgba(148, 163, 184, 0.35);
+      --radius-lg: 18px;
+      --shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.7);
+      --shadow-small: 0 8px 18px rgba(15, 23, 42, 0.7);
+      --transition-fast: 0.18s ease-out;
+      --transition-med: 0.22s ease-out;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 55%),
+        radial-gradient(circle at bottom right, rgba(96, 165, 250, 0.18), transparent 55%),
+        linear-gradient(135deg, #020617, #020617 40%, #020617 60%, #020617);
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .app-shell {
+      max-width: 1120px;
+      width: 100%;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.98));
+      border-radius: 24px;
+      padding: 20px 22px 22px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(26px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .app-shell::before {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      background:
+        radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.16), transparent 60%),
+        radial-gradient(circle at 100% 100%, rgba(129, 140, 248, 0.2), transparent 60%);
+      opacity: 0.33;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-pill {
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      background:
+        conic-gradient(from 200deg, #38bdf8, #a855f7, #f97316, #38bdf8);
+      padding: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.8);
+    }
+
+    .logo-inner {
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      background: radial-gradient(circle at 30% 20%, #0f172a, #020617 70%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      font-weight: 700;
+      color: #e5e7eb;
+      letter-spacing: 0.04em;
+    }
+
+    .title-text-main {
+      font-size: 20px;
+      font-weight: 650;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .title-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      color: var(--text-muted);
+      background: radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.08), transparent 65%);
+    }
+
+    .title-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .header-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.7);
+    }
+
+    .header-chip {
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .header-chip span {
+      opacity: 0.8;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr);
+      gap: 18px;
+    }
+
+    @media (max-width: 900px) {
+      body {
+        padding: 12px;
+      }
+      .app-shell {
+        padding: 16px;
+        border-radius: 22px;
+      }
+      .layout {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+
+    .card {
+      background: radial-gradient(circle at 0 0, rgba(248, 250, 252, 0.02), transparent 60%);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      padding: 14px 14px 12px;
+      box-shadow: var(--shadow-small);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 0 0, var(--accent-soft), transparent 60%);
+      opacity: 0.7;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #cbd5f5;
+    }
+
+    .card-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .field-group {
+      margin-top: 8px;
+      margin-bottom: 8px;
+    }
+
+    .field-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 3px;
+    }
+
+    .field-label span.key {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+    }
+
+    .folder-picker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      border: 1px dashed rgba(148, 163, 184, 0.7);
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text);
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.98));
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast),
+        border-color var(--transition-fast), background var(--transition-fast);
+    }
+
+    .folder-picker:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-small);
+      border-color: rgba(56, 189, 248, 0.85);
+      background: linear-gradient(135deg, rgba(15, 23, 42, 1), rgba(15, 23, 42, 0.96));
+    }
+
+    .folder-picker-icon {
+      width: 17px;
+      height: 17px;
+      border-radius: 6px;
+      background: radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.6), transparent 65%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    .folder-picker input[type="file"] {
+      display: none;
+    }
+
+    .folder-info {
+      margin-top: 5px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .condition-input {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      padding: 7px 10px;
+      font-size: 13px;
+      color: var(--text);
+      background: radial-gradient(circle at 0 0, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.98));
+      outline: none;
+      resize: vertical;
+      min-height: 40px;
+      max-height: 120px;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast),
+        background var(--transition-fast), transform var(--transition-fast);
+    }
+
+    .condition-input:focus {
+      border-color: var(--accent-strong);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.55), 0 0 0 10px rgba(56, 189, 248, 0.08);
+      transform: translateY(-0.5px);
+      background: radial-gradient(circle at 0 0, rgba(15, 23, 42, 1), rgba(2, 6, 23, 0.98));
+    }
+
+    .hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 5px;
+      line-height: 1.6;
+    }
+
+    .primary-button {
+      margin-top: 10px;
+      width: 100%;
+      border-radius: 999px;
+      border: none;
+      padding: 9px 14px;
+      font-size: 13px;
+      font-weight: 550;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      cursor: pointer;
+      background: radial-gradient(circle at 0 0, #38bdf8, #0ea5e9);
+      color: #0f172a;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 12px 25px rgba(8, 47, 73, 0.75);
+      transition: transform var(--transition-med), box-shadow var(--transition-med),
+        filter var(--transition-med), opacity var(--transition-fast);
+    }
+
+    .primary-button span.icon {
+      font-size: 14px;
+    }
+
+    .primary-button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .primary-button:not(:disabled):hover {
+      transform: translateY(-1.5px);
+      box-shadow: 0 18px 35px rgba(8, 47, 73, 0.9);
+      filter: brightness(1.03);
+    }
+
+    .primary-button:not(:disabled):active {
+      transform: translateY(0);
+      box-shadow: 0 8px 20px rgba(8, 47, 73, 0.8);
+      filter: brightness(0.98);
+    }
+
+    .status-bar {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border-radius: 999px;
+      padding: 5px 10px;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.94));
+      border: 1px solid rgba(148, 163, 184, 0.45);
+    }
+
+    .status-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-pill {
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      font-size: 10px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.22);
+    }
+
+    .status-right {
+      text-align: right;
+      opacity: 0.9;
+    }
+
+    .file-card {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .file-list-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .file-list-title {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #cbd5f5;
+    }
+
+    .file-count-chip {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      color: var(--text-muted);
+    }
+
+    .file-list-container {
+      flex: 1;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      background: radial-gradient(circle at 0 0, rgba(15, 23, 42, 1), rgba(15, 23, 42, 0.96));
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .file-list-scroll {
+      flex: 1;
+      padding: 7px 8px 7px 10px;
+      overflow-y: auto;
+      font-size: 12px;
+    }
+
+    .file-list-scroll::-webkit-scrollbar {
+      width: 8px;
+    }
+    .file-list-scroll::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.98);
+    }
+    .file-list-scroll::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, rgba(56, 189, 248, 0.85), rgba(129, 140, 248, 0.85));
+      border-radius: 999px;
+    }
+
+    .file-row {
+      padding: 3px 4px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: default;
+      transition: background var(--transition-fast), transform var(--transition-fast);
+    }
+
+    .file-row:hover {
+      background: rgba(15, 23, 42, 0.96);
+      transform: translateY(-0.5px);
+    }
+
+    .file-index {
+      font-size: 10px;
+      color: var(--text-muted);
+      width: 30px;
+      flex-shrink: 0;
+      text-align: right;
+      opacity: 0.7;
+    }
+
+    .file-name {
+      font-size: 12px;
+      color: #e5e7eb;
+      word-break: break-all;
+    }
+
+    .file-empty-state {
+      padding: 18px 14px;
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    .file-empty-icon {
+      font-size: 18px;
+      margin-bottom: 6px;
+      opacity: 0.8;
+    }
+
+    .footer-hint {
+      font-size: 10px;
+      color: var(--text-muted);
+      border-top: 1px dashed rgba(148, 163, 184, 0.4);
+      padding-top: 6px;
+      margin-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .footer-hint span {
+      opacity: 0.9;
+    }
+
+    .footer-hint strong {
+      color: #e5e7eb;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="header">
+      <div class="title-wrap">
+        <div class="logo-pill">
+          <div class="logo-inner">Fs</div>
+        </div>
+        <div>
+          <div class="title-text-main">
+            ファイル探索アシスタント
+            <span class="title-badge">ChatGPT 連携ビューア</span>
+          </div>
+          <div class="title-sub">
+            「それっぽいフォルダ」を選んで、探したいファイルの特徴を書くだけで、<br>
+            ファイル一覧＋説明文つきで ChatGPT に丸投げできます。<br>
+            ※文字数が多いと遷移に失敗するので、その場合はファイル一覧の内容を ChatGPT に貼り付ける必要があります。
+          </div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="header-chip">
+          <div class="header-dot"></div>
+          <span>File API only / 保存なし</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <!-- 左：フォルダ選択 ＋ 条件入力 -->
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">STEP 1 & 2</div>
+            <div class="card-sub">フォルダを選択して、探したいファイルの「特徴」を書きます。</div>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">
+            <span>1. 対象フォルダの選択</span>
+            <span class="key">フォルダを推測して選択</span>
+          </label>
+          <label class="folder-picker">
+            <div class="folder-picker-icon">📁</div>
+            <div>このフォルダの中から探す</div>
+            <input id="folderInput" type="file" webkitdirectory multiple>
+          </label>
+          <div id="folderInfo" class="folder-info">まだフォルダが選択されていません。</div>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">
+            <span>2. 探したいファイルの特徴</span>
+            <span>例: 「〇〇さんの写真」「2024年7月の家計簿」など</span>
+          </label>
+          <textarea
+            id="conditionInput"
+            class="condition-input"
+            placeholder="例）2024年7月のレシート画像がまとまっているファイル"></textarea>
+          <div class="hint">
+            入力内容は ChatGPT へのプロンプトの先頭に、<br>
+            <strong>「（入力内容）の特徴のファイルを探しています。下記のファイル名の一覧から、ファイルを探して頂けますか？」</strong><br>
+            として自動的に追加されます。
+          </div>
+        </div>
+
+        <button id="searchButton" class="primary-button" type="button">
+          <span class="icon">✨</span>
+          <span>ChatGPT に探してもらう</span>
+        </button>
+
+<button id="searchButton2" class="primary-button" type="button">
+          <span class="icon">✨</span>
+          <span>ChatGPT に探してもらう(遷移に失敗する場合)(自動でファイル一覧をコピーするため貼り付け作業だけ必要です)</span>
+        </button>
+
+        <div class="status-bar">
+          <div class="status-left">
+            <div class="status-dot"></div>
+            <div id="statusText">フォルダと条件を設定してからボタンを押してください。</div>
+          </div>
+          <div class="status-right">
+            <div class="status-pill">ChatGPT リンク生成専用</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 右：ファイル一覧 -->
+      <section class="card file-card">
+        <div class="file-list-header">
+          <div class="file-list-title">STEP 3 – ファイル一覧</div>
+          <div id="fileCount" class="file-count-chip">ファイル数：0</div>
+        </div>
+        <div class="card-sub" style="margin-bottom:6px;">
+          実際に ChatGPT に送るのと同じ順番で、フォルダ内のファイル名（拡張子つき）を縦に並べて表示します。
+        </div>
+        <div class="file-list-container">
+          <div id="fileList" class="file-list-scroll">
+            <div class="file-empty-state">
+              <div class="file-empty-icon">🔍</div>
+              ここにフォルダ内のファイル一覧が表示されます。<br>
+              <strong>フォルダ選択 → 条件入力 → 「ChatGPT に探してもらう」</strong><br>
+              の順に操作してください。
+            </div>
+          </div>
+        </div>
+        <div class="footer-hint">
+          <span>
+            ※ このページはファイル名だけを扱います。<strong>ファイルの中身には一切アクセスしません。</strong>
+          </span>
+          <span>
+            ※ ChatGPT は新しいタブで開きます。プロンプト欄に一覧が自動で貼り付きます。
+          </span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const folderInput = document.getElementById('folderInput');
+    const folderInfo = document.getElementById('folderInfo');
+    const conditionInput = document.getElementById('conditionInput');
+    const searchButton = document.getElementById('searchButton');
+    const searchButton2 = document.getElementById('searchButton2');
+    const statusText = document.getElementById('statusText');
+    const fileList = document.getElementById('fileList');
+    const fileCount = document.getElementById('fileCount');
+
+    let currentFiles = [];
+
+    folderInput.addEventListener('change', () => {
+      const files = Array.from(folderInput.files || []);
+      // ファイル名だけで重複を削除して、アルファベット順に並べる
+      const uniqueNames = Array.from(new Set(files.map(f => f.name))).sort((a, b) => {
+        return a.localeCompare(b, 'ja');
+      });
+
+      currentFiles = uniqueNames;
+      updateFolderInfo(files);
+      renderFileList();
+      updateStatus('フォルダの読み込みが完了しました。条件を入力して、ChatGPT に送信できます。');
+    });
+
+    function updateFolderInfo(files) {
+      if (!files || files.length === 0) {
+        folderInfo.textContent = 'まだフォルダが選択されていません。';
+        return;
+      }
+
+      // 代表的なパスを 1 つだけ表示（webkitRelativePath の先頭ディレクトリ）
+      const relativePath = files[0].webkitRelativePath || '';
+      const basePath = relativePath.split('/')[0] || '(フォルダ名不明)';
+      const fileTotal = files.length;
+      const uniqueTotal = currentFiles.length;
+
+      folderInfo.textContent =
+        `選択されたフォルダ: ${basePath} / 取得ファイル数: ${fileTotal}件（重複除外後: ${uniqueTotal}件）`;
+    }
+
+    function renderFileList() {
+      fileList.innerHTML = '';
+
+      if (!currentFiles.length) {
+        fileList.innerHTML = `
+          <div class="file-empty-state">
+            <div class="file-empty-icon">📂</div>
+            ファイルがまだ読み込まれていません。<br>
+            左側の「このフォルダの中から探す」からフォルダを選択してください。
+          </div>
+        `;
+        fileCount.textContent = 'ファイル数：0';
+        return;
+      }
+
+      const frag = document.createDocumentFragment();
+      currentFiles.forEach((name, idx) => {
+        const row = document.createElement('div');
+        row.className = 'file-row';
+
+        const index = document.createElement('div');
+        index.className = 'file-index';
+        index.textContent = String(idx + 1).padStart(3, '0');
+
+        const filename = document.createElement('div');
+        filename.className = 'file-name';
+        filename.textContent = name;
+
+        row.appendChild(index);
+        row.appendChild(filename);
+        frag.appendChild(row);
+      });
+
+      fileList.appendChild(frag);
+      fileCount.textContent = `ファイル数：${currentFiles.length}`;
+    }
+
+    searchButton.addEventListener('click', () => {
+      if (!currentFiles.length) {
+        updateStatus('フォルダが選択されていません。まずフォルダを選択してください。');
+        bounceStatus();
+        return;
+      }
+
+      const condition = conditionInput.value.trim();
+      if (!condition) {
+        updateStatus('探したいファイルの特徴をテキストボックスに入力してください。');
+        bounceStatus();
+        conditionInput.focus();
+        return;
+      }
+
+      const fileListText = currentFiles.join('\n');
+      const prompt =
+        `${condition}の特徴のファイルを探しています。下記のファイル名の一覧から、ファイルを探して頂けますか？\n\n---ここにファイル一覧欄の内容を貼り付けて下さい ---` +
+        fileListText;
+
+      const url = 'https://chatgpt.com/?temporary-chat=true&prompt=' +
+        encodeURIComponent(prompt);
+
+      updateStatus('ChatGPT 用のリンクを生成しました。新しいタブで開きます。');
+      // 新しいタブで開く
+      window.open(url, '_blank', 'noopener');
+
+      // ボタンに軽いフィードバック
+      searchButton.disabled = true;
+      searchButton.style.opacity = '0.75';
+      setTimeout(() => {
+        searchButton.disabled = false;
+        searchButton.style.opacity = '';
+      }, 600);
+    });
+
+searchButton2.addEventListener('click', () => {
+      if (!currentFiles.length) {
+        updateStatus('フォルダが選択されていません。まずフォルダを選択してください。');
+        bounceStatus();
+        return;
+      }
+
+      const condition = conditionInput.value.trim();
+      if (!condition) {
+        updateStatus('探したいファイルの特徴をテキストボックスに入力してください。');
+        bounceStatus();
+        conditionInput.focus();
+        return;
+      }
+
+      const fileListText = currentFiles.join('\n');
+      const prompt =
+        `${condition}の特徴のファイルを探しています。下記のファイル名の一覧から、ファイルを探して頂けますか？\n\n`;
+
+      const url = 'https://chatgpt.com/?temporary-chat=true&prompt=' +
+        encodeURIComponent(prompt);
+
+copyFileListRowsWithoutLeadingNumbers();
+
+      updateStatus('ChatGPT 用のリンクを生成しました。新しいタブで開きます。');
+      // 新しいタブで開く
+      window.open(url, '_blank', 'noopener');
+
+      // ボタンに軽いフィードバック
+      searchButton.disabled = true;
+      searchButton.style.opacity = '0.75';
+      setTimeout(() => {
+        searchButton.disabled = false;
+        searchButton.style.opacity = '';
+      }, 600);
+    });
+
+async function copyFileListRowsWithoutLeadingNumbers() {
+  const rows = document.querySelectorAll('#fileList .file-row');
+  if (!rows.length) return;
+
+  const result = [];
+
+  rows.forEach(row => {
+    const text = row.innerText.trim();
+
+    // 先頭の数字と空白を削除（例: "001  abc.png" → "abc.png"）
+    const cleaned = text.replace(/^\d+\s*/, '').trim();
+
+    if (cleaned) result.push(cleaned);
+  });
+
+  const finalText = result.join('\n');
+
+  try {
+    await navigator.clipboard.writeText(finalText);
+    console.log('先頭の数字を取り除いた行をコピーしました');
+  } catch (err) {
+    console.error('コピー失敗:', err);
+  }
+}
+
+
+
+    function updateStatus(message) {
+      statusText.textContent = message;
+    }
+
+    function bounceStatus() {
+      statusText.style.transform = 'translateY(-1px)';
+      statusText.style.transition = 'transform 0.12s ease-out';
+      setTimeout(() => {
+        statusText.style.transform = 'translateY(0)';
+      }, 120);
+    }
+  </script>
+</body>
+</html>
