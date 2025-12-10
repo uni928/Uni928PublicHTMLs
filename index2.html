@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>共同開発向けファイル名提案ツール</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    /* 全体レイアウト */
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "ヒラギノ角ゴ ProN", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      background: radial-gradient(circle at top, #4f46e5 0, #020617 55%, #000 100%);
+      color: #0f172a;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .glass-card {
+      width: 100%;
+      max-width: 960px;
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 24px;
+      padding: 24px 24px 20px;
+      box-shadow:
+        0 24px 60px rgba(15, 23, 42, 0.8),
+        0 0 0 1px rgba(148, 163, 184, 0.25);
+      backdrop-filter: blur(18px);
+      color: #e5e7eb;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .glass-card::before {
+      content: "";
+      position: absolute;
+      inset: -40px;
+      background: radial-gradient(circle at top left, #38bdf8 0, transparent 55%),
+                  radial-gradient(circle at bottom right, #a855f7 0, transparent 55%);
+      opacity: 0.18;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .logo-circle {
+      width: 42px;
+      height: 42px;
+      border-radius: 999px;
+      background: conic-gradient(from 210deg, #4f46e5, #22c55e, #06b6d4, #4f46e5);
+      padding: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: spin-slow 18s linear infinite;
+    }
+
+    .logo-inner {
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      background: #020617;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: #e5e7eb;
+    }
+
+    @keyframes spin-slow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .title-block {
+      flex: 1;
+    }
+
+    .title-block h1 {
+      font-size: 1.25rem;
+      margin: 0;
+      letter-spacing: 0.05em;
+    }
+
+    .title-block p {
+      margin: 4px 0 0;
+      font-size: 0.82rem;
+      color: #9ca3af;
+    }
+
+    .badge {
+      font-size: 0.72rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      color: #e5e7eb;
+      background: rgba(15, 23, 42, 0.6);
+      white-space: nowrap;
+    }
+
+    .main {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.1fr);
+      gap: 18px;
+    }
+
+    @media (max-width: 860px) {
+      .main {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .badge {
+        display: none;
+      }
+    }
+
+    .section-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #e5e7eb;
+    }
+
+    .section-title span.dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #38bdf8;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.8);
+    }
+
+    .textarea-wrapper {
+      position: relative;
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(51, 65, 85, 0.9);
+      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.9);
+      overflow: hidden;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 260px;
+      resize: vertical;
+      border: none;
+      outline: none;
+      background: transparent;
+      color: #e5e7eb;
+      padding: 14px 14px 16px;
+      box-sizing: border-box;
+      font-size: 0.9rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      line-height: 1.5;
+    }
+
+    textarea::placeholder {
+      color: #6b7280;
+    }
+
+    .textarea-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      padding: 6px 12px 8px;
+      border-top: 1px solid rgba(30, 64, 175, 0.8);
+      background: linear-gradient(to right, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.6));
+      color: #9ca3af;
+    }
+
+    .textarea-footer span.label {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .textarea-footer span.label-icon {
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.55rem;
+    }
+
+    .char-count {
+      font-variant-numeric: tabular-nums;
+      opacity: 0.9;
+    }
+
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: linear-gradient(
+        145deg,
+        rgba(15, 23, 42, 0.9),
+        rgba(30, 64, 175, 0.9)
+      );
+      border: 1px solid rgba(129, 140, 248, 0.5);
+      box-shadow:
+        0 18px 40px rgba(15, 23, 42, 0.9),
+        inset 0 0 0 1px rgba(15, 23, 42, 0.9);
+    }
+
+    .hint {
+      font-size: 0.8rem;
+      color: #cbd5f5;
+      margin-bottom: 4px;
+    }
+
+    .hint strong {
+      color: #e5e7eb;
+    }
+
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    button {
+      border-radius: 999px;
+      border: none;
+      padding: 11px 14px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition:
+        transform 0.13s ease,
+        box-shadow 0.13s ease,
+        background 0.13s ease,
+        opacity 0.13s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      letter-spacing: 0.02em;
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #022c22;
+      box-shadow:
+        0 14px 30px rgba(34, 197, 94, 0.35),
+        0 0 0 1px rgba(21, 128, 61, 0.7);
+    }
+
+    button.secondary {
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+      box-shadow:
+        0 12px 26px rgba(15, 23, 42, 0.9),
+        0 0 0 1px rgba(148, 163, 184, 0.8);
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow:
+        0 16px 26px rgba(15, 23, 42, 0.85);
+      opacity: 0.98;
+    }
+
+    button:active {
+      transform: translateY(0);
+      box-shadow:
+        0 8px 16px rgba(15, 23, 42, 0.9);
+      opacity: 0.92;
+    }
+
+    button span.icon {
+      font-size: 1rem;
+    }
+
+    button small {
+      font-weight: 500;
+      font-size: 0.75rem;
+      opacity: 0.9;
+    }
+
+    .note {
+      margin-top: 6px;
+      font-size: 0.75rem;
+      color: #e5e7eb;
+      opacity: 0.9;
+      line-height: 1.5;
+    }
+
+    .note code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+      font-size: 0.72rem;
+      background: rgba(15, 23, 42, 0.9);
+      padding: 2px 5px;
+      border-radius: 6px;
+      border: 1px solid rgba(55, 65, 81, 0.8);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: rgba(15, 23, 42, 0.96);
+      color: #e5e7eb;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 0.78rem;
+      box-shadow:
+        0 16px 40px rgba(15, 23, 42, 0.9),
+        0 0 0 1px rgba(148, 163, 184, 0.65);
+      opacity: 0;
+      pointer-events: none;
+      transition:
+        opacity 0.2s ease,
+        transform 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      z-index: 30;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+      pointer-events: auto;
+    }
+
+    .toast span.toast-icon {
+      font-size: 0.9rem;
+    }
+
+    .toast strong {
+      font-weight: 600;
+    }
+
+    .footer {
+      margin-top: 10px;
+      font-size: 0.7rem;
+      color: #9ca3af;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+  <div class="glass-card">
+    <div class="header">
+      <div class="logo-circle">
+        <div class="logo-inner">FN</div>
+      </div>
+      <div class="title-block">
+        <h1>ファイル名提案サポーター</h1>
+        <p>ファイル内容から、共同開発で他の人にも分かりやすいファイル名の案を ChatGPT に考えてもらうための下準備ツールです。</p>
+      </div>
+      <div class="badge">for Team Development</div>
+    </div>
+
+    <div class="main">
+      <!-- 左：ファイル内容欄 -->
+      <div>
+        <div class="section-title">
+          <span class="dot"></span>
+          <span>ファイル内容欄</span>
+        </div>
+        <div class="textarea-wrapper">
+          <textarea
+            id="fileContent"
+            placeholder="ここにファイルの中身を貼り付けてください（コード・設定ファイル・ドキュメントなど）。&#10;&#10;例：&#10;- TypeScript の React コンポーネント&#10;- API クライアントの実装&#10;- インフラ構成の YAML など"
+          ></textarea>
+          <div class="textarea-footer">
+            <span class="label">
+              <span class="label-icon">i</span>
+              <span>この内容をもとに ChatGPT に「分かりやすいファイル名」を考えてもらいます。</span>
+            </span>
+            <span class="char-count" id="charCount">0 文字</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右：アクション -->
+      <div>
+        <div class="section-title">
+          <span class="dot"></span>
+          <span>ChatGPT への送信方法</span>
+        </div>
+        <div class="actions">
+          <p class="hint">
+            <strong>① そのまま送る</strong> か <strong>② 自分で貼り付ける</strong> かを選べます。
+          </p>
+
+          <div class="button-group">
+            <button class="primary" id="btnDirect">
+              <span class="icon">🚀</span>
+              <span>ChatGPTで提案する</span>
+            </button>
+
+            <button class="secondary" id="btnCopyThenOpen">
+              <span class="icon">📋</span>
+              <span>ChatGPTで提案する (遷移に失敗する場合)</span>
+            </button>
+          </div>
+
+          <p class="note">
+            ● 「ChatGPTで提案する」ボタン…<br />
+            ファイル内容欄の内容を含めた
+            <code>prompt=…ファイル内容</code>
+            付きの URL を新しいタブで開きます。<br /><br />
+            ● 「ChatGPTで提案する(遷移に失敗する場合)」ボタン…<br />
+            ファイル内容欄をクリップボードにコピーしたあと、
+            <code>prompt=…</code> だけが入った ChatGPT を開きます。<br />
+            ChatGPT 側の入力欄にそのまま貼り付けてから送信してください。
+          </p>
+        </div>
+        <div class="footer">
+          ※ ChatGPT は <code>https://chatgpt.com/</code> を利用します。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">
+    <span class="toast-icon">📋</span>
+    <span><strong>コピーしました。</strong> ChatGPT の入力欄に貼り付けてから送信してください。</span>
+  </div>
+
+  <script>
+    const fileContent = document.getElementById("fileContent");
+    const charCount = document.getElementById("charCount");
+    const btnDirect = document.getElementById("btnDirect");
+    const btnCopyThenOpen = document.getElementById("btnCopyThenOpen");
+    const toast = document.getElementById("toast");
+
+    const basePrompt =
+      "下記の内容が記述されたファイルに関して、共同開発で他の人がファイル名を見て分かりやすいファイル名を複数提案して下さい。また、おすすめ TOP5 も挙げて下さい。\n\n";
+
+    function openChatGPTWithPrompt(promptText) {
+      const encoded = encodeURIComponent(promptText);
+      const url = "https://chatgpt.com/?temporary-chat=true&prompt=" + encoded;
+      window.open(url, "_blank", "noopener");
+    }
+
+    function showToast() {
+      toast.classList.add("show");
+      setTimeout(() => {
+        toast.classList.remove("show");
+      }, 2500);
+    }
+
+    // 文字数カウント
+    function updateCharCount() {
+      const len = fileContent.value.length;
+      charCount.textContent = len + " 文字";
+    }
+
+    fileContent.addEventListener("input", updateCharCount);
+    updateCharCount();
+
+    // ① そのまま ChatGPT に送る
+    btnDirect.addEventListener("click", () => {
+      const content = fileContent.value || "";
+      const fullPrompt = basePrompt + content;
+      openChatGPTWithPrompt(fullPrompt);
+    });
+
+    // ② コピーしてから遷移する（遷移失敗用）
+    btnCopyThenOpen.addEventListener("click", async () => {
+      const content = fileContent.value || "";
+
+      // まずコピーを試みる
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(content);
+          showToast();
+        } catch (e) {
+          // クリップボード API が失敗した場合は、選択してコピーしやすくする
+          fileContent.focus();
+          fileContent.select();
+          alert("自動コピーに失敗しました。Ctrl + C でコピーしてから、ChatGPT に貼り付けてください。");
+        }
+      } else {
+        // 古いブラウザ用フォールバック
+        fileContent.focus();
+        fileContent.select();
+        alert("このブラウザでは自動コピーが利用できません。Ctrl + C でコピーしてから、ChatGPT に貼り付けてください。");
+      }
+
+      // ベースプロンプトのみで ChatGPT を開く
+      openChatGPTWithPrompt(basePrompt);
+    });
+  </script>
+</body>
+</html>
