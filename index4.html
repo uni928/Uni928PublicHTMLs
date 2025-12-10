@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>検索</title>
+<style>
+  :root{
+    --bg:#f7f5fb; --fg:#241f31; --muted:#6b7280; --accent:#7c3aed; --card:#ffffff;
+    --tile:#f1eff7; --tile-hover:#e9e6f3; --ring:#e5e7eb; --danger:#ef4444;
+  }
+  html,body{height:100%}
+  body{margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background:var(--bg); color:var(--fg);}
+  .page{min-height:100%; display:grid; place-items:center}
+  .stack{display:flex; flex-direction:column; align-items:center; gap:28px; width:min(920px, 92vw)}
+
+  .search{width:min(720px, 92vw); background:var(--card); border-radius:999px; box-shadow:0 8px 32px rgba(0,0,0,.06); border:1px solid #eee; padding:10px 16px; display:flex; gap:12px; align-items:center}
+  .search input{flex:1; border:0; outline:0; font-size:18px; padding:8px}
+  .search button{border:0; background:var(--tile); padding:10px 14px; border-radius:999px; cursor:pointer}
+  .search button:hover{background:var(--tile-hover)}
+
+  .grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(110px,1fr)); gap:18px; width:min(720px,92vw)}
+  .tile{display:flex; flex-direction:column; align-items:center; gap:10px; user-select:none; position:relative}
+  .tile .dot{width:72px; height:72px; border-radius:50%; background:var(--tile); display:grid; place-items:center; font-size:30px; font-weight:700; letter-spacing:.03em; border:1px solid var(--ring); cursor:pointer; overflow:hidden}
+  .tile .dot:hover{background:var(--tile-hover)}
+  .tile .dot img{width:60%; height:60%; object-fit:contain}
+  .tile .cap{max-width:90px; font-size:13px; color:var(--fg); text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
+  .edit .tile .dot{cursor:grab}
+  /* モバイルでのドラッグ操作をしやすくする */
+  .edit .tile, .edit .tile .dot{ touch-action: none; }
+  .btnmini{position:absolute; top:-6px; right:14px; display:flex; gap:6px}
+  .btnmini button{width:24px; height:24px; border-radius:50%; border:0; color:#fff; cursor:pointer}
+  .btnmini .rename{background:var(--accent)}
+  .btnmini .remove{background:var(--danger)}
+
+  .add .dot{background:#efeafe; color:#5b21b6; border-color:#e9d5ff}
+
+  .toolbar{display:flex; gap:10px; align-items:center; justify-content:center}
+  .toolbar button{border:0; padding:8px 12px; border-radius:999px; background:#ede9fe; color:#4c1d95; cursor:pointer}
+
+  .modalWrap{position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.35)}
+  .modal{width:min(520px,92vw); background:var(--card); border-radius:16px; padding:18px; box-shadow:0 10px 40px rgba(0,0,0,.25)}
+  .modal h3{margin:0 0 12px; font-size:16px}
+  .modal .row{display:flex; flex-direction:column; gap:6px; margin-bottom:12px}
+  .modal input{padding:10px 12px; border-radius:10px; border:1px solid #ddd; font-size:14px}
+  .modal .actions{display:flex; justify-content:flex-end; gap:8px}
+  .modal .actions button{border:0; padding:8px 12px; border-radius:10px; cursor:pointer}
+  .ghost{opacity:.6}
+  .placeholder{width:72px; height:72px; border-radius:50%; border:2px dashed #cbd5e1;}
+
+  .toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:#111; color:#fff; padding:10px 14px; border-radius:12px; opacity:0; pointer-events:none; transition:opacity .2s}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="stack">
+      <form class="search" id="searchForm" action="https://www.google.com/search" method="GET">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M21 21l-4.3-4.3" stroke="#9aa0a6" stroke-width="2" stroke-linecap="round"/><circle cx="11" cy="11" r="7" stroke="#9aa0a6" stroke-width="2"/></svg>
+        <input id="q" name="q" type="text" placeholder="" autocomplete="off" />
+        <button type="submit">検索</button>
+      </form>      <div class="grid" id="grid" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div class="modalWrap" id="modalWrap" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h3 id="modalTitle">ショートカットを追加</h3>
+      <div class="row"><label>名前</label><input id="nameInput" type="text" placeholder="例：YouTube" /></div>
+      <div class="row"><label>URL</label><input id="urlInput" type="text" placeholder="https://example.com" /></div>
+      <div class="actions">
+        <button id="cancelBtn" type="button">キャンセル</button>
+        <button id="okBtn" type="button">完了</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script>
+const DB_NAME='shortcut-db2';const STORE='shortcuts';let dbPromise;
+function openDB(){if(!dbPromise){dbPromise=new Promise((res,rej)=>{const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=e=>{const db=e.target.result;const st=db.createObjectStore(STORE,{keyPath:'id',autoIncrement:true});st.createIndex('by_order','order');st.createIndex('by_url','url',{unique:true});};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}return dbPromise;}
+async function txStore(mode='readonly'){const db=await openDB();const tx=db.transaction(STORE,mode);return{tx,st:tx.objectStore(STORE)};}
+async function getAll(){const{st}=await txStore();return new Promise(r=>{const i=st.index('by_order');const out=[];i.openCursor().onsuccess=e=>{const c=e.target.result;if(c){out.push(c.value);c.continue();}else r(out);};});}
+function normUrl(v){if(!v)return'';v=v.trim();if(!/^https?:\/\//i.test(v))v='https://'+v;try{new URL(v);return v;}catch{return''}}
+function hostTitle(url){try{return new URL(url).hostname.replace(/^www\./,'');}catch{return url}}
+function faviconUrl(url){try{const u=new URL(url);return `https://www.google.com/s2/favicons?domain=${u.hostname}`;}catch{return''}}
+async function addShortcut(url,title){url=normUrl(url);if(!url)throw new Error('invalid');const all=await getAll();if(all.some(x=>x.url===url))return null;const order=(all.reduce((m,x)=>Math.max(m,x.order||0),0)||0)+1;let t=title&&title.trim()?title.trim():hostTitle(url);const{st,tx}=await txStore('readwrite');st.add({url,title:t,order});return new Promise(r=>tx.oncomplete=()=>r(true));}
+async function renameShortcut(id,title){const{st,tx}=await txStore('readwrite');const cur=window._cache.get(Number(id));if(!cur)return;st.put({...cur,title});return new Promise(r=>tx.oncomplete=()=>r(true));}
+async function removeShortcut(id){const{st,tx}=await txStore('readwrite');st.delete(Number(id));return new Promise(r=>tx.oncomplete=()=>r(true));}
+async function saveOrder(ids){
+  const{st,tx}=await txStore('readwrite');
+  ids.forEach((id,i)=>{
+    const nid = Number(id);
+    const cur = window._cache?.get(nid) || { id: nid };
+    st.put({ ...cur, id: nid, order: i+1 });
+  });
+  return new Promise(r=>tx.oncomplete=()=>r(true));
+}
+
+const grid=document.getElementById('grid');
+const modalWrap=document.getElementById('modalWrap');
+const nameInput=document.getElementById('nameInput');
+const urlInput=document.getElementById('urlInput');
+const okBtn=document.getElementById('okBtn');
+const cancelBtn=document.getElementById('cancelBtn');
+const toastEl=document.getElementById('toast');
+
+// グローバル変数をブロックスコープ外で宣言（どの関数からも参照可能に）
+window.editMode = false;
+window.editingId = null;
+window.editTimer = null;
+if (!window._cache) window._cache = new Map();
+
+// 並べ替えドラッグ用変数
+let draggingGhost=null, draggingId=null, dragPlaceholder=null, dragStartY=0, draggingNode=null;
+// グローバルキャッシュを安全に初期化
+if(!window._cache) window._cache = new Map();
+function toast(m){toastEl.textContent=m;toastEl.classList.add('show');setTimeout(()=>toastEl.classList.remove('show'),1200);} 
+function enterEditMode(){ if(editMode) return; editMode=true; render(); toast('編集モード'); resetEditTimer(); }
+function exitEditMode(){ if(!editMode) return; editMode=false; clearTimeout(editTimer); render(); toast('編集モード終了'); }
+function resetEditTimer(){ clearTimeout(editTimer); editTimer=setTimeout(()=> exitEditMode(), 8000); }
+function openModal(t,u){document.getElementById('modalTitle').textContent=editingId?'ショートカットを編集':'ショートカットを追加';modalWrap.style.display='grid';nameInput.value=t||'';urlInput.value=u||'';setTimeout(()=>nameInput.focus(),50);}
+function closeModal(){modalWrap.style.display='none';editingId=null;}
+
+// 並べ替え：移動/終了ハンドラ
+function onDragMove(e){
+  if(!draggingGhost) return;
+  e.preventDefault();
+  const dy = e.clientY - dragStartY;
+  draggingGhost.style.transform = `translateY(${dy}px)`;
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const tile = el && el.closest('.tile');
+  // ゴースト自身やプレースホルダは無視
+  if(tile === draggingGhost || tile === dragPlaceholder) return;
+  if(tile && tile.parentElement===grid && tile!==dragPlaceholder){
+    const rect = tile.getBoundingClientRect();
+    const before = (e.clientY - rect.top) < rect.height/2;
+    grid.insertBefore(dragPlaceholder, before ? tile : tile.nextSibling);
+  }
+}
+async function onDragUp(){
+  if(draggingGhost){ draggingGhost.remove(); draggingGhost=null; }
+  // 取り外していた元ノードをプレースホルダ位置へ戻す
+  if(draggingNode && dragPlaceholder){
+    grid.insertBefore(draggingNode, dragPlaceholder);
+    draggingNode.style.opacity = '';
+  }
+  if(dragPlaceholder){ dragPlaceholder.remove(); dragPlaceholder=null; }
+  const ids = [...grid.querySelectorAll('.tile')].slice(1).map(n=>n.dataset.id); // 先頭の「＋」は除外
+  await saveOrder(ids);
+  toast('順序を保存しました');
+  draggingId=null; draggingNode=null;
+  window.removeEventListener('pointermove', onDragMove);
+}
+
+async function render(){const items=await getAll();if(!window._cache) window._cache = new Map();
+  window._cache.clear();
+  items.forEach(x=>window._cache.set(x.id,x));document.body.classList.toggle('edit',editMode);grid.innerHTML='';const add=document.createElement('div');add.className='tile add';add.innerHTML='<div class="dot">+</div><div class="cap">ショートカット</div>';add.addEventListener('click',()=>{editingId=null;openModal('','');});grid.appendChild(add);
+// ＋は長押し対象外（no-op）
+add.addEventListener('pointerdown', ()=>{});
+items.forEach(it=>{const t=document.createElement('div');t.className='tile';t.dataset.id=it.id;const favi=faviconUrl(it.url);const icon=favi?`<img src="${favi}" alt="icon" onerror="this.style.display='none'">`:(it.title||hostTitle(it.url)).charAt(0).toUpperCase();t.innerHTML=`<div class="dot" title="${it.title}">${icon}</div><div class="cap">${it.title}</div>`;
+const dot=t.querySelector('.dot');
+// 通常クリックで開く
+dot.addEventListener('click',()=>{if(editMode)return;location.href=it.url;});
+// 長押しで編集モード（＋以外）
+let lpTimer=null;
+t.addEventListener('pointerdown',()=>{ if(editMode) return; lpTimer=setTimeout(()=> enterEditMode(), 500); });
+t.addEventListener('pointerup',()=>{ clearTimeout(lpTimer); });
+t.addEventListener('pointerleave',()=>{ clearTimeout(lpTimer); });
+t.addEventListener('contextmenu',(e)=>{ e.preventDefault(); enterEditMode(); });
+if(editMode){
+  const btn=document.createElement('div');btn.className='btnmini';
+  const rn=document.createElement('button');rn.className='rename';rn.textContent='✎';rn.onclick=()=>{editingId=it.id;openModal(it.title,it.url);};
+  const rm=document.createElement('button');rm.className='remove';rm.textContent='×';rm.onclick=async()=>{await removeShortcut(it.id);await render();};
+  btn.append(rn,rm);t.appendChild(btn);
+
+  // ドラッグで入れ替え（編集ボタン上は無効）
+  t.addEventListener('pointerdown',(e)=>{
+    if(e.target.closest('.btnmini')) return;
+    draggingId = t.dataset.id;
+    dragStartY = e.clientY;
+    // プレースホルダ（元サイズに合わせる）
+    dragPlaceholder = document.createElement('div');
+    dragPlaceholder.className = 'placeholder';
+    dragPlaceholder.style.width  = `${t.offsetWidth}px`;
+    dragPlaceholder.style.height = `${t.offsetHeight}px`;
+    // 元の位置にプレースホルダを挿入し、元ノードは一時的にDOMから外す
+    grid.insertBefore(dragPlaceholder, t);
+    draggingNode = t; // 後で戻すため保持
+    grid.removeChild(t);
+    // 影要素（クローン）を画面上に表示して追従
+    const r = dragPlaceholder.getBoundingClientRect();
+    draggingGhost = draggingNode.cloneNode(true);
+    draggingGhost.classList.add('ghost');
+    Object.assign(draggingGhost.style,{
+      position:'fixed', left:r.left+'px', top:r.top+'px',
+      width:r.width+'px', zIndex:999, pointerEvents:'none'
+    });
+    document.body.appendChild(draggingGhost);
+    window.addEventListener('pointermove', onDragMove, {passive:false});
+    window.addEventListener('pointerup', onDragUp, {once:true});
+  });
+}
+grid.appendChild(t);});}
+
+
+okBtn.onclick=async()=>{const name=nameInput.value.trim();const url=urlInput.value.trim();if(!url){urlInput.focus();return;}if(editingId){await renameShortcut(editingId,name||hostTitle(url));toast('タイトルを更新しました');}else{try{await addShortcut(url,name);toast('追加しました');}catch{toast('追加に失敗しました');}}closeModal();await render();};
+cancelBtn.onclick=()=>closeModal();modalWrap.onclick=e=>{if(e.target===modalWrap)closeModal();};
+// 背景クリック/ESCで編集モードを終了 & 操作で延長
+document.addEventListener('click',(e)=>{ if(!editMode) return; if(!e.target.closest('.tile') && !e.target.closest('.modalWrap')) exitEditMode(); });
+document.addEventListener('keydown',(e)=>{ if(e.key==='Escape') exitEditMode(); });
+document.addEventListener('pointerdown',()=>{ if(editMode) resetEditTimer(); });
+(async()=>{await openDB();await render();})();
+
+// ========================= 検索欄: URL優先でアクセス, 失敗時は検索 =========================
+const searchForm = document.getElementById('searchForm');
+const qInput = document.getElementById('q');
+function isLikelyUrl(v){
+  if(!v) return false;
+  v = v.trim();
+  if(/^https?:\/\//i.test(v)) return true;
+  // ドメイン or IP っぽい（example.com / sub.example.co.jp / 192.168.1.1 / localhost）
+  return /^([a-z0-9-]+\.)+[a-z]{2,}(?:[\/?#].*)?$/i.test(v) || /^(\d{1,3}\.){3}\d{1,3}(?:[:\/?#].*)?$/.test(v) || /^localhost(?:[:\/?#].*)?$/i.test(v);
+}
+searchForm.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const raw = qInput.value.trim();
+  if(!raw) return;
+  // URL っぽければアクセスに挑戦、ダメなら検索
+  if(isLikelyUrl(raw)){
+    const target = normUrl(raw);
+    try{
+      // no-cors で到達性だけ確認（3秒タイムアウト）
+     const ctrl = new AbortController();
+      const timer = setTimeout(()=> ctrl.abort(), 3000);
+      await fetch(target, { mode:'no-cors', method:'GET', signal: ctrl.signal });
+     clearTimeout(timer);
+      location.href = target;
+    }catch{
+      location.href = `https://www.google.com/search?q=${encodeURIComponent(raw)}`;
+    }
+  }else{
+    location.href = `https://www.google.com/search?q=${encodeURIComponent(raw)}`;
+  }
+});
+
+window.addEventListener('load', () => qInput.focus());
+  
+</script>
+</body>
+</html>
