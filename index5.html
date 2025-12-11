@@ -960,16 +960,66 @@ function pushUndo(beforeContent, afterContent, forceNewGroup) {
   }
 }
 
+// 2つのテキストの「どこから違うか」を探して、その位置を中心にスクロール
+function centerChangePosition(prevText, nextText) {
+  if (typeof prevText !== 'string' || typeof nextText !== 'string') return;
+  if (prevText === nextText) return;
 
+  const len = Math.min(prevText.length, nextText.length);
+  let diffIndex = 0;
 
-  function applyContent(newContent) {
-    isApplyingHistory = true;
-    state.content = newContent;
-    editorEl.value = newContent;
-    updateStats();
-    scheduleAutosave();
-    isApplyingHistory = false;
+  // 先頭から違う位置を探す
+  while (diffIndex < len && prevText.charAt(diffIndex) === nextText.charAt(diffIndex)) {
+    diffIndex++;
   }
+
+  // 安全な index に補正
+  const value = nextText;
+  const safeIndex = Math.max(0, Math.min(diffIndex, value.length));
+
+  // 行数（0-based）を求める
+  const before = value.slice(0, safeIndex);
+  const lineBreaks = before.match(/\n/g);
+  const lineIndex = lineBreaks ? lineBreaks.length : 0;
+
+  // 行の高さを取得
+  const style = window.getComputedStyle(editorEl);
+  let lineHeight = parseFloat(style.lineHeight);
+  if (isNaN(lineHeight)) {
+    const fontSize = parseFloat(style.fontSize) || 14;
+    lineHeight = fontSize * 1.4;
+  }
+
+  // その行を中央付近に持ってくる scrollTop を計算
+  const targetTop = lineIndex * lineHeight - (editorEl.clientHeight / 2) + (lineHeight / 2) +140;
+  editorEl.scrollTop = Math.max(0, targetTop);
+
+  // キャレットもその位置に置く
+  editorEl.setSelectionRange(safeIndex, safeIndex);
+}
+
+// Undo / Redo 用に、内容を差し替えつつスクロールも行う
+function applyContent(newContent) {
+  let oldContent = state.content;
+  isApplyingHistory = true;
+
+  const previous = (typeof oldContent === 'string') ? oldContent : state.content;
+
+  state.content = newContent;
+  editorEl.value = newContent;
+
+  updateStats();
+  scheduleAutosave();
+
+  // 変更位置までスクロール
+  try {
+    centerChangePosition(previous, newContent);
+  } catch (e) {
+    console.error('centerChangePosition error', e);
+  }
+
+  isApplyingHistory = false;
+}
 
   function handleUndo() {
     if (state.undoStack.length === 0) return;
