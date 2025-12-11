@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>文章作成スタジオ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root {
+    --bg-gradient: radial-gradient(circle at top, #1d4ed8 0, #020617 55%);
+    --card-bg: rgba(15,23,42,0.9);
+    --accent: #38bdf8;
+    --accent-soft: rgba(56,189,248,0.2);
+    --accent-strong: #0ea5e9;
+    --text-main: #e5e7eb;
+    --text-muted: #9ca3af;
+    --border-soft: rgba(148,163,184,0.25);
+    --danger: #fb7185;
+    --danger-soft: rgba(248,113,113,0.12);
+    --shadow-soft: 0 24px 60px rgba(15,23,42,0.9);
+    --radius-xl: 1.4rem;
+    --radius-lg: 1rem;
+    --radius-pill: 999px;
+    --transition-fast: 0.18s ease-out;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg-gradient);
+    color: var(--text-main);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .app-shell {
+    max-width: 1120px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(260px, 1.15fr);
+    gap: 20px;
+  }
+
+  @media (max-width: 900px) {
+    body {
+      padding: 16px;
+    }
+    .app-shell {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .editor-card,
+  .side-card {
+    background: var(--card-bg);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border-soft);
+    box-shadow: var(--shadow-soft);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* subtle glow border */
+  .editor-card::before,
+  .side-card::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    pointer-events: none;
+    border: 1px solid transparent;
+    background:
+      linear-gradient(120deg, rgba(56,189,248,0.25), transparent 40%, rgba(139,92,246,0.15)) border-box;
+    mask:
+      linear-gradient(#000 0 0) padding-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    opacity: 0.6;
+  }
+
+  .editor-inner,
+  .side-inner {
+    position: relative;
+    padding: 20px 20px 18px;
+  }
+
+  @media (max-width: 600px) {
+    .editor-inner,
+    .side-inner {
+      padding: 14px;
+    }
+  }
+
+  .app-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .app-logo {
+    width: 36px;
+    height: 36px;
+    border-radius: 16px;
+    background: radial-gradient(circle at 30% 0%, #ffffff, #38bdf8 40%, #1d4ed8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #0f172a;
+    font-weight: 800;
+    font-size: 20px;
+    letter-spacing: 0.05em;
+    box-shadow: 0 12px 25px rgba(15,23,42,0.8);
+  }
+
+  .app-title-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .app-title {
+    font-size: 1.15rem;
+    font-weight: 650;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #e5e7eb;
+  }
+
+  .app-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .autosave-pill {
+    font-size: 0.72rem;
+    padding: 4px 9px;
+    border-radius: var(--radius-pill);
+    border: 1px solid rgba(148,163,184,0.4);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(15,23,42,0.9);
+    white-space: nowrap;
+  }
+
+  .autosave-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #22c55e;
+    box-shadow: 0 0 0 6px rgba(34,197,94,0.2);
+  }
+
+  .autosave-pill[data-status="idle"] .autosave-dot {
+    background: #eab308;
+    box-shadow: 0 0 0 6px rgba(234,179,8,0.18);
+  }
+
+  .autosave-pill[data-status="error"] .autosave-dot {
+    background: var(--danger);
+    box-shadow: 0 0 0 6px rgba(248,113,113,0.18);
+  }
+
+  /* filename row */
+
+  .filename-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1.8fr);
+    gap: 10px;
+    align-items: end;
+    margin-bottom: 10px;
+  }
+
+  @media (max-width: 768px) {
+    .filename-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .field-label {
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.17em;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  .field-label strong {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .input-shell {
+    position: relative;
+  }
+
+  .input-base,
+  .input-preview {
+    width: 100%;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(148,163,184,0.6);
+    background: rgba(15,23,42,0.85);
+    color: var(--text-main);
+    padding: 9px 12px;
+    font-size: 0.88rem;
+    outline: none;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), transform 0.12s ease-out;
+  }
+
+  .input-base::placeholder {
+    color: rgba(148,163,184,0.7);
+  }
+
+  .input-base:focus {
+    border-color: var(--accent-strong);
+    box-shadow: 0 0 0 1px rgba(56,189,248,0.4);
+    background: rgba(15,23,42,0.98);
+    transform: translateY(-1px);
+  }
+
+  .input-preview {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.8rem;
+    opacity: 0.95;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .input-preview span {
+    color: var(--accent);
+  }
+
+  /* editor area */
+
+  .editor-area {
+    margin-top: 6px;
+    border-radius: 24px;
+    border: 1px solid rgba(30,64,175,0.8);
+    background: radial-gradient(circle at top left, rgba(56,189,248,0.18), rgba(15,23,42,0.9));
+    padding: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .editor-area::before {
+    content: "";
+    position: absolute;
+    width: 220px;
+    height: 220px;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(56,189,248,0.12), transparent 70%);
+    top: -120px;
+    right: -60px;
+    pointer-events: none;
+  }
+
+  .editor-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 12px;
+  }
+
+  .toolbar-left,
+  .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .toolbar-group {
+    display: inline-flex;
+    align-items: center;
+    border-radius: var(--radius-pill);
+    background: rgba(15,23,42,0.88);
+    border: 1px solid rgba(148,163,184,0.4);
+    overflow: hidden;
+  }
+
+  .btn {
+    border: none;
+    background: transparent;
+    color: var(--text-main);
+    font-size: 0.78rem;
+    padding: 6px 10px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    transition: background var(--transition-fast), color var(--transition-fast), transform 0.08s ease-out, box-shadow 0.08s ease-out;
+  }
+
+  .btn span.key {
+    font-size: 0.7rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    padding: 2px 6px;
+    border-radius: 8px;
+    background: rgba(15,23,42,0.9);
+    border: 1px solid rgba(148,163,184,0.6);
+  }
+
+  .btn-icon {
+    font-size: 0.95rem;
+    opacity: 0.9;
+  }
+
+  .btn:hover {
+    background: rgba(15,23,42,0.96);
+    transform: translateY(-0.5px);
+  }
+
+  .btn:active {
+    transform: translateY(1px) scale(0.99);
+    box-shadow: 0 0 0 0 rgba(0,0,0,0);
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent-strong), #4f46e5);
+    color: #0b1120;
+    font-weight: 600;
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #38bdf8, #6366f1);
+    box-shadow: 0 10px 25px rgba(37,99,235,0.45);
+  }
+
+  .btn-primary .key {
+    background: rgba(15,23,42,0.9);
+    color: var(--accent);
+    border-color: rgba(15,23,42,0.9);
+  }
+
+  .btn-outline {
+    border-radius: var(--radius-pill);
+  }
+
+  .btn-small {
+    font-size: 0.72rem;
+    padding: 4px 8px;
+  }
+
+  .btn-disabled {
+    opacity: 0.4;
+    cursor: default;
+    pointer-events: none;
+  }
+
+  .hint-text {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    opacity: 0.9;
+  }
+
+  .hint-text strong {
+    color: #e5e7eb;
+  }
+
+  textarea#editor {
+    width: 100%;
+    min-height: 340px;
+    max-height: calc(100vh - 260px);
+    resize: vertical;
+    border-radius: 18px;
+    border: 1px solid rgba(148,163,184,0.4);
+    padding: 14px 14px 50px;
+    font-family: "SF Pro Text", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 0.93rem;
+    line-height: 1.7;
+    background: rgba(15,23,42,0.96);
+    color: var(--text-main);
+    outline: none;
+    box-shadow: inset 0 0 0 1px rgba(15,23,42,0.8);
+    backdrop-filter: blur(14px);
+  }
+
+  textarea#editor::placeholder {
+    color: rgba(148,163,184,0.85);
+  }
+
+  textarea#editor:focus {
+    border-color: var(--accent-strong);
+    box-shadow:
+      inset 0 0 0 1px rgba(15,23,42,0.8),
+      0 0 0 1px rgba(56,189,248,0.35);
+  }
+
+  /* stats bar */
+
+  .stats-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+
+  .stats-left,
+  .stats-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .stat-pill {
+    padding: 4px 9px;
+    border-radius: var(--radius-pill);
+    background: rgba(15,23,42,0.96);
+    border: 1px solid rgba(148,163,184,0.5);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .stat-label {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.66rem;
+  }
+
+  .stat-value {
+    font-feature-settings: "tnum" 1,"lnum" 1;
+    font-variant-numeric: tabular-nums lining-nums;
+    color: #e5e7eb;
+  }
+
+  .stat-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(148,163,184,0.9);
+  }
+
+  /* side card */
+
+  .side-inner {
+    padding-top: 18px;
+    padding-bottom: 16px;
+  }
+
+  .side-section + .side-section {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(148,163,184,0.35);
+  }
+
+  .side-title {
+    font-size: 0.86rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .kbd-inline {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.74rem;
+    padding: 2px 6px;
+    border-radius: 6px;
+    border: 1px solid rgba(148,163,184,0.6);
+    background: rgba(15,23,42,0.9);
+  }
+
+  .shortcut-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 8px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+
+  .shortcut-grid div:nth-child(odd) {
+    text-align: right;
+  }
+
+  .shortcut-grid div:nth-child(even) {
+    opacity: 0.9;
+  }
+
+  .timeline {
+    border-radius: 14px;
+    background: rgba(15,23,42,0.85);
+    border: 1px solid rgba(148,163,184,0.4);
+    padding: 9px 10px;
+    font-size: 0.76rem;
+    color: var(--text-muted);
+  }
+
+  .timeline-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 0;
+  }
+
+  .timeline-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px rgba(56,189,248,0.25);
+  }
+
+  .timeline-label {
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .timeline-time {
+    font-feature-settings: "tnum" 1,"lnum" 1;
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  .history-buttons {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .history-buttons .btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .backup-note {
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    background: rgba(56,189,248,0.08);
+    border-radius: 10px;
+    padding: 8px 9px;
+    border: 1px dashed rgba(56,189,248,0.6);
+    margin-top: 6px;
+  }
+
+  .backup-note strong {
+    color: var(--accent);
+  }
+
+  .danger-note {
+    background: var(--danger-soft);
+    border-color: rgba(248,113,113,0.7);
+    color: #fecaca;
+  }
+
+  .file-input-hidden {
+    display: none;
+  }
+
+  .linkish {
+    color: var(--accent);
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <!-- main editor -->
+  <div class="editor-card">
+    <div class="editor-inner">
+      <div class="app-header">
+        <div class="app-logo">文</div>
+        <div class="app-title-wrap">
+          <div class="app-title">Writing Studio</div>
+          <div class="app-subtitle">
+            効率よく・安全に・きれいに文章を育てるためのエディタ
+          </div>
+        </div>
+        <div id="autosavePill" class="autosave-pill" data-status="idle">
+          <div class="autosave-dot"></div>
+          <span id="autosaveText">オフライン保存 OK</span>
+        </div>
+      </div>
+
+      <!-- filename -->
+      <div class="filename-row">
+        <div>
+          <div class="field-label"><strong>ファイル名</strong> ベース</div>
+          <div class="input-shell">
+            <input id="filenameBase" class="input-base" type="text" placeholder="文章作成"
+                   autocomplete="off" spellcheck="false">
+          </div>
+        </div>
+        <div>
+          <div class="field-label">保存時の <strong>実ファイル名</strong></div>
+          <div class="input-shell">
+            <div id="filenamePreview" class="input-preview" title="保存時のファイル名">
+              文章作成_<span>YYYYMMDDHHMMSS</span>.json
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- editor area -->
+      <div class="editor-area">
+        <!-- toolbar -->
+        <div class="editor-toolbar">
+          <div class="toolbar-left">
+            <div class="toolbar-group">
+              <button id="saveButton" class="btn btn-primary" type="button">
+                <span class="btn-icon">💾</span>
+                <span>バックアップ保存</span>
+                <span class="key">Ctrl + S</span>
+              </button>
+            </div>
+<div class="side-section">
+  <div style="margin-top:8px;">
+    <button id="clearLocalButton" class="btn btn-small btn-outline" type="button">
+      🗑 ローカル保存を全て消去
+    </button>
+  </div>
+</div>
+            <div class="toolbar-group">
+              <button id="undoButton" class="btn btn-outline" type="button">
+                <span class="btn-icon">⤺</span>
+                <span>1 手 戻す</span>
+                <span class="key">Ctrl + Z</span>
+              </button>
+              <button id="redoButton" class="btn btn-outline" type="button">
+                <span class="btn-icon">⤼</span>
+                <span>1 手 進める</span>
+                <span class="key">Ctrl + Y</span>
+              </button>
+            </div>
+          </div>
+          <div class="toolbar-right">
+            <span class="hint-text">
+              自動で IndexedDB に保存されます。<strong>ブラウザを閉じても続きから再開</strong>できます。
+            </span>
+          </div>
+        </div>
+
+        <!-- textarea -->
+        <textarea id="editor" placeholder="ここに文章を書いてください。&#10;&#10;例）今日作りたい記事のタイトル・見出し・箇条書きを先に並べてから、本文を書き始めると効率が上がります。"></textarea>
+
+        <!-- stats -->
+        <div class="stats-bar">
+          <div class="stats-left">
+            <div class="stat-pill">
+              <div class="stat-dot"></div>
+              <span class="stat-label">文字数</span>
+              <span id="charCount" class="stat-value">0</span>
+            </div>
+            <div class="stat-pill">
+              <div class="stat-dot"></div>
+              <span class="stat-label">行数</span>
+              <span id="lineCount" class="stat-value">1</span>
+            </div>
+          </div>
+          <div class="stats-right">
+            <div class="stat-pill">
+              <span class="stat-label">最終自動保存</span>
+              <span id="lastAutosaveTime" class="stat-value">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- side panel -->
+  <div class="side-card">
+    <div class="side-inner">
+      <!-- shortcuts -->
+      <div class="side-section">
+        <div class="side-title">ショートカット</div>
+        <div class="shortcut-grid">
+          <div><span class="kbd-inline">Ctrl + S</span></div>
+          <div>履歴込みバックアップを保存（ファイルに書き出し）</div>
+          <div><span class="kbd-inline">Ctrl + Z</span></div>
+          <div>1 手前の状態へ戻る（独自 Undo）</div>
+          <div><span class="kbd-inline">Ctrl + Y</span></div>
+          <div>Undo を 1 手進める（独自 Redo）</div>
+        </div>
+      </div>
+
+      <!-- version timeline -->
+      <div class="side-section">
+        <div class="side-title">バージョン履歴</div>
+        <div class="timeline">
+          <div class="timeline-row">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <div class="timeline-dot"></div>
+              <div>
+                <div class="timeline-label">最終バックアップ</div>
+                <div id="lastBackupTime" class="timeline-time">—</div>
+              </div>
+            </div>
+          </div>
+          <div class="history-buttons">
+            <button id="stepBackButton" class="btn btn-small btn-outline" type="button">
+              ⏮ 1 つ戻る
+            </button>
+            <button id="stepForwardButton" class="btn btn-small btn-outline" type="button">
+              ⏭ 1 つ進む
+            </button>
+          </div>
+        </div>
+        <div class="backup-note">
+          バックアップには <strong>Ctrl + Z / Ctrl + Y の履歴</strong>も一緒に保存されます。<br>
+          復元後も、保存時点までの Undo / Redo がそのまま使えます。
+        </div>
+      </div>
+
+      <!-- restore -->
+      <div class="side-section">
+        <div class="side-title">バックアップから復元</div>
+        <div class="backup-note danger-note">
+          <strong>別のブラウザ・PC</strong>に移したいときや、万一のために<br>
+          書き出したバックアップファイルをここから読み込めます。
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <button id="restoreButton" class="btn btn-small btn-outline" type="button">
+            📂 バックアップを読み込む
+          </button>
+          <input id="restoreFileInput" class="file-input-hidden" type="file" accept=".json,application/json">
+          <span id="restoreStatus" class="hint-text">
+            読み込み後は自動保存にも反映されます。
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // ---------- state ----------
+const initialState = {
+  title: '文章作成',
+  content: '',
+  undoStack: [],
+  redoStack: [],
+  saveHistory: [],        // [{title, content, timestamp}]
+  saveHistoryIndex: -1,
+  lastAutosaveAt: null,
+  lastBackupAt: null,
+  lastEditTime: 0        // ★ 直近の入力時刻（ms）
+};
+
+
+  let state = JSON.parse(JSON.stringify(initialState));
+  let isApplyingHistory = false;   // フラグ: Undo / Redo 適用中
+  let db = null;
+  const DB_NAME = 'writing_studio_db';
+  const DB_VERSION = 1;
+  const STORE_NAME = 'documents';
+  const DOCUMENT_ID = 'current';
+
+  // ---------- dom refs ----------
+  const editorEl = document.getElementById('editor');
+  const filenameBaseEl = document.getElementById('filenameBase');
+  const filenamePreviewEl = document.getElementById('filenamePreview');
+  const charCountEl = document.getElementById('charCount');
+  const lineCountEl = document.getElementById('lineCount');
+  const lastAutosaveTimeEl = document.getElementById('lastAutosaveTime');
+  const lastBackupTimeEl = document.getElementById('lastBackupTime');
+  const autosavePillEl = document.getElementById('autosavePill');
+  const autosaveTextEl = document.getElementById('autosaveText');
+  const saveButton = document.getElementById('saveButton');
+  const undoButton = document.getElementById('undoButton');
+  const redoButton = document.getElementById('redoButton');
+  const stepBackButton = document.getElementById('stepBackButton');
+  const stepForwardButton = document.getElementById('stepForwardButton');
+  const restoreButton = document.getElementById('restoreButton');
+  const restoreFileInput = document.getElementById('restoreFileInput');
+  const restoreStatusEl = document.getElementById('restoreStatus');
+
+  const clearLocalButton = document.getElementById('clearLocalButton');
+
+  // ---------- utils ----------
+  function pad2(n) { return n.toString().padStart(2, '0'); }
+  function formatTimestamp14(date) {
+    const y = date.getFullYear();
+    const m = pad2(date.getMonth() + 1);
+    const d = pad2(date.getDate());
+    const hh = pad2(date.getHours());
+    const mm = pad2(date.getMinutes());
+    const ss = pad2(date.getSeconds());
+    return `${y}${m}${d}${hh}${mm}${ss}`;
+  }
+  function formatReadable(date) {
+    if (!date) return '—';
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '—';
+    return `${d.getFullYear()}/${pad2(d.getMonth() + 1)}/${pad2(d.getDate())} `
+      + `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+  }
+  function sanitizeFilenameBase(str) {
+    const base = (str || '').trim() || '文章作成';
+    // 禁止文字を _ に
+    return base.replace(/[\\\/:*?"<>|]/g, '_');
+  }
+
+  function updateFilenamePreview() {
+    const base = sanitizeFilenameBase(filenameBaseEl.value);
+    const now = new Date();
+    const ts = formatTimestamp14(now);
+    filenamePreviewEl.innerHTML = `${base}_<span>${ts}</span>.json`;
+  }
+
+  function updateStats() {
+    const text = state.content || '';
+    charCountEl.textContent = text.length.toString();
+    const lines = text.split(/\r\n|\r|\n/).length || 1;
+    lineCountEl.textContent = lines.toString();
+  }
+
+  function updateAutosaveUI(status) {
+    autosavePillEl.dataset.status = status || 'ok';
+    if (status === 'error') {
+      autosaveTextEl.textContent = '保存エラー';
+    } else if (status === 'idle') {
+      autosaveTextEl.textContent = 'オフライン保存 OK';
+    } else {
+      autosaveTextEl.textContent = '自動保存中…';
+    }
+  }
+
+  function refreshAllUI() {
+    filenameBaseEl.value = state.title || '文章作成';
+    editorEl.value = state.content || '';
+    updateFilenamePreview();
+    updateStats();
+    lastAutosaveTimeEl.textContent = state.lastAutosaveAt ? formatReadable(state.lastAutosaveAt) : '—';
+    lastBackupTimeEl.textContent = state.lastBackupAt ? formatReadable(state.lastBackupAt) : '—';
+    // history buttons enable/disable
+    undoButton.classList.toggle('btn-disabled', state.undoStack.length === 0);
+    redoButton.classList.toggle('btn-disabled', state.redoStack.length === 0);
+    stepBackButton.classList.toggle('btn-disabled', state.saveHistoryIndex <= 0);
+    stepForwardButton.classList.toggle(
+      'btn-disabled',
+      state.saveHistoryIndex < 0 || state.saveHistoryIndex >= state.saveHistory.length - 1
+    );
+  }
+
+  // ---------- indexeddb ----------
+  function openDatabase() {
+    return new Promise(function(resolve, reject) {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onerror = function() {
+        console.error('IndexedDB open error', req.error);
+        updateAutosaveUI('error');
+        reject(req.error);
+      };
+      req.onupgradeneeded = function(e) {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        }
+      };
+      req.onsuccess = function(e) {
+        db = e.target.result;
+        resolve(db);
+      };
+    });
+  }
+
+  function loadStateFromIndexedDB() {
+    if (!db) return;
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.get(DOCUMENT_ID);
+    req.onsuccess = function() {
+      if (req.result) {
+        state = Object.assign({}, initialState, req.result);
+        // 安全のため ID は削除
+        delete state.id;
+      }
+      refreshAllUI();
+      updateAutosaveUI('idle');
+    };
+    req.onerror = function() {
+      console.error('IndexedDB load error', req.error);
+    };
+  }
+
+  let autosaveTimer = null;
+  function scheduleAutosave() {
+    updateAutosaveUI('saving');
+    if (autosaveTimer) clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(saveStateToIndexedDB, 400);
+  }
+
+  function saveStateToIndexedDB() {
+    if (!db) return;
+    state.lastAutosaveAt = new Date().toISOString();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const dataToStore = Object.assign({ id: DOCUMENT_ID }, state);
+    const req = store.put(dataToStore);
+    req.onsuccess = function() {
+      lastAutosaveTimeEl.textContent = formatReadable(state.lastAutosaveAt);
+      updateAutosaveUI('idle');
+    };
+    req.onerror = function() {
+      console.error('IndexedDB save error', req.error);
+      updateAutosaveUI('error');
+    };
+  }
+
+  // ---------- history: undo/redo ----------
+// ★ 何ミリ秒以上間が空いたら「別の塊」とみなすか
+const UNDO_GROUP_MS = 400; //0.4秒。お好みで調整OK
+let nextInputForceNewGroup = false; // ★ Enter 用フラグを追加
+let isComposing = false;
+
+// 変更前・変更後、および「強制」の有無から Undo を積むか判断
+function pushUndo(beforeContent, afterContent, forceNewGroup) {
+  if (isApplyingHistory) return;
+  // ★ undoStack の最後の要素がある場合 → afterContent をそれに置き換える
+  if (state.undoStack.length > 0) {
+   if( editorEl.value ==  state.undoStack[state.undoStack.length - 1]) return;
+  }
+
+  const now = Date.now();
+  const lastTime = state.lastEditTime || 0;
+
+  // ★ forceNewGroup が true のときは時間間隔に関わらず「新しい塊」として登録
+  if (nextInputForceNewGroup || (now - lastTime > UNDO_GROUP_MS)) {
+    state.undoStack.push(afterContent);
+
+    // 上限
+    if (state.undoStack.length > 500) {
+      state.undoStack.shift();
+    }
+
+    // 新しい入力が入ったので Redo は消える
+    state.redoStack = [];
+  }
+
+  // 最後の編集時刻を更新
+  state.lastEditTime = now;
+
+  if (state.undoStack.length > 1) {
+   if( state.undoStack[state.undoStack.length - 1] ==  state.undoStack[state.undoStack.length - 2]) state.undoStack.pop();;
+  }
+}
+
+
+
+  function applyContent(newContent) {
+    isApplyingHistory = true;
+    state.content = newContent;
+    editorEl.value = newContent;
+    updateStats();
+    scheduleAutosave();
+    isApplyingHistory = false;
+  }
+
+  function handleUndo() {
+    if (state.undoStack.length === 0) return;
+    if(state.undoStack[state.undoStack.length - 1] == editorEl.value) {
+    const previous = state.undoStack.pop();
+    state.redoStack.push(state.content);
+    }
+    if (state.undoStack.length > 1 && state.undoStack[state.undoStack.length - 1] == state.undoStack[state.undoStack.length - 2]) {
+    state.undoStack.pop();
+    }
+    const previous = state.undoStack.pop();
+    state.redoStack.push(state.content);
+    applyContent(previous);
+    refreshAllUI();
+  }
+
+  function handleRedo() {
+    if (state.redoStack.length === 0) return;
+    const next = state.redoStack.pop();
+    state.undoStack.push(state.content);
+    applyContent(next);
+    refreshAllUI();
+  }
+
+  // ---------- save history (1つ戻る / 1つ進む) ----------
+  function pushSaveHistorySnapshot(timestampISO) {
+    const snapshot = {
+      title: state.title,
+      content: state.content,
+      timestamp: timestampISO || new Date().toISOString()
+    };
+    // 途中にいる場合は、そこから先を破棄
+    if (state.saveHistoryIndex >= 0 && state.saveHistoryIndex < state.saveHistory.length - 1) {
+      state.saveHistory = state.saveHistory.slice(0, state.saveHistoryIndex + 1);
+    }
+    state.saveHistory.push(snapshot);
+    state.saveHistoryIndex = state.saveHistory.length - 1;
+
+    // 最大数制限（例: 50）
+    if (state.saveHistory.length > 50) {
+      const diff = state.saveHistory.length - 50;
+      state.saveHistory.splice(0, diff);
+      state.saveHistoryIndex = state.saveHistory.length - 1;
+    }
+  }
+
+  function handleStepBack() {
+    if (state.saveHistoryIndex <= 0) return;
+    state.saveHistoryIndex -= 1;
+    const snap = state.saveHistory[state.saveHistoryIndex];
+    // ここでは Undo/Redo の履歴はクリアして、状態を「節目」として再スタート
+    state.undoStack = [];
+    state.redoStack = [];
+    state.title = snap.title;
+    state.content = snap.content;
+    refreshAllUI();
+    scheduleAutosave();
+  }
+
+function handleClearLocalData() {
+  if (!confirm('このブラウザに保存されている文章と履歴をすべて削除します。\n本当によろしいですか？')) {
+    return;
+  }
+
+  // IndexedDB の current ドキュメントを削除
+  if (db) {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.delete(DOCUMENT_ID);
+    req.onerror = function() {
+      console.error('IndexedDB delete error', req.error);
+      alert('ローカル保存の削除中にエラーが発生しました。');
+    };
+    req.onsuccess = function() {
+      // メモリ上の state もリセット
+      state = JSON.parse(JSON.stringify(initialState));
+      refreshAllUI();
+      updateAutosaveUI('idle');
+      lastAutosaveTimeEl.textContent = '—';
+      lastBackupTimeEl.textContent = '—';
+      alert('ローカル保存を削除しました。最初の状態から再開します。');
+    };
+  } else {
+    // 念のため IndexedDB ごと削除に挑戦
+    const delReq = indexedDB.deleteDatabase(DB_NAME);
+    delReq.onsuccess = function() {
+      state = JSON.parse(JSON.stringify(initialState));
+      refreshAllUI();
+      updateAutosaveUI('idle');
+      lastAutosaveTimeEl.textContent = '—';
+      lastBackupTimeEl.textContent = '—';
+      alert('ローカル保存を削除しました。最初の状態から再開します。');
+    };
+    delReq.onerror = function() {
+      console.error('deleteDatabase error', delReq.error);
+      alert('ローカル保存の削除中にエラーが発生しました。');
+    };
+  }
+}
+
+clearLocalButton.addEventListener('click', function() {
+  handleClearLocalData();
+});
+
+  function handleStepForward() {
+    if (state.saveHistoryIndex < 0 || state.saveHistoryIndex >= state.saveHistory.length - 1) return;
+    state.saveHistoryIndex += 1;
+    const snap = state.saveHistory[state.saveHistoryIndex];
+    state.undoStack = [];
+    state.redoStack = [];
+    state.title = snap.title;
+    state.content = snap.content;
+    refreshAllUI();
+    scheduleAutosave();
+  }
+
+  // ---------- backup save (download) ----------
+function handleBackupSave() {
+  const now = new Date();
+  const timestamp14 = formatTimestamp14(now);
+  const base = sanitizeFilenameBase(filenameBaseEl.value);
+  const filename = `${base}_${timestamp14}.json`;
+
+  const backupData = {
+    version: 1,
+    title: state.title,
+    content: state.content,
+    undoStack: state.undoStack.slice(),
+    redoStack: state.redoStack.slice(),
+    saveHistory: state.saveHistory.slice(),
+    saveHistoryIndex: state.saveHistoryIndex,
+    createdAt: now.toISOString()
+  };
+
+  const json = JSON.stringify(backupData, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+
+  // ★ 保存先ダイアログを出さず、ブラウザ標準の「ダウンロード」に流す
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;           // ← ここでファイル名だけ指定（保存先はブラウザ任せ）
+  a.style.display = 'none';
+
+  document.body.appendChild(a);
+  a.click();                       // ← 自動でダウンロード開始
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);        // 後始末
+
+  // 以降は内部状態の更新
+  state.lastBackupAt = backupData.createdAt;
+  lastBackupTimeEl.textContent = formatReadable(state.lastBackupAt);
+
+  // バックアップのタイミングも saveHistory に登録
+  pushSaveHistorySnapshot(backupData.createdAt);
+
+  refreshAllUI();
+  scheduleAutosave();
+}
+
+
+  // ---------- backup restore (upload) ----------
+  function handleBackupRestoreFile(file) {
+    if (!file) return;
+    restoreStatusEl.textContent = 'バックアップを読み込み中…';
+
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      try {
+        const text = ev.target.result;
+        const data = JSON.parse(text);
+        if (typeof data !== 'object' || data === null || !('content' in data)) {
+          throw new Error('不正なバックアップ形式です');
+        }
+
+        state.title = data.title || '文章作成';
+        state.content = data.content || '';
+        state.undoStack = Array.isArray(data.undoStack) ? data.undoStack.slice() : [];
+        state.redoStack = Array.isArray(data.redoStack) ? data.redoStack.slice() : [];
+        state.saveHistory = Array.isArray(data.saveHistory) ? data.saveHistory.slice() : [];
+        state.saveHistoryIndex = typeof data.saveHistoryIndex === 'number'
+          ? data.saveHistoryIndex
+          : (state.saveHistory.length - 1);
+        state.lastBackupAt = data.createdAt || null;
+        // 復元直後の autosave 時間も現在にしておく
+        state.lastAutosaveAt = new Date().toISOString();
+
+        refreshAllUI();
+        saveStateToIndexedDB();
+
+        restoreStatusEl.textContent = 'バックアップを適用しました。Undo / Redo も復元されています。';
+      } catch (err) {
+        console.error('restore error', err);
+        restoreStatusEl.textContent = '読み込みに失敗しました。バックアップファイルを確認してください。';
+      }
+    };
+    reader.onerror = function() {
+      console.error('file read error', reader.error);
+      restoreStatusEl.textContent = 'ファイルの読み込み中にエラーが発生しました。';
+    };
+    reader.readAsText(file, 'utf-8');
+  }
+
+  // ---------- event handlers ----------
+editorEl.addEventListener('input', function() {
+  const newContent = editorEl.value;
+  const previousContent = state.content;
+
+  // ★ Enter キーなどで「次の入力は必ず新しいグループ」と指定された場合、
+  //   そのフラグをここで渡す
+  pushUndo(previousContent, newContent, nextInputForceNewGroup);
+
+  // フラグは1回使ったらリセット
+  nextInputForceNewGroup = false;
+
+  state.content = newContent;
+  updateStats();
+  scheduleAutosave();
+  refreshAllUI();
+});
+
+document.addEventListener('keydown', function(e) {
+    const key1 = e.key.toLowerCase();
+    const ctrlOrMeta = e.ctrlKey || e.metaKey;
+
+    if (ctrlOrMeta) {
+
+    if (key1 === 's') {
+      e.preventDefault();
+      handleBackupSave();
+    } else if (key1 === 'z') {
+      e.preventDefault();
+      handleUndo();
+    } else if (key1 === 'y' || (key1 === 'z' && e.shiftKey)) {
+      // Ctrl+Y または Ctrl+Shift+Z で Redo
+      e.preventDefault();
+      handleRedo();
+    }
+    }
+
+  // フォーカスが editor（textarea）のときだけ反応させる
+  if (e.target !== editorEl) return;
+
+  const key = e.key;
+
+  if (
+    e.code === 'Enter' ||
+    e.code === 'NumpadEnter' ||
+    e.keyCode === 13 // 古いブラウザ/IME 用
+  ) {
+    // 次の input イベントでは必ず新しい Undo グループにする
+    nextInputForceNewGroup = true;
+  const newContent = editorEl.value;
+  const previousContent = state.content;
+
+  // ★ Enter キーなどで「次の入力は必ず新しいグループ」と指定された場合、
+  //   そのフラグをここで渡す
+  pushUndo(previousContent, newContent, nextInputForceNewGroup);
+
+  // フラグは1回使ったらリセット
+  nextInputForceNewGroup = false;
+
+  state.content = newContent;
+  updateStats();
+  scheduleAutosave();
+  refreshAllUI();
+  }
+});
+
+
+  filenameBaseEl.addEventListener('input', function() {
+    state.title = filenameBaseEl.value.trim() || '文章作成';
+    updateFilenamePreview();
+    scheduleAutosave();
+  });
+
+  saveButton.addEventListener('click', function() {
+    handleBackupSave();
+  });
+
+  undoButton.addEventListener('click', function() {
+    handleUndo();
+  });
+
+  redoButton.addEventListener('click', function() {
+    handleRedo();
+  });
+
+  stepBackButton.addEventListener('click', function() {
+    handleStepBack();
+  });
+
+  stepForwardButton.addEventListener('click', function() {
+    handleStepForward();
+  });
+
+  restoreButton.addEventListener('click', function() {
+    restoreFileInput.click();
+  });
+
+  restoreFileInput.addEventListener('change', function(e) {
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      handleBackupRestoreFile(file);
+      // 同じファイルを再度選択できるように
+      restoreFileInput.value = '';
+    }
+  });
+
+  // ---------- init ----------
+  updateFilenamePreview();
+  updateStats();
+  refreshAllUI();
+  updateAutosaveUI('saving');
+
+  // IndexedDB オープン & ロード
+  if ('indexedDB' in window) {
+    openDatabase()
+      .then(() => {
+        loadStateFromIndexedDB();
+      })
+      .catch(err => {
+        console.error('DB init error', err);
+        updateAutosaveUI('error');
+      });
+  } else {
+    console.warn('IndexedDB not supported');
+    updateAutosaveUI('error');
+    autosaveTextEl.textContent = 'IndexedDB 非対応ブラウザ';
+  }
+})();
+</script>
+</body>
+</html>
