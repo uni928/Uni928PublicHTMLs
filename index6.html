@@ -488,6 +488,38 @@
      flex: 1 1 100%;              /* 1列 */
    }
  }
+
+ /* Mobile: make the list panel truly full-width */
+ @media (max-width: 980px){
+   /* main の横幅制限を外して全幅にする */
+   main{
+     max-width: none;
+     width: 100%;
+     padding-left: 12px;
+     padding-right: 12px;
+   }
+
+   /* パネルを確実に全幅に */
+   .panel{
+     width: 100%;
+   }
+
+   /* ヘッダーが横幅を圧迫しないように折り返す */
+   .bar{
+     flex-wrap: wrap;
+     gap: 12px;
+   }
+   .actions{
+     width: 100%;
+     flex-wrap: wrap;
+     gap: 10px;
+   }
+   .pill{
+     flex: 1 1 100%;
+     min-width: 0; /* ←これが重要：min-width:280px の圧迫を解除 */
+   }
+ }
+    
   </style>
 </head>
 <body>
@@ -1057,4 +1089,5 @@
 </script>
 </body>
 </html>
+
 
