@@ -449,6 +449,45 @@
       .brand{min-width:auto}
       .pill{min-width:0}
     }
+
+ /* Mobile: list item touch-friendly */
+ @media (max-width: 520px){
+   /* 文字と余白を少し増やす */
+   .itemTop{ padding: 14px; gap: 12px; }
+   .name{ font-size: 14px; }
+   .sub{ font-size: 12.5px; }
+   .badge{ font-size: 12px; padding: 4px 10px; }
+
+   /* ボタンを“縮ませない”：2列で並べ、足りなければ折り返し */
+   .itemBtns{
+     gap: 10px;
+     padding: 12px 12px 14px;
+   }
+   .itemBtns .btn{
+     flex: 1 1 calc(50% - 10px);   /* 2列 */
+     justify-content: center;
+     min-height: 42px;            /* タップしやすさ */
+     font-size: 13px;
+     padding: 10px 12px;
+   }
+   .itemBtns .btn .ic{
+     width: 14px;
+     height: 14px;
+   }
+
+   /* ↑↓は特に誤タップしやすいので少し広げる */
+   .itemBtns .btn[data-act="up"],
+   .itemBtns .btn[data-act="down"]{
+     min-height: 44px;
+   }
+ }
+
+ /* Extra small: 1列（さらに読みやすく） */
+ @media (max-width: 360px){
+   .itemBtns .btn{
+     flex: 1 1 100%;              /* 1列 */
+   }
+ }
   </style>
 </head>
 <body>
@@ -1018,3 +1057,4 @@
 </script>
 </body>
 </html>
+
