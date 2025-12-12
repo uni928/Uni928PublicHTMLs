@@ -1,0 +1,1020 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>HTML Library</title>
+  <style>
+    :root{
+      --bg0:#0b1020;
+      --bg1:#0f1730;
+      --card:#121b36cc;
+      --card2:#0f1730cc;
+      --stroke:#2a355d;
+      --stroke2:#3b4a7d;
+      --text:#eaf0ff;
+      --muted:#a9b6df;
+      --good:#54f0c6;
+      --warn:#ffd36e;
+      --bad:#ff6b86;
+      --pri:#8aa7ff;
+      --pri2:#bca8ff;
+      --shadow: 0 18px 60px rgba(0,0,0,.45);
+      --shadow2: 0 12px 30px rgba(0,0,0,.35);
+      --r:18px;
+      --r2:14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      color:var(--text);
+      background:
+        radial-gradient(900px 600px at 10% 0%, rgba(138,167,255,.22), transparent 60%),
+        radial-gradient(900px 600px at 90% 10%, rgba(188,168,255,.18), transparent 65%),
+        radial-gradient(900px 700px at 50% 110%, rgba(84,240,198,.14), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      overflow:hidden;
+    }
+    .noise{
+      pointer-events:none;
+      position:fixed; inset:0;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.25'/%3E%3C/svg%3E");
+      mix-blend-mode:overlay;
+      opacity:.12;
+    }
+    .app{
+      height:100%;
+      display:grid;
+      grid-template-rows:auto 1fr;
+    }
+
+    header{
+      position:sticky; top:0;
+      backdrop-filter: blur(14px);
+      background: linear-gradient(180deg, rgba(15,23,48,.78), rgba(15,23,48,.35));
+      border-bottom:1px solid rgba(59,74,125,.45);
+      z-index:5;
+    }
+    .bar{
+      max-width:1200px;
+      margin:0 auto;
+      padding:18px 18px 14px;
+      display:flex;
+      align-items:center;
+      gap:14px;
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      min-width:210px;
+    }
+    .logo{
+      width:38px; height:38px; border-radius:12px;
+      background: radial-gradient(70% 70% at 30% 30%, rgba(138,167,255,.85), rgba(188,168,255,.25) 60%, rgba(84,240,198,.18));
+      border:1px solid rgba(138,167,255,.35);
+      box-shadow: 0 10px 22px rgba(0,0,0,.35);
+      position:relative;
+      overflow:hidden;
+    }
+    .logo:after{
+      content:"";
+      position:absolute; inset:-20%;
+      background: conic-gradient(from 210deg, rgba(255,255,255,.0), rgba(255,255,255,.22), rgba(255,255,255,.0));
+      animation: spin 5.5s linear infinite;
+      opacity:.7;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .title{
+      line-height:1.1;
+      display:flex;
+      flex-direction:column;
+    }
+    .title strong{font-size:14px; letter-spacing:.2px}
+    .title span{font-size:12px; color:var(--muted)}
+    .actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex:1;
+    }
+    .pill{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px;
+      border-radius:999px;
+      background: rgba(18,27,54,.55);
+      border:1px solid rgba(59,74,125,.55);
+      box-shadow: var(--shadow2);
+      flex:1;
+      min-width:280px;
+    }
+    .pill input{
+      width:100%;
+      border:none;
+      outline:none;
+      background:transparent;
+      color:var(--text);
+      font-size:13px;
+    }
+    .pill input::placeholder{color:rgba(169,182,223,.7)}
+    .btnrow{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    .btn{
+      border:1px solid rgba(59,74,125,.65);
+      background: rgba(18,27,54,.55);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius: 12px;
+      font-size:13px;
+      cursor:pointer;
+      box-shadow: var(--shadow2);
+      display:inline-flex; align-items:center; gap:10px;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+      user-select:none;
+    }
+    .btn:hover{transform: translateY(-1px); border-color: rgba(138,167,255,.65)}
+    .btn:active{transform: translateY(0px) scale(.99)}
+    .btn.primary{
+      background: linear-gradient(180deg, rgba(138,167,255,.22), rgba(18,27,54,.55));
+      border-color: rgba(138,167,255,.55);
+    }
+    .btn.danger{
+      border-color: rgba(255,107,134,.55);
+    }
+    .btn .ic{
+      width:14px; height:14px; display:inline-block;
+      opacity:.9;
+    }
+    .kbd{
+      font-family:var(--mono);
+      font-size:11px;
+      padding:2px 7px;
+      border-radius:8px;
+      background: rgba(10,16,32,.6);
+      border:1px solid rgba(59,74,125,.45);
+      color: rgba(234,240,255,.9);
+    }
+
+    main{
+      max-width:1200px;
+      margin:0 auto;
+      width:100%;
+      padding:16px 18px 18px;
+      display:grid;
+      grid-template-columns: 420px 1fr;
+      gap:14px;
+      height:100%;
+      min-height:0;
+    }
+
+    .panel{
+      border-radius: var(--r);
+      background: linear-gradient(180deg, rgba(18,27,54,.62), rgba(15,23,48,.45));
+      border:1px solid rgba(59,74,125,.55);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+    }
+    .panelHead{
+      padding:14px 14px 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      border-bottom:1px solid rgba(59,74,125,.45);
+      background: rgba(15,23,48,.35);
+    }
+    .panelHead h2{
+      font-size:13px;
+      margin:0;
+      letter-spacing:.2px;
+    }
+    .meta{
+      font-size:12px;
+      color:var(--muted);
+      display:flex;
+      gap:10px;
+      align-items:center;
+      white-space:nowrap;
+    }
+    .badge{
+      font-size:11px;
+      padding:3px 8px;
+      border-radius:999px;
+      border:1px solid rgba(59,74,125,.55);
+      background: rgba(10,16,32,.35);
+      color: rgba(234,240,255,.9);
+    }
+
+    .drop{
+      margin:12px 12px 0;
+      border-radius: var(--r2);
+      border:1px dashed rgba(138,167,255,.45);
+      background: rgba(10,16,32,.22);
+      padding:12px;
+      display:flex;
+      gap:12px;
+      align-items:center;
+      transition: border-color .14s ease, background .14s ease, transform .14s ease;
+    }
+    .drop.drag{
+      border-color: rgba(84,240,198,.7);
+      background: rgba(84,240,198,.08);
+      transform: translateY(-1px);
+    }
+    .drop .hint{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      min-width:0;
+    }
+    .drop .hint b{font-size:13px}
+    .drop .hint span{font-size:12px; color:var(--muted)}
+    .drop .chip{
+      margin-left:auto;
+      font-size:12px;
+      padding:6px 10px;
+      border-radius:999px;
+      background: rgba(18,27,54,.55);
+      border:1px solid rgba(59,74,125,.55);
+      white-space:nowrap;
+    }
+
+    .list{
+      padding:12px;
+      overflow:auto;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .empty{
+      padding:18px;
+      border-radius: var(--r2);
+      border:1px solid rgba(59,74,125,.45);
+      background: rgba(10,16,32,.22);
+      color: var(--muted);
+      font-size:13px;
+      line-height:1.6;
+    }
+    .item{
+      border-radius: var(--r2);
+      border:1px solid rgba(59,74,125,.55);
+      background: rgba(10,16,32,.22);
+      box-shadow: 0 10px 24px rgba(0,0,0,.25);
+      overflow:hidden;
+    }
+    .itemTop{
+      padding:12px;
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+    }
+    .dot{
+      width:10px; height:10px; border-radius:999px;
+      background: radial-gradient(circle at 30% 30%, rgba(84,240,198,.9), rgba(138,167,255,.35));
+      border:1px solid rgba(84,240,198,.35);
+      margin-top:5px;
+      flex:0 0 auto;
+    }
+    .info{
+      min-width:0;
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .nameRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .name{
+      font-size:13px;
+      font-weight:650;
+      letter-spacing:.2px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .sub{
+      font-size:12px;
+      color:var(--muted);
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .sub code{
+      font-family:var(--mono);
+      font-size:11px;
+      padding:2px 6px;
+      border-radius:8px;
+      background: rgba(18,27,54,.45);
+      border:1px solid rgba(59,74,125,.45);
+      color: rgba(234,240,255,.88);
+    }
+
+    .itemBtns{
+      display:flex;
+      gap:8px;
+      padding:10px 12px 12px;
+      border-top:1px solid rgba(59,74,125,.45);
+      background: rgba(15,23,48,.25);
+      flex-wrap:wrap;
+    }
+    .mini{
+      padding:8px 10px;
+      border-radius:12px;
+      font-size:12px;
+    }
+    .mini .ic{width:13px;height:13px}
+    .mini.ghost{
+      background: rgba(10,16,32,.18);
+    }
+
+    /* Preview */
+    .previewWrap{
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+    }
+    .previewHead{
+      padding:14px;
+      border-bottom:1px solid rgba(59,74,125,.45);
+      background: rgba(15,23,48,.35);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .previewHead .left{
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+      gap:3px;
+    }
+    .previewHead .left .pTitle{
+      font-size:13px;
+      font-weight:650;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .previewHead .left .pSub{
+      font-size:12px;
+      color:var(--muted);
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .previewBody{
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+    }
+    .iframeShell{
+      position:relative;
+      flex:1;
+      min-height:0;
+      background: rgba(0,0,0,.18);
+    }
+    iframe{
+      width:100%;
+      height:100%;
+      border:0;
+      background:white;
+    }
+    .placeholder{
+      padding:18px;
+      margin:12px;
+      border-radius: var(--r2);
+      border:1px solid rgba(59,74,125,.45);
+      background: rgba(10,16,32,.22);
+      color: var(--muted);
+      font-size:13px;
+      line-height:1.6;
+    }
+
+    /* Toast */
+    .toast{
+      position:fixed;
+      right:18px;
+      bottom:18px;
+      max-width:420px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      z-index:50;
+      pointer-events:none;
+    }
+    .t{
+      pointer-events:auto;
+      border-radius: 14px;
+      padding:12px 12px;
+      background: rgba(18,27,54,.72);
+      border:1px solid rgba(59,74,125,.55);
+      box-shadow: var(--shadow);
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      animation: pop .18s ease-out;
+    }
+    @keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:translateY(0);opacity:1}}
+    .t .tDot{
+      width:10px;height:10px;border-radius:999px;margin-top:5px;
+      background: rgba(138,167,255,.85);
+      border:1px solid rgba(138,167,255,.35);
+    }
+    .t .tBody{min-width:0}
+    .t .tBody b{display:block;font-size:13px}
+    .t .tBody span{display:block;font-size:12px;color:var(--muted);line-height:1.5}
+    .t .tX{
+      margin-left:auto;
+      width:28px;height:28px;border-radius:10px;
+      border:1px solid rgba(59,74,125,.55);
+      background: rgba(10,16,32,.2);
+      color: var(--text);
+      cursor:pointer;
+    }
+
+    /* Small screens */
+    @media (max-width: 980px){
+      body{overflow:auto}
+      main{grid-template-columns:1fr; height:auto}
+      .panel{min-height:440px}
+      .brand{min-width:auto}
+      .pill{min-width:0}
+    }
+  </style>
+</head>
+<body>
+<div class="noise"></div>
+
+<div class="app">
+  <header>
+    <div class="bar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div class="title">
+          <strong>HTML Library</strong>
+          <span>ローカルHTMLを安全に保管＆即プレビュー</span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <div class="pill" title="タイトル/ファイル名で絞り込み">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" stroke-width="2"/>
+            <path d="M16.2 16.2 21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <input id="q" placeholder="検索（タイトル / ファイル名）…" />
+          <span class="kbd">/</span>
+        </div>
+
+        <div class="btnrow">
+          <button class="btn primary" id="pickBtn" type="button" title="ローカルHTMLを追加">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 3v10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M8 7l4-4 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M5 14v4a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            HTMLを追加
+          </button>
+
+          <button class="btn" id="exportBtn" type="button" title="JSONでエクスポート（任意）">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 13V3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M8 9l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M4 21h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            書き出し
+          </button>
+
+          <button class="btn danger" id="clearBtn" type="button" title="全削除（確認あり）">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 7h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2"/>
+              <path d="M10 11v7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M14 11v7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M7 7l1 14a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-14" stroke="currentColor" stroke-width="2"/>
+            </svg>
+            全削除
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Left: list -->
+    <section class="panel" aria-label="HTML一覧">
+      <div class="panelHead">
+        <h2>HTML一覧</h2>
+        <div class="meta">
+          <span class="badge" id="countBadge">0件</span>
+          <span class="badge" id="dbBadge">DB: 準備中…</span>
+        </div>
+      </div>
+
+      <div class="list" id="list">
+        <div class="empty" id="empty">
+          まだ何もありません。<br/>
+          <b>「HTMLを追加」</b> か、ここへHTMLファイルをドロップしてください。<br/>
+          追加したHTMLは、<b>開く / 新しいタブで開く / 削除 / ↑↓で並べ替え</b> ができます。
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<input id="file" type="file" accept=".html,.htm,text/html" multiple hidden />
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ---------------------------
+     IndexedDB tiny wrapper
+  ---------------------------- */
+  const DB_NAME = "html_library_db";
+  const DB_VER = 1;
+  const STORE = "items"; // key: id
+  const META_STORE = "meta"; // key: key
+
+  /** @type {IDBDatabase|null} */
+  let db = null;
+
+  function idbOpen(){
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VER);
+      req.onupgradeneeded = () => {
+        const d = req.result;
+        if(!d.objectStoreNames.contains(STORE)){
+          const s = d.createObjectStore(STORE, { keyPath: "id" });
+          s.createIndex("order", "order", { unique:false });
+          s.createIndex("updatedAt", "updatedAt", { unique:false });
+        }
+        if(!d.objectStoreNames.contains(META_STORE)){
+          d.createObjectStore(META_STORE, { keyPath: "key" });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  function tx(storeNames, mode="readonly"){
+    if(!db) throw new Error("DB not ready");
+    return db.transaction(storeNames, mode);
+  }
+
+  function idbGetAllOrdered(){
+    return new Promise((resolve, reject) => {
+      const t = tx([STORE], "readonly");
+      const s = t.objectStore(STORE).index("order");
+      const req = s.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  function idbPutItem(item){
+    return new Promise((resolve, reject) => {
+      const t = tx([STORE], "readwrite");
+      t.oncomplete = () => resolve();
+      t.onerror = () => reject(t.error);
+      t.objectStore(STORE).put(item);
+    });
+  }
+
+  function idbDeleteItem(id){
+    return new Promise((resolve, reject) => {
+      const t = tx([STORE], "readwrite");
+      t.oncomplete = () => resolve();
+      t.onerror = () => reject(t.error);
+      t.objectStore(STORE).delete(id);
+    });
+  }
+
+  function idbClearAll(){
+    return new Promise((resolve, reject) => {
+      const t = tx([STORE], "readwrite");
+      t.oncomplete = () => resolve();
+      t.onerror = () => reject(t.error);
+      t.objectStore(STORE).clear();
+    });
+  }
+
+  /* ---------------------------
+     State
+  ---------------------------- */
+  /** @type {{id:string, name:string, title:string, content:string, createdAt:number, updatedAt:number, order:number, bytes:number}[]} */
+  let items = [];
+  /** @type {string|null} */
+  let selectedId = null;
+
+  /* ---------------------------
+     UI helpers
+  ---------------------------- */
+  const $ = (sel) => document.querySelector(sel);
+  const listEl = $("#list");
+  const emptyEl = $("#empty");
+  const countBadge = $("#countBadge");
+  const dbBadge = $("#dbBadge");
+  const qEl = $("#q");
+
+  const fileInput = $("#file");
+  const pickBtn = $("#pickBtn");
+
+  const pTitle = $("#pTitle");
+  const pSub = $("#pSub");
+  const frame = $("#frame");
+  const placeholder = $("#placeholder");
+  const openNewTabBtn = $("#openNewTabBtn");
+  const copyBtn = $("#copyBtn");
+
+  const toastEl = $("#toast");
+  function toast(title, msg){
+    const node = document.createElement("div");
+    node.className = "t";
+    node.innerHTML = `
+      <div class="tDot"></div>
+      <div class="tBody"><b></b><span></span></div>
+      <button class="tX" type="button" aria-label="close">×</button>
+    `;
+    node.querySelector("b").textContent = title;
+    node.querySelector("span").textContent = msg;
+    node.querySelector(".tX").onclick = () => node.remove();
+    toastEl.appendChild(node);
+    setTimeout(() => node.remove(), 3600);
+  }
+
+  function fmtTime(ts){
+    const d = new Date(ts);
+    const pad = (n)=> String(n).padStart(2,"0");
+    return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  function fmtBytes(n){
+    if(n < 1024) return `${n} B`;
+    const kb = n/1024;
+    if(kb < 1024) return `${kb.toFixed(1)} KB`;
+    const mb = kb/1024;
+    return `${mb.toFixed(1)} MB`;
+  }
+
+  function iconSvg(kind){
+    const m = {
+      open:`<svg class="ic" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 3h6a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 7h14v14H5z" stroke="currentColor" stroke-width="2"/><path d="M9 11h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+      tab:`<svg class="ic" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14 5h5v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M19 5l-9 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 5H7a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+      del:`<svg class="ic" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2"/><path d="M10 11v7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14 11v7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 7l1 14a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-14" stroke="currentColor" stroke-width="2"/></svg>`,
+      up:`<svg class="ic" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 10l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+      down:`<svg class="ic" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 14l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    };
+    return m[kind] || "";
+  }
+
+  /* ---------------------------
+     Parsing title
+  ---------------------------- */
+  function extractTitle(html, fallback){
+    try{
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const t = (doc.querySelector("title")?.textContent || "").trim();
+      return t || fallback;
+    }catch{
+      return fallback;
+    }
+  }
+
+  function makeId(){
+    // collision-safe enough for local use
+    return "i_" + crypto.getRandomValues(new Uint32Array(4)).join("_");
+  }
+
+  function normalizeOrders(){
+    // ensure order = 0..n-1
+    items.sort((a,b)=>a.order-b.order);
+    items.forEach((it, idx)=> it.order = idx);
+  }
+
+  async function persistAll(){
+    // realtime saving: reflect current state immediately
+    normalizeOrders();
+    const ps = items.map(it => idbPutItem(it));
+    await Promise.all(ps);
+  }
+
+  /* ---------------------------
+     Render
+  ---------------------------- */
+  function render(){
+    const q = (qEl.value || "").trim().toLowerCase();
+    const filtered = items
+      .slice()
+      .sort((a,b)=>a.order-b.order)
+      .filter(it => {
+        if(!q) return true;
+        return (it.title || "").toLowerCase().includes(q) || (it.name || "").toLowerCase().includes(q);
+      });
+
+    countBadge.textContent = `${items.length}件`;
+
+    // list
+    listEl.innerHTML = "";
+    if(filtered.length === 0){
+      emptyEl.style.display = "";
+      listEl.appendChild(emptyEl);
+    }else{
+      emptyEl.style.display = "none";
+      for(const it of filtered){
+        const node = document.createElement("div");
+        node.className = "item";
+        const isSel = it.id === selectedId;
+
+        node.innerHTML = `
+          <div class="itemTop">
+            <div class="dot" style="${isSel ? "filter:saturate(1.2); box-shadow:0 0 0 3px rgba(138,167,255,.15)" : ""}"></div>
+            <div class="info">
+              <div class="nameRow">
+                <div class="name" title="${escapeHtml(it.title)}">${escapeHtml(it.title)}</div>
+                <span class="badge">${fmtBytes(it.bytes)}</span>
+              </div>
+              <div class="sub">
+                <span>ファイル: <code>${escapeHtml(it.name)}</code></span>
+                <span>更新: <code>${fmtTime(it.updatedAt)}</code></span>
+              </div>
+            </div>
+          </div>
+          <div class="itemBtns">
+            <button class="btn mini" data-act="tab" data-id="${it.id}">${iconSvg("tab")}新しいタブ</button>
+            <button class="btn mini" data-act="del" data-id="${it.id}">${iconSvg("del")}削除</button>
+            <button class="btn mini ghost" data-act="up" data-id="${it.id}">${iconSvg("up")}↑</button>
+            <button class="btn mini ghost" data-act="down" data-id="${it.id}">${iconSvg("down")}↓</button>
+          </div>
+        `;
+        listEl.appendChild(node);
+      }
+    }
+  }
+
+  function escapeHtml(s){
+    return String(s)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#39;");
+  }
+
+  /* ---------------------------
+     Preview operations
+  ---------------------------- */
+  function setPreview(item){
+    selectedId = item?.id ?? null;
+
+    if(!item){
+      pTitle.textContent = "プレビュー";
+      pSub.textContent = "左のリストから「開く」を押すと、ここに表示されます。";
+      placeholder.style.display = "";
+      frame.srcdoc = "";
+      openNewTabBtn.disabled = true;
+      copyBtn.disabled = true;
+      render();
+      return;
+    }
+
+    pTitle.textContent = item.title || item.name;
+    pSub.textContent = `${item.name} ・ ${fmtBytes(item.bytes)} ・ 更新 ${fmtTime(item.updatedAt)}`;
+
+    // iframe srcdoc
+    placeholder.style.display = "none";
+    frame.srcdoc = item.content;
+
+    openNewTabBtn.disabled = false;
+    copyBtn.disabled = false;
+
+    render();
+  }
+
+  function openInNewTab(item){
+    // Use blob URL (stable and handles large html better)
+    const blob = new Blob([item.content], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, "_blank", "noopener,noreferrer");
+    if(!w){
+      toast("ブロックされました", "ポップアップがブロックされました。ブラウザ設定をご確認ください。");
+      URL.revokeObjectURL(url);
+      return;
+    }
+    // revoke later
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+
+  /* ---------------------------
+     Reorder
+  ---------------------------- */
+  async function move(id, dir){
+    const idx = items.findIndex(x => x.id === id);
+    if(idx < 0) return;
+
+    normalizeOrders();
+    items.sort((a,b)=>a.order-b.order);
+
+    const curIndex = items.findIndex(x => x.id === id);
+    const nextIndex = curIndex + dir;
+    if(nextIndex < 0 || nextIndex >= items.length) return;
+
+    const a = items[curIndex];
+    const b = items[nextIndex];
+    const tmp = a.order;
+    a.order = b.order;
+    b.order = tmp;
+    a.updatedAt = Date.now();
+    b.updatedAt = Date.now();
+
+    await idbPutItem(a);
+    await idbPutItem(b);
+
+    toast("並べ替え", dir < 0 ? "上に移動しました" : "下に移動しました");
+    render();
+  }
+
+  /* ---------------------------
+     Add from files
+  ---------------------------- */
+  async function addFiles(fileList){
+    const files = Array.from(fileList || []).filter(f => {
+      const n = (f.name || "").toLowerCase();
+      return n.endsWith(".html") || n.endsWith(".htm") || f.type === "text/html";
+    });
+    if(files.length === 0){
+      toast("追加できません", ".html / .htm を選択してください。");
+      return;
+    }
+
+    for(const f of files){
+      const text = await f.text();
+      const title = extractTitle(text, f.name);
+      const now = Date.now();
+      const item = {
+        id: makeId(),
+        name: f.name,
+        title,
+        content: text,
+        createdAt: now,
+        updatedAt: now,
+        order: items.length, // append
+        bytes: new Blob([text]).size
+      };
+      items.push(item);
+      await idbPutItem(item);
+    }
+
+    toast("追加完了", `${files.length}件 追加しました（IndexedDBに保存済み）`);
+    render();
+  }
+
+  /* ---------------------------
+     Export (optional)
+  ---------------------------- */
+  function exportJson(){
+    normalizeOrders();
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      items: items.slice().sort((a,b)=>a.order-b.order)
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "html-library-export.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 3000);
+    toast("書き出し", "JSONを書き出しました。");
+  }
+
+  /* ---------------------------
+     Clear all
+  ---------------------------- */
+  async function clearAll(){
+    if(items.length === 0){
+      toast("空です", "削除するものがありません。");
+      return;
+    }
+    const ok = confirm("本当に全削除しますか？（IndexedDBから消えます）");
+    if(!ok) return;
+
+    await idbClearAll();
+    items = [];
+    selectedId = null;
+    setPreview(null);
+    render();
+    toast("全削除", "すべて削除しました。");
+  }
+
+  /* ---------------------------
+     Event wiring
+  ---------------------------- */
+  listEl.addEventListener("click", async (e) => {
+    const btn = e.target.closest("button[data-act]");
+    if(!btn) return;
+    const act = btn.dataset.act;
+    const id = btn.dataset.id;
+    const item = items.find(x => x.id === id);
+    if(!item) return;
+
+    if(act === "open"){
+      setPreview(item);
+      toast("プレビュー", "アプリ内で開きました。");
+      return;
+    }
+    if(act === "tab"){
+      openInNewTab(item);
+      toast("新しいタブ", "別タブで開きました。");
+      return;
+    }
+    if(act === "del"){
+      const ok = confirm(`削除しますか？\n\n${item.title || item.name}`);
+      if(!ok) return;
+      await idbDeleteItem(item.id);
+      items = items.filter(x => x.id !== item.id);
+      if(selectedId === item.id) setPreview(null);
+      toast("削除", "削除しました。");
+      render();
+      return;
+    }
+    if(act === "up"){ await move(id, -1); return; }
+    if(act === "down"){ await move(id, +1); return; }
+  });
+
+  pickBtn.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", async () => {
+    await addFiles(fileInput.files);
+    fileInput.value = "";
+  });
+
+  // Search focus via "/"
+  window.addEventListener("keydown", (e) => {
+    if(e.key === "/" && document.activeElement !== qEl){
+      e.preventDefault();
+      qEl.focus();
+    }
+    if(e.key === "Escape" && document.activeElement === qEl){
+      qEl.value = "";
+      qEl.blur();
+      render();
+    }
+  });
+
+  qEl.addEventListener("input", render);
+
+  $("#exportBtn").addEventListener("click", exportJson);
+  $("#clearBtn").addEventListener("click", clearAll);
+
+  /* ---------------------------
+     Init
+  ---------------------------- */
+  (async () => {
+    try{
+      db = await idbOpen();
+      dbBadge.textContent = "DB: OK";
+      const loaded = await idbGetAllOrdered();
+      items = (loaded || []).map(x => ({
+        id: x.id,
+        name: x.name,
+        title: x.title,
+        content: x.content,
+        createdAt: x.createdAt,
+        updatedAt: x.updatedAt,
+        order: x.order ?? 0,
+        bytes: x.bytes ?? new Blob([x.content || ""]).size
+      }));
+      normalizeOrders();
+      // reflect normalized orders back to DB (real-time consistency)
+      await persistAll();
+      render();
+
+      // If there was a previous selection, we could restore it,
+      // but requirement is "restart resumes state" => list state is restored.
+      // Preview is left empty by design (safer & lighter). If you want auto-restore preview,
+      // it can be added easily.
+      toast("準備完了", `復元しました：${items.length}件`);
+    }catch(err){
+      console.error(err);
+      dbBadge.textContent = "DB: ERROR";
+      toast("エラー", "IndexedDBの初期化に失敗しました。ブラウザ設定をご確認ください。");
+    }
+  })();
+
+})();
+</script>
+</body>
+</html>
