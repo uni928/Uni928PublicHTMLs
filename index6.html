@@ -37,7 +37,7 @@
         radial-gradient(900px 600px at 90% 10%, rgba(188,168,255,.18), transparent 65%),
         radial-gradient(900px 700px at 50% 110%, rgba(84,240,198,.14), transparent 60%),
         linear-gradient(180deg, var(--bg0), var(--bg1));
-      overflow:hidden;
+      overflow:auto;
     }
     .noise{
       pointer-events:none;
@@ -164,8 +164,8 @@
       display:grid;
       grid-template-columns: 420px 1fr;
       gap:14px;
-      height:100%;
-      min-height:0;
+      height:auto;
+      min-height:auto;
     }
 
     .panel{
@@ -173,8 +173,7 @@
       background: linear-gradient(180deg, rgba(18,27,54,.62), rgba(15,23,48,.45));
       border:1px solid rgba(59,74,125,.55);
       box-shadow: var(--shadow);
-      overflow:hidden;
-      min-height:300;
+      overflow:visible;     /* ← 縮まずに展開 */
       display:flex;
       flex-direction:column;
     }
@@ -245,8 +244,7 @@
 
     .list{
       padding:12px;
-      overflow:auto;
-      min-height:0;
+      overflow:visible;     /* ← 縮まずに展開 */
       display:flex;
       flex-direction:column;
       gap:10px;
@@ -1089,6 +1087,7 @@
 </script>
 </body>
 </html>
+
 
 
 
