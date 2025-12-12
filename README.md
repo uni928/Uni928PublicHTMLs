@@ -7,3 +7,7 @@
 上記のサブはメインが埋まってもう一個足したい場合に最後の項目をこれに変えて拡張する事を想定しています。（URLの後ろに?key=xxx と付けることで、xxx部分を変えると別のサイトとして扱います）
 
 [効率的に文章を作成](https://uni928.github.io/Uni928PublicHTMLs/index5.html)
+
+[単体 html をリスト形式で登録して開けるようにするサイト](https://uni928.github.io/Uni928PublicHTMLs/index6.html)
+
+上記のサイトは、小説をローカルに保存するサイト https://uni928.github.io/SyousetuReader/index4.html との連携を前提としています。
