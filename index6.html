@@ -563,6 +563,15 @@
             書き出し
           </button>
 
+   <button class="btn" id="importBtn" type="button" title="JSONからインポート（追加復元）">
+     <svg class="ic" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+       <path d="M12 11v10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+       <path d="M8 15l4-4 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+       <path d="M5 10V6a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+     </svg>
+     インポート
+   </button>
+
           <button class="btn danger" id="clearBtn" type="button" title="全削除（確認あり）">
             <svg class="ic" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M4 7h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -601,6 +610,7 @@
 </div>
 
 <input id="file" type="file" accept=".html,.htm,text/html" multiple hidden />
+<input id="importFile" type="file" accept="application/json,.json" hidden />
 
 <div class="toast" id="toast"></div>
 
@@ -611,9 +621,9 @@
   /* ---------------------------
      IndexedDB tiny wrapper
   ---------------------------- */
-  const DB_NAME = "html_library_db";
+  let DB_NAME = "html_library_db" + getParam("key");;
   const DB_VER = 1;
-  const STORE = "items"; // key: id
+  let STORE = "items" + getParam("key"); // key: id
   const META_STORE = "meta"; // key: key
 
   /** @type {IDBDatabase|null} */
@@ -832,6 +842,11 @@
     }
   }
 
+  function getParam(key) {
+    const value = new URLSearchParams(window.location.search).get(key);
+    return value !== null ? value : "";
+  }
+
   function escapeHtml(s){
     return String(s)
       .replaceAll("&","&amp;")
@@ -1045,6 +1060,66 @@
 
   qEl.addEventListener("input", render);
 
+ const importBtn = $("#importBtn");
+ const importFile = $("#importFile");
+
+ importBtn?.addEventListener("click", () => importFile.click());
+
+ importFile?.addEventListener("change", async () => {
+   const f = importFile.files?.[0];
+   importFile.value = "";
+   if(!f) return;
+
+   try{
+     const txt = await f.text();
+     const data = JSON.parse(txt);
+
+     // 受け入れ形式:
+     // 1) { items: [...] }  ← このアプリの書き出し形式
+     // 2) [...]            ← items配列だけでもOK
+     const incoming = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : null);
+     if(!incoming) throw new Error("Invalid format");
+
+     // 末尾に追加して順序崩れないようにする
+     normalizeOrders();
+     let baseOrder = items.length;
+     let importedCount = 0;
+
+     for(const raw of incoming){
+       // 必須: content
+       const content = String(raw.content ?? "");
+       if(!content.trim()) continue;
+
+       const name = String(raw.name ?? "imported.html");
+       const title = String(raw.title ?? extractTitle(content, name));
+       const now = Date.now();
+
+       const item = {
+         id: makeId(), // IDは新規発行（衝突回避）
+         name,
+         title,
+         content,
+         createdAt: Number(raw.createdAt) || now,
+         updatedAt: now,
+         order: baseOrder++,
+         bytes: Number(raw.bytes) || new Blob([content]).size
+       };
+
+       items.push(item);
+       await idbPutItem(item); // リアルタイム保存
+       importedCount++;
+     }
+
+     normalizeOrders();
+     await persistAll(); // 念のため整列をDB反映
+     render();
+     toast("インポート完了", `${importedCount}件 取り込みました（既存リストに追加）`);
+   }catch(err){
+     console.error(err);
+     toast("インポート失敗", "JSON形式が不正か、対応していない内容です。");
+   }
+ });
+
   $("#exportBtn").addEventListener("click", exportJson);
   $("#clearBtn").addEventListener("click", clearAll);
 
@@ -1087,7 +1162,3 @@
 </script>
 </body>
 </html>
-
-
-
-
