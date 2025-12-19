@@ -517,6 +517,16 @@
      min-width: 0; /* ←これが重要：min-width:280px の圧迫を解除 */
    }
  }
+
+ /* Clickable title */
+ #reopenLastLink{
+   color: inherit;
+   text-decoration: underline;
+   cursor: pointer;
+ }
+ #reopenLastLink:hover{
+   opacity: .85;
+ }
     
   </style>
 </head>
@@ -529,7 +539,9 @@
       <div class="brand">
         <div class="logo" aria-hidden="true"></div>
         <div class="title">
-          <strong>HTML Library</strong>
+ <strong>
+   <a id="reopenLastLink" href="javascript:void(0)">HTML Library</a>
+ </strong>
           <span>ローカルHTMLを安全に保管＆即プレビュー</span>
         </div>
       </div>
@@ -625,6 +637,26 @@
   const DB_VER = 1;
   let STORE = "items" + getParam("key"); // key: id
   const META_STORE = "meta"; // key: key
+const META_LAST_OPEN = "lastOpenedId";
+
+ function idbSetMeta(key, value){
+   return new Promise((resolve, reject) => {
+     const t = tx([META_STORE], "readwrite");
+     t.oncomplete = () => resolve();
+     t.onerror = () => reject(t.error);
+     t.objectStore(META_STORE).put({ key, value });
+   });
+ }
+
+ function idbGetMeta(key){
+   return new Promise((resolve, reject) => {
+     const t = tx([META_STORE], "readonly");
+     const req = t.objectStore(META_STORE).get(key);
+     req.onsuccess = () => resolve(req.result?.value ?? null);
+     req.onerror = () => reject(req.error);
+   });
+ }
+
 
   /** @type {IDBDatabase|null} */
   let db = null;
@@ -717,6 +749,29 @@
   const placeholder = $("#placeholder");
   const openNewTabBtn = $("#openNewTabBtn");
   const copyBtn = $("#copyBtn");
+
+ const reopenLastLink = $("#reopenLastLink");
+
+ reopenLastLink?.addEventListener("click", async () => {
+   try{
+     const lastId = await idbGetMeta(META_LAST_OPEN);
+     if(!lastId){
+       toast("履歴なし", "まだ新しいタブで開いたHTMLがありません。");
+       return;
+     }
+     const item = items.find(x => x.id === lastId);
+     if(!item){
+       toast("見つかりません", "前回開いたHTMLは削除されています。");
+       return;
+     }
+     openInNewTab(item);
+     toast("再オープン", "前回開いたHTMLを新しいタブで開きました。");
+   }catch(err){
+     console.error(err);
+     toast("エラー", "前回の履歴を取得できませんでした。");
+   }
+ });
+
 
   const toastEl = $("#toast");
   function toast(title, msg){
@@ -887,6 +942,7 @@
   }
 
   function openInNewTab(item){
+idbSetMeta(META_LAST_OPEN, item.id).catch(()=>{});
     // Use blob URL (stable and handles large html better)
     const blob = new Blob([item.content], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
