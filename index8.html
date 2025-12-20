@@ -375,6 +375,14 @@
       color: rgba(234,240,255,.78);
     }
 
+/* --- Mobile: ヘッダー追従を無効化（スマホでは固定しない） --- */
+@media (max-width: 640px){
+  .topbar{
+    position: static;      /* sticky を無効化 */
+    top: auto;
+  }
+}
+
     /* reveal animation */
     .reveal{opacity:0; transform: translateY(10px); transition: opacity .6s ease, transform .6s ease}
     .reveal.on{opacity:1; transform: translateY(0)}
