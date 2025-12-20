@@ -548,6 +548,14 @@
       transform: translateY(-1px);
       opacity:.85;
     }
+
+/* --- Mobile: ヘッダー追従を無効化（スマホでは固定しない） --- */
+@media (max-width: 640px){
+  .topbar{
+    position: static;      /* sticky を無効化 */
+    top: auto;
+  }
+}
   </style>
 </head>
 
