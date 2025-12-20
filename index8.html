@@ -1,0 +1,910 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>dポイント投資攻略｜ボーナスポイント×金ETFで長期回収</title>
+  <meta name="description" content="dポイント投資を“お得に始める”ための攻略ページ。ファミマ/ローソンのボーナスポイントで実質利回りを底上げし、金ETFで長期回収を狙う考え方を整理。" />
+  <style>
+    :root{
+      --bg0:#070A12;
+      --bg1:#0B1223;
+      --card: rgba(255,255,255,.06);
+      --card2: rgba(255,255,255,.09);
+      --border: rgba(255,255,255,.12);
+      --text:#EAF0FF;
+      --muted: rgba(234,240,255,.72);
+      --muted2: rgba(234,240,255,.58);
+      --accent:#7C5CFF;
+      --accent2:#27D5FF;
+      --good:#33E3A8;
+      --warn:#FFCC66;
+      --bad:#FF6B8B;
+      --shadow: 0 18px 60px rgba(0,0,0,.55);
+      --radius: 22px;
+      --radius2: 16px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", "Meiryo", sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(1000px 800px at 15% 8%, rgba(124,92,255,.28), transparent 60%),
+        radial-gradient(900px 700px at 85% 18%, rgba(39,213,255,.22), transparent 55%),
+        radial-gradient(800px 800px at 60% 90%, rgba(51,227,168,.12), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      overflow-x:hidden;
+    }
+
+    /* subtle grid */
+    .grid{
+      position:fixed; inset:0;
+      background:
+        linear-gradient(to right, rgba(255,255,255,.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,.04) 1px, transparent 1px);
+      background-size: 54px 54px;
+      mask-image: radial-gradient(900px 650px at 50% 25%, rgba(0,0,0,1), transparent 72%);
+      pointer-events:none;
+      opacity:.55;
+    }
+
+    a{color:inherit}
+    .wrap{max-width:1180px; margin:0 auto; padding:28px 18px 90px}
+    .topbar{
+      display:flex; align-items:center; justify-content:space-between; gap:14px;
+      position:sticky; top:0; z-index:20;
+      padding:14px 12px;
+      margin: -10px -6px 18px;
+      background: linear-gradient(180deg, rgba(7,10,18,.82), rgba(7,10,18,.30));
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .brand{
+      display:flex; align-items:center; gap:12px; min-width: 210px;
+    }
+    .logo{
+      width:42px; height:42px; border-radius:14px;
+      background:
+        radial-gradient(10px 10px at 30% 30%, rgba(255,255,255,.9), rgba(255,255,255,0) 60%),
+        linear-gradient(135deg, rgba(124,92,255,1), rgba(39,213,255,1));
+      box-shadow: 0 10px 30px rgba(124,92,255,.25), 0 10px 30px rgba(39,213,255,.16);
+      border:1px solid rgba(255,255,255,.18);
+    }
+    .brand h1{
+      font-size:14px; margin:0; line-height:1.15; letter-spacing:.02em;
+    }
+    .brand .sub{
+      display:block; margin-top:2px; font-weight:600; color:var(--muted2); font-size:12px;
+    }
+    .nav{
+      display:flex; flex-wrap:wrap; gap:10px; justify-content:flex-end;
+    }
+    .chip{
+      padding:10px 12px;
+      border-radius:999px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      color: rgba(234,240,255,.86);
+      text-decoration:none;
+      font-size:12.5px;
+      transition: transform .15s ease, background .15s ease, border-color .15s ease;
+      user-select:none;
+      white-space:nowrap;
+    }
+    .chip:hover{transform: translateY(-1px); background: rgba(255,255,255,.085); border-color: rgba(255,255,255,.16)}
+    .chip:active{transform: translateY(0px) scale(.98)}
+    .chip strong{font-weight:800}
+
+    /* hero */
+    .hero{
+      display:grid;
+      grid-template-columns: 1.25fr .75fr;
+      gap:18px;
+      align-items:stretch;
+      margin-top:14px;
+    }
+    @media (max-width: 980px){
+      .hero{grid-template-columns:1fr}
+      .brand{min-width:auto}
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.085), rgba(255,255,255,.045));
+      border: 1px solid rgba(255,255,255,.11);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      position:relative;
+    }
+    .card::before{
+      content:"";
+      position:absolute; inset:-2px;
+      background: radial-gradient(800px 260px at 10% 0%, rgba(124,92,255,.26), transparent 60%),
+                  radial-gradient(900px 300px at 100% 10%, rgba(39,213,255,.18), transparent 55%);
+      pointer-events:none;
+      opacity:.8;
+    }
+    .card .inner{position:relative; padding:26px}
+    .kicker{
+      display:inline-flex; align-items:center; gap:9px;
+      padding:8px 12px;
+      border-radius:999px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.11);
+      color: rgba(234,240,255,.84);
+      font-size:12px;
+      letter-spacing:.02em;
+    }
+    .dot{
+      width:8px; height:8px; border-radius:99px;
+      background: linear-gradient(135deg, var(--good), var(--accent2));
+      box-shadow: 0 0 0 4px rgba(51,227,168,.10);
+    }
+    .hero h2{
+      margin:14px 0 10px;
+      font-size:38px;
+      line-height:1.08;
+      letter-spacing:.01em;
+    }
+    @media (max-width: 640px){
+      .hero h2{font-size:30px}
+    }
+    .lead{
+      margin:0;
+      color: var(--muted);
+      font-size:15.5px;
+      line-height:1.8;
+      max-width: 70ch;
+    }
+    .ctaRow{
+      margin-top:18px;
+      display:flex; flex-wrap:wrap; gap:10px;
+    }
+    .btn{
+      appearance:none; border:none; cursor:pointer;
+      border-radius: 14px;
+      padding:12px 14px;
+      font-weight:800;
+      letter-spacing:.02em;
+      color: rgba(7,10,18,.95);
+      background: linear-gradient(135deg, rgba(51,227,168,1), rgba(39,213,255,1));
+      box-shadow: 0 18px 40px rgba(39,213,255,.14), 0 18px 50px rgba(51,227,168,.10);
+      transition: transform .15s ease, filter .15s ease;
+      text-decoration:none;
+      display:inline-flex; align-items:center; gap:10px;
+      user-select:none;
+    }
+    .btn:hover{transform: translateY(-1px); filter:saturate(1.04)}
+    .btn:active{transform: translateY(0px) scale(.99)}
+    .btn.secondary{
+      color: rgba(234,240,255,.92);
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.12);
+      box-shadow: none;
+    }
+    .btn svg{width:16px; height:16px}
+
+    .mini{
+      display:grid;
+      grid-template-rows: auto 1fr;
+    }
+    .mini .inner{padding:22px}
+    .statGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+      margin-top:14px;
+    }
+    .stat{
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: 18px;
+      padding:14px;
+      min-height: 92px;
+    }
+    .stat .label{
+      color: var(--muted2);
+      font-size:12px;
+      margin-bottom:6px;
+      letter-spacing:.02em;
+    }
+    .stat .value{
+      font-size:18px;
+      font-weight:900;
+      line-height:1.15;
+    }
+    .stat .note{
+      margin-top:8px;
+      color: rgba(234,240,255,.68);
+      font-size:12.5px;
+      line-height:1.5;
+    }
+    .badge{
+      display:inline-flex; align-items:center;
+      padding:6px 10px;
+      border-radius:999px;
+      background: rgba(124,92,255,.16);
+      border:1px solid rgba(124,92,255,.30);
+      color: rgba(234,240,255,.90);
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.02em;
+    }
+
+    /* sections */
+    .section{
+      margin-top:26px;
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:14px;
+    }
+    .sectionHead{
+      display:flex; align-items:flex-end; justify-content:space-between; gap:16px;
+      margin: 26px 4px 6px;
+    }
+    .sectionHead h3{
+      margin:0;
+      font-size:22px;
+      letter-spacing:.01em;
+    }
+    .sectionHead p{
+      margin:0;
+      color: var(--muted2);
+      font-size:12.5px;
+    }
+
+    .grid2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:14px;
+    }
+    @media (max-width: 980px){
+      .grid2{grid-template-columns:1fr}
+    }
+
+    .tile{
+      border-radius: var(--radius);
+      border:1px solid rgba(255,255,255,.11);
+      background: rgba(255,255,255,.06);
+      overflow:hidden;
+      position:relative;
+    }
+    .tile .inner{padding:22px}
+    .tile h4{margin:0 0 10px; font-size:18px}
+    .tile p{margin:0; color: var(--muted); line-height:1.85; font-size:14.2px}
+    .list{
+      margin:12px 0 0;
+      padding:0; list-style:none;
+      display:grid; gap:10px;
+    }
+    .li{
+      display:flex; gap:10px; align-items:flex-start;
+      padding:12px 12px;
+      border-radius: 16px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.05);
+    }
+    .icon{
+      width:28px; height:28px; border-radius: 12px;
+      background: rgba(39,213,255,.14);
+      border:1px solid rgba(39,213,255,.28);
+      flex: 0 0 auto;
+      display:grid; place-items:center;
+      margin-top:2px;
+    }
+    .icon.good{background: rgba(51,227,168,.14); border-color: rgba(51,227,168,.28)}
+    .icon.warn{background: rgba(255,204,102,.12); border-color: rgba(255,204,102,.28)}
+    .li b{display:block; margin:0 0 4px; font-size:14px}
+    .li span{display:block; color: var(--muted2); font-size:13px; line-height:1.65}
+
+    /* calculator */
+    .calc{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:14px;
+      align-items:stretch;
+    }
+    @media (max-width: 980px){
+      .calc{grid-template-columns:1fr}
+    }
+    .form{
+      display:grid; gap:12px;
+      margin-top: 10px;
+    }
+    label{display:grid; gap:8px; font-size:12.5px; color: var(--muted2)}
+    input, select{
+      width:100%;
+      padding:12px 12px;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.13);
+      background: rgba(7,10,18,.35);
+      color: rgba(234,240,255,.92);
+      outline:none;
+      transition: border-color .15s ease, transform .15s ease;
+    }
+    input:focus, select:focus{border-color: rgba(39,213,255,.45)}
+    .result{
+      margin-top: 12px;
+      border-radius: 18px;
+      border:1px solid rgba(255,255,255,.11);
+      background: rgba(255,255,255,.06);
+      padding: 16px;
+      display:grid;
+      gap:10px;
+    }
+    .resultRow{
+      display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;
+      padding:10px 10px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .resultRow .k{color: var(--muted2); font-size:12.5px}
+    .resultRow .v{font-weight:900}
+    .smallNote{
+      margin-top: 10px;
+      color: rgba(234,240,255,.60);
+      font-size:12px;
+      line-height:1.65;
+    }
+
+    /* footer */
+    .footer{
+      margin-top: 26px;
+      padding: 18px;
+      border-radius: var(--radius);
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.05);
+      color: rgba(234,240,255,.65);
+      line-height:1.8;
+      font-size:12.5px;
+    }
+    .hr{
+      height:1px; background: rgba(255,255,255,.10);
+      margin: 14px 0;
+    }
+    .pillRow{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px}
+    .pill{
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      font-size:12px;
+      color: rgba(234,240,255,.78);
+    }
+
+    /* reveal animation */
+    .reveal{opacity:0; transform: translateY(10px); transition: opacity .6s ease, transform .6s ease}
+    .reveal.on{opacity:1; transform: translateY(0)}
+  </style>
+</head>
+
+<body>
+  <div class="grid"></div>
+
+  <div class="wrap" id="top">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>dポイント投資攻略<span class="sub">ボーナスポイント×金ETF（安定株）で“長い目の回収”</span></h1>
+        </div>
+      </div>
+      <nav class="nav" aria-label="ページ内ナビゲーション">
+        <a class="chip" href="#strategy">攻略の全体像</a>
+        <a class="chip" href="#bonus">ボーナスポイント</a>
+        <a class="chip" href="#gold">金ETF</a>
+        <a class="chip" href="#tax">税金の目安</a>
+        <a class="chip" href="#coupon">引き換え券</a>
+        <a class="chip" href="#calc"><strong>回収</strong>シミュレーター</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <article class="card reveal">
+        <div class="inner">
+          <div class="kicker"><span class="dot"></span> まず“元手の質”を上げる。次に“時間”を味方にする。</div>
+          <h2>ボーナスポイントで<br/>実質利回りを底上げ → 金ETFで長期回収</h2>
+          <p class="lead">
+            dポイント投資は「大きく儲ける」よりも、<b>“お得に積み上げて、長い目で回収する”</b>発想が相性◎。<br/>
+            このページは、<b>ファミリーマート／ローソンのボーナスポイント</b>（例：<b>230円→100pt</b>級）で獲得効率を上げ、<b>金ETF（安定株）</b>の長期成長に乗せるための整理メモです。
+          </p>
+
+          <div class="ctaRow">
+            <a class="btn" href="#strategy" aria-label="攻略の全体像へ">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M6 12h12M13 6l5 6-5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              攻略の全体像を見る
+            </a>
+            <a class="btn secondary" href="#calc" aria-label="回収シミュレーターへ">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14M7 7h10M7 11h10M7 15h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              回収シミュレーター
+            </a>
+          </div>
+
+          <div class="pillRow" aria-label="要点">
+            <span class="pill">狙い：<b>230円→100pt</b>などの高効率</span>
+            <span class="pill">投資先：<b>金ETF</b>で長期目線</span>
+            <span class="pill">運用：短期ではなく<b>年単位</b>で回収</span>
+            <span class="pill">税：<b>一時所得</b>の控除・申告不要ラインを理解</span>
+          </div>
+        </div>
+      </article>
+
+      <aside class="card mini reveal">
+        <div class="inner">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+            <div>
+              <div class="kicker" style="margin-bottom:10px;"><span class="dot" style="background:linear-gradient(135deg,var(--warn),#FF8A3D)"></span> 今日の“攻略メモ”</div>
+              <div class="badge">まずは「獲得単価」を最適化</div>
+            </div>
+          </div>
+
+          <div class="statGrid" role="list">
+            <div class="stat" role="listitem">
+              <div class="label">狙いの型</div>
+              <div class="value">230円 → 100pt</div>
+              <div class="note">ボーナスポイントで<br/>“実質割引”を作る</div>
+            </div>
+            <div class="stat" role="listitem">
+              <div class="label">例（よくある）</div>
+              <div class="value">ネルノダ<br/>257円 → 100pt</div>
+              <div class="note">ファミマはさらに<br/>値引きが乗ることも</div>
+            </div>
+            <div class="stat" role="listitem">
+              <div class="label">長期の見せ場</div>
+              <div class="value">金価格（円建）<br/>10年で約2.7倍</div>
+              <div class="note">2014年平均 4,340円/g →<br/>2024年平均 11,718円/g</div>
+            </div>
+            <div class="stat" role="listitem">
+              <div class="label">直近の勢い</div>
+              <div class="value">2021→2024<br/>約1.8倍</div>
+              <div class="note">2021年平均 6,402円/g →<br/>2024年平均 11,718円/g</div>
+            </div>
+          </div>
+
+          <p class="smallNote">
+            ※金価格の年次データは田中貴金属の「年次金価格推移」より（税抜の参考小売価格）。 0
+          </p>
+        </div>
+      </aside>
+    </section>
+
+    <!-- Strategy -->
+    <div class="sectionHead" id="strategy">
+      <h3>攻略の全体像</h3>
+      <p>「獲得効率」→「長期回収」→「税と出口」をセットで設計</p>
+    </div>
+
+    <section class="grid2">
+      <article class="tile reveal">
+        <div class="inner">
+          <h4>① まず“獲得単価”を勝ち筋に寄せる</h4>
+          <p>
+            dポイント投資で一番効くのは、投資の上手さよりも<b>“ポイントをどれだけ有利に集めたか”</b>です。<br/>
+            基本方針はシンプル：<b>ファミリーマート／ローソンのボーナスポイント</b>で、<b>230円→100pt</b>級の案件を狙う。
+          </p>
+          <ul class="list">
+            <li class="li">
+              <div class="icon good" aria-hidden="true">✓</div>
+              <div>
+                <b>狙い：230円→100pt（実質“高割引”）</b>
+                <span>購入単価に対して付与ポイントが大きい案件は、投資の“原資”の質が上がります。</span>
+              </div>
+            </li>
+            <li class="li">
+              <div class="icon" aria-hidden="true">⚡</div>
+              <div>
+                <b>例：ネルノダ 257円→100pt が多い</b>
+                <span>さらにファミマは、タイミングによっては値引きが重なりやすく、実質単価が下がることも。</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="tile reveal">
+        <div class="inner">
+          <h4>② “投資先”は金ETF（安定株）で長期目線</h4>
+          <p>
+            短期で増やすより、<b>ブレに耐えながら伸びを待つ</b>のがポイント投資と相性が良いです。<br/>
+            金（ゴールド）は「誰かの負債ではない資産」として、長期では上昇局面もあり得ます（ただし価格変動はあります）。
+          </p>
+          <ul class="list">
+            <li class="li">
+              <div class="icon good" aria-hidden="true">↗</div>
+              <div>
+                <b>円建て金価格：2014→2024で約2.7倍</b>
+                <span>田中貴金属の年平均（税抜）で、2014年 4,340円/g → 2024年 11,718円/g。 1</span>
+              </div>
+            </li>
+            <li class="li">
+              <div class="icon warn" aria-hidden="true">⏳</div>
+              <div>
+                <b>“長い目で回収”が前提</b>
+                <span>直近の伸びだけを期待せず、年単位でゆっくり回収していく設計に。</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </article>
+    </section>
+
+    <!-- Bonus point -->
+    <div class="sectionHead" id="bonus">
+      <h3>獲得：ファミマ／ローソンのボーナスポイントを主戦場に</h3>
+      <p>目的は「230円→100pt」の“強い原資”づくり</p>
+    </div>
+
+    <section class="grid2">
+      <article class="tile reveal">
+        <div class="inner">
+          <h4>ボーナスポイントの考え方（超シンプル）</h4>
+          <p>
+            たとえば「230円で100ポイント」なら、ポイント還元だけ見ても<b>約43%相当</b>のインパクト。<br/>
+            ここに値引きやクーポンが重なると、<b>実質単価がさらに下がる</b>可能性があります。
+          </p>
+          <div class="result" aria-label="ミニ計算例">
+            <div class="resultRow">
+              <div class="k">例：230円→100pt</div>
+              <div class="v" id="ex1">実質ポイント比率 ≒ 43.5%</div>
+            </div>
+            <div class="resultRow">
+              <div class="k">例：257円→100pt（ネルノダ想定）</div>
+              <div class="v" id="ex2">実質ポイント比率 ≒ 38.9%</div>
+            </div>
+          </div>
+          <p class="smallNote">
+            ※ここでは「1pt=1円相当」として単純化しています。実際の価値の感じ方は人によって異なります。
+          </p>
+        </div>
+      </article>
+
+      <article class="tile reveal">
+        <div class="inner">
+          <h4>チェックリスト（買う前に見る）</h4>
+          <ul class="list">
+            <li class="li">
+              <div class="icon good" aria-hidden="true">✓</div>
+              <div>
+                <b>“付与ポイント”が強いか？（100pt/230〜260円）</b>
+                <span>まずは案件の強さを優先。ここが弱いと、後段の投資で取り返すのが大変。</span>
+              </div>
+            </li>
+            <li class="li">
+              <div class="icon" aria-hidden="true">🏪</div>
+              <div>
+                <b>ファミマ／ローソンのどちらが有利か？</b>
+                <span>同系統の案件でも、店舗や時期で“割引が重なる度合い”が変わることがあります。</span>
+              </div>
+            </li>
+            <li class="li">
+              <div class="icon warn" aria-hidden="true">⚠</div>
+              <div>
+                <b>買いすぎ注意：回収は“長期”が前提</b>
+                <span>ポイント投資は積み上げ型。生活を圧迫しない範囲で。</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </article>
+    </section>
+
+    <!-- Gold -->
+    <div class="sectionHead" id="gold">
+      <h3>金ETF（安定株）を推す理由：長期で“回収しやすい”発想</h3>
+      <p>ただし価格変動はあるので、断定はしない</p>
+    </div>
+
+    <section class="grid2">
+      <article class="tile reveal">
+        <div class="inner">
+          <h4>数字で見る：円建て金価格の推移（年平均）</h4>
+          <p>
+            田中貴金属の年次データ（税抜の参考小売価格）では、
+            <b>2014年平均 4,340円/g</b> → <b>2024年平均 11,718円/g</b> と、<b>約2.7倍</b>。 2<br/>
+            さらに <b>2021年平均 6,402円/g</b> → <b>2024年平均 11,718円/g</b> で <b>約1.8倍</b>（“ほぼ2倍”に近い伸び）。 3
+          </p>
+          <ul class="list">
+            <li class="li">
+              <div class="icon good" aria-hidden="true">✓</div>
+              <div>
+                <b>狙いは「短期で当てる」ではなく「時間で回収」</b>
+                <span>ポイント原資は“お得に集める”→金ETFは“長期で育てる”の二段構え。</span>
+              </div>
+            </li>
+            <li class="li">
+              <div class="icon warn" aria-hidden="true">⚠</div>
+              <div>
+                <b>注意：金は上下する</b>
+                <span>年単位で伸びる時もあれば、停滞・下落の期間もあります。分散と継続が鍵。</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="tile reveal">
+        <div class="inner">
+          <h4>“ポイント投資”と相性が良い理由</h4>
+          <p>
+            現金投資だと損益に敏感になりがちですが、ポイント投資は「生活防衛費を削らずに積む」設計がしやすい。<br/>
+            そのぶん、<b>ブレに耐えて長期回収</b>という戦い方が取りやすいです。
+          </p>
+          <ul class="list">
+            <li class="li">
+              <div class="icon good" aria-hidden="true">◎</div>
+              <div>
+                <b>“獲得効率”が高いほど、回収が早まる</b>
+                <span>230円→100pt級の案件は、スタート地点から有利。投資の巧拙より効きます。</span>
+              </div>
+            </li>
+            <li class="li">
+              <div class="icon" aria-hidden="true">🧠</div>
+              <div>
+                <b>メンタル設計：長期前提だとブレに強い</b>
+                <span>一喜一憂しにくい仕組みづくりが、結果的に続きます。</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </article>
+    </section>
+
+    <!-- Tax -->
+    <div class="sectionHead" id="tax">
+      <h3>税金：ポイント由来は「一時所得」扱いになるケースを理解</h3>
+      <p>“申告不要の目安”を知って、安心して長期運用</p>
+    </div>
+
+    <section class="grid2">
+      <article class="tile reveal">
+        <div class="inner">
+          <h4>ざっくり要点（国税庁の考え方）</h4>
+          <p>
+            国税庁の説明では、<b>一時所得は「特別控除（最高50万円）」</b>があり、計算方法も定義されています。 4<br/>
+            またQ&Aでは、一般的に<b>一時所得の合計が年間50万円を超えない限り申告が不要</b>という整理や、
+            給与所得者の申告不要基準（給与以外が年20万円以下）との関係についても触れられています。 5
+          </p>
+          <ul class="list">
+            <li class="li">
+              <div class="icon good" aria-hidden="true">✓</div>
+              <div>
+                <b>一時所得：特別控除は最高50万円</b>
+                <span>「総収入−経費−特別控除（最大50万円）」で一時所得を計算。 6</span>
+              </div>
+            </li>
+            <li class="li">
+              <div class="icon" aria-hidden="true">ℹ</div>
+              <div>
+                <b>給与所得者の“20万円ルール”との関係</b>
+                <span>国税庁Q&Aでは、一時所得は50万円控除後の残額の1/2で計算する点を踏まえ、一定範囲なら申告不要になり得る旨が説明されています。 7</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="tile reveal">
+        <div class="inner">
+          <h4>ポイントの扱いはケース分け（ここが大事）</h4>
+          <p>
+            ポイントは「通常の商取引の値引き」とみなされるかどうかで、課税関係が変わり得ます。国税庁の整理（企業発行ポイント）も参照できます。 8
+          </p>
+          <ul class="list">
+            <li class="li">
+              <div class="icon good" aria-hidden="true">✓</div>
+              <div>
+                <b>値引き扱いに近いポイント → 非課税になりやすい</b>
+                <span>一方で、キャンペーン等で「値引きと認められない経済的利益」は一時所得になることがあります。 9</span>
+              </div>
+            </li>
+            <li class="li">
+              <div class="icon warn" aria-hidden="true">⚠</div>
+              <div>
+                <b>注意：ここは最終的に自己判断が必要</b>
+                <span>不安なら税務署の電話相談センターや税理士へ。申告要否は個別事情で変わります。</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </article>
+    </section>
+
+    <!-- Coupon -->
+    <div class="sectionHead" id="coupon">
+      <h3>使うとき：ローカルの「お試し引き換え券」が残っていたら“上振れ”</h3>
+      <p>出口で得する可能性を忘れない</p>
+    </div>
+
+    <section class="grid2">
+      <article class="tile reveal">
+        <div class="inner">
+          <h4>出口の上振れ：引き換え券で“もう一段お得”になることがある</h4>
+          <p>
+            ポイントを使うタイミングで、もし<b>ローカル（アプリ等）の「お試し引き換え券」</b>が残っていたら、<b>実質価値が上がる</b>可能性があります。
+            <br/>“投資で増やす”だけでなく、<b>使う瞬間の最適化</b>も攻略の一部。
+          </p>
+          <ul class="list">
+            <li class="li">
+              <div class="icon good" aria-hidden="true">✓</div>
+              <div>
+                <b>使う前にチェック：引き換え券／クーポン／値引き</b>
+                <span>残っていれば、その分だけ“回収率”が上がります。</span>
+              </div>
+            </li>
+            <li class="li">
+              <div class="icon" aria-hidden="true">🧩</div>
+              <div>
+                <b>勝ち筋は「積み上げ × 小さな上振れ」</b>
+                <span>ボーナスポイント＋値引き＋引換券…の“重ねがけ”が強い。</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="tile reveal" id="calc">
+        <div class="inner">
+          <h4>回収シミュレーター（超ざっくり）</h4>
+          <p>
+            「230円→100pt」みたいな案件を、月に何回取るか。<br/>
+            “回収の速度”は、<b>獲得効率</b>と<b>継続年数</b>で決まります。
+          </p>
+
+          <div class="calc" role="group" aria-label="回収シミュレーター">
+            <div>
+              <div class="form">
+                <label>
+                  購入金額（円）
+                  <input id="yen" type="number" min="1" step="1" value="230" />
+                </label>
+                <label>
+                  付与ポイント（pt）
+                  <input id="pt" type="number" min="1" step="1" value="100" />
+                </label>
+                <label>
+                  月あたり回数（回）
+                  <input id="freq" type="number" min="0" step="1" value="4" />
+                </label>
+                <label>
+                  参考：年成長率（％）※想定（任意）
+                  <input id="cagr" type="number" min="-50" max="50" step="0.1" value="6.0" />
+                </label>
+              </div>
+
+              <div class="ctaRow" style="margin-top:12px;">
+                <button class="btn" id="calcBtn" type="button">
+                  <svg viewBox="0 0 24 24" fill="none"><path d="M4 20h16M6 16V8m6 8V4m6 12V10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                  計算する
+                </button>
+                <button class="btn secondary" id="resetBtn" type="button">初期値に戻す</button>
+              </div>
+
+              <p class="smallNote">
+                ※この計算は「お得度の把握」用の簡易モデルです。投資成果を保証するものではありません。
+              </p>
+            </div>
+
+            <div>
+              <div class="result" aria-live="polite">
+                <div class="resultRow">
+                  <div class="k">1回あたり：ポイント比率（1pt=1円換算）</div>
+                  <div class="v" id="r_ratio">—</div>
+                </div>
+                <div class="resultRow">
+                  <div class="k">月あたり：獲得ポイント（pt）</div>
+                  <div class="v" id="r_month">—</div>
+                </div>
+                <div class="resultRow">
+                  <div class="k">年あたり：獲得ポイント（pt）</div>
+                  <div class="v" id="r_year">—</div>
+                </div>
+                <div class="resultRow">
+                  <div class="k">想定：10年後の“倍率”（年成長率ベース）</div>
+                  <div class="v" id="r_10y">—</div>
+                </div>
+              </div>
+
+              <p class="smallNote">
+                ヒント：<b>獲得単価が強いほど</b>、同じ回数でも積み上げが早くなります。<br/>
+                逆に、単価が弱い案件を増やすと「回収までの時間」が伸びがちです。
+              </p>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- footer / disclaimer -->
+    <div class="footer reveal" id="notes">
+      <b>注意（大事）</b><br/>
+      ・本ページは「dポイント投資をお得に始めるための考え方」をまとめたもので、投資助言ではありません。価格変動・元本割れ等のリスクがあります。<br/>
+      ・税金の扱いは個別事情で変わります。国税庁の案内（企業発行ポイントの取扱い／一時所得の計算・Q&A）を参照し、不安な場合は税務署や税理士へご相談ください。 10
+      <div class="hr"></div>
+      <b>参考データ</b><br/>
+      ・金価格（円建て）年次：田中貴金属「年次金価格推移」（税抜の参考小売価格）。 11
+      <div class="hr"></div>
+      <span style="color:rgba(234,240,255,.72)">© dポイント投資攻略（ローカルHTML）</span>
+    </div>
+  </div>
+
+  <script>
+    // reveal on scroll
+    const els = Array.from(document.querySelectorAll(".reveal"));
+    const io = new IntersectionObserver((entries)=>{
+      for(const e of entries){
+        if(e.isIntersecting){ e.target.classList.add("on"); io.unobserve(e.target); }
+      }
+    }, {threshold: 0.12});
+    els.forEach(el=>io.observe(el));
+
+    // Mini examples
+    function fmtPct(x){ return (x*100).toFixed(1) + "%"; }
+    const ex1 = 100/230;
+    const ex2 = 100/257;
+    document.getElementById("ex1").textContent = "実質ポイント比率 ≒ " + fmtPct(ex1);
+    document.getElementById("ex2").textContent = "実質ポイント比率 ≒ " + fmtPct(ex2);
+
+    // Calculator
+    const yen = document.getElementById("yen");
+    const pt = document.getElementById("pt");
+    const freq = document.getElementById("freq");
+    const cagr = document.getElementById("cagr");
+
+    const r_ratio = document.getElementById("r_ratio");
+    const r_month = document.getElementById("r_month");
+    const r_year = document.getElementById("r_year");
+    const r_10y = document.getElementById("r_10y");
+
+    function fmtNum(n){
+      if(!isFinite(n)) return "—";
+      return Math.round(n).toLocaleString("ja-JP");
+    }
+    function fmtMul(n){
+      if(!isFinite(n)) return "—";
+      return n.toFixed(2) + "倍";
+    }
+
+    function calc(){
+      const y = Number(yen.value);
+      const p = Number(pt.value);
+      const f = Number(freq.value);
+      const g = Number(cagr.value) / 100;
+
+      if(!(y>0 && p>0 && f>=0)){
+        r_ratio.textContent = "入力を確認してください";
+        r_month.textContent = "—";
+        r_year.textContent = "—";
+        r_10y.textContent = "—";
+        return;
+      }
+
+      const ratio = p / y;
+      const month = p * f;
+      const year = month * 12;
+
+      // 10-year multiplier based on assumed CAGR
+      const m10 = Math.pow(1 + g, 10);
+
+      r_ratio.textContent = fmtPct(ratio) + "（= " + p.toLocaleString("ja-JP") + "pt / " + y.toLocaleString("ja-JP") + "円）";
+      r_month.textContent = fmtNum(month) + " pt";
+      r_year.textContent = fmtNum(year) + " pt";
+      r_10y.textContent = fmtMul(m10) + "（年" + (g*100).toFixed(1) + "%想定）";
+    }
+
+    document.getElementById("calcBtn").addEventListener("click", calc);
+    document.getElementById("resetBtn").addEventListener("click", ()=>{
+      yen.value = 230;
+      pt.value = 100;
+      freq.value = 4;
+      cagr.value = 6.0;
+      calc();
+    });
+
+    // initial
+    calc();
+  </script>
+</body>
+</html>
