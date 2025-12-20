@@ -1,0 +1,1027 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>クレジットカード不要でも見られる？Amazon Prime Videoをギフトカードで楽しむ方法</title>
+  <meta name="description" content="Amazon Prime Videoは、Amazonギフトカード残高を使って会費を支払い、クレジットカードなしでも楽しめる場合があります。3ステップでわかりやすく解説。" />
+  <style>
+    :root{
+      --bg0:#070A12;
+      --bg1:#0B1022;
+      --card:#0F1733cc;
+      --card2:#0E1630f2;
+      --stroke:#2A3A7A66;
+      --text:#EAF0FF;
+      --muted:#B7C3FFcc;
+      --muted2:#9AA8E6cc;
+      --brand:#7C5CFF;
+      --brand2:#00D4FF;
+      --good:#2BE6A6;
+      --warn:#FFCC66;
+      --bad:#FF6B8B;
+      --shadow: 0 24px 60px rgba(0,0,0,.45);
+      --shadow2: 0 12px 36px rgba(0,0,0,.38);
+      --radius: 22px;
+      --radius2: 16px;
+      --max: 1140px;
+      --ring: 0 0 0 4px rgba(124,92,255,.20), 0 0 0 1px rgba(0,212,255,.12) inset;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", Arial, sans-serif;
+      background:
+        radial-gradient(1200px 700px at 20% -10%, rgba(124,92,255,.50), transparent 60%),
+        radial-gradient(900px 620px at 80% 0%, rgba(0,212,255,.28), transparent 60%),
+        radial-gradient(900px 600px at 50% 110%, rgba(43,230,166,.18), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      overflow-x:hidden;
+    }
+
+    a{color:inherit}
+    .container{
+      width:min(var(--max), calc(100% - 40px));
+      margin: 0 auto;
+    }
+
+    /* Top nav */
+    .nav{
+      position:sticky;
+      top:0;
+      z-index:50;
+      backdrop-filter: blur(14px);
+      background: linear-gradient(180deg, rgba(7,10,18,.72), rgba(7,10,18,.35));
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .navInner{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      padding: 14px 0;
+    }
+    .logo{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      letter-spacing:.2px;
+      font-weight:800;
+      user-select:none;
+    }
+    .logoMark{
+      width:34px;height:34px;border-radius:12px;
+      background:
+        radial-gradient(12px 12px at 30% 30%, rgba(255,255,255,.55), transparent 60%),
+        linear-gradient(135deg, rgba(124,92,255,1), rgba(0,212,255,1));
+      box-shadow: 0 14px 30px rgba(124,92,255,.22);
+      border:1px solid rgba(255,255,255,.14);
+    }
+    .navLinks{
+      display:flex;
+      gap:14px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(15,23,51,.35);
+      color: var(--muted);
+      text-decoration:none;
+      transition: transform .15s ease, background .15s ease, border-color .15s ease;
+    }
+    .chip:hover{transform: translateY(-1px); background: rgba(15,23,51,.55); border-color: rgba(255,255,255,.16);}
+    .chip svg{opacity:.9}
+
+    /* Hero */
+    .hero{
+      padding: 46px 0 26px;
+      position:relative;
+    }
+    .heroGrid{
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 22px;
+      align-items:stretch;
+    }
+    @media (max-width: 980px){
+      .heroGrid{grid-template-columns:1fr; gap:16px;}
+    }
+
+    .heroCard{
+      border-radius: var(--radius);
+      padding: 26px;
+      border:1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(15,23,51,.66), rgba(14,22,48,.62));
+      box-shadow: var(--shadow);
+      position:relative;
+      overflow:hidden;
+    }
+    .heroCard:before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background:
+        radial-gradient(600px 220px at 15% 0%, rgba(124,92,255,.38), transparent 55%),
+        radial-gradient(520px 260px at 90% 10%, rgba(0,212,255,.25), transparent 60%),
+        radial-gradient(520px 260px at 40% 110%, rgba(43,230,166,.14), transparent 60%);
+      filter: blur(10px);
+      opacity:.9;
+      z-index:0;
+    }
+    .heroCard > *{position:relative; z-index:1;}
+    .badgeRow{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px;}
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      color: var(--muted);
+      font-weight:650;
+      font-size: 13px;
+    }
+    .badge strong{color:var(--text)}
+    h1{
+      margin: 8px 0 10px;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height:1.08;
+      letter-spacing: -0.6px;
+    }
+    .lead{
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 16px;
+      line-height:1.7;
+      max-width: 62ch;
+    }
+    .ctaRow{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top: 14px;
+    }
+    .btn{
+      appearance:none;
+      border:0;
+      border-radius: 999px;
+      padding: 12px 14px;
+      cursor:pointer;
+      font-weight:800;
+      letter-spacing:.2px;
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      text-decoration:none;
+      transition: transform .15s ease, filter .15s ease, box-shadow .15s ease;
+      user-select:none;
+    }
+    .btnPrimary{
+      background: linear-gradient(135deg, rgba(124,92,255,1), rgba(0,212,255,1));
+      color: #071018;
+      box-shadow: 0 18px 40px rgba(0,212,255,.16), 0 18px 40px rgba(124,92,255,.16);
+    }
+    .btnPrimary:hover{transform: translateY(-2px); filter: saturate(1.06) brightness(1.03);}
+    .btnGhost{
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      color: var(--text);
+    }
+    .btnGhost:hover{transform: translateY(-2px); box-shadow: var(--shadow2);}
+    .noteLine{
+      margin-top: 14px;
+      font-size: 13px;
+      color: var(--muted2);
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      line-height:1.6;
+    }
+    .noteLine svg{flex:0 0 auto; margin-top:2px; opacity:.9}
+
+    /* Side panel */
+    .side{
+      border-radius: var(--radius);
+      border:1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(15,23,51,.55), rgba(14,22,48,.70));
+      box-shadow: var(--shadow2);
+      padding: 18px;
+      overflow:hidden;
+      position:relative;
+    }
+    .side:before{
+      content:"";
+      position:absolute;
+      inset:-40px -40px auto auto;
+      width:220px;height:220px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.35), rgba(0,212,255,.22), transparent 62%);
+      filter: blur(8px);
+      opacity:.9;
+    }
+    .sideTitle{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom: 12px;
+      position:relative;
+    }
+    .sideTitle h2{
+      margin:0;
+      font-size: 16px;
+      letter-spacing:.2px;
+    }
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(43,230,166,.12);
+      border: 1px solid rgba(43,230,166,.22);
+      color: rgba(231,255,247,.92);
+      font-weight:750;
+      font-size: 12px;
+      position:relative;
+      white-space:nowrap;
+    }
+
+    .kpiGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+      position:relative;
+    }
+    .kpi{
+      border-radius: 16px;
+      padding: 12px 12px 11px;
+      background: rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.10);
+    }
+    .kpi .k{font-size:12px; color: var(--muted2); margin-bottom:6px;}
+    .kpi .v{font-size:15px; font-weight:900; letter-spacing:.2px;}
+    .kpi .s{font-size:12px; color: var(--muted); margin-top:6px; line-height:1.55;}
+
+    .miniSteps{
+      margin-top: 12px;
+      border-radius: 16px;
+      padding: 12px;
+      background: rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.08);
+      position:relative;
+    }
+    .miniSteps h3{
+      margin:0 0 10px;
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing:.2px;
+    }
+    .miniSteps ol{
+      margin:0;
+      padding-left: 18px;
+      color: var(--text);
+      line-height:1.7;
+    }
+    .miniSteps li{margin: 6px 0;}
+    .miniSteps b{color:#FFFFFF}
+
+    /* Sections */
+    section{padding: 22px 0;}
+    .sectionTitle{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:16px;
+      margin: 10px 0 14px;
+    }
+    .sectionTitle h2{
+      margin:0;
+      font-size: clamp(18px, 2.2vw, 26px);
+      letter-spacing: -0.2px;
+    }
+    .sectionTitle p{margin:0; color: var(--muted); line-height:1.6; max-width: 62ch;}
+    .grid3{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+    @media (max-width: 980px){ .grid3{grid-template-columns:1fr;}}
+    .card{
+      border-radius: var(--radius2);
+      background: linear-gradient(180deg, rgba(15,23,51,.60), rgba(14,22,48,.70));
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: 0 10px 30px rgba(0,0,0,.28);
+      padding: 16px;
+      transition: transform .15s ease, border-color .15s ease;
+      position:relative;
+      overflow:hidden;
+    }
+    .card:hover{transform: translateY(-2px); border-color: rgba(255,255,255,.16);}
+    .cardTop{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin-bottom: 10px;
+    }
+    .icon{
+      width:40px;height:40px;
+      border-radius: 14px;
+      display:grid;
+      place-items:center;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 14px 30px rgba(0,0,0,.18);
+      flex:0 0 auto;
+    }
+    .card h3{
+      margin:0;
+      font-size: 16px;
+      letter-spacing:.2px;
+    }
+    .card p{
+      margin:0;
+      color: var(--muted);
+      line-height:1.7;
+      font-size: 14px;
+    }
+    .tagRow{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top: 12px;
+    }
+    .tag{
+      font-size: 12px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+    }
+    .tag.good{border-color: rgba(43,230,166,.22); background: rgba(43,230,166,.08); color: rgba(231,255,247,.92);}
+    .tag.warn{border-color: rgba(255,204,102,.22); background: rgba(255,204,102,.08); color: rgba(255,239,214,.96);}
+    .tag.bad{border-color: rgba(255,107,139,.22); background: rgba(255,107,139,.08); color: rgba(255,221,228,.96);}
+
+    /* Timeline steps */
+    .stepsWrap{
+      border-radius: var(--radius);
+      border:1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(15,23,51,.52), rgba(14,22,48,.70));
+      box-shadow: var(--shadow2);
+      overflow:hidden;
+    }
+    .stepsHeader{
+      padding: 16px 16px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:16px;
+    }
+    .stepsHeader .hint{
+      color: var(--muted);
+      font-size: 13px;
+      line-height:1.6;
+      max-width: 72ch;
+      margin:0;
+    }
+    .steps{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0;
+    }
+    @media (max-width: 980px){ .steps{grid-template-columns:1fr;}}
+    .step{
+      padding: 16px;
+      position:relative;
+      border-right: 1px solid rgba(255,255,255,.06);
+    }
+    .step:last-child{border-right:0}
+    @media (max-width: 980px){
+      .step{border-right:0; border-bottom: 1px solid rgba(255,255,255,.06);}
+      .step:last-child{border-bottom:0}
+    }
+    .stepHead{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin-bottom: 10px;
+    }
+    .num{
+      width: 34px;height:34px;
+      border-radius: 12px;
+      display:grid; place-items:center;
+      font-weight:900;
+      background: rgba(124,92,255,.16);
+      border: 1px solid rgba(124,92,255,.26);
+      box-shadow: 0 18px 40px rgba(124,92,255,.12);
+    }
+    .step h3{margin:0; font-size:16px;}
+    .step p{margin:0; color: var(--muted); line-height:1.7; font-size:14px;}
+    .step ul{
+      margin: 10px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height:1.7;
+      font-size: 13px;
+    }
+    .step li{margin: 6px 0;}
+    .callout{
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.09);
+      color: var(--muted);
+      font-size: 13px;
+      line-height:1.7;
+    }
+
+    /* FAQ */
+    .faqGrid{
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 14px;
+      align-items:start;
+    }
+    @media (max-width: 980px){ .faqGrid{grid-template-columns:1fr;}}
+    .faq{
+      border-radius: var(--radius);
+      border:1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(15,23,51,.55), rgba(14,22,48,.70));
+      box-shadow: var(--shadow2);
+      overflow:hidden;
+    }
+    .faqItem{
+      border-top: 1px solid rgba(255,255,255,.06);
+    }
+    .faqItem:first-child{border-top:0}
+    .faqQ{
+      width:100%;
+      background: transparent;
+      border:0;
+      color: var(--text);
+      text-align:left;
+      padding: 14px 16px;
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:center;
+      cursor:pointer;
+      font-weight:850;
+      letter-spacing:.2px;
+    }
+    .faqQ:hover{background: rgba(255,255,255,.03);}
+    .faqA{
+      padding: 0 16px 14px;
+      color: var(--muted);
+      line-height:1.75;
+      font-size: 14px;
+      display:none;
+    }
+    .faqA.show{display:block}
+    .chev{
+      width: 34px;height:34px;
+      border-radius: 12px;
+      display:grid; place-items:center;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      flex: 0 0 auto;
+      transition: transform .15s ease;
+    }
+    .chev.rot{transform: rotate(180deg);}
+    .aside{
+      border-radius: var(--radius);
+      border:1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(15,23,51,.50), rgba(14,22,48,.72));
+      box-shadow: var(--shadow2);
+      padding: 16px;
+    }
+    .aside h3{margin:0 0 10px; font-size: 15px;}
+    .aside p{margin:0; color: var(--muted); line-height:1.75; font-size: 13px;}
+    .aside .warnBox{
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,204,102,.18);
+      background: rgba(255,204,102,.07);
+      color: rgba(255,239,214,.92);
+      line-height:1.75;
+      font-size: 13px;
+    }
+
+    /* Footer */
+    footer{
+      padding: 26px 0 40px;
+      color: var(--muted2);
+      font-size: 12px;
+      line-height:1.75;
+    }
+    .footerCard{
+      border-radius: var(--radius);
+      border:1px solid rgba(255,255,255,.08);
+      background: rgba(15,23,51,.38);
+      padding: 16px;
+    }
+
+    /* Tiny sparkle */
+    .spark{
+      display:inline-block;
+      width: 10px; height: 10px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, #fff, rgba(255,255,255,.25), transparent 70%);
+      box-shadow: 0 0 24px rgba(255,255,255,.25);
+      margin: 0 8px 0 2px;
+      transform: translateY(-1px);
+      opacity:.85;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="nav">
+    <div class="container navInner">
+      <div class="logo" aria-label="サイトロゴ">
+        <span class="logoMark" aria-hidden="true"></span>
+        <span>Prime Videoを<span style="background:linear-gradient(135deg,#7C5CFF,#00D4FF);-webkit-background-clip:text;background-clip:text;color:transparent;">クレカ無し</span>で見る方法</span>
+      </div>
+      <div class="navLinks">
+        <a class="chip" href="#how">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M21 12a9 9 0 1 1-9-9 9 9 0 0 1 9 9Z" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          3ステップ
+        </a>
+        <a class="chip" href="#benefits">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M20 7 10 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          メリット
+        </a>
+        <a class="chip" href="#faq">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M9.09 9a3 3 0 1 1 4.83 2.36c-.86.6-1.42 1.1-1.42 2.14V14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M21 12a9 9 0 1 1-9-9 9 9 0 0 1 9 9Z" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          FAQ
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <header class="hero">
+    <div class="container heroGrid">
+      <div class="heroCard">
+        <div class="badgeRow">
+          <span class="badge">
+            <span class="spark" aria-hidden="true"></span>
+            <strong>ポイント</strong>：ギフトカード残高で会費をまかなう
+          </span>
+          <span class="badge">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 2 4 5v6c0 5 3.5 9.4 8 11 4.5-1.6 8-6 8-11V5l-8-3Z" stroke="currentColor" stroke-width="2"/>
+              <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            余計な登録を減らす
+          </span>
+        </div>
+
+        <h1>クレジットカードがなくても、<br>Prime Videoを楽しめる場合があります。</h1>
+        <p class="lead">
+          「クレカを登録したくない」「必要な月だけ見たい」——そんな人向けに、
+          <b>Amazonアカウント＋ギフトカード残高</b>で視聴する流れを、3ステップでまとめました。
+        </p>
+
+        <div class="ctaRow">
+          <a class="btn btnPrimary" href="#how">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 5v14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M19 12H5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            3ステップを読む
+          </a>
+          <a class="btn btnGhost" href="#faq">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M9.09 9a3 3 0 1 1 4.83 2.36c-.86.6-1.42 1.1-1.42 2.14V14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            よくある質問
+          </a>
+        </div>
+
+        <div class="noteLine" role="note" aria-label="注意事項">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 9v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M10.3 3.5h3.4L22 20.5H2L10.3 3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+          <span>
+            本ページは使い方の紹介です。実際の支払い可否・無料体験の扱い・更新条件などは、アカウント状況やAmazonの仕様変更により異なる場合があります。
+          </span>
+        </div>
+      </div>
+
+      <aside class="side" aria-label="要点まとめ">
+        <div class="sideTitle">
+          <h2>このやり方が向いている人</h2>
+          <span class="pill">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M20 7 10 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            使う月だけ
+          </span>
+        </div>
+
+        <div class="kpiGrid">
+          <div class="kpi">
+            <div class="k">支払いの考え方</div>
+            <div class="v">残高の範囲でOK</div>
+            <div class="s">ギフトカード残高を会費に充当できる設定があります。</div>
+          </div>
+          <div class="kpi">
+            <div class="k">気が楽な理由</div>
+            <div class="v">残高が尽きたら…</div>
+            <div class="s">更新時に支払いができない場合、継続できず停止することがあります。</div>
+          </div>
+          <div class="kpi">
+            <div class="k">おすすめ運用</div>
+            <div class="v">月ごとにON/OFF</div>
+            <div class="s">見たい作品がある月だけ入会→終わったら解約もできます。</div>
+          </div>
+          <div class="kpi">
+            <div class="k">必要なもの</div>
+            <div class="v">アカウント＋ギフト</div>
+            <div class="s">カード番号の入力を避けたい人向けの選択肢です。</div>
+          </div>
+        </div>
+
+        <div class="miniSteps">
+          <h3>結論：やることはこれだけ</h3>
+          <ol>
+            <li><b>Amazonのアカウントを作る</b></li>
+            <li><b>Amazonギフトカードを1,500円分買う</b></li>
+            <li><b>チャージして入会</b> → Prime Videoを視聴</li>
+          </ol>
+        </div>
+      </aside>
+    </div>
+  </header>
+
+  <main>
+    <section id="benefits">
+      <div class="container">
+        <div class="sectionTitle">
+          <div>
+            <h2>クレカ無し（ギフト残高中心）で運用するメリット</h2>
+            <p>「カード登録に抵抗がある」「使いすぎが不安」な人が、安心して始めやすいポイントを整理しました。</p>
+          </div>
+        </div>
+
+        <div class="grid3">
+          <div class="card">
+            <div class="cardTop">
+              <div class="icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M3 7h18v10H3V7Z" stroke="currentColor" stroke-width="2"/>
+                  <path d="M3 10h18" stroke="currentColor" stroke-width="2"/>
+                  <path d="M7 14h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <h3>カード番号を入力しない選択肢</h3>
+            </div>
+            <p>ギフトカード残高を会費に回す運用なら、まずは<strong>残高の範囲内</strong>で試しやすいです。</p>
+            <div class="tagRow">
+              <span class="tag good">
+                <span aria-hidden="true">✓</span> 気持ちがラク
+              </span>
+              <span class="tag">
+                <span aria-hidden="true">◎</span> 予算管理しやすい
+              </span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="cardTop">
+              <div class="icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M12 18v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M4.93 4.93 7.76 7.76" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M16.24 16.24 19.07 19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M2 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M18 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M4.93 19.07 7.76 16.24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M16.24 7.76 19.07 4.93" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <h3>見たい月だけ入る、もできる</h3>
+            </div>
+            <p>「今月は映画を集中して見る」など、<strong>必要なタイミングだけ</strong>使う運用も可能です。</p>
+            <div class="tagRow">
+              <span class="tag good"><span aria-hidden="true">✓</span> サブスク整理に◎</span>
+              <span class="tag"><span aria-hidden="true">↻</span> いつでも見直せる</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="cardTop">
+              <div class="icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 5.5-7 10-7 10Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <h3>残高不足なら「更新されない」ことがある</h3>
+            </div>
+            <p>
+              更新時に残高（または支払い手段）が足りないと、<strong>支払い処理が失敗</strong>し、視聴できなくなるケースがあります。
+              <br>＝「使いっぱなしで料金だけ続く」が起きにくい運用です。
+            </p>
+            <div class="tagRow">
+              <span class="tag warn"><span aria-hidden="true">!</span> 仕様は変わる可能性</span>
+              <span class="tag"><span aria-hidden="true">🧾</span> 更新日を把握すると安心</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="how">
+      <div class="container">
+        <div class="sectionTitle">
+          <div>
+            <h2>3ステップ：クレカ無しで視聴までの流れ</h2>
+            <p>あなたが指定した内容（アカウント作成 → 1,500円購入 → チャージして入会）でまとめています。</p>
+          </div>
+        </div>
+
+        <div class="stepsWrap">
+          <div class="stepsHeader">
+            <p class="hint">
+              <b>コツ：</b>「会費をギフトカード残高から支払う」設定ができるとスムーズです。<br>
+              ただし、登録画面の表示や利用条件はアカウント状況によって変わる場合があります。
+            </p>
+          </div>
+
+          <div class="steps">
+            <div class="step">
+              <div class="stepHead">
+                <div class="num">1</div>
+                <h3>Amazonのアカウントを作る</h3>
+              </div>
+              <p>メールアドレス（または携帯番号）があれば作成できます。</p>
+              <ul>
+                <li>視聴はPrime VideoアプリやWebでOK</li>
+                <li>TVで見るならFire TV / 対応スマートTVでも視聴可能</li>
+              </ul>
+              <div class="callout">
+                <b>ポイント：</b>ここでは支払い情報を焦って入れなくても大丈夫。まずはアカウント作成から。
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="stepHead">
+                <div class="num">2</div>
+                <h3>Amazonギフトカードを1,500円買う</h3>
+              </div>
+              <p>
+                コンビニ等でカードタイプを買うか、オンラインでチャージタイプを購入するなど複数の方法があります。
+              </p>
+              <ul>
+                <li>まずは<b>1,500円</b>など小さく始める</li>
+                <li>残高＝上限なので、使いすぎを防ぎやすい</li>
+              </ul>
+              <div class="callout">
+                <b>ヒント：</b>「見たい月」だけ使う運用なら、必要分だけチャージするのがシンプルです。
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="stepHead">
+                <div class="num">3</div>
+                <h3>チャージして入会 → Prime Videoを見る</h3>
+              </div>
+              <p>
+                ギフトカードをアカウントに登録（チャージ）し、Prime会員（またはPrime Videoの対象プラン）に登録します。
+              </p>
+              <ul>
+                <li>会費の支払いに<b>ギフト残高が優先</b>される設定がある</li>
+                <li>更新時に残高が足りない場合、<b>更新できず停止</b>することがあります</li>
+              </ul>
+              <div class="callout">
+                <b>ラクな点：</b>残高不足なら更新されない方向に動くケースがあるため、<b>「勝手に続いてしまう不安」が減る</b>運用です。
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section id="faq">
+      <div class="container">
+        <div class="sectionTitle">
+          <div>
+            <h2>FAQ（よくある質問）</h2>
+            <p>不安になりやすいところを、短く・実用的にまとめました。</p>
+          </div>
+        </div>
+
+        <div class="faqGrid">
+          <div class="faq" role="region" aria-label="よくある質問">
+            <div class="faqItem">
+              <button class="faqQ" type="button" aria-expanded="false">
+                本当にクレジットカード登録なしでいけますか？
+                <span class="chev" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+              </button>
+              <div class="faqA">
+                ギフトカード残高を会費に充当できる案内はありますが、<b>登録時にクレジット/デビット登録が求められる場合がある</b>という情報もあります。
+                画面表示・条件はアカウントやタイミングで変わりうるため、登録画面の案内に従ってください。
+              </div>
+            </div>
+
+            <div class="faqItem">
+              <button class="faqQ" type="button" aria-expanded="false">
+                残高が足りないと「勝手に切れる」ってどういうこと？
+                <span class="chev" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+              </button>
+              <div class="faqA">
+                更新日に会費の支払い処理が通らないと、<b>会員特典（Prime Video等）が利用できなくなる</b>ケースがあります。
+                ただし、停止の挙動（猶予・再請求・通知など）は状況で異なる可能性があるため、更新前に残高確認すると安心です。
+              </div>
+            </div>
+
+            <div class="faqItem">
+              <button class="faqQ" type="button" aria-expanded="false">
+                見たい作品がある月だけ使いたい。できますか？
+                <span class="chev" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+              </button>
+              <div class="faqA">
+                はい。<b>必要な月だけ入会 → 見終わったら解約</b>という使い方も一般的です。
+                「見たい作品が来た月だけ」という運用にすると、サブスクが増えにくくなります。
+              </div>
+            </div>
+
+            <div class="faqItem">
+              <button class="faqQ" type="button" aria-expanded="false">
+                1,500円で足りますか？
+                <span class="chev" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+              </button>
+              <div class="faqA">
+                会費やプラン、税、更新タイミングによって必要額は変わります。
+                まずは1,500円など小さくチャージして、<b>次回更新まで残高が足りるか</b>だけ確認するのが安心です。
+              </div>
+            </div>
+          </div>
+
+          <aside class="aside" aria-label="補足">
+            <h3>はじめての人向け：安全運用のコツ</h3>
+            <p>
+              どのサブスクでも「更新日」と「支払い方法」がわかると安心です。
+              ギフトカード運用は、<b>残高が上限になる</b>ので管理がしやすい一方、
+              更新タイミングの前に少しだけ確認しておくと失敗が減ります。
+            </p>
+            <div class="warnBox">
+              <b>注意：</b>Amazonの仕様は変更される場合があります。登録画面で「利用できる支払い方法」や案内文を必ず確認してください。
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="sectionTitle">
+          <div>
+            <h2>まとめ：やり方はシンプル</h2>
+            <p>クレジットカードがなくても、ギフトカードを使った運用でPrime Videoを楽しめる可能性があります。</p>
+          </div>
+        </div>
+
+        <div class="grid3">
+          <div class="card">
+            <div class="cardTop">
+              <div class="icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2v20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M5 7h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M5 17h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <h3>やることは3つ</h3>
+            </div>
+            <p>
+              ①アカウント作成 → ②ギフトカード1,500円 → ③チャージして入会。<br>
+              “難しい設定”より、<b>流れが分かる</b>ことが大事です。
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="cardTop">
+              <div class="icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 12a8 8 0 0 1 16 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M12 12v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M8 20h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <h3>残高不足なら更新できず停止のことも</h3>
+            </div>
+            <p>
+              「うっかり継続」が不安な人には、ギフト残高中心の運用が合うことがあります。<br>
+              ※停止の挙動は状況により異なる場合があります。
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="cardTop">
+              <div class="icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M21 12a9 9 0 1 1-9-9 9 9 0 0 1 9 9Z" stroke="currentColor" stroke-width="2"/>
+                  <path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <h3>見たい月だけ見る、もアリ</h3>
+            </div>
+            <p>
+              「この作品がある月だけ」→終わったら整理。<br>
+              サブスクの数を増やしすぎない、賢い使い方です。
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="footerCard">
+        <b>免責事項：</b>
+        本ページはAmazon Prime Videoの利用方法を一般向けに説明するコンテンツです。表示・料金・支払い可否・更新挙動は、地域、アカウント状況、Amazonの仕様変更により異なる場合があります。最終的な条件はAmazonの案内をご確認ください。<br><br>
+        <b>非公式サイト：</b>本ページはAmazon.com, Inc. および Amazon.co.jp とは関係ありません。
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // FAQ accordion (no storage)
+    (function(){
+      const items = document.querySelectorAll(".faqItem");
+      items.forEach(item => {
+        const btn = item.querySelector(".faqQ");
+        const ans = item.querySelector(".faqA");
+        const chev = item.querySelector(".chev");
+        btn.addEventListener("click", () => {
+          const open = ans.classList.contains("show");
+          // close others
+          items.forEach(other => {
+            const b = other.querySelector(".faqQ");
+            const a = other.querySelector(".faqA");
+            const c = other.querySelector(".chev");
+            a.classList.remove("show");
+            b.setAttribute("aria-expanded", "false");
+            c.classList.remove("rot");
+          });
+          // toggle current
+          if(!open){
+            ans.classList.add("show");
+            btn.setAttribute("aria-expanded", "true");
+            chev.classList.add("rot");
+          }
+        });
+      });
+    })();
+  </script>
+</body>
+  </html>
