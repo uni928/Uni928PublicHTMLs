@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>GPT-5-nano Test</title>
+<style>
+#out {
+  white-space: pre-wrap;
+  padding: 10px;
+  border: 1px solid #ccc;
+  margin-top: 10px;
+}
+</style>
+</head>
+<body>
+
+<h3>GPT-5-nano 動作テスト</h3>
+
+API Key:
+<input id="apiKey" type="password" size="60" placeholder="sk-..." />
+<br><br>
+
+モデル名: <input id="model" value="gpt-5-nano">
+<button id="toggleModel" type="button">切替</button><br><br>
+
+reasoning_effort:
+<label><input type="radio" name="reasoning" value="minimal" checked> minimal</label>
+<label><input type="radio" name="reasoning" value="low"> low</label>
+<label><input type="radio" name="reasoning" value="medium"> medium</label>
+<label><input type="radio" name="reasoning" value="high"> high</label>
+<br><br>
+
+verbosity:
+<label><input type="radio" name="verbosity" value="low"> low</label>
+<label><input type="radio" name="verbosity" value="medium" checked> medium</label>
+<label><input type="radio" name="verbosity" value="high"> high</label>
+<br><br>
+
+ルール: <br>
+<textarea id="msg_rule" rows="4" cols="50"></textarea><br><br>
+
+メッセージ: <br>
+<textarea id="msg" rows="4" cols="50"></textarea><br><br>
+
+<button id="run">送信</button>
+
+<div id="out"></div>
+
+<script>
+
+// API Key を localStorage に保存
+const LS_API_KEY = "tmp_api_key";
+const apiKeyEl = document.getElementById("apiKey");
+
+// 起動時に復元
+const savedApiKey = localStorage.getItem(LS_API_KEY);
+if (savedApiKey) apiKeyEl.value = savedApiKey;
+
+// 入力のたびに保存
+apiKeyEl.addEventListener("input", () => {
+  localStorage.setItem(LS_API_KEY, apiKeyEl.value.trim());
+});
+
+// ルール/メッセージを localStorage に一時保存して復元
+const LS_RULE_KEY = "tmp_msg_rule";
+const LS_MSG_KEY  = "tmp_msg";
+
+const ruleEl = document.getElementById("msg_rule");
+const msgEl  = document.getElementById("msg");
+
+// 起動時に復元（あれば上書き）
+const savedRule = localStorage.getItem(LS_RULE_KEY);
+if (savedRule !== null) ruleEl.value = savedRule;
+const savedMsg = localStorage.getItem(LS_MSG_KEY);
+if (savedMsg !== null) msgEl.value = savedMsg;
+
+// 変更のたびに保存（入力イベントで随時）
+ruleEl.addEventListener("input", () => {
+  localStorage.setItem(LS_RULE_KEY, ruleEl.value);
+});
+msgEl.addEventListener("input", () => {
+  localStorage.setItem(LS_MSG_KEY, msgEl.value);
+});
+
+
+// モデル切替（gpt-5-nano ⇄ gpt-5-mini）
+document.getElementById("toggleModel").onclick = () => {
+  const el = document.getElementById("model");
+  const cur = el.value.trim();
+  // 押すと「gpt-5-nano 以外なら gpt-5-nano、gpt-5-nano なら gpt-5-mini」
+  el.value = (cur === "gpt-5-nano") ? "gpt-5-mini" : "gpt-5-nano";
+};
+
+
+
+document.getElementById("run").onclick = async () => {
+
+  const apiKey = apiKeyEl;
+  const model  = document.getElementById("model").value.trim();
+  const content = document.getElementById("msg").value;
+  const content2 = document.getElementById("msg_rule").value;
+
+  const reasoning_effort =
+    document.querySelector('input[name="reasoning"]:checked')?.value;
+  const verbosity =
+    document.querySelector('input[name="verbosity"]:checked')?.value;
+
+  if (!apiKey) {
+    alert("API Key を入力してください");
+    return;
+  }
+
+  document.getElementById("out").textContent = "実行中...\n";
+
+  try {
+let res;
+if(model.includes("gpt-5") || model.includes("gpt-6") || model.includes("gpt-7") || model.includes("gpt-8") || model.includes("gpt-9")) {
+    res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          {
+      "role": "system",
+      "content": content2
+    },
+          {
+      "role": "user",
+      "content": content
+    }
+        ],
+        // ★ gpt-5-nano は temperature をサポートしない
+        // temperature: 1 ← これすら書かない方が安全
+        //max_tokens: 2000,
+        stream: false,
+        reasoning_effort,
+        verbosity
+      })
+    });
+}
+else
+{
+    res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "user", content }
+        ],
+        // ★ gpt-5-nano は temperature をサポートしない
+         temperature: 1,
+        max_tokens: 2000,
+        stream: false
+      })
+    });
+}
+
+    const data = await res.json();
+
+    // 返信内容
+    const text = data?.choices?.[0]?.message?.content ?? "(content なし)";
+
+    document.getElementById("out").textContent =
+      "【返信】\n" + text + "\n\n【JSON】\n" +
+      JSON.stringify(data, null, 2);
+
+  } catch (e) {
+    document.getElementById("out").textContent = "Error:\n" + e;
+  }
+};
+</script>
+
+</body>
+</html>
