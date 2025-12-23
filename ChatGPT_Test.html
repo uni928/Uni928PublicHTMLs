@@ -48,39 +48,113 @@ verbosity:
 
 <script>
 
-// API Key を localStorage に保存
-const LS_API_KEY = "tmp_api_key";
+// ===== IndexedDB(kv) 永続化：ルール/メッセージ/API Key を保存・復元 =====
+const DB_NAME = "gpt_test_db";
+const DB_VER = 1;
+const STORE = "kv";
+
+const KEY_RULE = "tmp_msg_rule";
+const KEY_MSG  = "tmp_msg";
+const KEY_API  = "tmp_api_key";
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+     if (!db.objectStoreNames.contains(STORE)) {
+        db.createObjectStore(STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbGet(key) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readonly");
+    const st = tx.objectStore(STORE);
+    const req = st.get(key);
+    req.onsuccess = () => resolve(req.result ?? null);
+    req.onerror = () => reject(req.error);
+    tx.oncomplete = () => db.close();
+  });
+}
+
+async function idbSet(key, val) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    const st = tx.objectStore(STORE);
+    const req = st.put(val, key);
+    req.onsuccess = () => resolve(true);
+    req.onerror = () => reject(req.error);
+    tx.oncomplete = () => db.close();
+  });
+}
+
+// 旧 localStorage から IndexedDB へ初回移行（あれば）
+async function migrateFromLocalStorageOnce() {
+  const legacy = [
+    [KEY_RULE, localStorage.getItem(KEY_RULE)],
+    [KEY_MSG,  localStorage.getItem(KEY_MSG)],
+    [KEY_API,  localStorage.getItem(KEY_API)],
+  ];
+  let migrated = false;
+  for (const [k, v] of legacy) {
+    if (v !== null && v !== undefined) {
+      // IndexedDB 側が空なら入れる（上書きしない）
+      const cur = await idbGet(k);
+      if (cur === null) {
+        await idbSet(k, v);
+        migrated = true;
+      }
+    }
+  }
+  if (migrated) {
+    localStorage.removeItem(KEY_RULE);
+    localStorage.removeItem(KEY_MSG);
+    localStorage.removeItem(KEY_API);
+  }
+}
+
+const ruleEl  = document.getElementById("msg_rule");
+const msgEl   = document.getElementById("msg");
 const apiKeyEl = document.getElementById("apiKey");
 
 // 起動時に復元
-const savedApiKey = localStorage.getItem(LS_API_KEY);
-if (savedApiKey) apiKeyEl.value = savedApiKey;
+(async () => {
+  try {
+    await migrateFromLocalStorageOnce();
+    const savedRule = await idbGet(KEY_RULE);
+    if (savedRule !== null) ruleEl.value = savedRule;
+    const savedMsg = await idbGet(KEY_MSG);
+    if (savedMsg !== null) msgEl.value = savedMsg;
+    const savedApi = await idbGet(KEY_API);
+    if (savedApi !== null) apiKeyEl.value = savedApi;
+  } catch (e) {
+   console.warn("IndexedDB restore failed:", e);
+  }
+})();
 
-// 入力のたびに保存
-apiKeyEl.addEventListener("input", () => {
-  localStorage.setItem(LS_API_KEY, apiKeyEl.value.trim());
-});
+// 入力のたびに保存（軽くデバウンス）
+function debounce(fn, ms) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), ms);
+  };
+}
 
-// ルール/メッセージを localStorage に一時保存して復元
-const LS_RULE_KEY = "tmp_msg_rule";
-const LS_MSG_KEY  = "tmp_msg";
+const saveRule = debounce(() => idbSet(KEY_RULE, ruleEl.value), 150);
+const saveMsg  = debounce(() => idbSet(KEY_MSG, msgEl.value), 150);
+const saveApi  = debounce(() => idbSet(KEY_API, apiKeyEl.value.trim()), 150);
 
-const ruleEl = document.getElementById("msg_rule");
-const msgEl  = document.getElementById("msg");
-
-// 起動時に復元（あれば上書き）
-const savedRule = localStorage.getItem(LS_RULE_KEY);
-if (savedRule !== null) ruleEl.value = savedRule;
-const savedMsg = localStorage.getItem(LS_MSG_KEY);
-if (savedMsg !== null) msgEl.value = savedMsg;
-
-// 変更のたびに保存（入力イベントで随時）
-ruleEl.addEventListener("input", () => {
-  localStorage.setItem(LS_RULE_KEY, ruleEl.value);
-});
-msgEl.addEventListener("input", () => {
-  localStorage.setItem(LS_MSG_KEY, msgEl.value);
-});
+ruleEl.addEventListener("input", saveRule);
+msgEl.addEventListener("input", saveMsg);
+apiKeyEl.addEventListener("input", saveApi);
 
 
 // モデル切替（gpt-5-nano ⇄ gpt-5-mini）
