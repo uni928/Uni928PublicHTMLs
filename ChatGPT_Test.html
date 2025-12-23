@@ -18,6 +18,11 @@
 
 API Key:
 <input id="apiKey" type="password" size="60" placeholder="sk-..." />
+<label style="margin-left:8px;">
+  <input id="noSaveApiKey" type="checkbox">
+  API Key を保存しない
+</label>
+<button id="clearApiKey" type="button" style="margin-left:8px;">保存されたAPI Keyを削除</button>
 <br><br>
 
 モデル名: <input id="model" value="gpt-5-nano">
@@ -56,6 +61,7 @@ const STORE = "kv";
 const KEY_RULE = "tmp_msg_rule";
 const KEY_MSG  = "tmp_msg";
 const KEY_API  = "tmp_api_key";
+const KEY_NO_SAVE_API = "no_save_api_key";
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -95,6 +101,18 @@ async function idbSet(key, val) {
   });
 }
 
+async function idbDel(key) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    const st = tx.objectStore(STORE);
+    const req = st.delete(key);
+    req.onsuccess = () => resolve(true);
+    req.onerror = () => reject(req.error);
+    tx.oncomplete = () => db.close();
+  });
+}
+
 // 旧 localStorage から IndexedDB へ初回移行（あれば）
 async function migrateFromLocalStorageOnce() {
   const legacy = [
@@ -123,6 +141,8 @@ async function migrateFromLocalStorageOnce() {
 const ruleEl  = document.getElementById("msg_rule");
 const msgEl   = document.getElementById("msg");
 const apiKeyEl = document.getElementById("apiKey");
+const noSaveApiKeyEl = document.getElementById("noSaveApiKey");
+const clearApiKeyBtn = document.getElementById("clearApiKey");
 
 // 起動時に復元
 (async () => {
@@ -132,8 +152,16 @@ const apiKeyEl = document.getElementById("apiKey");
     if (savedRule !== null) ruleEl.value = savedRule;
     const savedMsg = await idbGet(KEY_MSG);
     if (savedMsg !== null) msgEl.value = savedMsg;
-    const savedApi = await idbGet(KEY_API);
-    if (savedApi !== null) apiKeyEl.value = savedApi;
+
+    // 「API Key を保存しない」設定を復元
+    const noSave = await idbGet(KEY_NO_SAVE_API);
+    noSaveApiKeyEl.checked = (noSave === "1");
+
+    // 保存しない設定がOFFのときだけ API Key を復元
+    if (!noSaveApiKeyEl.checked) {
+      const savedApi = await idbGet(KEY_API);
+      if (savedApi !== null) apiKeyEl.value = savedApi;
+    }
   } catch (e) {
    console.warn("IndexedDB restore failed:", e);
   }
@@ -150,11 +178,42 @@ function debounce(fn, ms) {
 
 const saveRule = debounce(() => idbSet(KEY_RULE, ruleEl.value), 150);
 const saveMsg  = debounce(() => idbSet(KEY_MSG, msgEl.value), 150);
-const saveApi  = debounce(() => idbSet(KEY_API, apiKeyEl.value.trim()), 150);
+const saveApi  = debounce(async () => {
+  if (noSaveApiKeyEl.checked) return; // 保存しない
+  await idbSet(KEY_API, apiKeyEl.value.trim());
+}, 150);
 
 ruleEl.addEventListener("input", saveRule);
 msgEl.addEventListener("input", saveMsg);
 apiKeyEl.addEventListener("input", saveApi);
+
+
+// 保存しないチェック：設定を保存し、ONならAPI Keyも消す（入力欄も空に）
+noSaveApiKeyEl.addEventListener("change", async () => {
+  try {
+    await idbSet(KEY_NO_SAVE_API, noSaveApiKeyEl.checked ? "1" : "0");
+    if (noSaveApiKeyEl.checked) {
+      await idbDel(KEY_API);
+      apiKeyEl.value = "";
+    } else {
+      // OFFに戻した直後は、入力を待つ（ここで復元はしない方が分かりやすい）
+    }
+  } catch (e) {
+    console.warn("toggle noSaveApiKey failed:", e);
+  }
+});
+
+// 保存されたAPI Keyを削除ボタン：IndexedDBから消して入力欄も空に
+clearApiKeyBtn.addEventListener("click", async () => {
+  try {
+    await idbDel(KEY_API);
+    apiKeyEl.value = "";
+    alert("保存された API Key を削除しました。");
+  } catch (e) {
+    console.warn("clear api key failed:", e);
+    alert("削除に失敗しました。");
+  }
+});
 
 
 // モデル切替（gpt-5-nano ⇄ gpt-5-mini）
