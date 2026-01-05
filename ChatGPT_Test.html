@@ -229,7 +229,7 @@ document.getElementById("toggleModel").onclick = () => {
 
 document.getElementById("run").onclick = async () => {
 
-  const apiKey = apiKeyEl;
+  const apiKey = apiKeyEl.value.trim();
   const model  = document.getElementById("model").value.trim();
   const content = document.getElementById("msg").value;
   const content2 = document.getElementById("msg_rule").value;
@@ -272,7 +272,8 @@ if(model.includes("gpt-5") || model.includes("gpt-6") || model.includes("gpt-7")
         //max_tokens: 2000,
         stream: false,
         reasoning_effort,
-        verbosity
+        verbosity,
+service_tier: "flex", // ←追加
       })
     });
 }
