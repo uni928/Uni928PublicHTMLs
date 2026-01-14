@@ -176,7 +176,7 @@
       box-shadow: 0 14px 36px rgba(0,0,0,.30);
       position:relative;
       overflow:hidden;
-      min-height: 120px;
+      min-height: 108px;
       display:flex;
       flex-direction:column;
     }
@@ -202,7 +202,7 @@
     }
 
     .cardInner{
-      padding: 40px 10px 10px;
+      padding: 36px 10px 10px; /* 少し詰める */
       display:flex;
       flex-direction:column;
       gap:10px;
@@ -446,6 +446,28 @@
     /* Dice modal（既存） */
     .diceBack{ z-index: 90; }
     .diceModal{ width:min(560px, 100%); }
+
+    /* ✅ カード12枚を一画面で見せやすいグリッド */
+    .allGrid{
+      margin: 0 14px;
+      padding: 10px;
+      border: 1px solid var(--stroke);
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.02));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr)); /* 6列×2段=12枚 */
+      gap: 12px;
+      overflow: hidden;
+    }
+
+    @media (max-width: 900px){
+      .allGrid{ grid-template-columns: repeat(4, minmax(0, 1fr)); } /* 4列×3段 */
+    }
+    @media (max-width: 600px){
+      .allGrid{ grid-template-columns: repeat(3, minmax(0, 1fr)); } /* 3列×4段 */
+    }
   </style>
 </head>
 <body>
@@ -463,39 +485,7 @@
       </div>
     </header>
 
-    <div class="columnsStack">
-      <section class="panel">
-        <div class="panelHead">
-          <div class="label">PLAYER 1 / STAGE</div>
-          <div class="hint">横3枠</div>
-        </div>
-        <div class="rowCards" id="col1"></div>
-      </section>
-
-      <section class="panel">
-        <div class="panelHead">
-          <div class="label">PLAYER 1 / 推し</div>
-          <div class="hint">横3枠</div>
-        </div>
-        <div class="rowCards" id="col2"></div>
-      </section>
-
-      <section class="panel">
-        <div class="panelHead">
-          <div class="label">PLAYER 2 / STAGE</div>
-          <div class="hint">横3枠</div>
-        </div>
-        <div class="rowCards" id="col3"></div>
-      </section>
-
-      <section class="panel">
-        <div class="panelHead">
-          <div class="label">PLAYER 2 / 推し</div>
-          <div class="hint">横3枠</div>
-        </div>
-        <div class="rowCards" id="col4"></div>
-      </section>
-    </div>
+<div class="allGrid" id="all"></div>
 
     <div class="footerNote">
       操作：各カードの <b>Func</b> で編集を開く → スライダー（10刻み）で増減、Undo（履歴がある限り何回でも）、Cでその枠をリセット。ターン変更で全スキルOFF。全リセットでIndexedDB削除。
@@ -677,11 +667,12 @@
     // =========================
     // アプリ本体
     // =========================
+    // ✅ 全カードを1コンテナに並べる
     const layout = [
-      { mountId: "col1", count: 3, prefix: "P1S" }, // P1 Stage
-      { mountId: "col2", count: 3, prefix: "P1O" }, // P1 Oshi
-      { mountId: "col3", count: 3, prefix: "P2S" }, // P2 Oshi（表記は後でラベルで調整）
-      { mountId: "col4", count: 3, prefix: "P2O" }, // P2 Stage（表記は後でラベルで調整）
+      { count: 3, prefix: "PLAYER1-推し" },
+      { count: 3, prefix: "PLAYER1-STAGE" },
+      { count: 3, prefix: "PLAYER2-推し" },
+      { count: 3, prefix: "PLAYER2-STAGE" },
     ];
 
     const values = Object.create(null);
@@ -799,12 +790,12 @@
     }
 
     function build(){
-      for (const col of layout){
-        const mount = document.getElementById(col.mountId);
-        mount.innerHTML = "";
-        for (let i=1;i<=col.count;i++){
-          const id = `${col.prefix}${i}`;
-          const label = `${col.prefix}-${i}`;
+      const mount = document.getElementById("all");
+      mount.innerHTML = "";
+      for (const group of layout){
+        for (let i=1;i<=group.count;i++){
+          const id = `${group.prefix}${i}`;
+          const label = `${group.prefix}-${i}`;
           mount.appendChild(makeCard(id, label));
         }
       }
