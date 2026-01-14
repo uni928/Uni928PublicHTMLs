@@ -183,7 +183,7 @@
 
     .badge{
       position:absolute;
-      top:10px; left:10px;
+      top:10px; right:10px;
       display:inline-flex;
       align-items:center;
       gap:6px;
@@ -751,7 +751,6 @@
         <div class="cardInner">
           <div class="valueRow">
             <div class="value" id="${id}-value" title="クリックで直接入力">0</div>
-            <button class="funcBtn" id="${id}-func">Func</button>
           </div>
           <div class="statusLine">
             <span class="pill" id="${id}-st1">S1:OFF</span>
@@ -773,7 +772,7 @@
         if (currentEditId === id) renderEditModal();
       });
 
-      card.querySelector(`#${id}-func`).addEventListener("click", () => {
+      card.addEventListener("click", () => {
         openEdit(id, labelText);
       });
 
