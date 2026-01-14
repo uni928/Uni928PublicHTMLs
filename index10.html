@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="ja">
 <head>
@@ -38,8 +39,8 @@
     /* ✅ 全体スケール縮小用ラッパー */
     .wrap{
       max-width: 1280px;
-      margin: 0 auto;
-      padding: 18px 14px 14px;
+      margin: 0 0;
+      padding: 0px 0px 0px;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -87,7 +88,7 @@
       border:1px solid var(--stroke2);
       background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.04));
       color: var(--text);
-      padding:10px 12px;
+      padding:8px 10px;
       border-radius: 14px;
       box-shadow: 0 10px 30px rgba(0,0,0,.22);
       cursor:pointer;
@@ -249,9 +250,9 @@
     }
 
     .value{
-      font-size: 34px;
-      line-height: 1;
-      font-weight: 1000;
+      font-size: 26px;
+      line-height: 1.05;
+      font-weight: 900;
       letter-spacing:.02em;
       text-shadow: 0 10px 28px rgba(0,0,0,.35);
       user-select:none;
@@ -261,10 +262,10 @@
     .deltaPill{
       border:1px solid var(--stroke2);
       background: rgba(255,255,255,.06);
-      padding: 8px 10px;
-      border-radius: 14px;
-      font-size: 12px;
-      font-weight: 1000;
+      padding: 6px 8px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 900;
       letter-spacing:.04em;
       display:flex;
       align-items:center;
@@ -290,7 +291,7 @@
       -webkit-appearance:none;
       appearance:none;
       width:100%;
-      height: 14px;
+      height: 10px;
       border-radius: 999px;
       background: linear-gradient(90deg,
         rgba(255,122,162,.32),
@@ -304,7 +305,7 @@
     input[type="range"]::-webkit-slider-thumb{
       -webkit-appearance:none;
       appearance:none;
-      width: 22px; height: 22px;
+      width: 16px; height: 16px;
       border-radius: 999px;
       border: 1px solid rgba(255,255,255,.35);
       background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.95), rgba(255,255,255,.25));
@@ -328,13 +329,13 @@
 
     .skillBtn{
       flex: 1 1 90px;
-      padding: 10px 10px;
-      border-radius: 14px;
+      padding: 6px 8px;
+      border-radius: 10px;
       border: 1px solid rgba(255,255,255,.18);
       background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
       color: rgba(255,255,255,.92);
-      font-weight: 1000;
-      font-size: 12px;
+      font-weight: 900;
+      font-size: 10px;
       letter-spacing:.03em;
       cursor:pointer;
       user-select:none;
@@ -360,9 +361,9 @@
       margin-left:auto;
       border:1px solid rgba(255,122,162,.35);
       background: linear-gradient(180deg, rgba(255,122,162,.18), rgba(255,122,162,.06));
-      padding: 10px 12px;
-      border-radius: 14px;
-      font-weight: 1000;
+      padding: 6px 8px;
+      border-radius: 10px;
+      font-weight: 900;
       cursor:pointer;
       white-space:nowrap;
     }
@@ -373,7 +374,7 @@
       border:1px solid rgba(255,255,255,.12);
       background: rgba(0,0,0,.16);
       border-radius: 14px;
-      padding: 8px 10px;
+      padding: 6px 8px;
       display:flex;
       flex-direction:column;
       gap:6px;
@@ -398,7 +399,7 @@
       align-items:center;
       justify-content:space-between;
       gap:10px;
-      font-size: 12px;
+      font-size: 10px;
       color: rgba(255,255,255,.86);
       border-bottom:1px solid rgba(255,255,255,.08);
       padding-bottom:6px;
