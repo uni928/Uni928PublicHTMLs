@@ -541,7 +541,6 @@
 
         <div class="histBox">
           <div class="histHead">
-            <span>差分履歴（表示は直近3 / Undoは無限）</span>
             <span id="histCount" style="color:rgba(255,255,255,.60);font-size:11px">0件</span>
           </div>
           <div id="editHist"></div>
@@ -872,7 +871,8 @@
       editUndo.style.opacity = arr.length === 0 ? 0.55 : 1;
 
       // hist render (直近3表示)
-      const view = arr.slice(0, 3);
+      //const view = arr.slice(0, 3);
+      const view = arr;
       histCount.textContent = `${arr.length}件`;
 
       editHist.innerHTML = "";
