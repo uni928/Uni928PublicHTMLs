@@ -22,6 +22,15 @@
       --ui-scale: 0.9;
     }
 
+
+    /* ✅ S1 / S2 を縦並び */
+    .pillCol{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      align-items:flex-start;
+    }
+
     *{box-sizing:border-box}
     body{
       margin:0;
@@ -753,8 +762,10 @@
             <div class="value" id="${id}-value" title="クリックで直接入力">0</div>
           </div>
           <div class="statusLine">
-            <span class="pill" id="${id}-st1">S1:OFF</span>
-            <span class="pill" id="${id}-st2">S2:OFF</span>
+            <div class="pillCol">
+              <span class="pill" id="${id}-st1">S1:OFF</span>
+              <span class="pill" id="${id}-st2">S2:OFF</span>
+            </div>
             <span style="opacity:.85">Δ履歴: <b id="${id}-hc" style="font-variant-numeric:tabular-nums">0</b></span>
           </div>
         </div>
