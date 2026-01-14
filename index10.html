@@ -41,7 +41,7 @@
       max-width: 1280px;
       margin: 0 0;
       padding: 0px 0px 0px;
-      min-height: 100vh;
+
       display: flex;
       flex-direction: column;
       gap: 12px;
@@ -625,13 +625,13 @@
       if (!deltaHist[id]) deltaHist[id] = [];
       deltaHist[id].unshift(delta);
       if (deltaHist[id].length > 3) deltaHist[id].pop();
-      renderMiniHistory(id);
+      //renderMiniHistory(id);
     }
 
     function popDeltaHistory(id){
       if (!deltaHist[id] || deltaHist[id].length === 0) return null;
       const d = deltaHist[id].shift(); // 最新を取り出し
-      renderMiniHistory(id);
+      //renderMiniHistory(id);
       return d;
     }
 
@@ -686,30 +686,13 @@
             </div>
           </div>
 
-          <div class="rangeWrap">
-            <div class="rangeLabel">
-              <span>-60</span>
-              <span>差分（10刻み / 離すと加算）</span>
-              <span>+60</span>
-            </div>
-            <input id="${id}-range" type="range" min="-60" max="60" step="10" value="0" />
-          </div>
-
+<input id="${id}-range" type="range" min="-60" max="60" step="10" value="0" />
          <div class="controlsCol">
             <button class="skillBtn off" data-skill="s1" id="${id}-s1">スキル1</button>
             <button class="skillBtn" id="${id}-undo" title="直近の差分を1回戻す">Undo</button>
             <button class="skillBtn off" data-skill="s2" id="${id}-s2">スキル2</button>
             <button class="skillBtn" id="${id}-reset" title="この枠をリセット">C</button>
           </div>
-
-          <div class="miniHist" id="${id}-mh">
-            <div class="miniHistHead">
-              <span>差分履歴（直近3）</span>
-              <span style="color:rgba(255,255,255,.62);font-size:11px">Undoで戻す</span>
-            </div>
-            <div class="miniHistList" id="${id}-mhl"></div>
-          </div>
-        </div>
       `;
 
       const valueEl = card.querySelector(`#${id}-value`);
@@ -779,7 +762,7 @@
         deltaHist[id] = [];
         rangeEl.value = 0;
         renderDelta(0);
-        renderMiniHistory(id);
+        //renderMiniHistory(id);
         render();
         pulse();
       });
@@ -798,7 +781,7 @@
       renderDelta(0);
       applySkillBtnClass(s1Btn, false);
       applySkillBtnClass(s2Btn, false);
-      renderMiniHistory(id);
+      //renderMiniHistory(id);
 
       return card;
     }
@@ -832,7 +815,7 @@
         if (dnEl) dnEl.textContent = "0";
         if (dsEl) dsEl.style.color = "rgba(255,255,255,.85)";
         if (dnEl) dnEl.style.color = "rgba(255,255,255,.85)";
-        renderMiniHistory(id);
+        //renderMiniHistory(id);
         card.classList.remove("pulse");
         void card.offsetWidth;
         card.classList.add("pulse");
