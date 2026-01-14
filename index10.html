@@ -805,8 +805,10 @@ margin-top:10px; /* ✅ ライフ数値を下に10px */
       mount.innerHTML = "";
       for (const group of layout){
         for (let i=1;i<=group.count;i++){
-          const id = `${group.prefix}${i}`;
-          const label = `${group.prefix}-${i}`;
+          let j = i;
+          if(group.prefix.endsWith("B")) j=4-j;
+          const id = `${group.prefix}${j}`;
+          const label = `${group.prefix}-${j}`;
           mount.appendChild(makeCard(id, label));
         }
       }
@@ -1135,3 +1137,4 @@ margin-top:10px; /* ✅ ライフ数値を下に10px */
   </script>
 </body>
 </html>
+
