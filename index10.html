@@ -1,0 +1,914 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ホロライブ風 ライフカウンター</title>
+  <style>
+    :root{
+      --bg1:#0b1020;
+      --bg2:#101a3a;
+      --stroke:#ffffff1a;
+      --stroke2:#ffffff2b;
+      --text:#eaf0ff;
+      --muted:#b9c3e6;
+      --good:#7cf7d3;
+      --bad:#ff7aa2;
+      --accent:#8aa7ff;
+      --accent2:#b18cff;
+      --pink:#ff63c3;
+      --shadow: 0 18px 50px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", Arial, sans-serif;
+      background:
+        radial-gradient(1200px 600px at 15% 20%, rgba(138,167,255,.35), transparent 55%),
+        radial-gradient(900px 500px at 85% 15%, rgba(177,140,255,.25), transparent 60%),
+        radial-gradient(900px 650px at 60% 85%, rgba(124,247,211,.18), transparent 55%),
+        linear-gradient(160deg, var(--bg1), var(--bg2));
+      min-height:100vh;
+      overflow-x:hidden;
+    }
+
+    .wrap{ max-width: 1280px; margin: 0 auto; padding: 18px 14px 28px; }
+
+    header{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom: 14px;
+    }
+
+    .title{ display:flex; flex-direction:column; gap:6px; }
+    h1{ margin:0; font-size:18px; letter-spacing:.04em; font-weight:1000; line-height:1.2; }
+    .subtitle{ margin:0; font-size:12px; color:var(--muted); line-height:1.4; }
+
+    .toolbar{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;
+    }
+
+    .btn{
+      border:1px solid var(--stroke2);
+      background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.04));
+      color: var(--text);
+      padding:10px 12px;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.22);
+      cursor:pointer;
+      font-weight: 1000;
+      font-size: 12px;
+      letter-spacing:.03em;
+      transition: transform .12s ease, filter .12s ease, border-color .12s ease;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      white-space:nowrap;
+    }
+    .btn:active{ transform: translateY(1px) scale(.99); filter:saturate(1.1); }
+    .btn:hover{ border-color: rgba(255,255,255,.35); }
+    .btnPrimary{
+      border-color: rgba(138,167,255,.45);
+      background: linear-gradient(180deg, rgba(138,167,255,.22), rgba(138,167,255,.08));
+    }
+    .btnDanger{
+      border-color: rgba(255,122,162,.45);
+      background: linear-gradient(180deg, rgba(255,122,162,.22), rgba(255,122,162,.07));
+    }
+
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.18);
+      font-weight: 1000;
+      font-size: 12px;
+      white-space:nowrap;
+    }
+    .chip b{ font-variant-numeric: tabular-nums; }
+
+    /* ✅ 縦横を入れ替え：4つのCOLUMN（P1STAGE等）を「縦に並べる」 */
+    .columnsStack{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+      align-items:stretch;
+    }
+
+    .panel{
+      border:1px solid var(--stroke);
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      overflow:hidden;
+      position:relative;
+    }
+
+    .panelHead{
+      padding: 12px 12px 10px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      border-bottom: 1px solid var(--stroke);
+      background: linear-gradient(90deg, rgba(138,167,255,.16), rgba(177,140,255,.10));
+      gap:10px;
+    }
+    .panelHead .label{
+      font-weight: 1000;
+      font-size: 12px;
+      color: rgba(255,255,255,.92);
+      letter-spacing:.07em;
+      text-transform: uppercase;
+    }
+    .panelHead .hint{
+      font-size: 11px;
+      color: rgba(255,255,255,.70);
+      letter-spacing:.02em;
+      white-space:nowrap;
+    }
+
+    /* ✅ 各COLUMNの中身（カード枠）を横に並べる（必要なら横スクロール） */
+    .rowCards{
+      padding: 12px;
+      display:grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(220px, 1fr);
+      gap: 12px;
+      overflow-x:auto;
+      scrollbar-width: thin;
+    }
+    .rowCards::-webkit-scrollbar{ height:10px; }
+    .rowCards::-webkit-scrollbar-thumb{
+      background: rgba(255,255,255,.18);
+      border-radius: 999px;
+      border: 2px solid rgba(0,0,0,0);
+      background-clip: padding-box;
+    }
+
+    .card{
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      background:
+        radial-gradient(400px 200px at 25% 0%, rgba(138,167,255,.18), transparent 50%),
+        radial-gradient(300px 180px at 90% 10%, rgba(177,140,255,.14), transparent 55%),
+        linear-gradient(180deg, rgba(18,26,51,.85), rgba(12,16,33,.72));
+      box-shadow: 0 14px 36px rgba(0,0,0,.30);
+      overflow:hidden;
+      position:relative;
+      min-height: 185px;
+    }
+
+    .card::before{
+      content:"";
+      position:absolute;
+      inset:-1px;
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, rgba(255,255,255,.18), rgba(255,255,255,0));
+      opacity:.35;
+      pointer-events:none;
+      mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000);
+      -webkit-mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000);
+      padding:1px;
+      box-sizing:border-box;
+    }
+
+    .badge{
+      position:absolute;
+      top:10px; left:10px;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      border:1px solid var(--stroke2);
+      background: rgba(0,0,0,.25);
+      font-weight: 1000;
+      font-size: 12px;
+      letter-spacing:.03em;
+    }
+    .dot{
+      width:8px;height:8px;border-radius:999px;
+      background: linear-gradient(180deg, var(--accent), var(--accent2));
+      box-shadow: 0 0 18px rgba(138,167,255,.35);
+    }
+
+    .cardInner{
+      padding: 38px 12px 12px;
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+    }
+
+    .valueRow{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .value{
+      font-size: 34px;
+      line-height: 1;
+      font-weight: 1000;
+      letter-spacing:.02em;
+      text-shadow: 0 10px 28px rgba(0,0,0,.35);
+      user-select:none;
+      cursor:pointer;
+    }
+
+    .deltaPill{
+      border:1px solid var(--stroke2);
+      background: rgba(255,255,255,.06);
+      padding: 8px 10px;
+      border-radius: 14px;
+      font-size: 12px;
+      font-weight: 1000;
+      letter-spacing:.04em;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      min-width: 104px;
+      justify-content:center;
+      user-select:none;
+    }
+    .deltaSign{ font-weight: 1000; opacity:.9; }
+    .deltaNum{ font-variant-numeric: tabular-nums; }
+
+    .rangeWrap{ display:flex; flex-direction:column; gap:8px; }
+    .rangeLabel{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      color: rgba(255,255,255,.70);
+      font-size: 11px;
+      letter-spacing:.02em;
+      user-select:none;
+    }
+    input[type="range"]{
+      -webkit-appearance:none;
+      appearance:none;
+      width:100%;
+      height: 14px;
+      border-radius: 999px;
+      background: linear-gradient(90deg,
+        rgba(255,122,162,.32),
+        rgba(255,255,255,.14),
+        rgba(124,247,211,.32)
+      );
+      outline:none;
+      border: 1px solid var(--stroke);
+      box-shadow: inset 0 2px 10px rgba(0,0,0,.25);
+    }
+    input[type="range"]::-webkit-slider-thumb{
+      -webkit-appearance:none;
+      appearance:none;
+      width: 22px; height: 22px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.35);
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.95), rgba(255,255,255,.25));
+      box-shadow: 0 12px 24px rgba(0,0,0,.35);
+      cursor:grab;
+    }
+    input[type="range"]::-webkit-slider-thumb:active{ cursor:grabbing; }
+
+    .controlsRow{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    .skillRow{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .skillBtn{
+      flex: 1 1 90px;
+      padding: 10px 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.18);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      color: rgba(255,255,255,.92);
+      font-weight: 1000;
+      font-size: 12px;
+      letter-spacing:.03em;
+      cursor:pointer;
+      user-select:none;
+      transition: transform .12s ease, border-color .12s ease, filter .12s ease;
+      -webkit-tap-highlight-color: transparent;
+      white-space:nowrap;
+    }
+    .skillBtn:active{ transform: translateY(1px) scale(.99); }
+    .skillBtn:hover{ border-color: rgba(255,255,255,.35); }
+
+    .skillBtn.on{
+      border-color: rgba(255, 99, 195, .65);
+      background: linear-gradient(180deg, rgba(255, 99, 195, .30), rgba(255, 99, 195, .10));
+      box-shadow: 0 12px 28px rgba(255, 99, 195, .12);
+    }
+    .skillBtn.off{
+      border-color: rgba(154,163,178,.45);
+      background: linear-gradient(180deg, rgba(154,163,178,.18), rgba(154,163,178,.06));
+      color: rgba(255,255,255,.85);
+    }
+
+    .resetMini{
+      margin-left:auto;
+      border:1px solid rgba(255,122,162,.35);
+      background: linear-gradient(180deg, rgba(255,122,162,.18), rgba(255,122,162,.06));
+      padding: 10px 12px;
+      border-radius: 14px;
+      font-weight: 1000;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+
+    /* ✅ 直近3件履歴 */
+    .miniHist{
+      margin-top: 8px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.16);
+      border-radius: 14px;
+      padding: 8px 10px;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .miniHistHead{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      font-size: 11px;
+      color: rgba(255,255,255,.72);
+      letter-spacing:.02em;
+      font-weight: 900;
+    }
+    .miniHistList{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .miniHistItem{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      font-size: 12px;
+      color: rgba(255,255,255,.86);
+      border-bottom:1px solid rgba(255,255,255,.08);
+      padding-bottom:6px;
+    }
+    .miniHistItem:last-child{ border-bottom:0; padding-bottom:0; }
+    .miniHistItem b{ font-variant-numeric: tabular-nums; }
+
+    .pulse{ animation: pulse .18s ease-out; }
+    @keyframes pulse{
+      0%{ transform: scale(1); }
+      50%{ transform: scale(1.02); }
+      100%{ transform: scale(1); }
+    }
+
+    /* Dice modal (そのまま) */
+    .modalBack{
+      position:fixed; inset:0;
+      background: rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+      z-index: 50;
+    }
+    .modal{
+      width:min(560px, 100%);
+      border-radius: 22px;
+      border:1px solid rgba(255,255,255,.18);
+      background:
+        radial-gradient(800px 400px at 20% 0%, rgba(138,167,255,.20), transparent 60%),
+        linear-gradient(180deg, rgba(18,26,51,.92), rgba(9,12,24,.88));
+      box-shadow: 0 22px 70px rgba(0,0,0,.55);
+      overflow:hidden;
+    }
+    .modalHead{
+      padding: 12px 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      border-bottom:1px solid rgba(255,255,255,.12);
+      gap:10px;
+    }
+    .modalTitle{
+      font-weight: 1000;
+      letter-spacing:.05em;
+      font-size: 13px;
+      color: rgba(255,255,255,.95);
+    }
+    .modalBody{ padding: 14px; display:flex; flex-direction:column; gap:10px; }
+    .diceBig{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.18);
+      border-radius: 18px;
+      padding: 14px;
+    }
+    .diceNum{ font-size: 40px; font-weight: 1000; letter-spacing:.04em; }
+    .hist{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.16);
+      border-radius: 18px;
+      padding: 10px;
+      max-height: 220px;
+      overflow:auto;
+    }
+    .histItem{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding: 10px 10px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      font-size: 12px;
+      color: rgba(255,255,255,.86);
+    }
+    .histItem:last-child{ border-bottom:0; }
+    .histTime{
+      color: rgba(255,255,255,.62);
+      font-variant-numeric: tabular-nums;
+      font-size: 11px;
+      white-space:nowrap;
+    }
+    .modalFoot{
+      padding: 12px 14px;
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+      border-top:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.03);
+    }
+
+    .footerNote{
+      margin-top: 12px;
+      color: rgba(255,255,255,.70);
+      font-size: 11px;
+      line-height:1.5;
+      padding: 10px 12px;
+      border: 1px dashed rgba(255,255,255,.20);
+      border-radius: 16px;
+      background: rgba(0,0,0,.18);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <h1>ライフカウンター（ホロライブ風）</h1>
+        <p class="subtitle">✅ COLUMN（P1 STAGE等）は縦並び／各COLUMN内の枠は横並び。差分は10刻み。差分操作は各枠の履歴（直近3件）に記録。Undoで1回戻せます。</p>
+      </div>
+      <div class="toolbar">
+        <span class="chip">TURN <b id="turnNum">1</b></span>
+        <button class="btn btnPrimary" id="turnBtn">ターン変更</button>
+        <button class="btn" id="diceBtn">🎲 サイコロ</button>
+        <button class="btn btnDanger" id="resetAll">全リセット</button>
+      </div>
+    </header>
+
+    <div class="columnsStack">
+      <section class="panel">
+        <div class="panelHead">
+          <div class="label">PLAYER 1 / STAGE</div>
+          <div class="hint">横6枠</div>
+        </div>
+        <div class="rowCards" id="col1"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panelHead">
+          <div class="label">PLAYER 1 / 推し</div>
+          <div class="hint">横3枠</div>
+        </div>
+        <div class="rowCards" id="col2"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panelHead">
+          <div class="label">PLAYER 2 / STAGE</div>
+          <div class="hint">横3枠</div>
+        </div>
+        <div class="rowCards" id="col3"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panelHead">
+          <div class="label">PLAYER 2 / 推し</div>
+          <div class="hint">横6枠</div>
+        </div>
+        <div class="rowCards" id="col4"></div>
+      </section>
+    </div>
+
+    <div class="footerNote">
+      使い方：スライダーで差分を選ぶ（10刻み）→離すと加算＆履歴に記録＆スライダーは0へ戻る。Undoは「直近の差分1回」を取り消し（履歴も消える）。数値クリックで直接編集も可（※直接編集は履歴には残しません）。
+    </div>
+  </div>
+
+  <!-- Dice Modal -->
+  <div class="modalBack" id="modalBack" role="dialog" aria-modal="true" aria-label="サイコロ">
+    <div class="modal">
+      <div class="modalHead">
+        <div class="modalTitle">🎲 サイコロ（履歴表示）</div>
+        <button class="btn" id="closeModal">閉じる</button>
+      </div>
+      <div class="modalBody">
+        <div class="diceBig">
+          <div>
+            <div style="font-size:12px;color:rgba(255,255,255,.70);font-weight:900;letter-spacing:.03em">最新の目</div>
+            <div class="diceNum" id="diceNum">-</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-end">
+            <button class="btn btnPrimary" id="rollBtn">振る</button>
+            <button class="btn btnDanger" id="clearDice">履歴クリア</button>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div style="font-weight:1000;font-size:12px;letter-spacing:.04em;color:rgba(255,255,255,.88)">履歴</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.62)">最大 30 件</div>
+        </div>
+        <div class="hist" id="hist"></div>
+      </div>
+      <div class="modalFoot">
+        <button class="btn" id="copyHist">履歴をコピー</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ✅ 指定：COLUMN 1=P1ステージ(6), COLUMN 2=P1推し(3), COLUMN 3=P2ステージ(3), COLUMN 4=P2推し(6)
+    const layout = [
+      { mountId: "col1", count: 6, prefix: "P1S" },
+      { mountId: "col2", count: 3, prefix: "P1O" },
+      { mountId: "col3", count: 3, prefix: "P2S" },
+      { mountId: "col4", count: 6, prefix: "P2O" },
+    ];
+
+    /** values: { [id]: number } */
+    const values = Object.create(null);
+    /** skills: { [id]: {s1:boolean, s2:boolean} } */
+    const skills = Object.create(null);
+    /** delta history per card: { [id]: number[] }  (最新が先頭 / 最大3) */
+    const deltaHist = Object.create(null);
+
+    let turn = 1;
+
+    // Dice history
+    const diceHistory = []; // {t: Date, v: number}
+
+    function fmtTime(d){
+      const hh = String(d.getHours()).padStart(2,"0");
+      const mm = String(d.getMinutes()).padStart(2,"0");
+      const ss = String(d.getSeconds()).padStart(2,"0");
+      return `${hh}:${mm}:${ss}`;
+    }
+
+    function fmtDelta(n){
+      const sign = n > 0 ? "+" : (n < 0 ? "−" : "±");
+      const abs = Math.abs(n);
+      return { sign, abs };
+    }
+
+    function applySkillBtnClass(btn, on){
+      btn.classList.toggle("on", !!on);
+      btn.classList.toggle("off", !on);
+    }
+
+    function setAllSkillsOff(){
+      for (const id of Object.keys(skills)){
+        skills[id].s1 = false;
+        skills[id].s2 = false;
+      }
+      document.querySelectorAll(".skillBtn[data-skill]").forEach(btn=>{
+        applySkillBtnClass(btn, false);
+      });
+    }
+
+    function pushDeltaHistory(id, delta){
+      if (!deltaHist[id]) deltaHist[id] = [];
+      deltaHist[id].unshift(delta);
+      if (deltaHist[id].length > 3) deltaHist[id].pop();
+      renderMiniHistory(id);
+    }
+
+    function popDeltaHistory(id){
+      if (!deltaHist[id] || deltaHist[id].length === 0) return null;
+      const d = deltaHist[id].shift(); // 最新を取り出し
+      renderMiniHistory(id);
+      return d;
+    }
+
+    function renderMiniHistory(id){
+      const box = document.getElementById(`${id}-mh`);
+      const list = document.getElementById(`${id}-mhl`);
+      const undoBtn = document.getElementById(`${id}-undo`);
+      const arr = deltaHist[id] || [];
+
+      if (undoBtn) undoBtn.disabled = arr.length === 0;
+      if (undoBtn) undoBtn.style.opacity = arr.length === 0 ? 0.55 : 1;
+
+      if (!list) return;
+      list.innerHTML = "";
+
+      if (arr.length === 0){
+        const row = document.createElement("div");
+        row.className = "miniHistItem";
+        row.style.justifyContent = "center";
+        row.style.color = "rgba(255,255,255,.62)";
+        row.textContent = "履歴なし";
+        list.appendChild(row);
+        return;
+      }
+
+      for (const d of arr){
+        const row = document.createElement("div");
+        row.className = "miniHistItem";
+        const sign = d > 0 ? "+" : "−";
+        row.innerHTML = `<div>差分 <b>${sign}${Math.abs(d)}</b></div><div style="color:rgba(255,255,255,.62);font-size:11px">直近</div>`;
+        list.appendChild(row);
+      }
+    }
+
+    function makeCard(id, labelText){
+      values[id] = 0;
+      skills[id] = { s1:false, s2:false };
+      deltaHist[id] = [];
+
+      const card = document.createElement("div");
+      card.className = "card";
+      card.dataset.id = id;
+
+      card.innerHTML = `
+        <div class="badge"><span class="dot"></span><span>${labelText}</span></div>
+        <div class="cardInner">
+          <div class="valueRow">
+            <div class="value" id="${id}-value" title="クリックで直接入力">0</div>
+            <div class="deltaPill" aria-live="polite" aria-atomic="true">
+              <span class="deltaSign" id="${id}-ds">±</span>
+              <span class="deltaNum" id="${id}-dn">0</span>
+            </div>
+          </div>
+
+          <div class="rangeWrap">
+            <div class="rangeLabel">
+              <span>-60</span>
+              <span>差分（10刻み / 離すと加算）</span>
+              <span>+60</span>
+            </div>
+            <input id="${id}-range" type="range" min="-60" max="60" step="10" value="0" />
+          </div>
+
+          <div class="controlsRow">
+            <div class="skillRow">
+              <button class="skillBtn off" data-skill="s1" id="${id}-s1">スキル1</button>
+              <button class="skillBtn off" data-skill="s2" id="${id}-s2">スキル2</button>
+            </div>
+            <button class="btn" id="${id}-undo" title="直近の差分を1回戻す">↩︎ Undo</button>
+            <button class="resetMini" id="${id}-reset" title="この枠をリセット">C</button>
+          </div>
+
+          <div class="miniHist" id="${id}-mh">
+            <div class="miniHistHead">
+              <span>差分履歴（直近3）</span>
+              <span style="color:rgba(255,255,255,.62);font-size:11px">Undoで戻す</span>
+            </div>
+            <div class="miniHistList" id="${id}-mhl"></div>
+          </div>
+        </div>
+      `;
+
+      const valueEl = card.querySelector(`#${id}-value`);
+      const rangeEl = card.querySelector(`#${id}-range`);
+      const dsEl = card.querySelector(`#${id}-ds`);
+      const dnEl = card.querySelector(`#${id}-dn`);
+      const resetBtn = card.querySelector(`#${id}-reset`);
+      const undoBtn = card.querySelector(`#${id}-undo`);
+      const s1Btn = card.querySelector(`#${id}-s1`);
+      const s2Btn = card.querySelector(`#${id}-s2`);
+
+      function render(){
+        valueEl.textContent = values[id];
+      }
+      function renderDelta(v){
+        const n = Number(v) || 0;
+        const { sign, abs } = fmtDelta(n);
+        dsEl.textContent = sign;
+        dnEl.textContent = abs;
+        dsEl.style.color = n > 0 ? "var(--good)" : (n < 0 ? "var(--bad)" : "rgba(255,255,255,.85)");
+        dnEl.style.color = dsEl.style.color;
+      }
+      function pulse(){
+        card.classList.remove("pulse");
+        void card.offsetWidth;
+        card.classList.add("pulse");
+      }
+
+      // スライダー：入力中は差分表示のみ
+      rangeEl.addEventListener("input", () => renderDelta(rangeEl.value));
+
+      // ✅ 確定（離す）：加算→履歴に保存→0へ
+      rangeEl.addEventListener("change", () => {
+        const delta = Number(rangeEl.value) || 0;
+        if (delta !== 0){
+          values[id] = values[id] + delta;
+          pushDeltaHistory(id, delta);
+          render();
+          pulse();
+        }
+        rangeEl.value = 0;
+        renderDelta(0);
+      });
+
+      // 値クリックで直接編集（※要望通り：履歴はスライダー変更のみ）
+      valueEl.addEventListener("click", () => {
+        const next = prompt("数値を直接入力（整数）", String(values[id]));
+        if (next === null) return;
+        const n = Number(next);
+        if (!Number.isFinite(n)) return;
+        values[id] = Math.trunc(n);
+        render();
+        pulse();
+      });
+
+      // ✅ Undo：直近差分を1回取り消し（履歴も消す）
+      undoBtn.addEventListener("click", () => {
+        const last = popDeltaHistory(id);
+        if (last === null) return;
+        values[id] = values[id] - last; // 取り消し
+        render();
+        pulse();
+      });
+
+      resetBtn.addEventListener("click", () => {
+        values[id] = 0;
+        deltaHist[id] = [];
+        rangeEl.value = 0;
+        renderDelta(0);
+        renderMiniHistory(id);
+        render();
+        pulse();
+      });
+
+      // スキルボタン：押すと ON/OFF（ピンク/灰色）
+      s1Btn.addEventListener("click", () => {
+        skills[id].s1 = !skills[id].s1;
+        applySkillBtnClass(s1Btn, skills[id].s1);
+      });
+      s2Btn.addEventListener("click", () => {
+        skills[id].s2 = !skills[id].s2;
+        applySkillBtnClass(s2Btn, skills[id].s2);
+      });
+
+      render();
+      renderDelta(0);
+      applySkillBtnClass(s1Btn, false);
+      applySkillBtnClass(s2Btn, false);
+      renderMiniHistory(id);
+
+      return card;
+    }
+
+    function build(){
+      for (const col of layout){
+        const mount = document.getElementById(col.mountId);
+        mount.innerHTML = "";
+        for (let i=1;i<=col.count;i++){
+          const id = `${col.prefix}${i}`;
+          const label = `${col.prefix}-${i}`;
+          mount.appendChild(makeCard(id, label));
+        }
+      }
+    }
+
+    function resetAll(){
+      for (const k of Object.keys(values)) values[k] = 0;
+      for (const k of Object.keys(deltaHist)) deltaHist[k] = [];
+
+      // 値/スライダー/差分 + miniHist
+      document.querySelectorAll(".card").forEach(card => {
+        const id = card.dataset.id;
+        const valueEl = document.getElementById(`${id}-value`);
+        const rangeEl = document.getElementById(`${id}-range`);
+        const dsEl = document.getElementById(`${id}-ds`);
+        const dnEl = document.getElementById(`${id}-dn`);
+        if (valueEl) valueEl.textContent = "0";
+        if (rangeEl) rangeEl.value = 0;
+        if (dsEl) dsEl.textContent = "±";
+        if (dnEl) dnEl.textContent = "0";
+        if (dsEl) dsEl.style.color = "rgba(255,255,255,.85)";
+        if (dnEl) dnEl.style.color = "rgba(255,255,255,.85)";
+        renderMiniHistory(id);
+        card.classList.remove("pulse");
+        void card.offsetWidth;
+        card.classList.add("pulse");
+      });
+
+      // スキルもOFF
+      setAllSkillsOff();
+    }
+
+    // Turn
+    function nextTurn(){
+      turn += 1;
+      document.getElementById("turnNum").textContent = String(turn);
+      setAllSkillsOff();
+    }
+
+    // Dice modal
+    const modalBack = document.getElementById("modalBack");
+    const diceNumEl = document.getElementById("diceNum");
+    const histEl = document.getElementById("hist");
+
+    function openModal(){ modalBack.style.display = "flex"; }
+    function closeModal(){ modalBack.style.display = "none"; }
+
+    function renderDiceHist(){
+      histEl.innerHTML = "";
+      if (diceHistory.length === 0){
+        const empty = document.createElement("div");
+        empty.className = "histItem";
+        empty.style.justifyContent = "center";
+        empty.style.color = "rgba(255,255,255,.62)";
+        empty.textContent = "まだ履歴がありません";
+        histEl.appendChild(empty);
+        return;
+      }
+      for (const item of diceHistory){
+        const row = document.createElement("div");
+        row.className = "histItem";
+        row.innerHTML = `<div>🎲 <b style="font-size:14px">${item.v}</b></div><div class="histTime">${fmtTime(item.t)}</div>`;
+        histEl.appendChild(row);
+      }
+    }
+
+    function rollDice(){
+      const v = Math.floor(Math.random()*6) + 1;
+      diceNumEl.textContent = String(v);
+      diceHistory.unshift({ t: new Date(), v });
+      if (diceHistory.length > 30) diceHistory.pop();
+      renderDiceHist();
+    }
+
+    function clearDice(){
+      diceHistory.length = 0;
+      diceNumEl.textContent = "-";
+      renderDiceHist();
+    }
+
+    async function copyHistory(){
+      const lines = diceHistory
+        .slice()
+        .reverse()
+        .map(x => `${fmtTime(x.t)}  ${x.v}`);
+      const text = lines.join("\n") || "（履歴なし）";
+      try{
+        await navigator.clipboard.writeText(text);
+        alert("履歴をコピーしました");
+      }catch{
+        prompt("コピーできない場合はここから手動でコピーしてください", text);
+      }
+    }
+
+    // Events
+    document.getElementById("resetAll").addEventListener("click", resetAll);
+    document.getElementById("turnBtn").addEventListener("click", nextTurn);
+
+    document.getElementById("diceBtn").addEventListener("click", () => {
+      openModal();
+      renderDiceHist();
+    });
+    document.getElementById("closeModal").addEventListener("click", closeModal);
+    modalBack.addEventListener("click", (e) => {
+      if (e.target === modalBack) closeModal();
+    });
+
+    document.getElementById("rollBtn").addEventListener("click", rollDice);
+    document.getElementById("clearDice").addEventListener("click", clearDice);
+    document.getElementById("copyHist").addEventListener("click", copyHistory);
+
+    build();
+    renderDiceHist();
+  </script>
+</body>
+</html>
