@@ -314,17 +314,12 @@
     }
     input[type="range"]::-webkit-slider-thumb:active{ cursor:grabbing; }
 
+    /* ✅ スキル / Undo / C を縦並び */
     .controlsRow{
       display:flex;
       gap:8px;
       align-items:center;
       justify-content:space-between;
-    }
-
-    .skillRow{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
     }
 
     .skillBtn{
@@ -355,17 +350,6 @@
       border-color: rgba(154,163,178,.45);
       background: linear-gradient(180deg, rgba(154,163,178,.18), rgba(154,163,178,.06));
       color: rgba(255,255,255,.85);
-    }
-
-    .resetMini{
-      margin-left:auto;
-      border:1px solid rgba(255,122,162,.35);
-      background: linear-gradient(180deg, rgba(255,122,162,.18), rgba(255,122,162,.06));
-      padding: 6px 8px;
-      border-radius: 10px;
-      font-weight: 900;
-      cursor:pointer;
-      white-space:nowrap;
     }
 
     /* ✅ 直近3件履歴 */
@@ -711,13 +695,11 @@
             <input id="${id}-range" type="range" min="-60" max="60" step="10" value="0" />
           </div>
 
-          <div class="controlsRow">
-            <div class="skillRow">
-              <button class="skillBtn off" data-skill="s1" id="${id}-s1">スキル1</button>
-              <button class="skillBtn off" data-skill="s2" id="${id}-s2">スキル2</button>
-            </div>
-            <button class="btn" id="${id}-undo" title="直近の差分を1回戻す">↩︎ Undo</button>
-            <button class="resetMini" id="${id}-reset" title="この枠をリセット">C</button>
+         <div class="controlsCol">
+            <button class="skillBtn off" data-skill="s1" id="${id}-s1">スキル1</button>
+            <button class="skillBtn" id="${id}-undo" title="直近の差分を1回戻す">Undo</button>
+            <button class="skillBtn off" data-skill="s2" id="${id}-s2">スキル2</button>
+            <button class="skillBtn" id="${id}-reset" title="この枠をリセット">C</button>
           </div>
 
           <div class="miniHist" id="${id}-mh">
