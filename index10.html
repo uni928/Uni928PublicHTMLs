@@ -573,6 +573,143 @@
   </div>
 
   <script>
+    // =========================
+    // IndexedDB 永続化（復帰あり）
+    // =========================
+    const DB_NAME = "holoca_life_counter_db";
+    const DB_VER  = 1;
+    const STORE   = "kv";
+    const STATE_KEY = "state";
+
+    let _dbPromise = null;
+    function openDB(){
+      if (_dbPromise) return _dbPromise;
+      _dbPromise = new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VER);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(STORE)){
+            db.createObjectStore(STORE);
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+      return _dbPromise;
+    }
+
+    async function idbGet(key){
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, "readonly");
+        const st = tx.objectStore(STORE);
+        const req = st.get(key);
+        req.onsuccess = () => resolve(req.result ?? null);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function idbSet(key, val){
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+       const tx = db.transaction(STORE, "readwrite");
+        const st = tx.objectStore(STORE);
+        const req = st.put(val, key);
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    // 全リセット時：DB自体を削除
+    async function deleteDB(){
+      // openしている接続があっても消せるようにclose
+      try{
+        const db = await openDB();
+        db.close();
+      }catch{}
+      _dbPromise = null;
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.deleteDatabase(DB_NAME);
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject(req.error);
+        req.onblocked = () => resolve(true); // blockedでもUIはリセット済みにする
+      });
+    }
+
+    function snapshotState(){
+      // diceHistoryはシリアライズ用に日時を数値化
+      const dice = diceHistory.map(x => ({ t: x.t instanceof Date ? x.t.getTime() : x.t, v: x.v })).slice(0, 30);
+      return {
+        v: 1,
+        turn,
+        values,
+        skills,
+        deltaHist,
+        diceHistory: dice,
+      };
+    }
+
+    async function loadState(){
+      const saved = await idbGet(STATE_KEY);
+      if (!saved || typeof saved !== "object") return null;
+      return saved;
+    }
+
+    // 保存は連打で重くならないようにデバウンス
+    let _saveTimer = null;
+    function scheduleSave(){
+      if (_saveTimer) clearTimeout(_saveTimer);
+      _saveTimer = setTimeout(async () => {
+        try{
+          await idbSet(STATE_KEY, snapshotState());
+        }catch(e){
+          console.warn("IndexedDB save failed:", e);
+        }
+      }, 200);
+    }
+
+    function applyStateToUI(){
+      // turn
+      const turnEl = document.getElementById("turnNum");
+      if (turnEl) turnEl.textContent = String(turn);
+
+      // values / skills / deltaHist
+      document.querySelectorAll(".card").forEach(card => {
+        const id = card.dataset.id;
+        const valueEl = document.getElementById(`${id}-value`);
+        if (valueEl && (id in values)) valueEl.textContent = String(values[id] ?? 0);
+
+        // skills reflect
+        const s1Btn = document.getElementById(`${id}-s1`);
+        const s2Btn = document.getElementById(`${id}-s2`);
+        if (s1Btn && skills[id]) applySkillBtnClass(s1Btn, !!skills[id].s1);
+        if (s2Btn && skills[id]) applySkillBtnClass(s2Btn, !!skills[id].s2);
+
+        // undo enable/disable (miniHist表示は今はコメントアウトなのでここだけ反映)
+        const undoBtn = document.getElementById(`${id}-undo`);
+        const arr = (deltaHist[id] || []);
+        if (undoBtn){
+          undoBtn.disabled = arr.length === 0;
+          undoBtn.style.opacity = arr.length === 0 ? 0.55 : 1;
+        }
+      });
+
+      // diceHistory 復帰（日時をDateに戻す）
+      for (let i=0;i<diceHistory.length;i++){
+        if (!(diceHistory[i].t instanceof Date)){
+          diceHistory[i].t = new Date(diceHistory[i].t);
+        }
+      }
+      renderDiceHist();
+      // 最新値表示
+      if (diceHistory.length > 0){
+        diceNumEl.textContent = String(diceHistory[0].v);
+      }else{
+        diceNumEl.textContent = "-";
+      }
+    }
+
+
     // ✅ 指定：COLUMN 1=P1ステージ(6), COLUMN 2=P1推し(3), COLUMN 3=P2ステージ(3), COLUMN 4=P2推し(6)
     const layout = [
       { mountId: "col1", count: 3, prefix: "P1S" },
@@ -624,7 +761,6 @@
     function pushDeltaHistory(id, delta){
       if (!deltaHist[id]) deltaHist[id] = [];
       deltaHist[id].unshift(delta);
-      if (deltaHist[id].length > 3) deltaHist[id].pop();
       //renderMiniHistory(id);
     }
 
@@ -667,9 +803,9 @@
     }
 
     function makeCard(id, labelText){
-      values[id] = 0;
-      skills[id] = { s1:false, s2:false };
-      deltaHist[id] = [];
+      if (!(id in values)) values[id] = 0;
+      if (!(id in skills)) skills[id] = { s1:false, s2:false };
+      if (!(id in deltaHist)) deltaHist[id] = [];
 
       const card = document.createElement("div");
       card.className = "card";
@@ -732,6 +868,7 @@
           pushDeltaHistory(id, delta);
           render();
           pulse();
+scheduleSave();
         }
         rangeEl.value = 0;
         renderDelta(0);
@@ -745,7 +882,7 @@
         if (!Number.isFinite(n)) return;
         values[id] = Math.trunc(n);
         render();
-        pulse();
+        pulse();scheduleSave();
       });
 
       // ✅ Undo：直近差分を1回取り消し（履歴も消す）
@@ -754,7 +891,7 @@
         if (last === null) return;
         values[id] = values[id] - last; // 取り消し
         render();
-        pulse();
+        pulse();scheduleSave();
       });
 
       resetBtn.addEventListener("click", () => {
@@ -764,7 +901,7 @@
         renderDelta(0);
         //renderMiniHistory(id);
         render();
-        pulse();
+        pulse();scheduleSave();
       });
 
       // スキルボタン：押すと ON/OFF（ピンク/灰色）
@@ -823,13 +960,15 @@
 
       // スキルもOFF
       setAllSkillsOff();
+      // ✅ IndexedDBから削除（DB自体を消す）
+      deleteDB().catch(e => console.warn("deleteDB failed:", e));
     }
 
     // Turn
     function nextTurn(){
       turn += 1;
       document.getElementById("turnNum").textContent = String(turn);
-      setAllSkillsOff();
+      setAllSkillsOff();scheduleSave();
     }
 
     // Dice modal
@@ -870,7 +1009,7 @@
     function clearDice(){
       diceHistory.length = 0;
       diceNumEl.textContent = "-";
-      renderDiceHist();
+      renderDiceHist();scheduleSave();
     }
 
     async function copyHistory(){
@@ -904,8 +1043,42 @@
     document.getElementById("clearDice").addEventListener("click", clearDice);
     document.getElementById("copyHist").addEventListener("click", copyHistory);
 
-    build();
-    renderDiceHist();
+    // ✅ 起動時：IndexedDBから復帰 → build → UIに反映
+    (async () => {
+      try{
+        const saved = await loadState();
+        build();
+        if (saved){
+          // turn
+          if (typeof saved.turn === "number") turn = saved.turn;
+          // values/skills/deltaHist（オブジェクト丸ごと置き換えではなく、今ある参照にマージ）
+          if (saved.values && typeof saved.values === "object"){
+            for (const k of Object.keys(saved.values)) values[k] = saved.values[k];
+          }
+          if (saved.skills && typeof saved.skills === "object"){
+            for (const k of Object.keys(saved.skills)) skills[k] = saved.skills[k];
+          }
+          if (saved.deltaHist && typeof saved.deltaHist === "object"){
+            for (const k of Object.keys(saved.deltaHist)) deltaHist[k] = saved.deltaHist[k];
+          }
+          if (Array.isArray(saved.diceHistory)){
+            diceHistory.length = 0;
+            for (const it of saved.diceHistory.slice(0,30)){
+              diceHistory.push({ t: new Date(it.t), v: it.v });
+            }
+            // 最新が先頭で保存している前提なので、先頭が最新になるように
+            diceHistory.sort((a,b)=>b.t - a.t);
+          }
+          applyStateToUI();
+        }else{
+          renderDiceHist();
+        }
+      }catch(e){
+        console.warn("restore failed:", e);
+        build();
+        renderDiceHist();
+      }
+   })();
   </script>
 </body>
 </html>
