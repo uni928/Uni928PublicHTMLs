@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="ja">
 <head>
@@ -20,6 +19,7 @@
       --pink:#ff63c3;
       --shadow: 0 18px 50px rgba(0,0,0,.35);
       --radius: 18px;
+      --ui-scale: 0.9;
     }
 
     *{box-sizing:border-box}
@@ -36,44 +36,27 @@
       overflow-x:hidden;
     }
 
-    /* ✅ 全体スケール縮小用ラッパー */
+    @media (max-width: 1200px){ :root{ --ui-scale: 0.85; } }
+    @media (max-width: 900px){  :root{ --ui-scale: 0.8; } }
+    @media (max-width: 600px){  :root{ --ui-scale: 0.75; } }
+
     .wrap{
       max-width: 1280px;
       margin: 0 0;
-      padding: 0px 0px 0px;
-
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-
-      /* ★ここが本体 */
+      padding: 0;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
       transform: scale(var(--ui-scale));
       transform-origin: top center;
     }
-
-    /* 画面サイズ別にスケール調整 */
-    :root{
-      --ui-scale: 0.9;
-    }
-
-    @media (max-width: 1200px){
-      :root{ --ui-scale: 0.85; }
-    }
-
-    @media (max-width: 900px){
-      :root{ --ui-scale: 0.8; }
-    }
-
-    @media (max-width: 600px){
-      :root{ --ui-scale: 0.75; }
-   }
 
     header{
       display:flex;
       align-items:flex-start;
       justify-content:space-between;
       gap:12px;
-      margin-bottom: 14px;
+      margin: 16px 14px 0;
     }
 
     .title{ display:flex; flex-direction:column; gap:6px; }
@@ -128,15 +111,13 @@
     }
     .chip b{ font-variant-numeric: tabular-nums; }
 
-    /* ✅ 4つのCOLUMN枠を「2×2」で配置して、画面内に収めやすくする */
     .columnsStack{
-      flex: 1;
-      min-height: 0;
-      display: grid;
+      margin: 0 14px;
+      display:grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       grid-template-rows: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-      align-items: stretch;
+      gap:14px;
+      align-items:stretch;
     }
 
     .panel{
@@ -146,7 +127,6 @@
       box-shadow: var(--shadow);
       backdrop-filter: blur(10px);
       overflow:hidden;
-      position:relative;
       display:flex;
       flex-direction:column;
       min-height:0;
@@ -175,19 +155,17 @@
       white-space:nowrap;
     }
 
-
-    /* ✅ 推し / STAGE は常に横3個 */
+    /* 3枠固定 */
     .rowCards{
       padding: 12px;
-      flex: 1;
-      min-height: 0;
       display:grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
-      overflow: hidden;
-      align-content: start;
+      overflow:hidden;
+      align-content:start;
     }
 
+    /* ====== カード（簡略版：数値 + Func のみ） ====== */
     .card{
       border: 1px solid var(--stroke);
       border-radius: var(--radius);
@@ -196,23 +174,11 @@
         radial-gradient(300px 180px at 90% 10%, rgba(177,140,255,.14), transparent 55%),
         linear-gradient(180deg, rgba(18,26,51,.85), rgba(12,16,33,.72));
       box-shadow: 0 14px 36px rgba(0,0,0,.30);
-      overflow:hidden;
       position:relative;
-      min-height: 165px;
-    }
-
-    .card::before{
-      content:"";
-      position:absolute;
-      inset:-1px;
-      border-radius: var(--radius);
-      background: linear-gradient(135deg, rgba(255,255,255,.18), rgba(255,255,255,0));
-      opacity:.35;
-      pointer-events:none;
-      mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000);
-      -webkit-mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000);
-      padding:1px;
-      box-sizing:border-box;
+      overflow:hidden;
+      min-height: 120px;
+      display:flex;
+      flex-direction:column;
     }
 
     .badge{
@@ -236,169 +202,85 @@
     }
 
     .cardInner{
-      padding: 34px 10px 10px;
+      padding: 40px 10px 10px;
       display:flex;
       flex-direction:column;
-      gap: 10px;
+      gap:10px;
+      flex:1;
+      min-height:0;
     }
 
     .valueRow{
       display:flex;
-      align-items:flex-end;
+      align-items:center;
       justify-content:space-between;
       gap:10px;
     }
 
     .value{
-      font-size: 26px;
+      font-size: 28px;
       line-height: 1.05;
-      font-weight: 900;
+      font-weight: 1000;
       letter-spacing:.02em;
       text-shadow: 0 10px 28px rgba(0,0,0,.35);
       user-select:none;
       cursor:pointer;
+      flex:1;
+      min-width:0;
     }
 
-    .deltaPill{
-      border:1px solid var(--stroke2);
-      background: rgba(255,255,255,.06);
-      padding: 6px 8px;
+    .funcBtn{
+      border:1px solid rgba(255,255,255,.20);
+      background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.04));
+      color: rgba(255,255,255,.95);
+      padding: 8px 10px;
       border-radius: 12px;
-      font-size: 10px;
-      font-weight: 900;
-      letter-spacing:.04em;
-      display:flex;
-      align-items:center;
-      gap:8px;
-      min-width: 104px;
-      justify-content:center;
-      user-select:none;
-    }
-    .deltaSign{ font-weight: 1000; opacity:.9; }
-    .deltaNum{ font-variant-numeric: tabular-nums; }
-
-    .rangeWrap{ display:flex; flex-direction:column; gap:8px; }
-    .rangeLabel{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      color: rgba(255,255,255,.70);
-      font-size: 11px;
-      letter-spacing:.02em;
-      user-select:none;
-    }
-    input[type="range"]{
-      -webkit-appearance:none;
-      appearance:none;
-      width:100%;
-      height: 10px;
-      border-radius: 999px;
-      background: linear-gradient(90deg,
-        rgba(255,122,162,.32),
-        rgba(255,255,255,.14),
-        rgba(124,247,211,.32)
-      );
-      outline:none;
-      border: 1px solid var(--stroke);
-      box-shadow: inset 0 2px 10px rgba(0,0,0,.25);
-    }
-    input[type="range"]::-webkit-slider-thumb{
-      -webkit-appearance:none;
-      appearance:none;
-      width: 16px; height: 16px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,.35);
-      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.95), rgba(255,255,255,.25));
-      box-shadow: 0 12px 24px rgba(0,0,0,.35);
-      cursor:grab;
-    }
-    input[type="range"]::-webkit-slider-thumb:active{ cursor:grabbing; }
-
-    /* ✅ スキル / Undo / C を縦並び */
-    .controlsRow{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      justify-content:space-between;
-    }
-
-    .skillBtn{
-      flex: 1 1 90px;
-      padding: 6px 8px;
-      border-radius: 10px;
-      border: 1px solid rgba(255,255,255,.18);
-      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
-      color: rgba(255,255,255,.92);
-      font-weight: 900;
-      font-size: 10px;
-      letter-spacing:.03em;
+      font-weight: 1000;
+      font-size: 12px;
       cursor:pointer;
-      user-select:none;
-      transition: transform .12s ease, border-color .12s ease, filter .12s ease;
       -webkit-tap-highlight-color: transparent;
       white-space:nowrap;
     }
-    .skillBtn:active{ transform: translateY(1px) scale(.99); }
-    .skillBtn:hover{ border-color: rgba(255,255,255,.35); }
+    .funcBtn:hover{ border-color: rgba(255,255,255,.35); }
+    .funcBtn:active{ transform: translateY(1px); }
 
-    .skillBtn.on{
-      border-color: rgba(255, 99, 195, .65);
-      background: linear-gradient(180deg, rgba(255, 99, 195, .30), rgba(255, 99, 195, .10));
-      box-shadow: 0 12px 28px rgba(255, 99, 195, .12);
-    }
-    .skillBtn.off{
-      border-color: rgba(154,163,178,.45);
-      background: linear-gradient(180deg, rgba(154,163,178,.18), rgba(154,163,178,.06));
-      color: rgba(255,255,255,.85);
-    }
-
-    /* ✅ 直近3件履歴 */
-    .miniHist{
-      margin-top: 8px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(0,0,0,.16);
-      border-radius: 14px;
-      padding: 6px 8px;
+    /* 状態インジケータ（スキルONなど） */
+    .statusLine{
       display:flex;
-      flex-direction:column;
-      gap:6px;
-    }
-    .miniHistHead{
-      display:flex;
+      gap:8px;
       align-items:center;
       justify-content:space-between;
-      gap:10px;
-      font-size: 11px;
-      color: rgba(255,255,255,.72);
+      color: rgba(255,255,255,.70);
+      font-size: 10px;
       letter-spacing:.02em;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding: 5px 8px;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.18);
       font-weight: 900;
     }
-    .miniHistList{
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-    }
-    .miniHistItem{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      font-size: 10px;
-      color: rgba(255,255,255,.86);
-      border-bottom:1px solid rgba(255,255,255,.08);
-      padding-bottom:6px;
-    }
-    .miniHistItem:last-child{ border-bottom:0; padding-bottom:0; }
-    .miniHistItem b{ font-variant-numeric: tabular-nums; }
-
-    .pulse{ animation: pulse .18s ease-out; }
-    @keyframes pulse{
-      0%{ transform: scale(1); }
-      50%{ transform: scale(1.02); }
-      100%{ transform: scale(1); }
+    .pill.on{
+      border-color: rgba(255, 99, 195, .55);
+      background: rgba(255, 99, 195, .12);
     }
 
-    /* Dice modal (そのまま) */
+    .footerNote{
+      margin: 0 14px 14px;
+      color: rgba(255,255,255,.70);
+      font-size: 11px;
+      line-height:1.5;
+      padding: 10px 12px;
+      border: 1px dashed rgba(255,255,255,.20);
+      border-radius: 16px;
+      background: rgba(0,0,0,.18);
+    }
+
+    /* ====== モーダル（カード編集） ====== */
     .modalBack{
       position:fixed; inset:0;
       background: rgba(0,0,0,.55);
@@ -406,7 +288,7 @@
       align-items:center;
       justify-content:center;
       padding: 18px;
-      z-index: 50;
+      z-index: 100;
     }
     .modal{
       width:min(560px, 100%);
@@ -431,60 +313,139 @@
       letter-spacing:.05em;
       font-size: 13px;
       color: rgba(255,255,255,.95);
-    }
-    .modalBody{ padding: 14px; display:flex; flex-direction:column; gap:10px; }
-    .diceBig{
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(0,0,0,.18);
-      border-radius: 18px;
-      padding: 14px;
-    }
-    .diceNum{ font-size: 40px; font-weight: 1000; letter-spacing:.04em; }
-    .hist{
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(0,0,0,.16);
-      border-radius: 18px;
-      padding: 10px;
-      max-height: 220px;
-      overflow:auto;
-    }
-    .histItem{
       display:flex;
       align-items:center;
-      justify-content:space-between;
       gap:10px;
-      padding: 10px 10px;
-      border-bottom:1px solid rgba(255,255,255,.08);
-      font-size: 12px;
-      color: rgba(255,255,255,.86);
     }
-    .histItem:last-child{ border-bottom:0; }
-    .histTime{
-      color: rgba(255,255,255,.62);
-      font-variant-numeric: tabular-nums;
-      font-size: 11px;
-      white-space:nowrap;
-    }
+    .modalBody{ padding: 14px; display:flex; flex-direction:column; gap:12px; }
     .modalFoot{
       padding: 12px 14px;
       display:flex;
-      justify-content:flex-end;
+      justify-content:space-between;
       gap:10px;
       border-top:1px solid rgba(255,255,255,.12);
       background: rgba(255,255,255,.03);
+      flex-wrap:wrap;
     }
 
-    .footerNote{
-      margin-top: 0px;
-      color: rgba(255,255,255,.70);
-      font-size: 11px;
-      line-height:1.5;
-      padding: 10px 12px;
-      border: 1px dashed rgba(255,255,255,.20);
-      border-radius: 16px;
+    .bigValue{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      border:1px solid rgba(255,255,255,.14);
       background: rgba(0,0,0,.18);
+      border-radius: 18px;
+      padding: 12px 12px;
     }
+    .bigValue .num{
+      font-size: 40px;
+      font-weight: 1000;
+      letter-spacing:.03em;
+      text-shadow: 0 10px 24px rgba(0,0,0,.35);
+      cursor:pointer;
+      user-select:none;
+    }
+    .deltaPill{
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.06);
+      padding: 6px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 900;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      min-width: 108px;
+      justify-content:center;
+    }
+    .deltaSign{ font-weight: 1000; opacity:.95; }
+    .deltaNum{ font-variant-numeric: tabular-nums; }
+
+    input[type="range"]{
+      -webkit-appearance:none;
+      appearance:none;
+      width:100%;
+      height: 10px;
+      border-radius: 999px;
+      background: linear-gradient(90deg,
+        rgba(255,122,162,.32),
+        rgba(255,255,255,.14),
+        rgba(124,247,211,.32)
+      );
+      outline:none;
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: inset 0 2px 10px rgba(0,0,0,.25);
+    }
+    input[type="range"]::-webkit-slider-thumb{
+      -webkit-appearance:none;
+      appearance:none;
+      width: 16px; height: 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.35);
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.95), rgba(255,255,255,.25));
+      box-shadow: 0 12px 24px rgba(0,0,0,.35);
+      cursor:grab;
+    }
+    input[type="range"]::-webkit-slider-thumb:active{ cursor:grabbing; }
+
+    .skillBtn{
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.18);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      color: rgba(255,255,255,.92);
+      font-weight: 1000;
+      font-size: 12px;
+      letter-spacing:.03em;
+      cursor:pointer;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+      white-space:nowrap;
+      transition: transform .12s ease, border-color .12s ease, filter .12s ease;
+    }
+    .skillBtn:active{ transform: translateY(1px) scale(.99); }
+    .skillBtn:hover{ border-color: rgba(255,255,255,.35); }
+
+    .skillBtn.on{
+      border-color: rgba(255, 99, 195, .65);
+      background: linear-gradient(180deg, rgba(255, 99, 195, .30), rgba(255, 99, 195, .10));
+      box-shadow: 0 12px 28px rgba(255, 99, 195, .12);
+    }
+    .skillBtn.off{
+      border-color: rgba(154,163,178,.45);
+      background: linear-gradient(180deg, rgba(154,163,178,.18), rgba(154,163,178,.06));
+      color: rgba(255,255,255,.85);
+    }
+    .row2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+
+    .histBox{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.16);
+      border-radius: 16px;
+      padding: 10px;
+    }
+    .histHead{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      font-size: 11px; color: rgba(255,255,255,.70); font-weight: 900;
+      margin-bottom: 8px;
+    }
+    .histItem{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      font-size: 12px; color: rgba(255,255,255,.86);
+      border-bottom:1px solid rgba(255,255,255,.08);
+      padding: 8px 2px;
+    }
+    .histItem:last-child{ border-bottom:0; }
+    .histItem b{ font-variant-numeric: tabular-nums; }
+
+    /* Dice modal（既存） */
+    .diceBack{ z-index: 90; }
+    .diceModal{ width:min(560px, 100%); }
   </style>
 </head>
 <body>
@@ -492,7 +453,7 @@
     <header>
       <div class="title">
         <h1>ライフカウンター（ホロカ風）</h1>
-        <p class="subtitle">✅ COLUMN（P1 STAGE等）は縦並び／各COLUMN内の枠は横並び。差分は10刻み。差分操作は各枠の履歴（直近3件）に記録。Undoで1回戻せます。</p>
+        <p class="subtitle">各枠は「数値＋Func」だけ。Funcで編集モーダルを開きます。状態はIndexedDBに保存し、次回復帰します。</p>
       </div>
       <div class="toolbar">
         <span class="chip">TURN <b id="turnNum">1</b></span>
@@ -521,7 +482,7 @@
 
       <section class="panel">
         <div class="panelHead">
-          <div class="label">PLAYER 2 / 推し</div>
+          <div class="label">PLAYER 2 / STAGE</div>
           <div class="hint">横3枠</div>
         </div>
         <div class="rowCards" id="col3"></div>
@@ -529,7 +490,7 @@
 
       <section class="panel">
         <div class="panelHead">
-          <div class="label">PLAYER 2 / STAGE</div>
+          <div class="label">PLAYER 2 / 推し</div>
           <div class="hint">横3枠</div>
         </div>
         <div class="rowCards" id="col4"></div>
@@ -537,22 +498,75 @@
     </div>
 
     <div class="footerNote">
-      使い方：スライダーで差分を選ぶ（10刻み）→離すと加算＆履歴に記録＆スライダーは0へ戻る。Undoは「直近の差分1回」を取り消し（履歴も消える）。数値クリックで直接編集も可（※直接編集は履歴には残しません）。
+      操作：各カードの <b>Func</b> で編集を開く → スライダー（10刻み）で増減、Undo（履歴がある限り何回でも）、Cでその枠をリセット。ターン変更で全スキルOFF。全リセットでIndexedDB削除。
+    </div>
+  </div>
+
+  <!-- カード編集モーダル -->
+  <div class="modalBack" id="editBack" role="dialog" aria-modal="true" aria-label="カード編集">
+    <div class="modal">
+      <div class="modalHead">
+        <div class="modalTitle">
+          <span>🛠️ 編集</span>
+          <span class="pill" id="editLabel">-</span>
+        </div>
+        <button class="btn" id="editClose">閉じる</button>
+      </div>
+
+      <div class="modalBody">
+        <div class="bigValue">
+          <div>
+            <div style="font-size:11px;color:rgba(255,255,255,.70);font-weight:900;letter-spacing:.03em">現在値（クリックで直接入力）</div>
+            <div class="num" id="editValue">0</div>
+          </div>
+          <div class="deltaPill">
+            <span class="deltaSign" id="editDs">±</span>
+            <span class="deltaNum" id="editDn">0</span>
+          </div>
+        </div>
+
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;color:rgba(255,255,255,.70);font-size:11px;font-weight:900">
+            <span>-60</span><span>差分（10刻み / 離すと加算）</span><span>+60</span>
+          </div>
+          <input id="editRange" type="range" min="-60" max="60" step="10" value="0" />
+        </div>
+
+        <div class="row2">
+          <button class="skillBtn off" id="editS1">スキル1</button>
+          <button class="skillBtn off" id="editS2">スキル2</button>
+          <button class="skillBtn" id="editUndo">Undo（戻す）</button>
+          <button class="skillBtn" id="editReset">C（リセット）</button>
+        </div>
+
+        <div class="histBox">
+          <div class="histHead">
+            <span>差分履歴（表示は直近3 / Undoは無限）</span>
+            <span id="histCount" style="color:rgba(255,255,255,.60);font-size:11px">0件</span>
+          </div>
+          <div id="editHist"></div>
+        </div>
+      </div>
+
+      <div class="modalFoot">
+        <button class="btn" id="editSaveNow">今すぐ保存</button>
+        <button class="btn btnDanger" id="editClose2">閉じる</button>
+      </div>
     </div>
   </div>
 
   <!-- Dice Modal -->
-  <div class="modalBack" id="modalBack" role="dialog" aria-modal="true" aria-label="サイコロ">
-    <div class="modal">
+  <div class="modalBack diceBack" id="modalBack" role="dialog" aria-modal="true" aria-label="サイコロ">
+    <div class="modal diceModal">
       <div class="modalHead">
         <div class="modalTitle">🎲 サイコロ（履歴表示）</div>
         <button class="btn" id="closeModal">閉じる</button>
       </div>
       <div class="modalBody">
-        <div class="diceBig">
+        <div class="bigValue" style="padding:14px">
           <div>
             <div style="font-size:12px;color:rgba(255,255,255,.70);font-weight:900;letter-spacing:.03em">最新の目</div>
-            <div class="diceNum" id="diceNum">-</div>
+            <div class="num" id="diceNum">-</div>
           </div>
           <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-end">
             <button class="btn btnPrimary" id="rollBtn">振る</button>
@@ -560,11 +574,13 @@
           </div>
         </div>
 
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-          <div style="font-weight:1000;font-size:12px;letter-spacing:.04em;color:rgba(255,255,255,.88)">履歴</div>
-          <div style="font-size:11px;color:rgba(255,255,255,.62)">最大 30 件</div>
+        <div class="histBox">
+          <div class="histHead">
+            <span>履歴</span>
+            <span style="color:rgba(255,255,255,.60);font-size:11px">最大 30 件</span>
+          </div>
+          <div id="hist"></div>
         </div>
-        <div class="hist" id="hist"></div>
       </div>
       <div class="modalFoot">
         <button class="btn" id="copyHist">履歴をコピー</button>
@@ -612,7 +628,7 @@
     async function idbSet(key, val){
       const db = await openDB();
       return new Promise((resolve, reject) => {
-       const tx = db.transaction(STORE, "readwrite");
+        const tx = db.transaction(STORE, "readwrite");
         const st = tx.objectStore(STORE);
         const req = st.put(val, key);
         req.onsuccess = () => resolve(true);
@@ -620,9 +636,7 @@
       });
     }
 
-    // 全リセット時：DB自体を削除
     async function deleteDB(){
-      // openしている接続があっても消せるようにclose
       try{
         const db = await openDB();
         db.close();
@@ -632,12 +646,11 @@
         const req = indexedDB.deleteDatabase(DB_NAME);
         req.onsuccess = () => resolve(true);
         req.onerror = () => reject(req.error);
-        req.onblocked = () => resolve(true); // blockedでもUIはリセット済みにする
+        req.onblocked = () => resolve(true);
       });
     }
 
     function snapshotState(){
-      // diceHistoryはシリアライズ用に日時を数値化
       const dice = diceHistory.map(x => ({ t: x.t instanceof Date ? x.t.getTime() : x.t, v: x.v })).slice(0, 30);
       return {
         v: 1,
@@ -649,99 +662,35 @@
       };
     }
 
-    async function loadState(){
-      const saved = await idbGet(STATE_KEY);
-      if (!saved || typeof saved !== "object") return null;
-      return saved;
-    }
-
-    // 保存は連打で重くならないようにデバウンス
     let _saveTimer = null;
     function scheduleSave(){
       if (_saveTimer) clearTimeout(_saveTimer);
       _saveTimer = setTimeout(async () => {
-        try{
-          await idbSet(STATE_KEY, snapshotState());
-        }catch(e){
-          console.warn("IndexedDB save failed:", e);
-        }
+        try{ await idbSet(STATE_KEY, snapshotState()); }
+        catch(e){ console.warn("IndexedDB save failed:", e); }
       }, 200);
     }
-
-    function applyStateToUI(){
-      // turn
-      const turnEl = document.getElementById("turnNum");
-      if (turnEl) turnEl.textContent = String(turn);
-
-      // values / skills / deltaHist
-      document.querySelectorAll(".card").forEach(card => {
-        const id = card.dataset.id;
-        const valueEl = document.getElementById(`${id}-value`);
-        if (valueEl && (id in values)) valueEl.textContent = String(values[id] ?? 0);
-
-        // skills reflect
-        const s1Btn = document.getElementById(`${id}-s1`);
-        const s2Btn = document.getElementById(`${id}-s2`);
-        if (s1Btn && skills[id]) applySkillBtnClass(s1Btn, !!skills[id].s1);
-        if (s2Btn && skills[id]) applySkillBtnClass(s2Btn, !!skills[id].s2);
-
-        // undo enable/disable (miniHist表示は今はコメントアウトなのでここだけ反映)
-        const undoBtn = document.getElementById(`${id}-undo`);
-        const arr = (deltaHist[id] || []);
-        if (undoBtn){
-          undoBtn.disabled = arr.length === 0;
-          undoBtn.style.opacity = arr.length === 0 ? 0.55 : 1;
-        }
-      });
-
-      // diceHistory 復帰（日時をDateに戻す）
-      for (let i=0;i<diceHistory.length;i++){
-        if (!(diceHistory[i].t instanceof Date)){
-          diceHistory[i].t = new Date(diceHistory[i].t);
-        }
-      }
-      renderDiceHist();
-      // 最新値表示
-      if (diceHistory.length > 0){
-        diceNumEl.textContent = String(diceHistory[0].v);
-      }else{
-        diceNumEl.textContent = "-";
-      }
+    async function saveNow(){
+      try{ await idbSet(STATE_KEY, snapshotState()); }
+      catch(e){ console.warn("IndexedDB saveNow failed:", e); }
     }
 
-
-    // ✅ 指定：COLUMN 1=P1ステージ(6), COLUMN 2=P1推し(3), COLUMN 3=P2ステージ(3), COLUMN 4=P2推し(6)
+    // =========================
+    // アプリ本体
+    // =========================
     const layout = [
-      { mountId: "col1", count: 3, prefix: "P1S" },
-      { mountId: "col2", count: 3, prefix: "P1O" },
-      { mountId: "col3", count: 3, prefix: "P2S" },
-      { mountId: "col4", count: 3, prefix: "P2O" },
+      { mountId: "col1", count: 3, prefix: "P1S" }, // P1 Stage
+      { mountId: "col2", count: 3, prefix: "P1O" }, // P1 Oshi
+      { mountId: "col3", count: 3, prefix: "P2S" }, // P2 Oshi（表記は後でラベルで調整）
+      { mountId: "col4", count: 3, prefix: "P2O" }, // P2 Stage（表記は後でラベルで調整）
     ];
 
-    /** values: { [id]: number } */
     const values = Object.create(null);
-    /** skills: { [id]: {s1:boolean, s2:boolean} } */
     const skills = Object.create(null);
-    /** delta history per card: { [id]: number[] }  (最新が先頭 / 最大3) */
-    const deltaHist = Object.create(null);
-
+    const deltaHist = Object.create(null); // 無制限（表示は直近3）
     let turn = 1;
 
-    // Dice history
     const diceHistory = []; // {t: Date, v: number}
-
-    function fmtTime(d){
-      const hh = String(d.getHours()).padStart(2,"0");
-      const mm = String(d.getMinutes()).padStart(2,"0");
-      const ss = String(d.getSeconds()).padStart(2,"0");
-      return `${hh}:${mm}:${ss}`;
-    }
-
-    function fmtDelta(n){
-      const sign = n > 0 ? "+" : (n < 0 ? "−" : "±");
-      const abs = Math.abs(n);
-      return { sign, abs };
-    }
 
     function applySkillBtnClass(btn, on){
       btn.classList.toggle("on", !!on);
@@ -753,52 +702,48 @@
         skills[id].s1 = false;
         skills[id].s2 = false;
       }
-      document.querySelectorAll(".skillBtn[data-skill]").forEach(btn=>{
-        applySkillBtnClass(btn, false);
+      // カード側の表示も更新
+      document.querySelectorAll(".card").forEach(card => {
+        const id = card.dataset.id;
+        renderCardStatus(id);
       });
+      // 編集中なら反映
+      if (currentEditId) renderEditModal();
+    }
+
+    function fmtDelta(n){
+      const sign = n > 0 ? "+" : (n < 0 ? "−" : "±");
+      const abs = Math.abs(n);
+      return { sign, abs };
     }
 
     function pushDeltaHistory(id, delta){
       if (!deltaHist[id]) deltaHist[id] = [];
-      deltaHist[id].unshift(delta);
-      //renderMiniHistory(id);
+      deltaHist[id].unshift(delta); // 無制限
     }
 
     function popDeltaHistory(id){
       if (!deltaHist[id] || deltaHist[id].length === 0) return null;
-      const d = deltaHist[id].shift(); // 最新を取り出し
-      //renderMiniHistory(id);
-      return d;
+      return deltaHist[id].shift();
     }
 
-    function renderMiniHistory(id){
-      const box = document.getElementById(`${id}-mh`);
-      const list = document.getElementById(`${id}-mhl`);
-      const undoBtn = document.getElementById(`${id}-undo`);
-      const arr = deltaHist[id] || [];
+    function renderCardValue(id){
+      const el = document.getElementById(`${id}-value`);
+      if (el) el.textContent = String(values[id] ?? 0);
+    }
 
-      if (undoBtn) undoBtn.disabled = arr.length === 0;
-      if (undoBtn) undoBtn.style.opacity = arr.length === 0 ? 0.55 : 1;
-
-      if (!list) return;
-      list.innerHTML = "";
-
-      if (arr.length === 0){
-        const row = document.createElement("div");
-        row.className = "miniHistItem";
-        row.style.justifyContent = "center";
-        row.style.color = "rgba(255,255,255,.62)";
-        row.textContent = "履歴なし";
-        list.appendChild(row);
-        return;
+    function renderCardStatus(id){
+      const s1 = !!(skills[id]?.s1);
+      const s2 = !!(skills[id]?.s2);
+      const s1El = document.getElementById(`${id}-st1`);
+      const s2El = document.getElementById(`${id}-st2`);
+      if (s1El){
+        s1El.classList.toggle("on", s1);
+        s1El.textContent = `S1:${s1 ? "ON" : "OFF"}`;
       }
-
-      for (const d of arr){
-        const row = document.createElement("div");
-        row.className = "miniHistItem";
-        const sign = d > 0 ? "+" : "−";
-        row.innerHTML = `<div>差分 <b>${sign}${Math.abs(d)}</b></div><div style="color:rgba(255,255,255,.62);font-size:11px">直近</div>`;
-        list.appendChild(row);
+      if (s2El){
+        s2El.classList.toggle("on", s2);
+        s2El.textContent = `S2:${s2 ? "ON" : "OFF"}`;
       }
     }
 
@@ -816,111 +761,42 @@
         <div class="cardInner">
           <div class="valueRow">
             <div class="value" id="${id}-value" title="クリックで直接入力">0</div>
-            <div class="deltaPill" aria-live="polite" aria-atomic="true">
-              <span class="deltaSign" id="${id}-ds">±</span>
-              <span class="deltaNum" id="${id}-dn">0</span>
-            </div>
+            <button class="funcBtn" id="${id}-func">Func</button>
           </div>
-
-<input id="${id}-range" type="range" min="-60" max="60" step="10" value="0" />
-         <div class="controlsCol">
-            <button class="skillBtn off" data-skill="s1" id="${id}-s1">スキル1</button>
-            <button class="skillBtn" id="${id}-undo" title="直近の差分を1回戻す">Undo</button>
-            <button class="skillBtn off" data-skill="s2" id="${id}-s2">スキル2</button>
-            <button class="skillBtn" id="${id}-reset" title="この枠をリセット">C</button>
+          <div class="statusLine">
+            <span class="pill" id="${id}-st1">S1:OFF</span>
+            <span class="pill" id="${id}-st2">S2:OFF</span>
+            <span style="opacity:.85">Δ履歴: <b id="${id}-hc" style="font-variant-numeric:tabular-nums">0</b></span>
           </div>
+        </div>
       `;
 
-      const valueEl = card.querySelector(`#${id}-value`);
-      const rangeEl = card.querySelector(`#${id}-range`);
-      const dsEl = card.querySelector(`#${id}-ds`);
-      const dnEl = card.querySelector(`#${id}-dn`);
-      const resetBtn = card.querySelector(`#${id}-reset`);
-      const undoBtn = card.querySelector(`#${id}-undo`);
-      const s1Btn = card.querySelector(`#${id}-s1`);
-      const s2Btn = card.querySelector(`#${id}-s2`);
-
-      function render(){
-        valueEl.textContent = values[id];
-      }
-      function renderDelta(v){
-        const n = Number(v) || 0;
-        const { sign, abs } = fmtDelta(n);
-        dsEl.textContent = sign;
-        dnEl.textContent = abs;
-        dsEl.style.color = n > 0 ? "var(--good)" : (n < 0 ? "var(--bad)" : "rgba(255,255,255,.85)");
-        dnEl.style.color = dsEl.style.color;
-      }
-      function pulse(){
-        card.classList.remove("pulse");
-        void card.offsetWidth;
-        card.classList.add("pulse");
-      }
-
-      // スライダー：入力中は差分表示のみ
-      rangeEl.addEventListener("input", () => renderDelta(rangeEl.value));
-
-      // ✅ 確定（離す）：加算→履歴に保存→0へ
-      rangeEl.addEventListener("change", () => {
-        const delta = Number(rangeEl.value) || 0;
-        if (delta !== 0){
-          values[id] = values[id] + delta;
-          pushDeltaHistory(id, delta);
-          render();
-          pulse();
-scheduleSave();
-        }
-        rangeEl.value = 0;
-        renderDelta(0);
-      });
-
-      // 値クリックで直接編集（※要望通り：履歴はスライダー変更のみ）
-      valueEl.addEventListener("click", () => {
-        const next = prompt("数値を直接入力（整数）", String(values[id]));
+      // 直接入力は残す（必要なければ消せます）
+      card.querySelector(`#${id}-value`).addEventListener("click", () => {
+        const next = prompt("数値を直接入力（整数）", String(values[id] ?? 0));
         if (next === null) return;
         const n = Number(next);
         if (!Number.isFinite(n)) return;
         values[id] = Math.trunc(n);
-        render();
-        pulse();scheduleSave();
+        renderCardValue(id);
+        scheduleSave();
+        if (currentEditId === id) renderEditModal();
       });
 
-      // ✅ Undo：直近差分を1回取り消し（履歴も消す）
-      undoBtn.addEventListener("click", () => {
-        const last = popDeltaHistory(id);
-        if (last === null) return;
-        values[id] = values[id] - last; // 取り消し
-        render();
-        pulse();scheduleSave();
+      card.querySelector(`#${id}-func`).addEventListener("click", () => {
+        openEdit(id, labelText);
       });
 
-      resetBtn.addEventListener("click", () => {
-        values[id] = 0;
-        deltaHist[id] = [];
-        rangeEl.value = 0;
-        renderDelta(0);
-        //renderMiniHistory(id);
-        render();
-        pulse();scheduleSave();
-      });
-
-      // スキルボタン：押すと ON/OFF（ピンク/灰色）
-      s1Btn.addEventListener("click", () => {
-        skills[id].s1 = !skills[id].s1;
-        applySkillBtnClass(s1Btn, skills[id].s1);
-      });
-      s2Btn.addEventListener("click", () => {
-        skills[id].s2 = !skills[id].s2;
-        applySkillBtnClass(s2Btn, skills[id].s2);
-      });
-
-      render();
-      renderDelta(0);
-      applySkillBtnClass(s1Btn, false);
-      applySkillBtnClass(s2Btn, false);
-      //renderMiniHistory(id);
-
+      renderCardValue(id);
+      renderCardStatus(id);
+      renderCardHistCount(id);
       return card;
+    }
+
+    function renderCardHistCount(id){
+      const el = document.getElementById(`${id}-hc`);
+      if (!el) return;
+      el.textContent = String((deltaHist[id] || []).length);
     }
 
     function build(){
@@ -935,49 +811,223 @@ scheduleSave();
       }
     }
 
-    function resetAll(){
-      for (const k of Object.keys(values)) values[k] = 0;
-      for (const k of Object.keys(deltaHist)) deltaHist[k] = [];
+    // =========================
+    // 編集モーダル
+    // =========================
+    const editBack   = document.getElementById("editBack");
+    const editLabel  = document.getElementById("editLabel");
+    const editValue  = document.getElementById("editValue");
+    const editRange  = document.getElementById("editRange");
+    const editDs     = document.getElementById("editDs");
+    const editDn     = document.getElementById("editDn");
+    const editS1     = document.getElementById("editS1");
+    const editS2     = document.getElementById("editS2");
+    const editUndo   = document.getElementById("editUndo");
+    const editReset  = document.getElementById("editReset");
+    const editHist   = document.getElementById("editHist");
+    const histCount  = document.getElementById("histCount");
 
-      // 値/スライダー/差分 + miniHist
-      document.querySelectorAll(".card").forEach(card => {
-        const id = card.dataset.id;
-        const valueEl = document.getElementById(`${id}-value`);
-        const rangeEl = document.getElementById(`${id}-range`);
-        const dsEl = document.getElementById(`${id}-ds`);
-        const dnEl = document.getElementById(`${id}-dn`);
-        if (valueEl) valueEl.textContent = "0";
-        if (rangeEl) rangeEl.value = 0;
-        if (dsEl) dsEl.textContent = "±";
-        if (dnEl) dnEl.textContent = "0";
-        if (dsEl) dsEl.style.color = "rgba(255,255,255,.85)";
-        if (dnEl) dnEl.style.color = "rgba(255,255,255,.85)";
-        //renderMiniHistory(id);
-        card.classList.remove("pulse");
-        void card.offsetWidth;
-        card.classList.add("pulse");
-      });
+    let currentEditId = null;
+    let currentEditLabel = "";
 
-      // スキルもOFF
-      setAllSkillsOff();
-      // ✅ IndexedDBから削除（DB自体を消す）
-      deleteDB().catch(e => console.warn("deleteDB failed:", e));
+    function openEdit(id, label){
+      currentEditId = id;
+      currentEditLabel = label;
+      editRange.value = 0;
+      renderEditDelta(0);
+      renderEditModal();
+      editBack.style.display = "flex";
     }
 
-    // Turn
+    function closeEdit(){
+      editBack.style.display = "none";
+      currentEditId = null;
+      currentEditLabel = "";
+    }
+
+    function renderEditDelta(v){
+      const n = Number(v) || 0;
+      const { sign, abs } = fmtDelta(n);
+      editDs.textContent = sign;
+      editDn.textContent = abs;
+      const c = n > 0 ? "var(--good)" : (n < 0 ? "var(--bad)" : "rgba(255,255,255,.85)");
+      editDs.style.color = c;
+      editDn.style.color = c;
+    }
+
+    function renderEditModal(){
+      if (!currentEditId) return;
+      const id = currentEditId;
+
+      editLabel.textContent = currentEditLabel;
+      editValue.textContent = String(values[id] ?? 0);
+
+      // skills
+      applySkillBtnClass(editS1, !!skills[id]?.s1);
+      applySkillBtnClass(editS2, !!skills[id]?.s2);
+
+      // undo enable
+      const arr = deltaHist[id] || [];
+      editUndo.disabled = arr.length === 0;
+      editUndo.style.opacity = arr.length === 0 ? 0.55 : 1;
+
+      // hist render (直近3表示)
+      const view = arr.slice(0, 3);
+      histCount.textContent = `${arr.length}件`;
+
+      editHist.innerHTML = "";
+      if (arr.length === 0){
+        const div = document.createElement("div");
+        div.className = "histItem";
+        div.style.justifyContent = "center";
+        div.style.color = "rgba(255,255,255,.62)";
+        div.textContent = "履歴なし";
+        editHist.appendChild(div);
+      }else{
+        for (const d of view){
+          const sign = d > 0 ? "+" : "−";
+          const row = document.createElement("div");
+          row.className = "histItem";
+          row.innerHTML = `<div>差分 <b>${sign}${Math.abs(d)}</b></div><div style="color:rgba(255,255,255,.62);font-size:11px">直近</div>`;
+          editHist.appendChild(row);
+        }
+      }
+
+      // カード側の小表示も更新
+      renderCardValue(id);
+      renderCardStatus(id);
+      renderCardHistCount(id);
+    }
+
+    // モーダルイベント
+    document.getElementById("editClose").addEventListener("click", closeEdit);
+    document.getElementById("editClose2").addEventListener("click", closeEdit);
+    editBack.addEventListener("click", (e) => { if (e.target === editBack) closeEdit(); });
+
+    // 直接入力
+    editValue.addEventListener("click", () => {
+      if (!currentEditId) return;
+      const id = currentEditId;
+      const next = prompt("数値を直接入力（整数）", String(values[id] ?? 0));
+      if (next === null) return;
+      const n = Number(next);
+      if (!Number.isFinite(n)) return;
+      values[id] = Math.trunc(n);
+      scheduleSave();
+      renderEditModal();
+    });
+
+    // スライダー（inputで差分表示、changeで確定）
+    editRange.addEventListener("input", () => renderEditDelta(editRange.value));
+    editRange.addEventListener("change", () => {
+      if (!currentEditId) return;
+      const id = currentEditId;
+      const delta = Number(editRange.value) || 0;
+      if (delta !== 0){
+        values[id] = (values[id] ?? 0) + delta;
+        pushDeltaHistory(id, delta);
+        scheduleSave();
+      }
+      editRange.value = 0;
+      renderEditDelta(0);
+      renderEditModal();
+    });
+
+    // スキル
+    editS1.addEventListener("click", () => {
+      if (!currentEditId) return;
+      const id = currentEditId;
+      skills[id].s1 = !skills[id].s1;
+      scheduleSave();
+      renderEditModal();
+    });
+    editS2.addEventListener("click", () => {
+      if (!currentEditId) return;
+      const id = currentEditId;
+      skills[id].s2 = !skills[id].s2;
+      scheduleSave();
+      renderEditModal();
+    });
+
+    // Undo（何回でも）
+    editUndo.addEventListener("click", () => {
+      if (!currentEditId) return;
+      const id = currentEditId;
+      const last = popDeltaHistory(id);
+      if (last === null) return;
+      values[id] = (values[id] ?? 0) - last;
+      scheduleSave();
+      renderEditModal();
+    });
+
+    // C（枠リセット）
+    editReset.addEventListener("click", () => {
+      if (!currentEditId) return;
+      const id = currentEditId;
+      values[id] = 0;
+      deltaHist[id] = [];
+      scheduleSave();
+      renderEditModal();
+    });
+
+    // 今すぐ保存
+    document.getElementById("editSaveNow").addEventListener("click", async () => {
+      await saveNow();
+      alert("保存しました");
+    });
+
+    // =========================
+    // 上部機能（ターン/全リセット/サイコロ）
+    // =========================
     function nextTurn(){
       turn += 1;
       document.getElementById("turnNum").textContent = String(turn);
-      setAllSkillsOff();scheduleSave();
+      setAllSkillsOff();
+      scheduleSave();
     }
+
+    async function resetAll(){
+      // メモリ上を初期化
+      for (const k of Object.keys(values)) values[k] = 0;
+      for (const k of Object.keys(deltaHist)) deltaHist[k] = [];
+      for (const k of Object.keys(skills)) skills[k] = { s1:false, s2:false };
+      turn = 1;
+      diceHistory.length = 0;
+
+      // UI反映
+      document.getElementById("turnNum").textContent = "1";
+      document.querySelectorAll(".card").forEach(card => {
+        const id = card.dataset.id;
+        renderCardValue(id);
+        renderCardStatus(id);
+        renderCardHistCount(id);
+      });
+      renderDiceHist();
+      document.getElementById("diceNum").textContent = "-";
+      if (currentEditId) renderEditModal();
+
+      // ✅ IndexedDB削除
+      await deleteDB().catch(e => console.warn("deleteDB failed:", e));
+      alert("全リセットしました（保存データも削除）");
+    }
+
+    document.getElementById("turnBtn").addEventListener("click", nextTurn);
+    document.getElementById("resetAll").addEventListener("click", resetAll);
 
     // Dice modal
     const modalBack = document.getElementById("modalBack");
     const diceNumEl = document.getElementById("diceNum");
     const histEl = document.getElementById("hist");
 
-    function openModal(){ modalBack.style.display = "flex"; }
-    function closeModal(){ modalBack.style.display = "none"; }
+    function openDice(){ modalBack.style.display = "flex"; renderDiceHist(); }
+    function closeDice(){ modalBack.style.display = "none"; }
+
+    function fmtTime(d){
+      const hh = String(d.getHours()).padStart(2,"0");
+      const mm = String(d.getMinutes()).padStart(2,"0");
+      const ss = String(d.getSeconds()).padStart(2,"0");
+      return `${hh}:${mm}:${ss}`;
+    }
 
     function renderDiceHist(){
       histEl.innerHTML = "";
@@ -993,7 +1043,7 @@ scheduleSave();
       for (const item of diceHistory){
         const row = document.createElement("div");
         row.className = "histItem";
-        row.innerHTML = `<div>🎲 <b style="font-size:14px">${item.v}</b></div><div class="histTime">${fmtTime(item.t)}</div>`;
+        row.innerHTML = `<div>🎲 <b style="font-size:14px">${item.v}</b></div><div style="color:rgba(255,255,255,.62);font-size:11px">${fmtTime(item.t)}</div>`;
         histEl.appendChild(row);
       }
     }
@@ -1004,12 +1054,14 @@ scheduleSave();
       diceHistory.unshift({ t: new Date(), v });
       if (diceHistory.length > 30) diceHistory.pop();
       renderDiceHist();
+      scheduleSave();
     }
 
     function clearDice(){
       diceHistory.length = 0;
       diceNumEl.textContent = "-";
-      renderDiceHist();scheduleSave();
+      renderDiceHist();
+      scheduleSave();
     }
 
     async function copyHistory(){
@@ -1026,32 +1078,24 @@ scheduleSave();
       }
     }
 
-    // Events
-    document.getElementById("resetAll").addEventListener("click", resetAll);
-    document.getElementById("turnBtn").addEventListener("click", nextTurn);
-
-    document.getElementById("diceBtn").addEventListener("click", () => {
-      openModal();
-      renderDiceHist();
-    });
-    document.getElementById("closeModal").addEventListener("click", closeModal);
-    modalBack.addEventListener("click", (e) => {
-      if (e.target === modalBack) closeModal();
-    });
-
+    document.getElementById("diceBtn").addEventListener("click", openDice);
+    document.getElementById("closeModal").addEventListener("click", closeDice);
+    modalBack.addEventListener("click", (e) => { if (e.target === modalBack) closeDice(); });
     document.getElementById("rollBtn").addEventListener("click", rollDice);
     document.getElementById("clearDice").addEventListener("click", clearDice);
     document.getElementById("copyHist").addEventListener("click", copyHistory);
 
-    // ✅ 起動時：IndexedDBから復帰 → build → UIに反映
+    // =========================
+    // 起動時復帰 → build → UI反映
+    // =========================
     (async () => {
+      build();
+
       try{
-        const saved = await loadState();
-        build();
-        if (saved){
-          // turn
+        const saved = await idbGet(STATE_KEY);
+        if (saved && typeof saved === "object"){
           if (typeof saved.turn === "number") turn = saved.turn;
-          // values/skills/deltaHist（オブジェクト丸ごと置き換えではなく、今ある参照にマージ）
+
           if (saved.values && typeof saved.values === "object"){
             for (const k of Object.keys(saved.values)) values[k] = saved.values[k];
           }
@@ -1066,19 +1110,26 @@ scheduleSave();
             for (const it of saved.diceHistory.slice(0,30)){
               diceHistory.push({ t: new Date(it.t), v: it.v });
             }
-            // 最新が先頭で保存している前提なので、先頭が最新になるように
             diceHistory.sort((a,b)=>b.t - a.t);
           }
-          applyStateToUI();
-        }else{
-          renderDiceHist();
         }
       }catch(e){
         console.warn("restore failed:", e);
-        build();
-        renderDiceHist();
       }
-   })();
+
+      document.getElementById("turnNum").textContent = String(turn);
+
+      // UI反映
+      document.querySelectorAll(".card").forEach(card => {
+        const id = card.dataset.id;
+        renderCardValue(id);
+        renderCardStatus(id);
+        renderCardHistCount(id);
+      });
+
+      renderDiceHist();
+      if (diceHistory.length > 0) diceNumEl.textContent = String(diceHistory[0].v);
+    })();
   </script>
 </body>
 </html>
