@@ -467,16 +467,16 @@ margin-top:10px; /* ✅ ライフ数値を下に10px */
       box-shadow: var(--shadow);
       backdrop-filter: blur(10px);
       display: grid;
-      grid-template-columns: repeat(6, minmax(0, 1fr)); /* 6列×2段=12枚 */
+      grid-template-columns: repeat(3, minmax(0, 1fr)); /* ✅ 最大4列 */
       gap: 12px;
       overflow: hidden;
     }
 
     @media (max-width: 900px){
-      .allGrid{ grid-template-columns: repeat(4, minmax(0, 1fr)); } /* 4列×3段 */
+      .allGrid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
     @media (max-width: 600px){
-      .allGrid{ grid-template-columns: repeat(3, minmax(0, 1fr)); } /* 3列×4段 */
+      .allGrid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
   </style>
 </head>
