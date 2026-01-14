@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ホロライブ風 ライフカウンター</title>
+  <title>ホロカ風 ライフカウンター</title>
   <style>
     :root{
       --bg1:#0b1020;
@@ -35,7 +35,37 @@
       overflow-x:hidden;
     }
 
-    .wrap{ max-width: 1280px; margin: 0 auto; padding: 18px 14px 28px; }
+    /* ✅ 全体スケール縮小用ラッパー */
+    .wrap{
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 18px 14px 14px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+
+      /* ★ここが本体 */
+      transform: scale(var(--ui-scale));
+      transform-origin: top center;
+    }
+
+    /* 画面サイズ別にスケール調整 */
+    :root{
+      --ui-scale: 0.9;
+    }
+
+    @media (max-width: 1200px){
+      :root{ --ui-scale: 0.85; }
+    }
+
+    @media (max-width: 900px){
+      :root{ --ui-scale: 0.8; }
+    }
+
+    @media (max-width: 600px){
+      :root{ --ui-scale: 0.75; }
+   }
 
     header{
       display:flex;
@@ -97,12 +127,15 @@
     }
     .chip b{ font-variant-numeric: tabular-nums; }
 
-    /* ✅ 縦横を入れ替え：4つのCOLUMN（P1STAGE等）を「縦に並べる」 */
+    /* ✅ 4つのCOLUMN枠を「2×2」で配置して、画面内に収めやすくする */
     .columnsStack{
-      display:flex;
-      flex-direction:column;
-      gap:14px;
-      align-items:stretch;
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-rows: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      align-items: stretch;
     }
 
     .panel{
@@ -113,6 +146,9 @@
       backdrop-filter: blur(10px);
       overflow:hidden;
       position:relative;
+      display:flex;
+      flex-direction:column;
+      min-height:0;
     }
 
     .panelHead{
@@ -138,22 +174,17 @@
       white-space:nowrap;
     }
 
-    /* ✅ 各COLUMNの中身（カード枠）を横に並べる（必要なら横スクロール） */
+
+    /* ✅ 推し / STAGE は常に横3個 */
     .rowCards{
       padding: 12px;
+      flex: 1;
+      min-height: 0;
       display:grid;
-      grid-auto-flow: column;
-      grid-auto-columns: minmax(220px, 1fr);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
-      overflow-x:auto;
-      scrollbar-width: thin;
-    }
-    .rowCards::-webkit-scrollbar{ height:10px; }
-    .rowCards::-webkit-scrollbar-thumb{
-      background: rgba(255,255,255,.18);
-      border-radius: 999px;
-      border: 2px solid rgba(0,0,0,0);
-      background-clip: padding-box;
+      overflow: hidden;
+      align-content: start;
     }
 
     .card{
@@ -166,7 +197,7 @@
       box-shadow: 0 14px 36px rgba(0,0,0,.30);
       overflow:hidden;
       position:relative;
-      min-height: 185px;
+      min-height: 165px;
     }
 
     .card::before{
@@ -204,7 +235,7 @@
     }
 
     .cardInner{
-      padding: 38px 12px 12px;
+      padding: 34px 10px 10px;
       display:flex;
       flex-direction:column;
       gap: 10px;
@@ -460,7 +491,7 @@
     }
 
     .footerNote{
-      margin-top: 12px;
+      margin-top: 0px;
       color: rgba(255,255,255,.70);
       font-size: 11px;
       line-height:1.5;
@@ -475,7 +506,7 @@
   <div class="wrap">
     <header>
       <div class="title">
-        <h1>ライフカウンター（ホロライブ風）</h1>
+        <h1>ライフカウンター（ホロカ風）</h1>
         <p class="subtitle">✅ COLUMN（P1 STAGE等）は縦並び／各COLUMN内の枠は横並び。差分は10刻み。差分操作は各枠の履歴（直近3件）に記録。Undoで1回戻せます。</p>
       </div>
       <div class="toolbar">
@@ -490,7 +521,7 @@
       <section class="panel">
         <div class="panelHead">
           <div class="label">PLAYER 1 / STAGE</div>
-          <div class="hint">横6枠</div>
+          <div class="hint">横3枠</div>
         </div>
         <div class="rowCards" id="col1"></div>
       </section>
@@ -505,7 +536,7 @@
 
       <section class="panel">
         <div class="panelHead">
-          <div class="label">PLAYER 2 / STAGE</div>
+          <div class="label">PLAYER 2 / 推し</div>
           <div class="hint">横3枠</div>
         </div>
         <div class="rowCards" id="col3"></div>
@@ -513,8 +544,8 @@
 
       <section class="panel">
         <div class="panelHead">
-          <div class="label">PLAYER 2 / 推し</div>
-          <div class="hint">横6枠</div>
+          <div class="label">PLAYER 2 / STAGE</div>
+          <div class="hint">横3枠</div>
         </div>
         <div class="rowCards" id="col4"></div>
       </section>
@@ -559,10 +590,10 @@
   <script>
     // ✅ 指定：COLUMN 1=P1ステージ(6), COLUMN 2=P1推し(3), COLUMN 3=P2ステージ(3), COLUMN 4=P2推し(6)
     const layout = [
-      { mountId: "col1", count: 6, prefix: "P1S" },
+      { mountId: "col1", count: 3, prefix: "P1S" },
       { mountId: "col2", count: 3, prefix: "P1O" },
       { mountId: "col3", count: 3, prefix: "P2S" },
-      { mountId: "col4", count: 6, prefix: "P2O" },
+      { mountId: "col4", count: 3, prefix: "P2O" },
     ];
 
     /** values: { [id]: number } */
