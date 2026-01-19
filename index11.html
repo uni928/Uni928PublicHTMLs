@@ -6,7 +6,7 @@
   <title>招待隠蔽・感染ゲーム（スマホ回し）</title>
   <style>
     :root{
-      --bg:#0f1220; --card:#171a2b; --card2:#111325; --text:#eef0ff; --muted:#aab0d6;
+      --bg:#0f1220; --card:#171a2b; --text:#eef0ff; --muted:#aab0d6;
       --accent:#6ee7ff; --danger:#ff6b6b; --ok:#7CFF9B; --btn:#23264a;
       --shadow: 0 10px 30px rgba(0,0,0,.35);
       --radius:18px;
@@ -76,11 +76,7 @@
       border-radius: 16px;
       padding:14px;
     }
-    .list{
-      display:grid;
-      grid-template-columns: 1fr;
-      gap:10px;
-    }
+    .list{display:grid; grid-template-columns: 1fr; gap:10px;}
     .playerRow{
       display:flex; justify-content:space-between; align-items:center;
       padding:10px 12px;
@@ -97,7 +93,6 @@
     }
     .tag.inf{border-color: rgba(255,107,107,.35); background: rgba(255,107,107,.10); color:#ffd1d1}
     .tag.safe{border-color: rgba(124,255,155,.25); background: rgba(124,255,155,.08); color:#d6ffe1}
-    .tag.neutral{border-color: rgba(110,231,255,.25); background: rgba(110,231,255,.08); color:#d9fbff}
     .hr{height:1px; background: rgba(255,255,255,.10); margin:6px 0;}
     .mono{font-variant-numeric: tabular-nums;}
     .footerNote{font-size:12px; color:var(--muted)}
@@ -149,15 +144,16 @@
 (() => {
   // ====== 状態 ======
   const S = {
-    phase: "setup", // setup | infectPhase | pass | action | roundOver | results
+    phase: "setup", // setup | infectPhase | pass | action | healSelect | actionResult | roundOver | results
     n: 0,
     round: 1,
     currentPlayer: 1, // 1..n
     infected: [],     // boolean length n (0-index)
     score: [],        // number length n
-    lastLog: "",      // 直近の処理説明（全員に見えるわけではない。基本はそのプレイヤー画面に表示）
+    resultTitle: "",
+    resultBody: "",
     pending: null,    // pass画面から次に進む先
-    resultReason: ""  // ラウンド終了理由表示
+    resultReason: ""
   };
 
   const elView = document.getElementById("view");
@@ -166,29 +162,13 @@
   // ====== ユーティリティ ======
   const rndi = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
-  function pickRandomIndex(excludeSet, n){
-    // excludeSet: Set of indices to avoid
-    const candidates = [];
-    for(let i=0;i<n;i++){
-      if(!excludeSet.has(i)) candidates.push(i);
-    }
-    if(candidates.length === 0) return -1;
-    return candidates[rndi(0, candidates.length-1)];
-  }
-
-  function allInfected(){
-    return S.infected.every(Boolean);
-  }
-
-  function countInfected(){
-    return S.infected.filter(Boolean).length;
-  }
-
   function nonInfectedIndices(){
     const a=[];
     for(let i=0;i<S.n;i++) if(!S.infected[i]) a.push(i);
     return a;
   }
+  function allInfected(){ return S.infected.every(Boolean); }
+  function countInfected(){ return S.infected.filter(Boolean).length; }
 
   function setPhase(p){
     S.phase = p;
@@ -196,9 +176,16 @@
   }
 
   function clampScores(){
-    // 必要なら0未満にしない等の調整。仕様にないのでそのままでもOKだが、見やすさのため0下限。
+    // 仕様外だが見やすさのため0下限
     for(let i=0;i<S.n;i++){
       if(S.score[i] < 0) S.score[i] = 0;
+    }
+  }
+
+  // 行動後：感染者全員が +5 点
+  function grantInfectedBonus(){
+    for(let i=0;i<S.n;i++){
+      if(S.infected[i]) S.score[i] += 5;
     }
   }
 
@@ -209,7 +196,8 @@
     S.currentPlayer = 1;
     S.infected = Array(n).fill(false);
     S.score = Array(n).fill(0);
-    S.lastLog = "";
+    S.resultTitle = "";
+    S.resultBody = "";
     S.pending = null;
     S.resultReason = "";
     setPhase("infectPhase");
@@ -219,14 +207,12 @@
     // 感染フェイズ：非感染者から1人ランダム感染（自動）
     const non = nonInfectedIndices();
     if(non.length === 0){
-      // すでに全員感染
       finishRoundAllInfected();
       return;
     }
     const idx = non[rndi(0, non.length-1)];
     S.infected[idx] = true;
-    S.lastLog = `感染フェイズ：プレイヤー${idx+1} が感染しました。`;
-    // 全員感染なら終了、そうでなければ行動フェイズへ（プレイヤー1から）
+
     if(allInfected()){
       finishRoundAllInfected();
     }else{
@@ -236,83 +222,94 @@
   }
 
   function showPassScreen(next){
-    S.pending = next; // "action" or "infectPhase" etc.
+    S.pending = next; // "action"
     setPhase("pass");
   }
 
-  function nextPlayerOrNextInfection(){
+  function goNextAfterResult(){
     if(S.currentPlayer < S.n){
       S.currentPlayer += 1;
       showPassScreen("action");
     }else{
-      // 全員が1回行動したら次のラウンドへ（感染フェイズ）
       S.round += 1;
       setPhase("infectPhase");
     }
   }
 
-  function doInfectionCheck(playerIndex){
-    // 「感染チェック」：自分以外を1人ランダムに選び、感染しているかだけ表示（ゲーム状態は変えない）
-    const exclude = new Set([playerIndex]);
-    const t = pickRandomIndex(exclude, S.n);
-    const isInf = S.infected[t];
-    S.lastLog =
-      `感染チェック：あなた（プレイヤー${playerIndex+1}）はプレイヤー${t+1}をチェック → ` +
-      (isInf ? "感染しています。" : "感染していません。");
-    nextPlayerOrNextInfection();
+  function showActionResult(title, body){
+    S.resultTitle = title;
+    S.resultBody = body;
+    setPhase("actionResult");
   }
 
-  function doHeal(playerIndex){
-    // 「治す」：非感染者のみ選択可能。自分以外を1人ランダムに選ぶ
-    const exclude = new Set([playerIndex]);
-    const t = pickRandomIndex(exclude, S.n);
+  function doInfectionCheck(playerIndex){
+    // 感染チェック：自分以外をランダムで1人チェックし、「感染者か」を知る
+    const candidates = [];
+    for(let i=0;i<S.n;i++){
+      if(i !== playerIndex) candidates.push(i);
+    }
+    const t = candidates[rndi(0, candidates.length-1)];
+    const isInf = S.infected[t];
 
-    // 表示上は必ず「治しました」
-    let log = `治療：あなた（プレイヤー${playerIndex+1}）はプレイヤー${t+1}を治しました。`;
+    // 行動後ボーナス：感染者全員 +5
+    grantInfectedBonus();
+    clampScores();
 
-    if(!S.infected[t]){
+    // 結果表示（このプレイヤーだけが見て次へ）
+    showActionResult(
+      "感染チェック結果",
+      `プレイヤー${t+1} は ${isInf ? "感染者です" : "感染者ではありません"}。`
+    );
+  }
+
+  function openHealSelect(playerIndex){
+    // 治す：対象プレイヤーを選択
+    setPhase("healSelect");
+  }
+
+  function doHeal(playerIndex, targetIndex){
+    // 治す：表示コメントは「プレイヤー○を治しました」のみ
+    // 内部処理は従来ルール通り（対象が感染者か否かで減点/治癒処理）
+
+    if(!S.infected[targetIndex]){
       // 対象が感染者でない → 非感染者全員 -3
       for(let i=0;i<S.n;i++){
         if(!S.infected[i]) S.score[i] -= 3;
       }
-      log += `\n結果：プレイヤー${t+1}は感染者ではありませんでした。非感染者全員が3点失いました。`;
     }else{
-      // 対象が感染者 → 対象は非感染者になる。対象＋感染者全員 -5
-      const infectedBefore = S.infected.map(x => x); // copy
-      // まず減点（「そのプレイヤーと感染者全員」＝治療対象＋当時感染者）
+      // 対象が感染者 → 対象は非感染者になる／対象＋（治療時点の）感染者全員 -5
+      const infectedBefore = S.infected.slice();
       for(let i=0;i<S.n;i++){
         if(infectedBefore[i]) S.score[i] -= 5;
       }
-      // 対象は治療で非感染者に
-      S.infected[t] = false;
-      log += `\n結果：プレイヤー${t+1}は感染者でした！治療に成功。\nペナルティ：治療対象（プレイヤー${t+1}）と感染者全員が5点失いました。`;
+      S.infected[targetIndex] = false;
     }
 
+    // 行動後ボーナス：感染者全員 +5（治療で感染者が減っている場合は「治療後の感染者」へ付与）
+    grantInfectedBonus();
     clampScores();
 
-    // 行動後、全員感染になっていたら次の感染フェイズで終了する…が、仕様上「感染フェイズで全員感染なら」なので、
-    // ここでは即終了せず、通常通り進行（次の感染フェイズで判定）。
-    S.lastLog = log;
-    nextPlayerOrNextInfection();
+    // 結果表示（詳細は伏せる）
+    showActionResult(
+      "治療しました",
+      `プレイヤー${targetIndex+1} を治しました。`
+    );
   }
 
   function finishRoundAllInfected(){
-    // 全員感染したため、全員治療されました → リザルトへ
     S.resultReason = "全員が感染しました。全員感染したため、全員治療されました。";
     setPhase("roundOver");
   }
 
-  function goToResults(){
-    setPhase("results");
-  }
+  function goToResults(){ setPhase("results"); }
 
   function continueGameCarryScore(){
-    // 点数引き継ぎで続ける：感染状況だけリセット、ラウンドを進めて再開
+    // 点数引き継ぎで続ける：感染状況だけリセット
     S.infected = Array(S.n).fill(false);
     S.currentPlayer = 1;
-    S.lastLog = "";
+    S.resultTitle = "";
+    S.resultBody = "";
     S.resultReason = "";
-    // 続けるので次ラウンドとして感染フェイズから
     setPhase("infectPhase");
   }
 
@@ -323,7 +320,8 @@
     S.currentPlayer = 1;
     S.infected = [];
     S.score = [];
-    S.lastLog = "";
+    S.resultTitle = "";
+    S.resultBody = "";
     S.pending = null;
     S.resultReason = "";
     render();
@@ -336,7 +334,7 @@
     if(S.phase === "setup"){
       elView.innerHTML = `
         <div class="big">最初にプレイ人数を決めてください</div>
-        <div class="muted">※ 2人以上推奨（1人だとランダム対象が作れません）</div>
+        <div class="muted">※ 2人以上推奨</div>
         <div class="panel">
           <div class="row">
             <div class="pill"><span>人数</span> <b>2〜30</b></div>
@@ -347,7 +345,7 @@
           </div>
           <div class="muted" style="margin-top:10px">
             進行：<b>感染フェイズ（自動）→ 行動フェイズ（全員1回ずつ）→ …</b><br/>
-            感染フェイズで全員感染した瞬間にラウンド終了 → リザルトへ。
+            行動後：<b>感染者全員が+5点</b> を得ます。
           </div>
         </div>
       `;
@@ -369,7 +367,7 @@
           </div>
           <div class="hr"></div>
           <button class="btn primary" id="btnAutoInfect">感染（自動実行）</button>
-          <div class="muted" style="margin-top:10px">みんなで話し合いの準備ができたら押してください。</div>
+          <div class="muted" style="margin-top:10px">話し合いの準備ができたら押してください。</div>
         </div>
       `;
       document.getElementById("btnAutoInfect").onclick = beginInfectionPhase;
@@ -382,14 +380,13 @@
         <div class="big">スマホを回してください</div>
         <div class="panel">
           <div class="big" style="font-size:20px">プレイヤー${p} がボタンを押してください</div>
-          <div class="muted">※ 他の人は見ないで渡してください（役割が出ます）</div>
+          <div class="muted">※ 他の人は見ないで渡してください</div>
           <div class="hr"></div>
           <button class="btn primary" id="btnImPlayer">プレイヤー${p}です</button>
         </div>
       `;
       document.getElementById("btnImPlayer").onclick = () => {
         if(S.pending === "action") setPhase("action");
-        else if(S.pending === "infectPhase") setPhase("infectPhase");
         else setPhase("action");
       };
       return;
@@ -399,53 +396,87 @@
       const i = S.currentPlayer - 1;
       const isInf = S.infected[i];
 
-      const statusTag = isInf
-        ? `<span class="tag inf">感染者</span>`
-        : `<span class="tag safe">非感染者</span>`;
-
-      const buttons = isInf
-        ? `
-            <button class="btn danger" id="btnCheck">感染チェック（ランダム1人）</button>
-          `
-        : `
-            <button class="btn danger" id="btnCheck">感染チェック（ランダム1人）</button>
-            <button class="btn ok" id="btnHeal">治す（ランダム1人）</button>
-          `;
-
       elView.innerHTML = `
         <div class="row" style="justify-content:space-between">
           <div class="big">行動フェイズ：プレイヤー${i+1}</div>
-          ${statusTag}
+          ${isInf ? `<span class="tag inf">感染者</span>` : `<span class="tag safe">非感染者</span>`}
         </div>
         <div class="muted">
           ${isInf
-            ? "あなたは <b>感染者</b> です。できる行動は <b>感染チェック</b> のみです。"
-            : "あなたは <b>非感染者</b> です。<b>感染チェック</b> か <b>治す</b> を選べます。"}
+            ? "あなたは <b>感染者</b> です。<b>感染チェック</b> のみできます。"
+            : "あなたは <b>非感染者</b> です。<b>感染チェック</b> か <b>治す</b> を選べます（治療対象は選択）。"}
         </div>
 
         <div class="panel">
           <div class="row">
-            ${buttons}
+            <button class="btn danger" id="btnCheck">感染チェック</button>
+            ${isInf ? "" : `<button class="btn ok" id="btnHeal">治す</button>`}
           </div>
           <div class="hr"></div>
-          <div class="muted" style="white-space:pre-line">${escapeHtml(S.lastLog || "（まだ行動していません）")}</div>
+          <div class="muted">
+            行動後：<b>感染者全員が+5点</b>
+          </div>
         </div>
 
         <div class="panel">
           <div class="row">
             <div class="pill">感染者 <b class="mono">${countInfected()}</b> / <b class="mono">${S.n}</b></div>
-            <div class="pill">このラウンドの順番 <b class="mono">${S.currentPlayer}</b> / <b class="mono">${S.n}</b></div>
-          </div>
-          <div class="muted" style="margin-top:8px">
-            行動後は「次のプレイヤーに回す」画面に自動で移ります。
+            <div class="pill">順番 <b class="mono">${S.currentPlayer}</b> / <b class="mono">${S.n}</b></div>
           </div>
         </div>
       `;
 
       document.getElementById("btnCheck").onclick = () => doInfectionCheck(i);
       if(!isInf){
-        document.getElementById("btnHeal").onclick = () => doHeal(i);
+        document.getElementById("btnHeal").onclick = () => openHealSelect(i);
       }
+      return;
+    }
+
+    if(S.phase === "healSelect"){
+      const i = S.currentPlayer - 1;
+
+      const buttons = [];
+      for(let t=0;t<S.n;t++){
+        if(t === i) continue;
+        buttons.push(`<button class="btn ok" data-t="${t}">プレイヤー${t+1} を治す</button>`);
+      }
+
+      elView.innerHTML = `
+        <div class="big">治療対象を選んでください</div>
+        <div class="muted">（あなたはプレイヤー${i+1}）</div>
+        <div class="panel">
+          <div class="row">
+            ${buttons.join("")}
+          </div>
+          <div class="hr"></div>
+          <button class="btn ghost" id="btnBack">戻る</button>
+        </div>
+      `;
+
+      elView.querySelectorAll("button[data-t]").forEach(btn => {
+        btn.onclick = () => {
+          const t = Number(btn.getAttribute("data-t"));
+          doHeal(i, t);
+        };
+      });
+      document.getElementById("btnBack").onclick = () => setPhase("action");
+      return;
+    }
+
+    if(S.phase === "actionResult"){
+      elView.innerHTML = `
+        <div class="big">${escapeHtml(S.resultTitle)}</div>
+        <div class="panel">
+          <div class="big" style="font-size:20px; white-space:pre-line">${escapeHtml(S.resultBody)}</div>
+          <div class="hr"></div>
+          <button class="btn primary" id="btnNext">次のプレイヤーへ</button>
+        </div>
+        <div class="muted">
+          ※ この画面を見たら、スマホを次の人へ渡してください。
+        </div>
+      `;
+      document.getElementById("btnNext").onclick = goNextAfterResult;
       return;
     }
 
@@ -482,7 +513,7 @@
 
       elView.innerHTML = `
         <div class="big">リザルト</div>
-        <div class="muted">点数は引き継ぎ可能です（続けるボタン）。</div>
+        <div class="muted">続けると点数を引き継いで次ラウンドへ（感染状況はリセット）。</div>
 
         <div class="panel">
           <div class="row">
@@ -520,34 +551,34 @@
   function showRules(){
     const rules = `
 【進行】
-1) 最初に人数を決める
-2) 感染フェイズ：非感染者から1人ランダムに感染（自動）
-3) 全員感染したら「全員治療されました」→ リザルトへ（続けるで点数引き継ぎ）
+1) 人数決定
+2) 感染フェイズ：非感染者から1人ランダム感染（自動）
+3) 全員感染したら「全員治療されました」→ リザルト（続けるで点数引き継ぎ）
 4) 非感染者がいるなら行動フェイズへ
 5) 行動フェイズ：プレイヤー1→2→…→N が1回ずつ行動（スマホを回す）
-6) 全員が行動したら次の感染フェイズへ（以降くり返し）
+6) 行動後：感染者全員が+5点
+7) 全員が行動したら次の感染フェイズへ
 
 【行動】
-● 非感染者：
-- 「感染チェック」：自分以外のランダム1人が感染しているかを確認（状態変化なし）
-- 「治す」：自分以外のランダム1人を治療（表示は必ず「治しました」）
-   - 対象が感染者でない場合：非感染者全員が3点失う
-   - 対象が感染者の場合：対象は非感染者になる／（治療時点で）感染者全員が5点失う
+● 感染チェック：
+- 対象は自分以外からランダム
+- チェック後、対象が「感染者か」を知る
 
-● 感染者：
-- 「感染チェック」のみ
+● 治す（非感染者のみ）：
+- 対象プレイヤーを選択
+- 表示コメントは「プレイヤー○を治しました」のみ（成否や詳細は表示しない）
+- 内部処理（点数/感染状態）はルール通りに実行
+   - 対象が非感染者：非感染者全員 -3点
+   - 対象が感染者：対象は非感染者へ／（治療時点の）感染者全員 -5点
 
-※ このHTMLはオフラインで動きます（保存しないと状態は残りません）。
+● 感染者は感染チェックのみ
 `.trim();
-
     alert(rules);
   }
 
-  // ====== 外部ボタン ======
   document.getElementById("btnRules").onclick = showRules;
   document.getElementById("btnReset").onclick = restartAll;
 
-  // 初期描画
   render();
 })();
 </script>
