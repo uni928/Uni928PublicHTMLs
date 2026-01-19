@@ -370,6 +370,7 @@
           <div class="muted" style="margin-top:10px">話し合いの準備ができたら押してください。</div>
         </div>
       `;
+      grantInfectedBonus();
       document.getElementById("btnAutoInfect").onclick = beginInfectionPhase;
       return;
     }
@@ -492,7 +493,7 @@
           <button class="btn primary" id="btnToResults">リザルトへ</button>
         </div>
       `;
-      grantInfectedBonus();
+      
       document.getElementById("btnToResults").onclick = goToResults;
       return;
     }
