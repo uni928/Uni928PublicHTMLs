@@ -252,8 +252,8 @@
     const isInf = S.infected[t];
 
     // 行動後ボーナス：感染者全員 +5
-    grantInfectedBonus();
-    clampScores();
+    //grantInfectedBonus();
+    //clampScores();
 
     // 結果表示（このプレイヤーだけが見て次へ）
     showActionResult(
@@ -286,8 +286,8 @@
     }
 
     // 行動後ボーナス：感染者全員 +5（治療で感染者が減っている場合は「治療後の感染者」へ付与）
-    grantInfectedBonus();
-    clampScores();
+    //grantInfectedBonus();
+    //clampScores();
 
     // 結果表示（詳細は伏せる）
     showActionResult(
@@ -492,6 +492,7 @@
           <button class="btn primary" id="btnToResults">リザルトへ</button>
         </div>
       `;
+      grantInfectedBonus();
       document.getElementById("btnToResults").onclick = goToResults;
       return;
     }
