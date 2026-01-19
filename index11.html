@@ -213,7 +213,7 @@
     const idx = non[rndi(0, non.length-1)];
     S.infected[idx] = true;
 
-    if(allInfected()){
+    if(countInfected() >= Math.floor(S.n / 2)){
       finishRoundAllInfected();
     }else{
       S.currentPlayer = 1;
