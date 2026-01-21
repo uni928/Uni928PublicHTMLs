@@ -1,0 +1,849 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Odds-park 出馬表 → スピード指数</title>
+  <style>
+    :root{
+      --bg0:#070A10;
+      --bg1:#0B1020;
+      --card:#0E1630cc;
+      --card2:#0E1630f2;
+      --txt:#EAF0FF;
+      --muted:#A8B3D6;
+      --line:#243055;
+      --accent:#7C5CFF;
+      --accent2:#2EE59D;
+      --warn:#FFB020;
+      --bad:#FF5C7A;
+      --good:#2EE59D;
+      --shadow: 0 18px 60px rgba(0,0,0,.45);
+      --shadow2: 0 10px 30px rgba(0,0,0,.35);
+      --r: 18px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", "Meiryo", Arial, sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      color:var(--txt);
+      background:
+        radial-gradient(1100px 700px at 20% -10%, rgba(124,92,255,.35), transparent 60%),
+        radial-gradient(900px 550px at 110% 10%, rgba(46,229,157,.25), transparent 55%),
+        radial-gradient(900px 650px at 60% 110%, rgba(255,92,122,.16), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1) 55%, #070B14);
+      min-height:100vh;
+    }
+    a{color:inherit}
+    .wrap{max-width:1180px;margin:0 auto;padding:28px 18px 44px}
+    .topbar{
+      display:flex; gap:14px; align-items:center; justify-content:space-between;
+      margin-bottom:18px;
+    }
+    .brand{
+      display:flex; align-items:center; gap:12px;
+    }
+    .logo{
+      width:44px;height:44px;border-radius:14px;
+      background: conic-gradient(from 210deg, var(--accent), var(--accent2), #4CB7FF, var(--accent));
+      box-shadow: 0 10px 30px rgba(124,92,255,.25);
+      position:relative;
+      overflow:hidden;
+    }
+    .logo:after{
+      content:"";
+      position:absolute; inset:-30%;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.35), transparent 35%),
+                  linear-gradient(120deg, transparent 40%, rgba(255,255,255,.18), transparent 60%);
+      transform: rotate(18deg);
+    }
+    .titleblock h1{
+      font-size:18px; margin:0; letter-spacing:.2px;
+    }
+    .titleblock p{
+      margin:2px 0 0; font-size:12px; color:var(--muted);
+    }
+    .pill{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:10px 12px;border:1px solid var(--line);
+      background:rgba(14,22,48,.55);
+      border-radius:999px;
+      box-shadow: var(--shadow2);
+      color:var(--muted);
+      font-size:12px;
+      user-select:none;
+      white-space:nowrap;
+    }
+    .pill b{color:var(--txt);font-weight:650}
+    .grid{
+      display:grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap:14px;
+    }
+    @media (max-width: 980px){
+      .grid{grid-template-columns:1fr}
+    }
+    .card{
+      background: linear-gradient(180deg, rgba(14,22,48,.74), rgba(14,22,48,.48));
+      border:1px solid rgba(36,48,85,.75);
+      border-radius: var(--r);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      position:relative;
+    }
+    .card:before{
+      content:"";
+      position:absolute; inset:-2px;
+      background: radial-gradient(600px 220px at 15% 0%, rgba(124,92,255,.18), transparent 60%),
+                  radial-gradient(500px 220px at 95% 0%, rgba(46,229,157,.14), transparent 60%);
+      pointer-events:none;
+      filter:saturate(1.2);
+    }
+    .card > *{position:relative}
+    .cardHd{
+      padding:14px 16px;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      border-bottom:1px solid rgba(36,48,85,.55);
+      background: rgba(8,12,24,.38);
+    }
+    .cardHd h2{
+      margin:0; font-size:14px; letter-spacing:.2px;
+      display:flex; align-items:center; gap:10px;
+    }
+    .dot{
+      width:10px;height:10px;border-radius:99px;
+      background: linear-gradient(180deg, var(--accent), #4CB7FF);
+      box-shadow: 0 0 0 4px rgba(124,92,255,.12);
+    }
+    .cardBd{padding:14px 16px}
+    .help{
+      color:var(--muted);
+      font-size:12px; line-height:1.65;
+    }
+    .actions{
+      display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+      margin-top:12px;
+    }
+    button, .btn{
+      appearance:none;border:1px solid rgba(36,48,85,.9);
+      background: rgba(10,16,34,.8);
+      color:var(--txt);
+      padding:11px 12px;
+      border-radius: 14px;
+      cursor:pointer;
+      transition: transform .08s ease, border-color .15s ease, background .15s ease, box-shadow .15s ease;
+      box-shadow: 0 10px 26px rgba(0,0,0,.25);
+      font-weight:650;
+      font-size:13px;
+      display:inline-flex; align-items:center; gap:9px;
+      user-select:none;
+    }
+    button:hover{transform: translateY(-1px); border-color: rgba(124,92,255,.7); background: rgba(12,18,38,.92)}
+    button:active{transform: translateY(0px) scale(.99)}
+    button.primary{
+      border-color: rgba(124,92,255,.85);
+      background: linear-gradient(135deg, rgba(124,92,255,.92), rgba(46,229,157,.78));
+      box-shadow: 0 16px 36px rgba(124,92,255,.22);
+    }
+    button.primary:hover{filter:saturate(1.15)}
+    button.ghost{
+      background: rgba(10,16,34,.4);
+      border-style:dashed;
+      color: var(--muted);
+      font-weight:600;
+    }
+    button:disabled{
+      opacity:.55;
+      cursor:not-allowed;
+      transform:none !important;
+    }
+    .kbd{
+      font-family:var(--mono);
+      font-size:11px;
+      padding:2px 6px;
+      border:1px solid rgba(36,48,85,.8);
+      border-bottom-color: rgba(36,48,85,1);
+      border-radius:8px;
+      background: rgba(6,10,22,.65);
+      color:var(--muted);
+    }
+    textarea{
+      width:100%;
+      min-height:220px;
+      resize:vertical;
+      border-radius:16px;
+      border:1px solid rgba(36,48,85,.75);
+      background: rgba(6,10,22,.55);
+      color: var(--txt);
+      padding:12px 12px;
+      font-size:12px;
+      line-height:1.55;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
+      outline:none;
+    }
+    textarea:focus{
+      border-color: rgba(124,92,255,.7);
+      box-shadow: 0 0 0 4px rgba(124,92,255,.14), inset 0 0 0 1px rgba(255,255,255,.02);
+    }
+    .metaRow{
+      display:flex; flex-wrap:wrap; gap:10px;
+      margin-top:12px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .chips{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+    .chip{
+      font-size:11px; color:var(--muted);
+      padding:6px 9px;
+      border:1px solid rgba(36,48,85,.7);
+      background: rgba(10,16,34,.48);
+      border-radius:999px;
+      display:inline-flex; gap:8px; align-items:center;
+    }
+    .chip b{color:var(--txt); font-weight:700}
+    .status{
+      font-size:12px;
+      color:var(--muted);
+      display:flex; align-items:center; gap:8px;
+    }
+    .status .lamp{
+      width:10px;height:10px;border-radius:99px;
+      background: rgba(168,179,214,.5);
+      box-shadow: 0 0 0 4px rgba(168,179,214,.10);
+    }
+    .status.ok .lamp{background: rgba(46,229,157,.9); box-shadow: 0 0 0 4px rgba(46,229,157,.12)}
+    .status.bad .lamp{background: rgba(255,92,122,.9); box-shadow: 0 0 0 4px rgba(255,92,122,.12)}
+    .status.warn .lamp{background: rgba(255,176,32,.95); box-shadow: 0 0 0 4px rgba(255,176,32,.14)}
+    .searchRow{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+      margin-top: 6px;
+    }
+    input[type="text"]{
+      flex:1;
+      min-width:220px;
+      border-radius: 14px;
+      border:1px solid rgba(36,48,85,.75);
+      background: rgba(6,10,22,.55);
+      color: var(--txt);
+      padding:11px 12px;
+      outline:none;
+    }
+    input[type="text"]:focus{
+      border-color: rgba(124,92,255,.7);
+      box-shadow: 0 0 0 4px rgba(124,92,255,.14);
+    }
+    select{
+      border-radius: 14px;
+      border:1px solid rgba(36,48,85,.75);
+      background: rgba(6,10,22,.55);
+      color: var(--txt);
+      padding:11px 10px;
+      outline:none;
+      cursor:pointer;
+      min-width: 160px;
+    }
+    .tableWrap{
+      margin-top:12px;
+      border:1px solid rgba(36,48,85,.65);
+      border-radius: 16px;
+      overflow:hidden;
+      background: rgba(6,10,22,.35);
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:12px;
+    }
+    thead th{
+      text-align:left;
+      padding:10px 10px;
+      color: var(--muted);
+      font-weight:700;
+      letter-spacing:.2px;
+      border-bottom:1px solid rgba(36,48,85,.6);
+      background: rgba(10,16,34,.55);
+      position:sticky; top:0;
+      backdrop-filter: blur(8px);
+      z-index:1;
+    }
+    tbody td{
+      padding:10px 10px;
+      border-bottom:1px solid rgba(36,48,85,.35);
+      vertical-align:top;
+    }
+    tbody tr:hover{
+      background: rgba(124,92,255,.06);
+    }
+    .num{font-family:var(--mono); color:var(--txt)}
+    .muted{color:var(--muted)}
+    .badge{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid rgba(36,48,85,.7);
+      background: rgba(10,16,34,.5);
+      color: var(--muted);
+      font-size:11px;
+      white-space:nowrap;
+    }
+    .badge.good{border-color: rgba(46,229,157,.45); color: rgba(46,229,157,.95); background: rgba(46,229,157,.08)}
+    .badge.bad{border-color: rgba(255,92,122,.45); color: rgba(255,92,122,.95); background: rgba(255,92,122,.08)}
+    .rank{
+      font-family:var(--mono);
+      font-weight:800;
+      padding:4px 8px;
+      border-radius: 12px;
+      background: rgba(124,92,255,.12);
+      border:1px solid rgba(124,92,255,.35);
+      display:inline-block;
+      min-width: 42px;
+      text-align:center;
+    }
+    .miniGrid{
+      display:grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap:6px;
+      margin-top:6px;
+    }
+    .mini{
+      border:1px solid rgba(36,48,85,.55);
+      background: rgba(10,16,34,.42);
+      border-radius: 12px;
+      padding:7px 8px;
+      line-height:1.25;
+      min-height: 56px;
+    }
+    .mini .t{font-family:var(--mono); font-weight:800}
+    .mini .s{color:var(--muted); font-size:10px; margin-top:2px}
+    .mini.best{
+      border-color: rgba(46,229,157,.55);
+      background: rgba(46,229,157,.07);
+    }
+    .mini.na{
+      opacity:.6;
+      border-style:dashed;
+    }
+    .foot{
+      margin-top:14px;
+      color: var(--muted);
+      font-size:11px;
+      line-height:1.6;
+    }
+    .toast{
+      position:fixed;
+      left:50%; bottom:18px;
+      transform: translateX(-50%);
+      background: rgba(10,16,34,.92);
+      border:1px solid rgba(36,48,85,.8);
+      color: var(--txt);
+      padding:10px 12px;
+      border-radius: 999px;
+      box-shadow: var(--shadow2);
+      display:none;
+      gap:10px;
+      align-items:center;
+      max-width: min(720px, calc(100vw - 26px));
+      backdrop-filter: blur(10px);
+      z-index:9999;
+      font-size:12px;
+    }
+    .toast.show{display:flex}
+    .toast .tDot{width:10px;height:10px;border-radius:99px;background:rgba(46,229,157,.95);box-shadow:0 0 0 4px rgba(46,229,157,.14)}
+    .toast.bad .tDot{background:rgba(255,92,122,.95);box-shadow:0 0 0 4px rgba(255,92,122,.14)}
+    .toast.warn .tDot{background:rgba(255,176,32,.95);box-shadow:0 0 0 4px rgba(255,176,32,.14)}
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div class="titleblock">
+          <h1>出馬表 → スピード指数（中央競馬を含む馬は参考にしないで下さい）</h1>
+        </div>
+      </div>
+      <div class="pill" title="解析はブラウザ内で完結します。外部送信しません。">
+        <span>🔒</span><b>ローカル解析</b><span class="muted">（外部送信なし）</span>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- INPUT -->
+      <div class="card">
+        <div class="cardHd">
+          <h2><span class="dot"></span>入力（出馬表HTML）</h2>
+          <span class="badge">推奨: <span class="kbd">Ctrl</span>+<span class="kbd">A</span> → <span class="kbd">Ctrl</span>+<span class="kbd">C</span></span>
+        </div>
+        <div class="cardBd">
+          <div class="help">
+            1) オッズパークの出馬表ページで「ページ全体のHTML」をコピー（右クリック→ページのソースを表示→全選択→コピー、等）<br/>
+            2) このページで <b>［クリップボードから貼り付け］</b> または直接ペースト<br/>
+            3) <b>［指数を出す］</b> を押すと、各馬の前走〜5走前から指数を計算して並べます。
+          </div>
+
+          <div class="actions">
+            <button id="btnPaste" class="ghost" title="navigator.clipboard.readText() を使います（ブラウザ権限が必要）">📋 クリップボードから貼り付け</button>
+            <button id="btnCalc" class="primary">⚡ 指数を出す</button>
+            <button id="btnClear">🧹 クリア</button>
+          </div>
+
+          <div class="metaRow">
+            <div class="chips">
+              <span class="chip">指数: <b>(time * 1000 / distance)<sup>0.9</sup></b></span>
+              <span class="chip">評価: <b>小さいほど速い</b></span>
+              <span class="chip">抽出: <b>前走〜5走前</b></span>
+            </div>
+            <div id="status" class="status"><span class="lamp"></span><span id="statusText">未解析</span></div>
+          </div>
+
+          <div style="margin-top:12px">
+            <textarea id="htmlInput" spellcheck="false" placeholder="ここにオッズパークの出馬表HTMLを貼り付けてください（ページソース推奨）"></textarea>
+          </div>
+
+          <div class="foot">
+            ※ クリップボード読み取りはブラウザによって制限があります。うまく動かない場合は、上の欄に直接貼り付けてください。<br/>
+            ※ オッズパーク側のHTML構造が変わると抽出できない可能性があります（その場合は解析ロジックを合わせて調整できます）。
+          </div>
+        </div>
+      </div>
+
+      <!-- OUTPUT -->
+      <div class="card">
+        <div class="cardHd">
+          <h2><span class="dot"></span>結果（各馬のスピード指数）</h2>
+          <span class="badge">表示: <b>最速(最小)でランキング</b></span>
+        </div>
+        <div class="cardBd">
+          <div class="searchRow">
+            <input id="q" type="text" placeholder="検索（馬名 / 馬番 / 騎手 など）" />
+            <select id="sort">
+              <option value="bestAsc">並び: 最速指数（小→大）</option>
+              <option value="bestDesc">並び: 最速指数（大→小）</option>
+              <option value="avgAsc" selected>並び: 平均指数（小→大）</option>
+              <option value="horseNoAsc">並び: 馬番（昇順）</option>
+            </select>
+          </div>
+
+          <div class="tableWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:64px">順位</th>
+                  <th style="width:64px">馬番</th>
+                  <th>馬名</th>
+                  <th style="width:120px">最速指数</th>
+                  <th style="width:120px">平均指数</th>
+                  <th>前走〜5走（指数）</th>
+                </tr>
+              </thead>
+              <tbody id="tbody">
+                <tr>
+                  <td colspan="6" class="muted">まだ結果がありません。左でHTMLを貼り付けて［指数を出す］を押してください。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="foot">
+            ・指数は <b>(タイム * 1000 / 距離)^0.9</b>（例: 1:30.0 の 1400m → (90*1000/1400)^0.9）<br/>
+            ・「最速指数」は前走〜5走のうち <b>最小値</b>（=最も速かった走り）<br/>
+            ・「平均指数」は算出できた走りだけで平均（欠損は除外）
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite">
+    <span class="tDot"></span>
+    <span id="toastText"></span>
+  </div>
+
+<script>
+(() => {
+  const el = (id) => document.getElementById(id);
+
+  const htmlInput = el("htmlInput");
+  const btnPaste  = el("btnPaste");
+  const btnCalc   = el("btnCalc");
+  const btnClear  = el("btnClear");
+  const tbody     = el("tbody");
+  const status    = el("status");
+  const statusText= el("statusText");
+  const q         = el("q");
+  const sort      = el("sort");
+
+  let lastData = [];
+
+  function toast(msg, type="ok"){
+    const t = el("toast");
+    const tt= el("toastText");
+    t.classList.remove("bad","warn");
+    if(type==="bad") t.classList.add("bad");
+    if(type==="warn") t.classList.add("warn");
+    tt.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(()=>t.classList.remove("show"), 2400);
+  }
+
+  function setStatus(kind, text){
+    status.classList.remove("ok","bad","warn");
+    if(kind) status.classList.add(kind);
+    statusText.textContent = text;
+  }
+
+  // --- time "1:33.1" / "58.2" / "2:02.1" -> seconds (float)
+  function parseTimeToSeconds(s){
+    if(!s) return null;
+    s = String(s).trim();
+    // keep only first token that looks like time
+    const m = s.match(/(\d+:\d{2}(?:\.\d)?|\d{1,2}(?:\.\d)?)/);
+    if(!m) return null;
+    const t = m[1];
+    if(t.includes(":")){
+      const [mm, ss] = t.split(":");
+      const min = Number(mm);
+      const sec = Number(ss);
+      if(!Number.isFinite(min) || !Number.isFinite(sec)) return null;
+      return min * 60 + sec;
+    }
+    const sec = Number(t);
+    return Number.isFinite(sec) ? sec : null;
+  }
+
+  // distance like "ダ1400" "芝2000" "ダ 1400" -> meters (int)
+  function parseDistanceMeters(s){
+    if(!s) return null;
+    s = String(s).replace(/\s+/g,"");
+    const m = s.match(/[ダ芝](\d{3,4})/);
+    if(!m) return null;
+    const v = Number(m[1]);
+    return Number.isFinite(v) ? v : null;
+  }
+
+  // 馬場状態に応じて距離を補正
+  function adjustDistanceByCondition(meters, text){
+    if(!meters || !text) return meters;
+    if(text.includes("不良")) return meters * 1.055;
+    if(text.includes("芝")) return meters * 1.15;
+    if(text.includes("重")){   return meters * 1.03;}
+    else if(text.includes("稍重")){ return meters * 1.015;}
+    return meters;
+  }
+
+  function calcIndex(seconds, meters){
+    // 指数 = (タイム * 1000 / 距離)^0.9  （= 1000m換算タイム^0.9）
+    // 距離差で指数が極端に変化しにくいように、距離を 1000m 基準に正規化する
+    return Math.pow((seconds * 1000) / meters, 0.9);
+  }
+
+  // --- Extract per-horse: horseNo, name, past races (distance+time)
+  function parseOddsParkRaceHTML(raw){
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(raw, "text/html");
+
+    // main table (出走馬一覧) : class tb72
+    const table = doc.querySelector("table.tb72");
+    if(!table){
+      throw new Error("出走表テーブル（table.tb72）が見つかりません。ページソース全体を貼り付けたか確認してください。");
+    }
+
+    const rows = Array.from(table.querySelectorAll("tbody > tr"))
+      .filter(tr => {
+        // horse row contains HorseDetail link with <strong>馬名</strong>
+        return !!tr.querySelector('a[href*="HorseDetail.do"] strong');
+      });
+
+    if(rows.length === 0){
+      throw new Error("馬行が見つかりませんでした。HTML構造が異なる可能性があります。");
+    }
+
+    const horses = rows.map(tr => {
+      const horseName = tr.querySelector('a[href*="HorseDetail.do"] strong')?.textContent?.trim() ?? "(不明)";
+      const horseNo = tr.querySelector("td.al-center")?.textContent?.trim() ?? ""; // 最初に出る馬番セル想定
+      // より確実に：馬番は「枠番」「馬番」列があり、馬番は2つ目の .showElm.al-center が多い
+      const centers = Array.from(tr.querySelectorAll("td.showElm.al-center"));
+      const horseNo2 = centers?.[0]?.textContent?.trim() || horseNo;
+      const horseNoFinal = horseNo2.replace(/\s+/g,"");
+
+      // past 5 cells: td.showElm with class like bg-7chaku etc contains racename-small/racedetail/zen5text small
+      const pastCells = Array.from(tr.querySelectorAll("td.showElm"))
+        .filter(td => /bg-\d+chaku/.test(td.className));
+
+      const past = pastCells.slice(0, 5).map(td => {
+       const detailText = td.querySelector(".racedetail small")?.textContent ?? "";
+        const rawDist = parseDistanceMeters(detailText);
+
+        const timeText = td.querySelector(".zen5text small")?.textContent ?? td.textContent ?? "";
+        const sec = parseTimeToSeconds(timeText);
+
+        // 馬場状態（稍重 / 重 / 不良）を含む全文から距離補正
+        const adjustedDist = adjustDistanceByCondition(rawDist, td.textContent || "");
+
+        let idx = null;
+        if(adjustedDist && sec){
+          idx = calcIndex(sec, adjustedDist);
+        }
+
+        return {
+          dist: adjustedDist,
+         sec,
+          idx,
+          rawDistance: detailText.trim(),
+          rawTime: timeText.trim()
+        };
+      });
+
+      return { horseNo: horseNoFinal, horseName, past };
+    });
+
+    return horses;
+  }
+
+  function fmt(n, digits=6){
+n = (Math.round(600 - n * 10) - 100) * (Math.round(600 - n * 10) - 100) / 50;
+    if(n == null || !Number.isFinite(n)) return "—";
+    return Number(n).toFixed(1);
+  }
+
+  function makeRow(h, rank){
+    // compute best(min) and avg
+    const valid = h.past.map(p=>p.idx).filter(v=>Number.isFinite(v));
+    const best = valid.length ? Math.min(...valid) : null;
+    const avg  = valid.length ? (valid.reduce((a,b)=>a+b,0)/valid.length) : null;
+
+    const tr = document.createElement("tr");
+
+    const tdRank = document.createElement("td");
+    tdRank.innerHTML = `<span class="rank">${rank}</span>`;
+    tr.appendChild(tdRank);
+
+    const tdNo = document.createElement("td");
+    tdNo.innerHTML = `<span class="num">${h.horseNo || "—"}</span>`;
+    tr.appendChild(tdNo);
+
+    const tdName = document.createElement("td");
+    tdName.innerHTML = `
+      <div style="font-weight:800; font-size:13px; letter-spacing:.1px">${escapeHtml(h.horseName)}</div>
+    `;
+    tr.appendChild(tdName);
+
+    const tdBest = document.createElement("td");
+    tdBest.innerHTML = best==null
+      ? `<span class="badge bad">算出不可</span>`
+      : `<div class="num" style="font-weight:900">${fmt(best, 6)}</div><div class="muted" style="font-size:10px;margin-top:2px">大きいほど速い</div>`;
+    tr.appendChild(tdBest);
+
+    const tdAvg = document.createElement("td");
+    tdAvg.innerHTML = avg==null
+      ? `<span class="badge bad">算出不可</span>`
+      : `<div class="num" style="font-weight:900">${fmt(avg, 6)}</div><div class="muted" style="font-size:10px;margin-top:2px">欠損除外</div>`;
+    tr.appendChild(tdAvg);
+
+    const tdPast = document.createElement("td");
+    const bestIdx = best;
+    const minis = h.past.map((p,i)=>{
+      const ok = Number.isFinite(p.idx);
+      const isBest = ok && bestIdx != null && Math.abs(p.idx - bestIdx) < 1e-12;
+      const cls = ok ? (isBest ? "mini best" : "mini") : "mini na";
+      const label = ["前走","前々走","3走前","4走前","5走前"][i] || `#${i+1}`;
+      const distLabel = p.dist ? `${p.dist}m` : "距離—";
+      const timeLabel = p.sec!=null ? secondsToLabel(p.sec) : "タイム—";
+      const idxLabel = ok ? fmt(p.idx, 6) : "—";
+      return `
+        <div class="${cls}" title="${escapeHtml(label)} / ${escapeHtml(p.rawDistance || "")} / ${escapeHtml(p.rawTime || "")}">
+          <div class="t">${idxLabel}</div>
+          <div class="s">${escapeHtml(label)} · ${escapeHtml(distLabel)} · ${escapeHtml(timeLabel)}</div>
+        </div>
+      `;
+    }).join("");
+
+    tdPast.innerHTML = `<div class="miniGrid">${minis}</div>`;
+    tr.appendChild(tdPast);
+
+    tr.dataset.horseno = (h.horseNo || "").toLowerCase();
+    tr.dataset.horsename = (h.horseName || "").toLowerCase();
+    tr.dataset.best = best==null ? "" : String(best);
+    tr.dataset.avg  = avg==null ? "" : String(avg);
+
+    return tr;
+  }
+
+  function secondsToLabel(sec){
+    if(sec == null || !Number.isFinite(sec)) return "—";
+    if(sec >= 60){
+      const mm = Math.floor(sec/60);
+      const ss = (sec - mm*60).toFixed(1).padStart(4,"0");
+      return `${mm}:${ss}`;
+    }
+    return sec.toFixed(1);
+  }
+
+  function escapeHtml(s){
+    return String(s)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#39;");
+  }
+
+  function render(){
+    const query = (q.value || "").trim().toLowerCase();
+    const sortMode = sort.value;
+
+    let data = [...lastData];
+
+    // sort
+    data.sort((a,b)=>{
+      const aBest = a._best;
+      const bBest = b._best;
+      const aAvg = a._avg;
+      const bAvg = b._avg;
+
+      if(sortMode === "horseNoAsc"){
+        const an = Number(a.horseNo || 9999);
+        const bn = Number(b.horseNo || 9999);
+        return an - bn;
+      }
+      if(sortMode === "bestDesc"){
+        // best bigger first (note: usually smaller is better)
+        if(aBest==null && bBest==null) return 0;
+        if(aBest==null) return 1;
+        if(bBest==null) return -1;
+        return bBest - aBest;
+      }
+      if(sortMode === "avgAsc"){
+        if(aAvg==null && bAvg==null) return 0;
+        if(aAvg==null) return 1;
+        if(bAvg==null) return -1;
+        return aAvg - bAvg;
+      }
+      // default bestAsc
+      if(aBest==null && bBest==null) return 0;
+      if(aBest==null) return 1;
+      if(bBest==null) return -1;
+      return aBest - bBest;
+    });
+
+    // filter
+    if(query){
+      data = data.filter(h=>{
+        const hay = `${h.horseNo} ${h.horseName}`.toLowerCase();
+        return hay.includes(query);
+      });
+    }
+
+    tbody.innerHTML = "";
+    if(data.length === 0){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td colspan="6" class="muted">該当する馬がありません。</td>`;
+      tbody.appendChild(tr);
+      return;
+    }
+
+    // ranking by current sort order (when bestAsc is typical)
+    data.forEach((h, i)=>{
+      tbody.appendChild(makeRow(h, i+1));
+    });
+  }
+
+  function enrichStats(horses){
+    return horses.map(h=>{
+      const valid = h.past.map(p=>p.idx).filter(v=>Number.isFinite(v));
+      h._best = valid.length ? Math.min(...valid) : null;
+      h._avg  = valid.length ? (valid.reduce((a,b)=>a+b,0)/valid.length) : null;
+      return h;
+    });
+  }
+
+  async function pasteFromClipboard(){
+    try{
+      if(!navigator.clipboard?.readText){
+        toast("このブラウザではクリップボード読み取りが利用できません。手動で貼り付けてください。", "warn");
+        return;
+      }
+      const text = await navigator.clipboard.readText();
+      if(!text || text.trim().length < 50){
+        toast("クリップボードが空か、内容が短すぎます。出馬表HTMLをコピーしてください。", "warn");
+        return;
+      }
+      htmlInput.value = text;
+      toast("クリップボードから貼り付けました。", "ok");
+      setStatus("warn", "未解析（貼り付け済み）");
+    }catch(e){
+      toast("クリップボード読み取りに失敗しました（権限/HTTPS/ブラウザ制限の可能性）。手動貼り付けをお試しください。", "bad");
+      setStatus("bad", "貼り付け失敗");
+      console.error(e);
+    }
+  }
+
+  function calc(){
+    const raw = htmlInput.value;
+    if(!raw || raw.trim().length < 100){
+      toast("HTMLが空です。出馬表HTMLを貼り付けてください。", "warn");
+      setStatus("warn", "入力不足");
+      return;
+    }
+
+    btnCalc.disabled = true;
+    try{
+      const horses = parseOddsParkRaceHTML(raw);
+      lastData = enrichStats(horses);
+
+      // quick sanity
+      const okCount = lastData.filter(h=>h._best!=null).length;
+      const total = lastData.length;
+
+      render();
+
+      if(okCount === 0){
+        setStatus("bad", `抽出はできましたが指数が算出できません（距離/タイム抽出失敗の可能性）: ${total}頭`);
+        toast("指数が算出できませんでした。HTMLの形式（ページソース）を確認してください。", "bad");
+      }else{
+        setStatus("ok", `解析完了: ${total}頭（指数算出: ${okCount}頭）`);
+        toast(`解析完了：${total}頭（算出：${okCount}頭）`, "ok");
+      }
+    }catch(e){
+      console.error(e);
+      tbody.innerHTML = `<tr><td colspan="6" class="muted">解析エラー: ${escapeHtml(e.message || String(e))}</td></tr>`;
+      setStatus("bad", "解析エラー");
+      toast("解析に失敗しました。ページソース全体を貼り付けているか確認してください。", "bad");
+    }finally{
+      btnCalc.disabled = false;
+    }
+  }
+
+  function clearAll(){
+    htmlInput.value = "";
+    lastData = [];
+    q.value = "";
+    sort.value = "bestAsc";
+    tbody.innerHTML = `<tr><td colspan="6" class="muted">まだ結果がありません。左でHTMLを貼り付けて［指数を出す］を押してください。</td></tr>`;
+    setStatus("", "未解析");
+    toast("クリアしました。", "ok");
+  }
+
+  // events
+  btnPaste.addEventListener("click", pasteFromClipboard);
+  btnCalc.addEventListener("click", calc);
+  btnClear.addEventListener("click", clearAll);
+  q.addEventListener("input", render);
+  sort.addEventListener("change", render);
+
+  // convenient hotkeys
+  window.addEventListener("keydown", (e)=>{
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="enter"){
+      e.preventDefault();
+      calc();
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
