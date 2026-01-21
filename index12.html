@@ -476,6 +476,21 @@
   const q         = el("q");
   const sort      = el("sort");
 
+    const pageText = el.body?.textContent || "";
+    const isCentral = isCentralRace(pageText);
+
+  // 中央競馬場名一覧
+  const CENTRAL_RACECOURSES = [
+    "札幌","函館","福島","新潟","東京",
+    "中山","中京","京都","阪神","小倉"
+  ];
+
+  // 開催名に中央競馬場が含まれているか
+  function isCentralRace(text){
+    if(!text) return false;
+    return CENTRAL_RACECOURSES.some(name => text.includes(name));
+  }
+
   let lastData = [];
 
   function toast(msg, type="ok"){
@@ -526,13 +541,24 @@
   }
 
   // 馬場状態に応じて距離を補正
-  function adjustDistanceByCondition(meters, text){
-    if(!meters || !text) return meters;
-    if(text.includes("不良")) return meters / 1.055;
-    if(text.includes("芝")) return meters / 1.15;
-    if(text.includes("重"))   return meters / 1.03;
-    if(text.includes("稍重")) return meters / 1.015;
-    return meters;
+  function adjustDistanceByCondition(meters, text, isCentral){
+    if(!meters) return meters;
+
+    let adjusted = meters;
+
+    // 馬場状態補正
+    if(text){
+      if(text.includes("不良")) adjusted /= 1.055;
+      else if(text.includes("重")) adjusted /= 1.03;
+      else if(text.includes("稍重")) adjusted /= 1.015;
+    }
+
+    // 中央競馬場補正
+    if(isCentral){
+      adjusted *= 0.9;
+    }
+
+    return adjusted;
   }
 
   function calcIndex(seconds, meters){
@@ -582,7 +608,11 @@
         const sec = parseTimeToSeconds(timeText);
 
         // 馬場状態（稍重 / 重 / 不良）を含む全文から距離補正
-        const adjustedDist = adjustDistanceByCondition(rawDist, td.textContent || "");
+        const adjustedDist = adjustDistanceByCondition(
+          rawDist,
+          td.textContent || "",
+          isCentral
+        );
 
         let idx = null;
         if(adjustedDist && sec){
