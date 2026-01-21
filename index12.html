@@ -528,10 +528,10 @@
   // 馬場状態に応じて距離を補正
   function adjustDistanceByCondition(meters, text){
     if(!meters || !text) return meters;
-    if(text.includes("不良")) return meters * 1.055;
-    if(text.includes("芝")) return meters * 1.15;
-    if(text.includes("重")){   return meters * 1.03;}
-    else if(text.includes("稍重")){ return meters * 1.015;}
+    if(text.includes("不良")) return meters / 1.055;
+    if(text.includes("芝")) return meters / 1.15;
+    if(text.includes("重"))   return meters / 1.03;
+    if(text.includes("稍重")) return meters / 1.015;
     return meters;
   }
 
