@@ -1,0 +1,1340 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>超高速 添削（ChatGPT / Gemini）</title>
+  <style>
+    :root{
+      --bg: #fff6df;              /* クリーム色 */
+      --card: rgba(255,255,255,.72);
+      --card2: rgba(255,255,255,.55);
+      --ink: #1e1c16;
+      --muted: rgba(30,28,22,.68);
+      --line: rgba(30,28,22,.14);
+      --shadow: 0 18px 45px rgba(0,0,0,.10);
+      --shadow2: 0 12px 28px rgba(0,0,0,.08);
+      --radius: 22px;
+      --radius2: 16px;
+      --focus: rgba(30,28,22,.18);
+      --accent: #1e1c16;
+      --good: #147a3d;
+      --warn: #b24a00;
+      --bad:  #b00020;
+
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color: var(--ink);
+      background: radial-gradient(1200px 800px at 10% 10%, rgba(255,255,255,.65), rgba(255,255,255,0) 60%),
+                  radial-gradient(1000px 700px at 90% 30%, rgba(255,255,255,.55), rgba(255,255,255,0) 55%),
+                  linear-gradient(180deg, var(--bg), #fffaf0 55%, var(--bg));
+      overflow-x:hidden;
+    }
+
+    .wrap{
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 18px 42px;
+    }
+
+    .hero{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+
+    h1{
+      margin:0;
+      font-size: clamp(20px, 3.2vw, 34px);
+      letter-spacing: -0.02em;
+      line-height:1.12;
+    }
+    .subtitle{
+      margin:0;
+      color: var(--muted);
+      font-size: 13.5px;
+      line-height:1.5;
+    }
+
+    .badgeRow{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      align-items:center;
+    }
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 9px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.55);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow2);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      font-size: 12px;
+      color: rgba(30,28,22,.78);
+      user-select:none;
+    }
+    .dot{ width:8px; height:8px; border-radius:999px; background: rgba(30,28,22,.35); }
+    .dot.good{ background: rgba(20,122,61,.75); }
+    .dot.warn{ background: rgba(178,74,0,.75); }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 420px 1fr;
+      gap: 14px;
+      align-items:start;
+    }
+    @media (max-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      overflow:hidden;
+    }
+
+    .cardHeader{
+      padding: 16px 16px 12px;
+      border-bottom: 1px solid rgba(30,28,22,.10);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+    }
+    .cardHeader h2{
+      margin:0;
+      font-size: 14px;
+      letter-spacing: .02em;
+      color: rgba(30,28,22,.86);
+    }
+
+    .cardBody{ padding: 14px 16px 16px; }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .label{
+      display:flex;
+      justify-content:space-between;
+      gap: 10px;
+      align-items:baseline;
+      font-size: 12px;
+      color: rgba(30,28,22,.72);
+    }
+    .hint{
+      font-size: 11px;
+      color: rgba(30,28,22,.55);
+    }
+
+    input[type="text"], input[type="password"], textarea, select{
+      width: 100%;
+      border: 1px solid rgba(30,28,22,.18);
+      border-radius: 14px;
+      padding: 11px 12px;
+      background: rgba(255,255,255,.75);
+      color: var(--ink);
+      outline:none;
+      box-shadow: 0 0 0 0 rgba(0,0,0,0);
+      transition: box-shadow .15s ease, border-color .15s ease, transform .12s ease;
+      font-size: 13.5px;
+    }
+    textarea{
+      min-height: 220px;
+      resize: vertical;
+      line-height: 1.65;
+    }
+    input:focus, textarea:focus, select:focus{
+      border-color: rgba(30,28,22,.28);
+      box-shadow: 0 0 0 6px var(--focus);
+    }
+
+    .row{
+      display:flex;
+      gap: 10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .row > *{ flex: 1; min-width: 140px; }
+    .row .tight{ flex: 0 0 auto; min-width:auto; }
+
+    .seg{
+      display:flex;
+      gap: 6px;
+      padding: 6px;
+      border: 1px solid rgba(30,28,22,.16);
+      background: rgba(255,255,255,.58);
+      border-radius: 16px;
+    }
+    .seg button{
+      flex:1;
+      border: none;
+      background: transparent;
+      padding: 10px 10px;
+      border-radius: 12px;
+      font-size: 13px;
+      color: rgba(30,28,22,.70);
+      cursor:pointer;
+      transition: transform .08s ease, background .15s ease, color .15s ease;
+      user-select:none;
+    }
+    .seg button:hover{ transform: translateY(-1px); }
+    .seg button.active{
+      background: rgba(30,28,22,.92);
+      color: rgba(255,255,255,.92);
+      box-shadow: 0 10px 18px rgba(0,0,0,.14);
+    }
+
+    .check{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(30,28,22,.14);
+      background: rgba(255,255,255,.55);
+    }
+    .check input{ width: 16px; height:16px; }
+
+    .btnRow{
+      display:flex;
+      gap: 10px;
+      flex-wrap:wrap;
+      margin-top: 8px;
+    }
+
+    .btn{
+      border: 1px solid rgba(30,28,22,.18);
+      background: rgba(255,255,255,.70);
+      border-radius: 16px;
+      padding: 11px 12px;
+      font-size: 13px;
+      cursor:pointer;
+      transition: transform .08s ease, box-shadow .15s ease, background .15s ease;
+      user-select:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap: 8px;
+      min-height: 40px;
+    }
+    .btn:hover{ transform: translateY(-1px); box-shadow: 0 12px 22px rgba(0,0,0,.10); }
+    .btn:active{ transform: translateY(0px); box-shadow:none; }
+    .btn.primary{
+      background: rgba(30,28,22,.92);
+      color: rgba(255,255,255,.94);
+      border-color: rgba(30,28,22,.5);
+    }
+    .btn.danger{
+      background: rgba(176,0,32,.10);
+      border-color: rgba(176,0,32,.25);
+      color: rgba(120,0,20,.95);
+    }
+    .btn.ghost{
+      background: rgba(255,255,255,.55);
+    }
+    .btn[disabled]{
+      opacity:.55;
+      cursor:not-allowed;
+      transform:none !important;
+      box-shadow:none !important;
+    }
+
+    .main{
+      display:flex;
+      flex-direction:column;
+      gap: 14px;
+    }
+
+    .pane{
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .paneTop{
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(30,28,22,.10);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+    }
+    .paneTop .left{
+      display:flex;
+      align-items:baseline;
+      gap: 10px;
+      flex-wrap:wrap;
+    }
+    .paneTop .left .name{
+      font-weight: 650;
+      letter-spacing: .01em;
+    }
+    .paneTop .left .meta{
+      font-size: 12px;
+      color: rgba(30,28,22,.62);
+    }
+
+    .paneBody{
+      padding: 14px 16px 16px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      align-items:start;
+    }
+    @media (max-width: 980px){
+      .paneBody{ grid-template-columns: 1fr; }
+    }
+
+    .box{
+      background: rgba(255,255,255,.62);
+      border: 1px solid rgba(30,28,22,.12);
+      border-radius: var(--radius2);
+      padding: 12px 12px;
+      min-height: 260px;
+      box-shadow: 0 10px 24px rgba(0,0,0,.06);
+    }
+    .box h3{
+      margin:0 0 8px;
+      font-size: 12px;
+      color: rgba(30,28,22,.74);
+      letter-spacing: .02em;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap: 8px;
+    }
+    .box .small{
+      font-size: 11px;
+      color: rgba(30,28,22,.55);
+      font-weight: 500;
+    }
+
+    .out{
+      white-space: pre-wrap;
+      line-height: 1.65;
+      font-size: 13.5px;
+      color: rgba(30,28,22,.92);
+      min-height: 210px;
+    }
+
+    .diff{
+      font-family: var(--mono);
+      font-size: 12px;
+      white-space: pre-wrap;
+      line-height: 1.6;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed rgba(30,28,22,.18);
+      color: rgba(30,28,22,.80);
+    }
+    .hl-ins{ background: rgba(20,122,61,.14); border-radius: 6px; padding: 0 2px; }
+    .hl-del{ background: rgba(176,0,32,.10); border-radius: 6px; padding: 0 2px; text-decoration: line-through; text-decoration-thickness: 1px; }
+    .status{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      font-size: 12px;
+      color: rgba(30,28,22,.70);
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(30,28,22,.12);
+      background: rgba(255,255,255,.55);
+    }
+    .spinner{
+      width: 14px; height:14px;
+      border-radius:999px;
+      border: 2px solid rgba(30,28,22,.18);
+      border-top-color: rgba(30,28,22,.68);
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin{ to{ transform: rotate(360deg);} }
+
+    .toast{
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      max-width: 520px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(30,28,22,.92);
+      color: rgba(255,255,255,.92);
+      box-shadow: 0 18px 45px rgba(0,0,0,.18);
+      border: 1px solid rgba(255,255,255,.14);
+      transform: translateY(10px);
+      opacity:0;
+      pointer-events:none;
+      transition: opacity .18s ease, transform .18s ease;
+      font-size: 13px;
+      line-height:1.5;
+      z-index: 50;
+    }
+    .toast.show{ opacity:1; transform: translateY(0); }
+    .toast small{ display:block; opacity:.75; margin-top:4px; }
+
+    .tinyLink{
+      border:none;
+      background:transparent;
+      color: rgba(30,28,22,.70);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      cursor:pointer;
+      font-size: 12px;
+      padding: 6px 8px;
+      border-radius: 10px;
+    }
+    .tinyLink:hover{ background: rgba(255,255,255,.50); }
+
+    .note{
+      margin-top: 12px;
+      color: rgba(30,28,22,.62);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .note code{ font-family: var(--mono); font-size: 11.5px; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div class="title">
+        <h1>超高速 添削 — ChatGPT / Gemini</h1>
+        <p class="subtitle">「貼って → すぐ直す」に特化。ストリーミングで、出力が来た瞬間から表示します。</p>
+      </div>
+      <div class="badgeRow">
+        <div class="badge"><span class="dot good"></span>ストリーミング表示</div>
+        <div class="badge"><span class="dot"></span>設定はIndexedDBに保存</div>
+        <div class="badge"><span class="dot warn"></span>APIキーは任意で暗号化保存</div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- Settings -->
+      <section class="card" aria-label="settings">
+        <div class="cardHeader">
+          <h2>設定</h2>
+          <button class="tinyLink" id="btnFillSample" title="サンプル文を入れる">サンプル</button>
+        </div>
+        <div class="cardBody">
+          <div class="field">
+            <div class="label">
+              <span>エンジン（再起動後も保持）</span>
+              <span class="hint" id="engineHint">—</span>
+            </div>
+            <div class="seg" role="tablist" aria-label="engine">
+              <button id="segGemini" class="active" type="button">Gemini</button>
+              <button id="segOpenAI" type="button">ChatGPT</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="label">
+              <span>API Key</span>
+              <span class="hint" id="keyHint">未保存</span>
+            </div>
+            <input id="apiKey" type="password" placeholder="貼り付け（例: ...）" autocomplete="off" />
+            <div class="row">
+              <label class="check" style="flex:1">
+                <input id="saveKey" type="checkbox" />
+                <span style="font-size:13px;color:rgba(30,28,22,.78)">ローカルに保存（AES-GCM暗号化）</span>
+              </label>
+              <button class="btn danger tight" id="btnDeleteKey" type="button" title="保存済みAPIキー情報を削除">保存削除</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="label">
+              <span>添削モード</span>
+              <span class="hint">高速重視（短い指示・短い出力）</span>
+            </div>
+            <select id="mode">
+              <option value="polish">自然で読みやすく（おすすめ）</option>
+              <option value="formal">丁寧・ビジネス寄り</option>
+              <option value="casual">くだけた・会話寄り</option>
+              <option value="strict">誤り最優先（硬めでもOK）</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <div class="label">
+              <span>出力の見せ方</span>
+              <span class="hint">体感速度優先</span>
+            </div>
+            <div class="row">
+              <label class="check">
+                <input id="showTips" type="checkbox" checked />
+                <span style="font-size:13px;color:rgba(30,28,22,.78)">短い改善ポイントも表示</span>
+              </label>
+              <label class="check">
+                <input id="showDiff" type="checkbox" checked />
+                <span style="font-size:13px;color:rgba(30,28,22,.78)">簡易Diff</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="btnRow">
+            <button class="btn primary" id="btnRun" type="button">
+              <span>⚡</span><span>今すぐ添削</span>
+            </button>
+            <button class="btn ghost" id="btnStop" type="button" disabled>
+              <span>■</span><span>停止</span>
+            </button>
+            <button class="btn ghost" id="btnCopy" type="button" disabled>
+              <span>⧉</span><span>結果をコピー</span>
+            </button>
+            <button class="btn ghost" id="btnSwap" type="button">
+              <span>⇄</span><span>入力↔出力</span>
+            </button>
+          </div>
+
+          <div class="note">
+            <div><strong>使用モデル</strong></div>
+            <div>Gemini: <code>gemini-2.5-flash-lite</code>（SSE） / ChatGPT: <code>gpt-5-nano</code> + <code>reasoning.effort="minimal"</code>（Responses SSE）</div>
+            <div style="margin-top:8px;">
+              ※ ブラウザから直接APIへアクセスします。環境によってはCORS等で失敗する場合があります（その場合はプロキシ/Workers経由にしてください）。
+            </div>
+            <div style="margin-top:8px;">
+              ※ API Key の暗号化は暗号化キー決め打ちなので、セキュリティ的には弱めです。ローカルにダウンロードして、暗号化キーを変える事を推奨します。Google のアカウントを新たに作って Gemini API Key の無料枠を使うのも良いかもしれません。
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Main -->
+      <main class="main">
+        <section class="pane" aria-label="editor">
+          <div class="paneTop">
+            <div class="left">
+              <div class="name">文章を貼り付け</div>
+              <div class="meta" id="metaLine">—</div>
+            </div>
+            <div class="row" style="flex: 0 0 auto; min-width: 260px;">
+              <button class="btn ghost tight" id="btnClear" type="button" title="入力をクリア">クリア</button>
+              <button class="btn ghost tight" id="btnPaste" type="button" title="クリップボードから貼り付け">貼り付け</button><button class="btn primary" id="btnRunTop" type="button"><span>⚡</span><span>今すぐ添削</span></button>
+            </div>
+          </div>
+
+          <div class="paneBody">
+            <div class="box">
+              <h3>入力 <span class="small" id="inCount">0文字</span></h3>
+              <textarea id="inputText" placeholder="ここに文章を貼ってください。&#10;（例）この文章を、読みやすく自然に整えてください。"></textarea>
+            </div>
+
+            <div class="box">
+              <h3>出力 <span class="small" id="outCount">0文字</span></h3>
+              <div class="out" id="outputText"></div>
+              <div class="diff" id="diffBox" style="display:none;"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card" aria-label="status">
+          <div class="cardBody">
+            <div class="status" id="status">
+              <span class="dot" id="statusDot"></span>
+              <span id="statusText">待機中（文章を入れて「今すぐ添削」）</span>
+              <span style="margin-left:auto; font-family:var(--mono); font-size:11.5px; opacity:.8" id="latency">—</span>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   設定
+========================================================= */
+const OPENAI_MODEL = "gpt-5-nano";
+const GEMINI_MODEL = "gemini-2.5-flash-lite";
+
+// 固定の暗号化パスフレーズ（要件：決め打ちキー）
+// ※本当に秘匿したい用途は、ユーザー入力のパスフレーズ方式に変えるのが推奨です。
+const FIXED_PASSPHRASE = "fixed-passphrase-for-local-encryption-v1";
+
+// IndexedDB
+const DB_NAME = "speedProofDB";
+const DB_VER  = 1;
+const STORE   = "kv";
+const KEY_SETTINGS = "settings";
+const KEY_APIKEY   = "apikey_encrypted"; // {salt, iv, ct, v}
+
+/* =========================================================
+   DOM
+========================================================= */
+const segGemini = document.getElementById("segGemini");
+const segOpenAI = document.getElementById("segOpenAI");
+const engineHint = document.getElementById("engineHint");
+const apiKeyEl = document.getElementById("apiKey");
+const saveKeyEl = document.getElementById("saveKey");
+const keyHintEl = document.getElementById("keyHint");
+const btnDeleteKey = document.getElementById("btnDeleteKey");
+
+const modeEl = document.getElementById("mode");
+const showTipsEl = document.getElementById("showTips");
+const showDiffEl = document.getElementById("showDiff");
+
+const btnRun = document.getElementById("btnRun");
+const btnRunTop = document.getElementById("btnRunTop");
+const btnStop = document.getElementById("btnStop");
+const btnCopy = document.getElementById("btnCopy");
+const btnSwap = document.getElementById("btnSwap");
+
+const btnClear = document.getElementById("btnClear");
+const btnPaste = document.getElementById("btnPaste");
+const btnFillSample = document.getElementById("btnFillSample");
+
+const inputText = document.getElementById("inputText");
+const outputText = document.getElementById("outputText");
+const diffBox = document.getElementById("diffBox");
+
+const inCount = document.getElementById("inCount");
+const outCount = document.getElementById("outCount");
+const metaLine = document.getElementById("metaLine");
+
+const statusEl = document.getElementById("status");
+const statusDot = document.getElementById("statusDot");
+const statusText = document.getElementById("statusText");
+const latencyEl = document.getElementById("latency");
+
+const toastEl = document.getElementById("toast");
+
+/* =========================================================
+   State
+========================================================= */
+let engine = "gemini"; // "gemini" | "openai"
+let controller = null;
+let startedAt = 0;
+let receivedFirstTokenAt = 0;
+
+function setEngine(next){
+  engine = next;
+  segGemini.classList.toggle("active", engine==="gemini");
+  segOpenAI.classList.toggle("active", engine==="openai");
+  engineHint.textContent = engine==="gemini"
+    ? `Gemini（${GEMINI_MODEL}）`
+    : `ChatGPT（${OPENAI_MODEL} / reasoning minimal）`;
+  saveSettingsSoon();
+}
+
+function toast(msg, sub){
+  toastEl.innerHTML = `${escapeHtml(msg)}${sub?`<small>${escapeHtml(sub)}</small>`:""}`;
+  toastEl.classList.add("show");
+  clearTimeout(toastEl._t);
+  toastEl._t = setTimeout(()=>toastEl.classList.remove("show"), 2200);
+}
+
+function setStatus(kind, text){
+  // kind: idle|run|ok|warn|bad
+  statusText.textContent = text;
+  statusDot.className = "dot";
+  if(kind==="run") statusDot.classList.add("warn");
+  if(kind==="ok")  statusDot.classList.add("good");
+  if(kind==="bad") statusDot.style.background = "rgba(176,0,32,.78)";
+  if(kind==="idle") statusDot.style.background = "rgba(30,28,22,.35)";
+}
+
+/* =========================================================
+   IndexedDB helpers
+========================================================= */
+function openDB(){
+  return new Promise((resolve,reject)=>{
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = ()=>{
+      const db = req.result;
+      if(!db.objectStoreNames.contains(STORE)){
+        db.createObjectStore(STORE);
+      }
+    };
+    req.onsuccess = ()=>resolve(req.result);
+    req.onerror = ()=>reject(req.error);
+  });
+}
+
+async function idbGet(key){
+  const db = await openDB();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(STORE,"readonly");
+    const st = tx.objectStore(STORE);
+    const req = st.get(key);
+    req.onsuccess = ()=>resolve(req.result);
+    req.onerror = ()=>reject(req.error);
+  });
+}
+
+async function idbSet(key, val){
+  const db = await openDB();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(STORE,"readwrite");
+    const st = tx.objectStore(STORE);
+    const req = st.put(val, key);
+    req.onsuccess = ()=>resolve(true);
+    req.onerror = ()=>reject(req.error);
+  });
+}
+
+async function idbDel(key){
+  const db = await openDB();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(STORE,"readwrite");
+    const st = tx.objectStore(STORE);
+    const req = st.delete(key);
+    req.onsuccess = ()=>resolve(true);
+    req.onerror = ()=>reject(req.error);
+  });
+}
+
+/* =========================================================
+   Crypto (AES-GCM + PBKDF2)
+========================================================= */
+function b64enc(bytes){
+  let bin = "";
+  const arr = new Uint8Array(bytes);
+  for (let i=0;i<arr.length;i++) bin += String.fromCharCode(arr[i]);
+  return btoa(bin);
+}
+function b64dec(b64){
+  const bin = atob(b64);
+  const arr = new Uint8Array(bin.length);
+  for (let i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
+  return arr.buffer;
+}
+
+async function deriveKey(passphrase, salt){
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(passphrase),
+    "PBKDF2",
+    false,
+    ["deriveKey"]
+  );
+  return crypto.subtle.deriveKey(
+    { name:"PBKDF2", salt, iterations: 120000, hash:"SHA-256" },
+    keyMaterial,
+    { name:"AES-GCM", length:256 },
+    false,
+    ["encrypt","decrypt"]
+  );
+}
+
+async function encryptText(plain){
+  const enc = new TextEncoder();
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv   = crypto.getRandomValues(new Uint8Array(12));
+  const key  = await deriveKey(FIXED_PASSPHRASE, salt);
+  const ct   = await crypto.subtle.encrypt({name:"AES-GCM", iv}, key, enc.encode(plain));
+  return { v:1, salt: b64enc(salt), iv: b64enc(iv), ct: b64enc(ct) };
+}
+
+async function decryptText(payload){
+  const dec = new TextDecoder();
+  const salt = new Uint8Array(b64dec(payload.salt));
+  const iv   = new Uint8Array(b64dec(payload.iv));
+  const ct   = b64dec(payload.ct);
+  const key  = await deriveKey(FIXED_PASSPHRASE, salt);
+  const pt   = await crypto.subtle.decrypt({name:"AES-GCM", iv}, key, ct);
+  return dec.decode(pt);
+}
+
+/* =========================================================
+   Persistence
+========================================================= */
+let saveTimer = null;
+function saveSettingsSoon(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveSettings, 120);
+}
+
+async function saveSettings(){
+  const settings = {
+    engine,
+    mode: modeEl.value,
+    showTips: !!showTipsEl.checked,
+    showDiff: !!showDiffEl.checked,
+    saveKey: !!saveKeyEl.checked,
+  };
+  await idbSet(KEY_SETTINGS, settings);
+}
+
+async function saveKeyIfNeeded(){
+  const k = apiKeyEl.value.trim();
+  if(!saveKeyEl.checked){
+    // 保存しない場合は、保存済みがあれば消す（状態を一致させる）
+    const existed = await idbGet(KEY_APIKEY);
+    if(existed) await idbDel(KEY_APIKEY);
+    keyHintEl.textContent = "未保存";
+    return;
+  }
+  if(!k){
+    keyHintEl.textContent = "未保存";
+    await idbDel(KEY_APIKEY);
+    return;
+  }
+  const enc = await encryptText(k);
+  await idbSet(KEY_APIKEY, enc);
+  keyHintEl.textContent = "保存済み（暗号化）";
+}
+
+async function loadAll(){
+  const settings = await idbGet(KEY_SETTINGS);
+  if(settings){
+    if(settings.engine) setEngine(settings.engine);
+    if(settings.mode) modeEl.value = settings.mode;
+    showTipsEl.checked = !!settings.showTips;
+    showDiffEl.checked = !!settings.showDiff;
+    saveKeyEl.checked  = !!settings.saveKey;
+  }else{
+    setEngine("gemini");
+  }
+
+  const saved = await idbGet(KEY_APIKEY);
+  if(saved){
+    try{
+      const k = await decryptText(saved);
+      apiKeyEl.value = k;
+      keyHintEl.textContent = "保存済み（暗号化）";
+      // 設定上の保存チェックがOFFなら、表示はしても即削除する（ズレ防止）
+      if(!saveKeyEl.checked){
+        await idbDel(KEY_APIKEY);
+        keyHintEl.textContent = "未保存";
+      }
+    }catch(e){
+      // 復号失敗
+      keyHintEl.textContent = "復元失敗（削除推奨）";
+      toast("保存済みキーの復号に失敗しました", "「保存削除」でリセットできます。");
+    }
+  }else{
+    keyHintEl.textContent = "未保存";
+  }
+
+  refreshMeta();
+}
+
+/* =========================================================
+   Prompt builder（高速寄り：短い指示・短い出力）
+========================================================= */
+function buildInstruction(){
+  const mode = modeEl.value;
+  const showTips = showTipsEl.checked;
+
+  const tone =
+    mode==="polish" ? "自然で読みやすい日本語に整えてください。" :
+    mode==="formal" ? "丁寧でビジネスにも使える自然な日本語に整えてください。" :
+    mode==="casual" ? "会話として自然で親しみやすい日本語に整えてください。" :
+    "誤り（誤字脱字・文法・表記揺れ・冗長）を最優先で直してください。";
+
+  // 出力形式は“速い”ためにシンプル
+  // 1) 修正版のみ（最優先）
+  // 2) 任意で短いポイント（最大3つ）
+  const tips = showTips
+    ? "\n\n---\n【改善ポイント】を最大3つ、短く箇条書きで。"
+    : "";
+
+  return `あなたは日本語の文章校正者です。次の文章を、意味を変えずに${tone}
+制約:
+- 出力は短く。言い訳や前置きは不要。
+- まず【修正版】のみを全文で出力。
+${tips}
+
+文章:`;
+}
+
+/* =========================================================
+   Diff（超簡易：単語レベルのLCS風・軽量）
+========================================================= */
+function buildSimpleDiff(a, b){
+  // 速度重視：分割は空白/句読点/改行をざっくり保持
+  const tokenize = (s)=> s.split(/(\s+|[、。,.!?！？「」『』（）()［］\[\]【】—\-…・:：;；])/g).filter(x=>x!=="" );
+  const A = tokenize(a), B = tokenize(b);
+
+  // LCS（O(n*m)は重いので、上限を設ける）
+  const n=A.length, m=B.length;
+  const LIM = 900; // トークンが多い場合はdiffを諦める
+  if(n*m > LIM*LIM) return { ok:false, text:"（Diffは長文のため省略しました）" };
+
+  const dp = Array.from({length:n+1}, ()=>new Uint16Array(m+1));
+  for(let i=1;i<=n;i++){
+    const ai = A[i-1];
+    for(let j=1;j<=m;j++){
+      dp[i][j] = (ai===B[j-1]) ? (dp[i-1][j-1]+1) : Math.max(dp[i-1][j], dp[i][j-1]);
+    }
+  }
+  // backtrack
+  let i=n, j=m;
+  const out = [];
+  while(i>0 && j>0){
+    if(A[i-1]===B[j-1]){
+      out.push({t:"eq", v:A[i-1]});
+      i--; j--;
+    }else if(dp[i-1][j] >= dp[i][j-1]){
+      out.push({t:"del", v:A[i-1]});
+      i--;
+    }else{
+      out.push({t:"ins", v:B[j-1]});
+      j--;
+    }
+  }
+  while(i>0){ out.push({t:"del", v:A[i-1]}); i--; }
+  while(j>0){ out.push({t:"ins", v:B[j-1]}); j--; }
+  out.reverse();
+
+  let html = "";
+  for(const it of out){
+    if(it.t==="eq") html += escapeHtml(it.v);
+    if(it.t==="ins") html += `<span class="hl-ins">${escapeHtml(it.v)}</span>`;
+    if(it.t==="del") html += `<span class="hl-del">${escapeHtml(it.v)}</span>`;
+  }
+  return { ok:true, text: html };
+}
+
+/* =========================================================
+   Networking: SSE parsers
+========================================================= */
+async function* sseEventsFromResponse(resp, signal){
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let buf = "";
+  let lastEvent = "";
+
+  while(true){
+    const { value, done } = await reader.read();
+    if(done) break;
+    if(signal?.aborted) break;
+
+    buf += decoder.decode(value, { stream:true });
+
+    // 改行を正規化（超重要）
+    buf = buf.replace(/\r\n/g, "\n");
+
+    // SSEは空行（\n\n）で1イベント
+    let idx;
+    while((idx = buf.indexOf("\n\n")) !== -1){
+      const chunk = buf.slice(0, idx);
+      buf = buf.slice(idx + 2);
+
+      const lines = chunk.split("\n");
+      let eventName = "";
+      let dataLines = [];
+
+      for(const line of lines){
+        if(line.startsWith("event:")){
+          eventName = line.slice(6).trim();
+        }else if(line.startsWith("data:")){
+          dataLines.push(line.slice(5).trimStart());
+        }
+      }
+
+      if(eventName) lastEvent = eventName;
+      if(!dataLines.length) continue;
+
+      const data = dataLines.join("\n");
+      yield { event: (eventName || lastEvent || ""), data };
+    }
+  }
+}
+
+/* =========================================================
+   OpenAI (Responses API SSE)
+========================================================= */
+async function runOpenAI(text, apiKey, signal, onDelta){
+  const url = "https://api.openai.com/v1/responses";
+  const instructions = buildInstruction();
+
+  const body = {
+    model: OPENAI_MODEL,
+    reasoning: { effort: "minimal" }, // 速度寄り :contentReference[oaicite:2]{index=2}
+    input: [
+      { role:"user", content: `${instructions}\n${text}` }
+    ],
+    stream: true
+  };
+
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type":"application/json",
+      "Authorization": `Bearer ${apiKey}`
+    },
+    body: JSON.stringify(body),
+    signal
+  });
+
+  if(!resp.ok){
+    const err = await safeReadText(resp);
+    throw new Error(`OpenAI API error (${resp.status}): ${err}`);
+  }
+
+  for await (const { event, data } of sseEventsFromResponse(resp, signal)){
+  if(data === "[DONE]") break;
+
+  let obj = null;
+  try{ obj = JSON.parse(data); }catch{ /* JSONじゃないこともある */ }
+
+  const ev = event || obj?.type || obj?.event || "";
+
+  // これが本命：Responses のテキストdelta
+  if(ev === "response.output_text.delta"){
+    const d = obj?.delta ?? "";
+    if(d) onDelta(String(d));
+    continue;
+  }
+
+  // 保険：実装差分に耐える（deltaっぽいものを拾う）
+  if(ev.includes("delta")){
+    const d = obj?.delta ?? obj?.text ?? obj?.value ?? "";
+    if(d) onDelta(String(d));
+  }
+}
+}
+
+/* =========================================================
+   Gemini (streamGenerateContent SSE)
+========================================================= */
+async function runGemini(text, apiKey, signal, onDelta){
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:streamGenerateContent?alt=sse`;
+
+  const prompt = `${buildInstruction()}\n${text}`;
+
+  const body = {
+    contents: [{
+      role: "user",
+      parts: [{ text: prompt }]
+    }]
+  };
+
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "text/event-stream",          // ★ SSE要求
+      "x-goog-api-key": apiKey
+    },
+    body: JSON.stringify(body),
+    signal
+  });
+
+  if(!resp.ok){
+    const err = await safeReadText(resp);
+    throw new Error(`Gemini API error (${resp.status}): ${err}`);
+  }
+
+  // ✅ 2) Content-Typeを見て、SSEじゃなければ通常JSONとして読むフォールバック
+  const ct = (resp.headers.get("content-type") || "").toLowerCase();
+
+  if(!ct.includes("text/event-stream")){
+    // --- 非SSEフォールバック（ここが超重要）---
+    const txt = await resp.text();
+    let obj;
+    try { obj = JSON.parse(txt); }
+    catch { throw new Error(`Gemini non-SSE response (not JSON): ${txt.slice(0, 300)}`); }
+
+    // 返り方が「配列」だったり「単体」だったりするのを両対応
+    const list = Array.isArray(obj) ? obj : [obj];
+    for(const item of list){
+      const parts = item?.candidates?.[0]?.content?.parts;
+      if(Array.isArray(parts)){
+        for(const p of parts){
+          if(typeof p.text === "string" && p.text) onDelta(p.text);
+        }
+      }
+    }
+    return;
+  }
+
+  // --- SSE本流 ---
+  for await (const { data } of sseEventsFromResponse(resp, signal)){
+    let obj;
+    try{ obj = JSON.parse(data); }catch{ continue; }
+
+    const parts = obj?.candidates?.[0]?.content?.parts;
+    if(Array.isArray(parts)){
+      for(const p of parts){
+        if(typeof p.text === "string" && p.text) onDelta(p.text);
+      }
+    }
+  }
+}
+
+
+/* =========================================================
+   Orchestration
+========================================================= */
+function escapeHtml(s){
+  return String(s)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+async function safeReadText(resp){
+  try{ return await resp.text(); }catch{ return ""; }
+}
+
+function refreshCounts(){
+  const t = inputText.value || "";
+  inCount.textContent = `${t.length}文字`;
+  const o = outputText.textContent || "";
+  outCount.textContent = `${o.length}文字`;
+  refreshMeta();
+}
+
+function refreshMeta(){
+  const t = inputText.value || "";
+  const lines = (t.match(/\n/g)||[]).length + 1;
+  metaLine.textContent = `入力: ${t.length}文字 / ${lines}行`;
+}
+
+function setRunning(r){
+  btnRun.disabled = r;
+  btnRunTop.disabled = r; // ← 追加
+  btnStop.disabled = !r;
+  apiKeyEl.disabled = r;
+  segGemini.disabled = r;
+  segOpenAI.disabled = r;
+  modeEl.disabled = r;
+  showTipsEl.disabled = r;
+  showDiffEl.disabled = r;
+  saveKeyEl.disabled = r;
+  btnDeleteKey.disabled = r;
+}
+
+function splitResult(text){
+  // 期待：まず修正版、次に --- と改善ポイント
+  // 厳密でなくてもOK。最優先は「全文が出る」こと。
+  return text.trim();
+}
+
+async function run(){
+  const text = inputText.value.trim();
+  const apiKey = apiKeyEl.value.trim();
+  if(!text){
+    toast("文章を入力してください");
+    inputText.focus();
+    return;
+  }
+  if(!apiKey){
+    toast("API Key を入力してください");
+    apiKeyEl.focus();
+    return;
+  }
+
+  // 保存（設定・必要ならキー暗号化）
+  await saveSettings();
+  await saveKeyIfNeeded();
+
+  outputText.textContent = "";
+  diffBox.style.display = "none";
+  diffBox.innerHTML = "";
+  btnCopy.disabled = true;
+
+  controller = new AbortController();
+  const signal = controller.signal;
+
+  startedAt = performance.now();
+  receivedFirstTokenAt = 0;
+  latencyEl.textContent = "…";
+
+  setRunning(true);
+  setStatus("run", "生成中…（最初の出力を待っています）");
+
+  const spinner = document.createElement("span");
+  spinner.className = "spinner";
+  statusEl.insertBefore(spinner, statusEl.firstChild);
+
+  let acc = "";
+
+  const onDelta = (d)=>{
+    if(!receivedFirstTokenAt){
+      receivedFirstTokenAt = performance.now();
+      const ttfb = Math.max(0, receivedFirstTokenAt - startedAt);
+      latencyEl.textContent = `TTFB ${Math.round(ttfb)}ms`;
+      setStatus("run", "出力中…");
+    }
+    acc += d;
+    outputText.textContent = splitResult(acc);
+    refreshCounts();
+  };
+
+  try{
+    if(engine==="gemini"){
+      await runGemini(text, apiKey, signal, onDelta);
+    }else{
+      await runOpenAI(text, apiKey, signal, onDelta);
+    }
+
+    // 完了
+    const total = Math.max(0, performance.now() - startedAt);
+    latencyEl.textContent = `Total ${Math.round(total)}ms`;
+    setStatus("ok", "完了");
+    btnCopy.disabled = false;
+
+    if(showDiffEl.checked){
+      const diff = buildSimpleDiff(text, outputText.textContent || "");
+      diffBox.style.display = "block";
+      diffBox.innerHTML = diff.ok ? diff.text : escapeHtml(diff.text);
+    }
+  }catch(e){
+    if(signal.aborted){
+      setStatus("warn", "停止しました");
+      toast("停止しました");
+    }else{
+      console.error(e);
+      setStatus("bad", "エラーが発生しました（詳細は下のトースト）");
+      toast("API呼び出しでエラー", String(e.message || e));
+      latencyEl.textContent = "—";
+    }
+  }finally{
+    spinner.remove();
+    setRunning(false);
+    controller = null;
+    refreshCounts();
+  }
+}
+
+function stop(){
+  if(controller) controller.abort();
+}
+
+/* =========================================================
+   UI actions
+========================================================= */
+segGemini.addEventListener("click", ()=>setEngine("gemini"));
+segOpenAI.addEventListener("click", ()=>setEngine("openai"));
+
+saveKeyEl.addEventListener("change", async ()=>{
+  await saveSettings();
+  await saveKeyIfNeeded();
+  toast(saveKeyEl.checked ? "キーを暗号化して保存します" : "キーは保存しません");
+});
+
+btnDeleteKey.addEventListener("click", async ()=>{
+  await idbDel(KEY_APIKEY);
+  apiKeyEl.value = "";
+  keyHintEl.textContent = "未保存";
+  saveKeyEl.checked = false;
+  await saveSettings();
+  toast("保存済みAPIキーを削除しました");
+});
+
+modeEl.addEventListener("change", saveSettingsSoon);
+showTipsEl.addEventListener("change", saveSettingsSoon);
+showDiffEl.addEventListener("change", ()=>{
+  saveSettingsSoon();
+  if(!showDiffEl.checked){
+    diffBox.style.display = "none";
+    diffBox.innerHTML = "";
+  }
+});
+
+btnRun.addEventListener("click", run);
+btnStop.addEventListener("click", stop);
+btnRunTop.addEventListener("click", run);
+
+btnCopy.addEventListener("click", async ()=>{
+  const t = outputText.textContent || "";
+  if(!t.trim()) return;
+  try{
+    await navigator.clipboard.writeText(t);
+    toast("コピーしました");
+  }catch{
+    toast("コピーに失敗しました", "ブラウザ権限をご確認ください");
+  }
+});
+
+btnSwap.addEventListener("click", ()=>{
+  const a = inputText.value;
+  const b = outputText.textContent || "";
+  inputText.value = b;
+  outputText.textContent = a;
+  refreshCounts();
+  toast("入れ替えました");
+});
+
+btnClear.addEventListener("click", ()=>{
+  inputText.value = "";
+  outputText.textContent = "";
+  diffBox.style.display = "none";
+  diffBox.innerHTML = "";
+  btnCopy.disabled = true;
+  refreshCounts();
+  toast("クリアしました");
+});
+
+btnPaste.addEventListener("click", async ()=>{
+  try{
+    const t = await navigator.clipboard.readText();
+    if(t){
+      inputText.value = t;
+      refreshCounts();
+      toast("貼り付けました");
+      inputText.focus();
+    }else{
+      toast("クリップボードが空です");
+    }
+  }catch{
+    toast("貼り付けに失敗しました", "ブラウザ権限をご確認ください");
+  }
+});
+
+btnFillSample.addEventListener("click", ()=>{
+  inputText.value = "この文章は、ちょっと読みにくいので、自然に直してもらえると助かります。あと、敬語とか表記ゆれがあったらそれも整えてください。できれば短く、要点が伝わるようにお願いしたいです。";
+  refreshCounts();
+  toast("サンプルを入れました");
+});
+
+inputText.addEventListener("input", refreshCounts);
+
+// Ctrl+Enter で実行
+document.addEventListener("keydown", (e)=>{
+  if((e.ctrlKey || e.metaKey) && e.key === "Enter"){
+    e.preventDefault();
+    if(!btnRun.disabled) run();
+  }
+});
+
+// 初期化
+(async function init(){
+  await loadAll();
+  refreshCounts();
+  setStatus("idle", "待機中（文章を入れて「今すぐ添削」）");
+})();
+</script>
+</body>
+</html>
