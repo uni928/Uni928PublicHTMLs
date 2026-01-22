@@ -485,10 +485,21 @@
     "中山","中京","京都","阪神","小倉"
   ];
 
+  // 難関地方（開催名に含まれていたら距離×0.95）
+  // ※必要に応じて増減してください
+  const HARD_LOCAL_KEYWORDS = [
+    "大井","川崎","船橋","浦和","門別"
+  ];
+
   // 開催名に中央競馬場が含まれているか
   function isCentralRace(text){
     if(!text) return false;
     return CENTRAL_RACECOURSES.some(name => text.includes(name));
+  }
+
+  function isHardLocal(text){
+    if(!text) return false;
+    return HARD_LOCAL_KEYWORDS.some(k => text.includes(k));
   }
 
   let lastData = [];
@@ -553,18 +564,29 @@
       else if(text.includes("稍重")) adjusted /= 1.015;
     }
 
+    // 芝補正（芝が含まれるなら距離×0.9）
+    // detailText が "芝1600" のように入る想定
+    if(text && text.includes("芝")){
+      adjusted *= 0.9;
+    }
+
+
     // 中央競馬場補正
     if(isCentral){
       adjusted *= 0.9;
+    }
+
+    // 難関地方補正（開催名が難関地方なら距離×0.95）
+    if(isHardLocal(text)){
+      adjusted *= 0.95;
     }
 
     return adjusted;
   }
 
   function calcIndex(seconds, meters){
-    // 指数 = (タイム * 1000 / 距離)^0.9  （= 1000m換算タイム^0.9）
-    // 距離差で指数が極端に変化しにくいように、距離を 1000m 基準に正規化する
-    return Math.pow((seconds * 1000) / meters, 0.9);
+    const base = 10 * seconds / Math.pow(meters, 0.65);
+    return Math.pow(base, 1.25);
   }
 
   // --- Extract per-horse: horseNo, name, past races (distance+time)
@@ -640,11 +662,25 @@ n = (Math.round(600 - n * 10) - 100) * (Math.round(600 - n * 10) - 100) / 50;
     return Number(n).toFixed(1);
   }
 
-  function makeRow(h, rank){
+  function makeRow(h, rank, minAvgDisp){
     // compute best(min) and avg
     const valid = h.past.map(p=>p.idx).filter(v=>Number.isFinite(v));
     const best = valid.length ? Math.min(...valid) : null;
     const avg  = valid.length ? (valid.reduce((a,b)=>a+b,0)/valid.length) : null;
+    const bestDisp = h._bestDisp;
+    const avgDisp  = h._avgDisp;
+
+    const bestScore =
+      Number.isFinite(bestDisp) && Number.isFinite(minAvgDisp)
+        ? Math.pow(bestDisp - minAvgDisp, 2)
+        : null;
+
+    const avgScore =
+      Number.isFinite(avgDisp) && Number.isFinite(minAvgDisp)
+        ? Math.pow(avgDisp - minAvgDisp, 2)
+        : null;
+
+console.log();
 
     const tr = document.createElement("tr");
 
@@ -665,13 +701,13 @@ n = (Math.round(600 - n * 10) - 100) * (Math.round(600 - n * 10) - 100) / 50;
     const tdBest = document.createElement("td");
     tdBest.innerHTML = best==null
       ? `<span class="badge bad">算出不可</span>`
-      : `<div class="num" style="font-weight:900">${fmt(best, 6)}</div><div class="muted" style="font-size:10px;margin-top:2px">大きいほど速い</div>`;
+      : `<div class="num" style="font-weight:900">${bestScore}</div><div class="muted" style="font-size:10px;margin-top:2px">大きいほど速い</div>`;
     tr.appendChild(tdBest);
 
     const tdAvg = document.createElement("td");
     tdAvg.innerHTML = avg==null
       ? `<span class="badge bad">算出不可</span>`
-      : `<div class="num" style="font-weight:900">${fmt(avg, 6)}</div><div class="muted" style="font-size:10px;margin-top:2px">欠損除外</div>`;
+      : `<div class="num" style="font-weight:900">${avgScore}</div><div class="muted" style="font-size:10px;margin-top:2px">欠損除外</div>`;
     tr.appendChild(tdAvg);
 
     const tdPast = document.createElement("td");
@@ -728,6 +764,15 @@ n = (Math.round(600 - n * 10) - 100) * (Math.round(600 - n * 10) - 100) / 50;
 
     let data = [...lastData];
 
+    const avgDispList = data
+      .map(h => h._avgDisp)
+      .filter(v => Number.isFinite(v));
+
+    const minAvgDisp =
+      avgDispList.length > 0
+        ? Math.max(...avgDispList)
+        : null;
+
     // sort
     data.sort((a,b)=>{
       const aBest = a._best;
@@ -778,7 +823,7 @@ n = (Math.round(600 - n * 10) - 100) * (Math.round(600 - n * 10) - 100) / 50;
 
     // ranking by current sort order (when bestAsc is typical)
     data.forEach((h, i)=>{
-      tbody.appendChild(makeRow(h, i+1));
+      tbody.appendChild(makeRow(h, i+1, minAvgDisp));
     });
   }
 
@@ -787,9 +832,18 @@ n = (Math.round(600 - n * 10) - 100) * (Math.round(600 - n * 10) - 100) / 50;
       const valid = h.past.map(p=>p.idx).filter(v=>Number.isFinite(v));
       h._best = valid.length ? Math.min(...valid) : null;
       h._avg  = valid.length ? (valid.reduce((a,b)=>a+b,0)/valid.length) : null;
+      h._bestDisp = toDisplayIndex(h._best);
+      h._avgDisp  = toDisplayIndex(h._avg);
       return h;
     });
   }
+
+function toDisplayIndex(idx){
+  if (idx == null || !Number.isFinite(idx)) {
+    return null;
+  }
+  return Math.round((idx - 40) * 10);
+}
 
   async function pasteFromClipboard(){
     try{
