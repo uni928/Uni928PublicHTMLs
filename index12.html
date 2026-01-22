@@ -932,8 +932,8 @@ async function fetchHtmlFromUrl(url){
 console.log(raw);
       }
     }
-let isDone = false;
-let isDoneNum = 0;
+isDone = false;
+isDoneNum = 0;
     if(!raw || raw.trim().length < 100){
       toast("HTMLが空です。出馬表HTMLを貼り付けてください。", "warn");
       setStatus("warn", "入力不足");
