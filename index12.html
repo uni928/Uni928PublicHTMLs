@@ -678,12 +678,12 @@ n = (Math.round(600 - n * 10) - 100) * (Math.round(600 - n * 10) - 100) / 50;
 
     const bestScore =
       Number.isFinite(bestDisp) && Number.isFinite(minAvgDisp)
-        ? Math.pow(bestDisp - minAvgDisp, 2)
+        ? Math.abs(bestDisp - minAvgDisp)
         : null;
 
     const avgScore =
       Number.isFinite(avgDisp) && Number.isFinite(minAvgDisp)
-        ? Math.pow(avgDisp - minAvgDisp, 2)
+        ? Math.abs(avgDisp - minAvgDisp)
         : null;
 
 if(!isDone) {
@@ -711,13 +711,13 @@ isDoneNum = avgScore;
     const tdBest = document.createElement("td");
     tdBest.innerHTML = best==null
       ? `<span class="badge bad">算出不可</span>`
-      : `<div class="num" style="font-weight:900">${isDoneNum-bestScore}</div><div class="muted" style="font-size:10px;margin-top:2px">大きいほど速い</div>`;
+      : `<div class="num" style="font-weight:900">${Math.pow(isDoneNum-bestScore, 2)}</div><div class="muted" style="font-size:10px;margin-top:2px">大きいほど速い</div>`;
     tr.appendChild(tdBest);
 
     const tdAvg = document.createElement("td");
     tdAvg.innerHTML = avg==null
       ? `<span class="badge bad">算出不可</span>`
-      : `<div class="num" style="font-weight:900">${isDoneNum-avgScore}</div><div class="muted" style="font-size:10px;margin-top:2px">欠損除外</div>`;
+      : `<div class="num" style="font-weight:900">${Math.pow(isDoneNum-avgScore, 2)}</div><div class="muted" style="font-size:10px;margin-top:2px">欠損除外</div>`;
     tr.appendChild(tdAvg);
 
     const tdPast = document.createElement("td");
@@ -997,3 +997,4 @@ isDoneNum = 0;
 </script>
 </body>
 </html>
+
