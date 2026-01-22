@@ -613,10 +613,13 @@
     const horses = rows.map(tr => {
       const horseName = tr.querySelector('a[href*="HorseDetail.do"] strong')?.textContent?.trim() ?? "(不明)";
       const horseNo = tr.querySelector("td.al-center")?.textContent?.trim() ?? ""; // 最初に出る馬番セル想定
-      // より確実に：馬番は「枠番」「馬番」列があり、馬番は2つ目の .showElm.al-center が多い
       const centers = Array.from(tr.querySelectorAll("td.showElm.al-center"));
-      const horseNo2 = centers?.[0]?.textContent?.trim() || horseNo;
-      const horseNoFinal = horseNo2.replace(/\s+/g,"");
+      const horseNoTd =
+        centers.find(td => !/bg-\d+/.test(td.className))  // bg-◯ が付いてない方＝馬番
+        || centers[1]                                    // 念のため2番目
+        || centers[0]                                    // 最後の保険
+        || null;
+      const horseNoFinal = (horseNoTd?.textContent || horseNo || "").trim().replace(/\s+/g,"");
 
       // past 5 cells: td.showElm with class like bg-7chaku etc contains racename-small/racedetail/zen5text small
       const pastCells = Array.from(tr.querySelectorAll("td.showElm"))
@@ -866,8 +869,48 @@ function toDisplayIndex(idx){
     }
   }
 
-  function calc(){
+  function looksLikeUrl(text){
+    const s = (text || "").trim();
+    if(!s) return false;
+    // 最低限：http(s)で始まる
+    return /^https?:\/\/\S+$/i.test(s);
+  }
+
+/**
+ * URL から HTML を取得する
+ * ※ CORS 制約により失敗する場合あり
+ */
+async function fetchHtmlFromUrl(url){
+  const res = await fetch(url, {
+    method: "GET",
+    mode: "cors",
+    credentials: "omit",
+    redirect: "follow",
+    headers: { "Accept": "text/html,*/*" },
+    cache: "no-store",
+  });
+  if(!res.ok){
+    throw new Error(`HTTP ${res.status} ${res.statusText}`);
+  }
+  return await res.text();
+}
+
+
+  async function calc(){
     const raw = htmlInput.value;
+
+    if(looksLikeUrl(raw)){
+      try{
+        setStatus("warn", "URLからHTML取得中…（CORSで失敗する場合があります）");
+        const html = await fetchHtmlFromUrl(raw);
+        raw = html;
+        toast("URLからHTMLを取得しました。解析します。", "ok");
+      }catch(e){
+console.log(raw);
+      }
+    }
+
+
     if(!raw || raw.trim().length < 100){
       toast("HTMLが空です。出馬表HTMLを貼り付けてください。", "warn");
       setStatus("warn", "入力不足");
