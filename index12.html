@@ -585,12 +585,12 @@ let isDoneNum = 0;
 
     // 中央競馬場補正
     if(isCentral){
-      adjusted *= 0.9;
+      adjusted *= 0.78;
     }
 
-    // 難関地方補正（開催名が難関地方なら距離×0.95）
+    // 難関地方補正（開催名が難関地方なら距離×0.9）
     if(isHardLocal(text)){
-      adjusted *= 0.95;
+      adjusted *= 0.88;
     }
 
     return adjusted;
