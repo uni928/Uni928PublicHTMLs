@@ -494,6 +494,15 @@ let isDoneNum = 0;
     "大井","川崎","船橋","浦和","門別"
   ];
 
+  // 過去走から除外するキーワード
+  const EXCLUDE_PAST_KEYWORDS = [
+    "除外",
+    "取消",
+    "中止",
+    "競走中止",
+    "失格"
+  ];
+
   // 開催名に中央競馬場が含まれているか
   function isCentralRace(text){
     if(!text) return false;
@@ -589,7 +598,7 @@ let isDoneNum = 0;
 
   function calcIndex(seconds, meters){
     const base = 10 * seconds / Math.pow(meters, 0.65);
-    return Math.pow(base, 1.25);
+    return Math.pow(base, 1.15);
   }
 
   // --- Extract per-horse: horseNo, name, past races (distance+time)
@@ -626,7 +635,12 @@ let isDoneNum = 0;
 
       // past 5 cells: td.showElm with class like bg-7chaku etc contains racename-small/racedetail/zen5text small
       const pastCells = Array.from(tr.querySelectorAll("td.showElm"))
-        .filter(td => /bg-\d+chaku/.test(td.className));
+        .filter(td => /bg-\d+chaku/.test(td.className))
+        // ★ 除外キーワードが含まれる走りは省く
+        .filter(td => {
+          const text = td.textContent || "";
+          return !EXCLUDE_PAST_KEYWORDS.some(k => text.includes(k));
+        });
 
       const past = pastCells.slice(0, 5).map(td => {
        const detailText = td.querySelector(".racedetail small")?.textContent ?? "";
@@ -678,12 +692,12 @@ n = (Math.round(600 - n * 10) - 100) * (Math.round(600 - n * 10) - 100) / 50;
 
     const bestScore =
       Number.isFinite(bestDisp) && Number.isFinite(minAvgDisp)
-        ? Math.abs(bestDisp - minAvgDisp)
+        ? Math.pow(bestDisp - minAvgDisp, 2)
         : null;
 
     const avgScore =
       Number.isFinite(avgDisp) && Number.isFinite(minAvgDisp)
-        ? Math.abs(avgDisp - minAvgDisp)
+        ? Math.pow(avgDisp - minAvgDisp, 2)
         : null;
 
 if(!isDone) {
@@ -711,13 +725,13 @@ isDoneNum = avgScore;
     const tdBest = document.createElement("td");
     tdBest.innerHTML = best==null
       ? `<span class="badge bad">算出不可</span>`
-      : `<div class="num" style="font-weight:900">${Math.pow(isDoneNum-bestScore, 2)}</div><div class="muted" style="font-size:10px;margin-top:2px">大きいほど速い</div>`;
+      : `<div class="num" style="font-weight:900">${bestScore}</div><div class="muted" style="font-size:10px;margin-top:2px">大きいほど速い</div>`;
     tr.appendChild(tdBest);
 
     const tdAvg = document.createElement("td");
     tdAvg.innerHTML = avg==null
       ? `<span class="badge bad">算出不可</span>`
-      : `<div class="num" style="font-weight:900">${Math.pow(isDoneNum-avgScore, 2)}</div><div class="muted" style="font-size:10px;margin-top:2px">欠損除外</div>`;
+      : `<div class="num" style="font-weight:900">${avgScore}</div><div class="muted" style="font-size:10px;margin-top:2px">欠損除外</div>`;
     tr.appendChild(tdAvg);
 
     const tdPast = document.createElement("td");
@@ -835,7 +849,7 @@ isDoneNum = avgScore;
 
     // ranking by current sort order (when bestAsc is typical)
     data.forEach((h, i)=>{
-      tbody.prepend(makeRow(h, i+1, minAvgDisp, data.length));
+      tbody.appendChild(makeRow(h, i+1, minAvgDisp, data.length));
     });
   }
 
@@ -856,6 +870,20 @@ function sortByAvgScoreDesc(){
   function enrichStats(horses){
     return horses.map(h=>{
       const valid = h.past.map(p=>p.idx).filter(v=>Number.isFinite(v));
+if(3 <= valid.length) {
+let max = 0;
+for(let i = 0; i < valid.length; i++) {
+if(valid[max] < valid[i]) {
+max = i;
+}
+valid.pop(max);
+let min = 0;
+if(valid[i] < valid[min]) {
+min = i;
+}
+valid.pop(min);
+}
+}
       h._best = valid.length ? Math.min(...valid) : null;
       h._avg  = valid.length ? (valid.reduce((a,b)=>a+b,0)/valid.length) : null;
       h._bestDisp = toDisplayIndex(h._best);
@@ -997,4 +1025,3 @@ isDoneNum = 0;
 </script>
 </body>
 </html>
-
