@@ -685,6 +685,24 @@ n = (Math.round(600 - n * 10) - 100) * (Math.round(600 - n * 10) - 100) / 50;
   function makeRow(h, rank, minAvgDisp, totalCount){
     // compute best(min) and avg
     const valid = h.past.map(p=>p.idx).filter(v=>Number.isFinite(v));
+
+  if(3 <= valid.length) {
+let max = 0;
+for(let i = 0; i < valid.length; i++) {
+if(valid[max] < valid[i]) {
+max = i;
+}
+}
+valid.splice(max, 1);
+let min = 0;
+for(let i = 0; i < valid.length; i++) {
+if(valid[i] < valid[min]) {
+min = i;
+}
+}
+
+}
+console.log(valid.length);
     const best = valid.length ? Math.min(...valid) : null;
     const avg  = valid.length ? (valid.reduce((a,b)=>a+b,0)/valid.length) : null;
     const bestDisp = h._bestDisp;
@@ -870,19 +888,21 @@ function sortByAvgScoreDesc(){
   function enrichStats(horses){
     return horses.map(h=>{
       const valid = h.past.map(p=>p.idx).filter(v=>Number.isFinite(v));
-if(3 <= valid.length) {
+  if(3 <= valid.length) {
 let max = 0;
 for(let i = 0; i < valid.length; i++) {
 if(valid[max] < valid[i]) {
 max = i;
 }
-valid.pop(max);
+}
+valid.splice(max, 1);
 let min = 0;
+for(let i = 0; i < valid.length; i++) {
 if(valid[i] < valid[min]) {
 min = i;
 }
-valid.pop(min);
 }
+
 }
       h._best = valid.length ? Math.min(...valid) : null;
       h._avg  = valid.length ? (valid.reduce((a,b)=>a+b,0)/valid.length) : null;
