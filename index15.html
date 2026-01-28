@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gemini API 料金計算（JPY）</title>
+  <style>
+    :root{
+      --bg: #fbf2d9;          /* クリーム */
+      --card: #fffdf6;
+      --ink: #1f2328;
+      --muted: #5b6472;
+      --line: rgba(31,35,40,.12);
+      --shadow: 0 14px 40px rgba(31,35,40,.12);
+      --shadow2: 0 10px 24px rgba(31,35,40,.10);
+      --radius: 18px;
+      --radius2: 14px;
+      --accent: #2b6cb0;
+      --accent2:#1a4f86;
+      --good: #137333;
+      --warn: #b45309;
+      --chip: rgba(43,108,176,.10);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", "YuGothic", "Meiryo", sans-serif;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color: var(--ink);
+      background:
+        radial-gradient(900px 500px at 18% 10%, rgba(43,108,176,.10), transparent 55%),
+        radial-gradient(800px 500px at 85% 20%, rgba(19,115,51,.10), transparent 55%),
+        radial-gradient(800px 600px at 40% 95%, rgba(180,83,9,.10), transparent 55%),
+        var(--bg);
+    }
+
+    .wrap{
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 28px 16px 42px;
+    }
+
+    header{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap: 14px;
+      flex-wrap:wrap;
+      margin-bottom: 14px;
+    }
+
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap: 8px;
+    }
+    .title h1{
+      font-size: clamp(22px, 2.4vw, 30px);
+      margin:0;
+      letter-spacing: .2px;
+    }
+    .subtitle{
+      margin:0;
+      color: var(--muted);
+      line-height:1.6;
+      font-size: 14px;
+    }
+
+    .badgeRow{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:flex-end;
+    }
+    .chip{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      padding: 9px 12px;
+      background: var(--chip);
+      border: 1px solid rgba(43,108,176,.18);
+      border-radius: 999px;
+      color: var(--accent2);
+      font-weight: 650;
+      font-size: 12.5px;
+      white-space:nowrap;
+    }
+    .chip .dot{
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 3px rgba(43,108,176,.16);
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,253,246,.92));
+      border: 1px solid rgba(31,35,40,.10);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+
+    .controls{
+      padding: 18px 18px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .grid{
+      display:grid;
+      gap: 12px;
+      grid-template-columns: repeat(4, minmax(170px, 1fr));
+    }
+
+    @media (max-width: 920px){
+      .grid{ grid-template-columns: repeat(2, minmax(160px, 1fr)); }
+    }
+    @media (max-width: 480px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .field{
+      padding: 12px 12px 10px;
+      border-radius: var(--radius2);
+      border: 1px solid rgba(31,35,40,.12);
+      background: rgba(255,255,255,.75);
+      box-shadow: 0 8px 18px rgba(31,35,40,.06);
+    }
+    .field label{
+      display:flex;
+      justify-content:space-between;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      user-select:none;
+    }
+    .field label span:last-child{
+      font-family: var(--mono);
+      color: rgba(31,35,40,.65);
+      font-size: 11px;
+    }
+    input[type="number"]{
+      width:100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(31,35,40,.16);
+      background: rgba(255,255,255,.96);
+      font-size: 16px;
+      outline: none;
+      transition: .15s ease;
+    }
+    input[type="number"]:focus{
+      border-color: rgba(43,108,176,.55);
+      box-shadow: 0 0 0 4px rgba(43,108,176,.16);
+    }
+
+    .actions{
+      display:flex;
+      gap: 10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top: 12px;
+      justify-content:space-between;
+    }
+
+    .btnRow{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    button{
+      border: none;
+      cursor:pointer;
+      font-weight: 700;
+      border-radius: 14px;
+      padding: 10px 14px;
+      background: linear-gradient(180deg, rgba(43,108,176,.95), rgba(26,79,134,.95));
+      color: white;
+      box-shadow: var(--shadow2);
+      transition: transform .08s ease, filter .15s ease;
+      letter-spacing: .2px;
+    }
+    button:hover{ filter: brightness(1.03); }
+    button:active{ transform: translateY(1px); }
+
+    .ghost{
+      background: rgba(255,255,255,.72);
+      color: var(--accent2);
+      border: 1px solid rgba(43,108,176,.26);
+      box-shadow: 0 10px 24px rgba(31,35,40,.08);
+    }
+
+    .note{
+      color: var(--muted);
+      font-size: 12.5px;
+      line-height: 1.6;
+      margin:0;
+    }
+
+    .tables{
+      padding: 14px 18px 18px;
+      display:grid;
+      gap: 16px;
+    }
+
+    .sectionTitle{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      flex-wrap:wrap;
+      margin: 6px 2px 8px;
+    }
+    .sectionTitle h2{
+      margin:0;
+      font-size: 16px;
+      letter-spacing: .2px;
+    }
+    .kpis{
+      display:flex;
+      gap: 10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:flex-end;
+    }
+    .kpi{
+      background: rgba(255,255,255,.70);
+      border: 1px solid rgba(31,35,40,.10);
+      border-radius: 999px;
+      padding: 8px 10px;
+      font-size: 12px;
+      color: var(--muted);
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      box-shadow: 0 10px 24px rgba(31,35,40,.06);
+      white-space:nowrap;
+    }
+    .kpi b{
+      color: var(--ink);
+      font-family: var(--mono);
+      font-weight: 800;
+    }
+
+    .tableWrap{
+      overflow:auto;
+      border-radius: 16px;
+      border: 1px solid rgba(31,35,40,.10);
+      background: rgba(255,255,255,.78);
+      box-shadow: 0 12px 30px rgba(31,35,40,.08);
+    }
+
+    table{
+      width:100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 860px;
+    }
+
+    thead th{
+      position: sticky;
+      top:0;
+      background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,255,255,.90));
+      border-bottom: 1px solid rgba(31,35,40,.12);
+      font-size: 12px;
+      color: rgba(31,35,40,.70);
+      text-align:left;
+      padding: 12px 12px;
+      z-index: 2;
+      backdrop-filter: blur(6px);
+    }
+
+    tbody td{
+      padding: 12px 12px;
+      border-bottom: 1px solid rgba(31,35,40,.08);
+      vertical-align: top;
+      font-size: 13.5px;
+    }
+    tbody tr:hover td{
+      background: rgba(43,108,176,.04);
+    }
+
+    .model{
+      font-weight: 800;
+      letter-spacing: .1px;
+    }
+    .tag{
+      display:inline-flex;
+      margin-left: 8px;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(31,35,40,.12);
+      background: rgba(255,255,255,.72);
+      color: rgba(31,35,40,.72);
+      white-space:nowrap;
+    }
+    .tag.batch{
+      border-color: rgba(19,115,51,.25);
+      background: rgba(19,115,51,.09);
+      color: var(--good);
+      font-weight: 800;
+    }
+    .tag.preview{
+      border-color: rgba(180,83,9,.28);
+      background: rgba(180,83,9,.10);
+      color: var(--warn);
+      font-weight: 800;
+    }
+
+    .formula{
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.55;
+      color: rgba(31,35,40,.76);
+      white-space: nowrap;
+    }
+    .yen{
+      font-family: var(--mono);
+      font-weight: 900;
+      font-size: 13.5px;
+      white-space:nowrap;
+    }
+
+    .foot{
+      margin-top: 12px;
+      color: rgba(31,35,40,.62);
+      font-size: 12px;
+      line-height: 1.65;
+    }
+    .foot code{
+      font-family: var(--mono);
+      background: rgba(31,35,40,.06);
+      padding: 2px 6px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <h1>Gemini API 料金計算（JPY）</h1>
+        <p class="subtitle">
+          想定 <b>input tokens</b> / <b>output tokens</b> / <b>USD→JPY</b> / <b>1日の実行回数</b> を入れて、モデル別の費用を自動計算します。<br>本資料は、ChatGPT に料金を調査させたうえで作成しています。実際の料金と異なる可能性があるため、使用するモデルを暫定的に決定した後、計算式を確認し、料金が正しいか、必ずご確認ください。
+        </p>
+      </div>
+      <div class="badgeRow">
+        <div class="chip"><span class="dot"></span> クリーム背景 / カードUI / 見やすい表</div>
+        <div class="chip"><span class="dot"></span> 初期値で自動計算</div>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="controls">
+        <div class="grid">
+          <div class="field">
+            <label>想定 input（tokens）<span>例: 1500</span></label>
+            <input id="inTokens" type="number" min="0" step="1" value="1500" />
+          </div>
+          <div class="field">
+            <label>想定 output（tokens）<span>例: 300</span></label>
+            <input id="outTokens" type="number" min="0" step="1" value="300" />
+          </div>
+          <div class="field">
+            <label>1ドル何円（USD→JPY）<span>例: 160</span></label>
+            <input id="usdJpy" type="number" min="0" step="0.01" value="160" />
+          </div>
+          <div class="field">
+            <label>1日の想定実行回数<span>例: 1000</span></label>
+            <input id="perDay" type="number" min="0" step="1" value="1000" />
+          </div>
+        </div>
+
+        <div class="actions">
+          <div class="btnRow">
+            <button id="calcBtn">計算する</button>
+            <button id="resetBtn" class="ghost" type="button">初期値に戻す</button>
+          </div>
+          <p class="note">
+            ※ 価格は Google 公式「Gemini Developer API pricing」の <b>Paid tier (per 1M tokens, USD)</b> を使用。Batch は <b>50%割引</b>枠として表に含めています。 :contentReference[oaicite:1]{index=1}
+          </p>
+        </div>
+      </div>
+
+      <div class="tables">
+        <div class="sectionTitle">
+          <h2>モデル別：1リクエストあたり（JPY）</h2>
+          <div class="kpis">
+            <div class="kpi">input <b id="kIn">1500</b> tokens</div>
+            <div class="kpi">output <b id="kOut">300</b> tokens</div>
+            <div class="kpi">USD→JPY <b id="kFx">160</b></div>
+          </div>
+        </div>
+
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="min-width:210px;">モデル</th>
+                <th style="min-width:170px;">1リクエストあたり</th>
+                <th>計算式</th>
+              </tr>
+            </thead>
+            <tbody id="perReqBody"></tbody>
+          </table>
+        </div>
+
+        <div class="sectionTitle">
+          <h2>モデル別：1か月あたり（JPY）</h2>
+          <div class="kpis">
+            <div class="kpi">1日 <b id="kDay">1000</b> 回</div>
+            <div class="kpi">月換算 <b>×30日</b></div>
+          </div>
+        </div>
+
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="min-width:210px;">モデル</th>
+                <th style="min-width:170px;">1か月あたり</th>
+                <th>計算式</th>
+              </tr>
+            </thead>
+            <tbody id="perMonthBody"></tbody>
+          </table>
+        </div>
+
+        <div class="foot">
+          <div>
+            参考：価格出典（Google 公式）：
+            <code>Gemini 3 Pro Preview / Gemini 3 Flash Preview / Gemini 2.5 Pro / Gemini 2.5 Flash / Gemini 2.5 Flash-Lite / Gemini 2.0 Flash / Gemini 2.0 Flash-Lite</code>
+            :contentReference[oaicite:2]{index=2}
+          </div>
+          <div style="margin-top:6px;">
+            ※ Gemini 2.5 Pro / Gemini 3 Pro は「prompts ≤ 200k tokens」の価格を採用（一般的な小〜中規模想定）。 :contentReference[oaicite:3]{index=3}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ===== Gemini pricing (Paid tier, per 1M tokens, USD) =====
+  // Source: https://ai.google.dev/gemini-api/docs/pricing
+  // We use text token prices (input/output). Some models have Batch (50%).
+  const MODELS = [
+    // Gemini 3
+    { id: "gemini-3-pro-preview", name: "gemini-3-pro-preview", tierTag: "Preview", tagClass: "preview",
+      inputPer1M: 2.00, outputPer1M: 12.00, note: "≤200k prompts" },
+    { id: "gemini-3-pro-preview-batch", name: "gemini-3-pro-preview", tierTag: "Batch(50%割引)", tagClass: "batch",
+      inputPer1M: 1.00, outputPer1M: 6.00, note: "≤200k prompts" },
+
+    { id: "gemini-3-flash-preview", name: "gemini-3-flash-preview", tierTag: "Preview", tagClass: "preview",
+      inputPer1M: 0.50, outputPer1M: 3.00 },
+    { id: "gemini-3-flash-preview-batch", name: "gemini-3-flash-preview", tierTag: "Batch(50%割引)", tagClass: "batch",
+      inputPer1M: 0.25, outputPer1M: 1.50 },
+
+    // Gemini 2.5
+    { id: "gemini-2.5-pro", name: "gemini-2.5-pro", tierTag: "Standard", tagClass: "",
+      inputPer1M: 1.25, outputPer1M: 10.00, note: "≤200k prompts" },
+    { id: "gemini-2.5-pro-batch", name: "gemini-2.5-pro", tierTag: "Batch(50%割引)", tagClass: "batch",
+      inputPer1M: 0.625, outputPer1M: 5.00, note: "≤200k prompts" },
+
+    { id: "gemini-2.5-flash", name: "gemini-2.5-flash", tierTag: "Standard", tagClass: "",
+      inputPer1M: 0.30, outputPer1M: 2.50 },
+    { id: "gemini-2.5-flash-batch", name: "gemini-2.5-flash", tierTag: "Batch(50%割引)", tagClass: "batch",
+      inputPer1M: 0.15, outputPer1M: 1.25 },
+
+    { id: "gemini-2.5-flash-lite", name: "gemini-2.5-flash-lite", tierTag: "Standard", tagClass: "",
+      inputPer1M: 0.10, outputPer1M: 0.40 },
+
+    // Gemini 2.0
+    { id: "gemini-2.0-flash", name: "gemini-2.0-flash", tierTag: "Standard", tagClass: "",
+      inputPer1M: 0.10, outputPer1M: 0.40 },
+    { id: "gemini-2.0-flash-batch", name: "gemini-2.0-flash", tierTag: "Batch(50%割引)", tagClass: "batch",
+      inputPer1M: 0.05, outputPer1M: 0.20 },
+
+    { id: "gemini-2.0-flash-lite", name: "gemini-2.0-flash-lite", tierTag: "Standard", tagClass: "",
+      inputPer1M: 0.075, outputPer1M: 0.30 },
+    { id: "gemini-2.0-flash-lite-batch", name: "gemini-2.0-flash-lite", tierTag: "Batch(50%割引)", tagClass: "batch",
+      inputPer1M: 0.0375, outputPer1M: 0.15 },
+  ];
+
+  const $ = (id) => document.getElementById(id);
+
+  function clampNonNeg(n){
+    if (!Number.isFinite(n)) return 0;
+    return Math.max(0, n);
+  }
+
+  function fmtNumber(n, digits=4){
+    return n.toLocaleString("ja-JP", {
+      maximumFractionDigits: digits,
+      minimumFractionDigits: 0
+    });
+  }
+
+  function fmtYen(n, digits=4){
+    return fmtNumber(n, digits) + " 円";
+  }
+
+  function buildFormulaUSDJPY(m, fx, inTok, outTok){
+    // Example: 0.10 × 160 × 1500 / 1,000,000 + 0.40 × 160 × 300 / 1,000,000
+    const a = `${fmtNumber(m.inputPer1M, 4)} × ${fmtNumber(fx, 4)} × ${fmtNumber(inTok, 0)} / 1,000,000`;
+    const b = `${fmtNumber(m.outputPer1M, 4)} × ${fmtNumber(fx, 4)} × ${fmtNumber(outTok, 0)} / 1,000,000`;
+    return `${a} + ${b}`;
+  }
+
+  function calcPerRequestJPY(m, fx, inTok, outTok){
+    // (USD per 1M tokens) * (JPY/USD) * tokens / 1,000,000
+    const inJPY  = (m.inputPer1M  * fx * inTok ) / 1_000_000;
+    const outJPY = (m.outputPer1M * fx * outTok) / 1_000_000;
+    return inJPY + outJPY;
+  }
+
+  function rowModelCell(m){
+    const tag = m.tierTag ? `<span class="tag ${m.tagClass || ""}">${escapeHtml(m.tierTag)}</span>` : "";
+    const note = m.note ? ` <span class="tag">${escapeHtml(m.note)}</span>` : "";
+    return `<div class="model">${escapeHtml(m.name)}${tag}${note}</div>`;
+  }
+
+  function escapeHtml(s){
+    return String(s)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#39;");
+  }
+
+  function render(){
+    const inTok  = clampNonNeg(Number($("inTokens").value));
+    const outTok = clampNonNeg(Number($("outTokens").value));
+    const fx     = clampNonNeg(Number($("usdJpy").value));
+    const perDay = clampNonNeg(Number($("perDay").value));
+
+    $("kIn").textContent  = fmtNumber(inTok,0);
+    $("kOut").textContent = fmtNumber(outTok,0);
+    $("kFx").textContent  = fmtNumber(fx,4);
+    $("kDay").textContent = fmtNumber(perDay,0);
+
+    const perReqBody = [];
+    const perMonthBody = [];
+
+    for (const m of MODELS){
+      const formula = buildFormulaUSDJPY(m, fx, inTok, outTok);
+      const perReq = calcPerRequestJPY(m, fx, inTok, outTok);
+      const perMonth = perReq * perDay * 30;
+
+      perReqBody.push(`
+        <tr>
+          <td>${rowModelCell(m)}</td>
+          <td class="yen">${escapeHtml(fmtYen(perReq, 6))}</td>
+          <td class="formula">${escapeHtml(formula)}</td>
+        </tr>
+      `);
+
+      perMonthBody.push(`
+        <tr>
+          <td>${rowModelCell(m)}</td>
+          <td class="yen">${escapeHtml(fmtNumber(Math.round(perMonth),0))} 円</td>
+          <td class="formula">(${escapeHtml(formula)}) × ${escapeHtml(fmtNumber(perDay,0))} × 30</td>
+        </tr>
+      `);
+    }
+
+    $("perReqBody").innerHTML = perReqBody.join("");
+    $("perMonthBody").innerHTML = perMonthBody.join("");
+  }
+
+  function resetDefaults(){
+    $("inTokens").value = 1500;
+    $("outTokens").value = 300;
+    $("usdJpy").value = 160;
+    $("perDay").value = 1000;
+    render();
+  }
+
+  // Events
+  $("calcBtn").addEventListener("click", render);
+  $("resetBtn").addEventListener("click", resetDefaults);
+  ["inTokens","outTokens","usdJpy","perDay"].forEach(id=>{
+    $(id).addEventListener("input", render);
+  });
+
+  // Initial render (open page with defaults)
+  render();
+</script>
+</body>
+</html>
