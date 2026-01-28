@@ -637,7 +637,8 @@ const btnCopyUrl = $("btnCopyUrl");
       // “gpt-4o-mini” を代表として出すと恣意的なので、平均も微妙。
       // 代わりに「選択モデル」を作る案もあるが要件外なので、ここでは “gpt-4o-mini” を代表モデルとして表示しない。
       // → サマリーは “gpt-4o-mini” ではなく「gpt-5-nano」を基準に表示（例があるため）。
-      const baseForSummary = MODELS[0];
+      //const baseForSummary = MODELS[0];
+      const baseForSummary = { name: "gpt-5-nano Flex",   inRate: 0.025, outRate: 0.20 };
 
       // Render base models
       const rows = [];
@@ -729,6 +730,8 @@ const btnCopyUrl = $("btnCopyUrl");
       const basePerDay = basePerReq * dayN;
       const basePerMonth = basePerDay * daysInMonth;
 
+      //sumDay.textContent = `${formatYenInt(basePerDay)}（${baseForSummary.name}）`;
+      //sumMonth.textContent = `${formatYenInt(basePerMonth)}（${baseForSummary.name}）`;
       sumDay.textContent = `${formatYenInt(basePerDay)}（${baseForSummary.name}）`;
       sumMonth.textContent = `${formatYenInt(basePerMonth)}（${baseForSummary.name}）`;
 
