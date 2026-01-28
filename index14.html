@@ -417,6 +417,7 @@
             <div class="actions">
               <button class="btn-primary" id="btnCalc" type="button">再計算</button>
               <button class="btn-ghost" id="btnCopy" type="button" title="表をTSVでコピー">表をコピー</button>
+<button class="btn-ghost" id="btnCopyUrl" type="button" title="現在の入力値で開けるURLをコピー">URLをコピー</button>
               <button class="btn-ghost" id="btnReset" type="button" title="初期値に戻す">初期値に戻す</button>
             </div>
 
@@ -534,9 +535,47 @@
     const btnCalc  = $("btnCalc");
     const btnReset = $("btnReset");
     const btnCopy  = $("btnCopy");
+const btnCopyUrl = $("btnCopyUrl");
 
     // ==== Utils ====
     const clampNonNeg = (n) => (Number.isFinite(n) && n >= 0) ? n : 0;
+    function applyQueryParams(){
+      const sp = new URLSearchParams(location.search);
+      // i: input tokens, o: output tokens, fx: JPY/USD, d: requests per day
+      if (sp.has("i"))  inTok.value  = String(Math.max(0, Number(sp.get("i"))  || 0));
+      if (sp.has("o"))  outTok.value = String(Math.max(0, Number(sp.get("o"))  || 0));
+      if (sp.has("fx")) fx.value     = String(Math.max(0, Number(sp.get("fx")) || 0));
+      if (sp.has("d"))  perDay.value = String(Math.max(0, Number(sp.get("d"))  || 0));
+    }
+
+    function buildShareUrl(){
+      const url = new URL(location.href);
+      url.searchParams.set("i",  String(Math.max(0, Number(inTok.value)  || 0)));
+      url.searchParams.set("o",  String(Math.max(0, Number(outTok.value) || 0)));
+      url.searchParams.set("fx", String(Math.max(0, Number(fx.value)     || 0)));
+      url.searchParams.set("d",  String(Math.max(0, Number(perDay.value) || 0)));
+      return url.toString();
+    }
+
+    btnCopyUrl.addEventListener("click", async () => {
+      const shareUrl = buildShareUrl();
+      try{
+        await navigator.clipboard.writeText(shareUrl);
+        showToast("URLをコピーしました");
+      }catch(e){
+        const ta = document.createElement("textarea");
+        ta.value = shareUrl;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        showToast("URLをコピーしました");
+      }
+    });
+
 
     function formatYen(n, decimals = 4){
       // 4桁小数は「1リクエスト」用途。月額は整数に丸めたいので別で指定。
@@ -748,8 +787,8 @@
 
     // ==== Init ====
     wireAutoCalc();
+applyQueryParams();
     render(); // 初期値で即表示
   </script>
 </body>
 </html>
-
