@@ -19,3 +19,9 @@
 [単体 html をリスト形式で登録して開けるようにするサイト](https://uni928.github.io/Uni928PublicHTMLs/index6.html)
 
 上記のサイトは、小説をローカルに保存するサイト https://uni928.github.io/SyousetuReader/index4.html との連携を前提としています。
+
+---
+
+[ChatGPT API 料金シミュレーター](https://uni928.github.io/Uni928PublicHTMLs/index14.html)
+
+[Gemini 版](https://uni928.github.io/Uni928PublicHTMLs/index15.html) は目視で料金チェックが出来ていません。
