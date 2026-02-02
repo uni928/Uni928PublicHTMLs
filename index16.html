@@ -1,0 +1,608 @@
+<!doctype html>
+<script>
+  (function () {
+    const p = new URLSearchParams(location.search);
+    if (p.get("m") !== "2") return;
+
+    const h = p.get("h");
+    if (!h) return;
+
+    let b64 = h.replace(/-/g, "+").replace(/_/g, "/");
+    const pad = b64.length % 4;
+    if (pad) b64 += "=".repeat(4 - pad);
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const html = new TextDecoder().decode(bytes);
+
+//document.body.hidden = true;
+//document.documentElement.setAttribute("m2", "");
+
+        // innerHTML で置き換え（document.open は使わない）
+        const render = () => {
+          document.documentElement.innerHTML = html;
+
+          // ★ innerHTML では <script> が実行されないため、作り直して実行させる
+          const scripts = Array.from(document.querySelectorAll("script"));
+          for (const old of scripts) {
+            const s = document.createElement("script");
+            // 属性をコピー（type, src, nomodule, async, defer, integrity, crossorigin など）
+            for (const { name, value } of Array.from(old.attributes)) {
+              s.setAttribute(name, value);
+            }
+            // インラインスクリプト本文をコピー
+            if (!old.src) s.textContent = old.textContent || "";
+            old.replaceWith(s);
+          }
+        };
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", render, { once: true });
+        } else {
+          render();
+        }
+  })();
+</script>
+
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>HTML → URL 変換ツール</title>
+  <meta name="color-scheme" content="light" />
+  <style>html[m2] body { display:none !important; }
+    :root{
+      --bg:#fff3db;           /* クリーム */
+      --card:#fffaf0;
+      --ink:#2b241a;
+      --muted:#6b5b47;
+      --line:rgba(43,36,26,.14);
+      --shadow: 0 18px 50px rgba(43,36,26,.14);
+      --shadow2: 0 8px 22px rgba(43,36,26,.10);
+      --accent:#c06a2b;
+      --accent2:#8b4a1f;
+      --good:#2b7a3d;
+      --warn:#8a4b1f;
+      --radius:18px;
+      --radius2:14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      color:var(--ink);
+      background:
+        radial-gradient(900px 400px at 20% 5%, rgba(192,106,43,.12), transparent 60%),
+        radial-gradient(700px 380px at 85% 15%, rgba(139,74,31,.12), transparent 60%),
+        linear-gradient(180deg, var(--bg), #fff0d4 55%, #ffe7c0);
+    }
+    .wrap{
+      max-width:1080px;
+      margin:0 auto;
+      padding:28px 16px 44px;
+    }
+    header{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:18px;
+    }
+    .brand{
+      display:flex; gap:12px; align-items:center;
+    }
+    .logo{
+      width:44px;height:44px;border-radius:14px;
+      background:linear-gradient(135deg, rgba(192,106,43,.95), rgba(139,74,31,.95));
+      box-shadow: var(--shadow2);
+      position:relative;
+      overflow:hidden;
+    }
+    .logo:before{
+      content:"";
+      position:absolute; inset:-30%;
+      background:radial-gradient(circle at 30% 30%, rgba(255,255,255,.35), transparent 55%);
+      transform:rotate(12deg);
+    }
+    h1{
+      margin:0;
+      font-size:20px;
+      letter-spacing:.2px;
+    }
+    .sub{
+      margin:4px 0 0;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.4;
+    }
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:10px 12px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      background:rgba(255,255,255,.55);
+      box-shadow: 0 6px 18px rgba(43,36,26,.07);
+      font-size:12.5px;
+      color:var(--muted);
+      white-space:nowrap;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap:14px;
+    }
+    @media (max-width: 920px){
+      .grid{grid-template-columns:1fr}
+      header{flex-direction:column; align-items:stretch}
+      .pill{justify-content:center}
+    }
+    .card{
+      background:rgba(255,255,255,.62);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      backdrop-filter: blur(8px);
+    }
+    .card .hd{
+      padding:14px 16px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.52));
+    }
+    .title{
+      display:flex; flex-direction:column; gap:2px;
+    }
+    .title b{font-size:13.5px}
+    .title span{font-size:12px;color:var(--muted)}
+    .body{padding:14px 16px 16px}
+    textarea{
+      width:100%;
+      min-height:340px;
+      resize:vertical;
+      padding:14px 14px;
+      border-radius:var(--radius2);
+      border:1px solid rgba(43,36,26,.18);
+      outline:none;
+      background:rgba(255,255,255,.78);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+      font-family: var(--mono);
+      font-size:12.8px;
+      line-height:1.55;
+      color:#2a2319;
+    }
+    textarea:focus{
+      border-color: rgba(192,106,43,.55);
+      box-shadow: 0 0 0 4px rgba(192,106,43,.16), inset 0 1px 0 rgba(255,255,255,.7);
+    }
+    .row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top:12px;
+    }
+    .btn{
+      border:none;
+      border-radius:999px;
+      padding:11px 14px;
+      font-weight:600;
+      font-size:13px;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap:9px;
+      transition: transform .06s ease, box-shadow .12s ease, background .12s ease, opacity .12s ease;
+      user-select:none;
+    }
+    .btn:active{transform: translateY(1px)}
+    .btn.primary{
+      background:linear-gradient(135deg, rgba(192,106,43,.96), rgba(139,74,31,.96));
+      color:#fff;
+      box-shadow: 0 12px 26px rgba(192,106,43,.24);
+    }
+    .btn.primary:hover{box-shadow: 0 14px 30px rgba(192,106,43,.30)}
+    .btn.ghost{
+      background:rgba(255,255,255,.72);
+      color:var(--ink);
+      border:1px solid rgba(43,36,26,.16);
+      box-shadow: 0 10px 20px rgba(43,36,26,.08);
+    }
+    .btn.ghost:hover{box-shadow: 0 12px 24px rgba(43,36,26,.10)}
+    .btn.warn{
+      background:rgba(255,255,255,.70);
+      color:var(--warn);
+      border:1px solid rgba(138,75,31,.22);
+    }
+    .btn:disabled{opacity:.55; cursor:not-allowed}
+    .hint{
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.55;
+      margin-top:10px;
+    }
+    .mono{
+      font-family: var(--mono);
+      font-size:12.2px;
+    }
+    .out{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .field{
+      width:100%;
+      padding:12px 12px;
+      border-radius:var(--radius2);
+      border:1px solid rgba(43,36,26,.18);
+      background:rgba(255,255,255,.78);
+      outline:none;
+      font-family: var(--mono);
+      font-size:12.2px;
+      line-height:1.4;
+      word-break:break-all;
+      min-height:84px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+    }
+    .status{
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(43,36,26,.14);
+      background:rgba(255,255,255,.55);
+      color:var(--muted);
+      font-size:12.5px;
+      line-height:1.45;
+    }
+    .status.ok{border-color: rgba(43,122,61,.22); color: var(--good)}
+    .status.warn{border-color: rgba(138,75,31,.22); color: var(--warn)}
+    .kpi{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:10px;
+    }
+    .kpi .box{
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(43,36,26,.14);
+      background:rgba(255,255,255,.55);
+      font-size:12.5px;
+      color:var(--muted);
+    }
+    .kpi b{color:var(--ink)}
+    .footer{
+      margin-top:14px;
+      font-size:12px;
+      color:rgba(43,36,26,.55);
+      text-align:center;
+    }
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:9px 10px;
+      border-radius:999px;
+      border:1px solid rgba(43,36,26,.14);
+      background:rgba(255,255,255,.55);
+      font-size:12px;
+      color:var(--muted);
+      margin-top:10px;
+      flex-wrap:wrap;
+    }
+    .chip code{
+      font-family:var(--mono);
+      font-size:11.8px;
+      color:#3b2f21;
+      background:rgba(255,255,255,.55);
+      padding:2px 6px;
+      border-radius:8px;
+      border:1px solid rgba(43,36,26,.10);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>HTML を URL に変換</h1>
+          <p class="sub">コードを貼り付け → URL を生成＆コピー。<span class="mono">m=1</span>でコード復元、<span class="mono">m=2</span>で表示モード。</p>
+        </div>
+      </div>
+      <div class="pill" title="使い方の要点">
+        <span>📌</span>
+        <span><span class="mono">?m=1&amp;h=...</span>：コード表示 / <span class="mono">?m=2&amp;h=...</span>：HTML表示</span>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- Left: Editor -->
+      <section class="card" aria-label="HTML入力">
+        <div class="hd">
+          <div class="title">
+            <b>HTML を入力</b>
+            <span>（保存なし / ローカルだけで動作）</span>
+          </div>
+          <button class="btn ghost" id="btnSample" type="button">✨ サンプル挿入</button>
+        </div>
+        <div class="body">
+          <textarea id="htmlInput" spellcheck="false" placeholder="ここに HTML を貼り付けてください…"></textarea>
+
+          <div class="row">
+            <button class="btn primary" id="btnMakeUrl" type="button">🔗 URL をコピー</button>
+            <button class="btn ghost" id="btnCopyOnly" type="button" style="display: none;">📋 表示中URLだけコピー</button>
+            <button class="btn warn" id="btnOpenPreview" type="button" style="display: none;">🪟 表示モードで開く（m=2）</button>
+            <button class="btn ghost" id="btnClear" type="button">🧹 クリア</button>
+          </div>
+
+          <div class="hint">
+            ※ URL は長くなります。長すぎる場合は貼り付け先（ブラウザ/アプリ/共有先）で扱えないことがあります。<br>
+            ※ <span class="mono">m=2</span> の表示は「同じタブで置き換え」方式です（戻るで戻れます）。うまくいかない場合は新規タブでも開けます。
+          </div>
+
+          <div class="chip">
+            例：
+            <code>（通常） /tool.html</code>
+            <code>?m=1&amp;h=...</code>
+            <code>?m=2&amp;h=...</code>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right: Output -->
+      <section class="card" aria-label="URL出力">
+        <div class="hd">
+          <div class="title">
+            <b>生成された URL</b>
+            <span>コピー済み表示 &amp; 長さチェック</span>
+          </div>
+        </div>
+        <div class="body out">
+          <div id="status" class="status">まだ URL は生成されていません。</div>
+
+          <div id="urlField" class="field" aria-label="URL表示" role="textbox" aria-multiline="true"></div>
+
+          <div class="kpi">
+            <div class="box"><b>HTML文字数</b><div id="kpiHtml">0</div></div>
+            <div class="box"><b>URL文字数</b><div id="kpiUrl">0</div></div>
+          </div>
+
+          <div class="hint mono">
+            復元（m=1）: このページでコードが textarea に入ります。<br>
+            表示（m=2）: HTML をそのまま表示します（ツールUIは置き換わります）。
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="footer">© HTML → URL Converter (Single-file)</div>
+  </div>
+
+  <script>
+    // ---------------------------
+    // Base64URL encode/decode (UTF-8 safe)
+    // ---------------------------
+    function toBase64Url(str) {
+      const utf8 = new TextEncoder().encode(str);
+      let bin = "";
+      for (let i = 0; i < utf8.length; i++) bin += String.fromCharCode(utf8[i]);
+      const b64 = btoa(bin);
+      return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+    }
+
+    function fromBase64Url(b64url) {
+      let b64 = b64url.replace(/-/g, "+").replace(/_/g, "/");
+      const pad = b64.length % 4;
+      if (pad) b64 += "=".repeat(4 - pad);
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return new TextDecoder().decode(bytes);
+    }
+
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (e) {
+        // Fallback
+        try {
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          ta.style.position = "fixed";
+          ta.style.left = "-9999px";
+          ta.style.top = "-9999px";
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          const ok = document.execCommand("copy");
+          document.body.removeChild(ta);
+          return ok;
+        } catch (_) {
+          return false;
+        }
+      }
+    }
+
+    function setStatus(kind, msg) {
+      const el = document.getElementById("status");
+      el.className = "status" + (kind ? " " + kind : "");
+      el.textContent = msg;
+    }
+
+    function setUrlField(url) {
+      document.getElementById("urlField").textContent = url || "";
+      document.getElementById("btnCopyOnly").disabled = !url;
+      document.getElementById("btnOpenPreview").disabled = !url;
+      document.getElementById("kpiUrl").textContent = String(url ? url.length : 0);
+    }
+
+    function updateHtmlKpi() {
+      const html = document.getElementById("htmlInput").value || "";
+      document.getElementById("kpiHtml").textContent = String(html.length);
+    }
+
+    function makeUrl(mode, html) {
+      // 同じページURLをベースにする（クエリ・ハッシュは除去）
+      const base = location.origin + location.pathname;
+      const h = toBase64Url(html);
+      const u = new URL(base);
+      u.searchParams.set("m", String(2));
+      u.searchParams.set("h", h);
+      return u.toString();
+    }
+
+    function openInThisTabAsHtml(html) {
+      // m=2 表示モード（そのタブで開く）
+      // 注意: ツールUIは置き換えられます
+      //document.open();
+      //document.write(html);
+     // document.close();
+
+    }
+
+    // ---------------------------
+    // Mode handling on load
+    // ---------------------------
+    (function initFromUrl() {
+      const params = new URLSearchParams(location.search);
+      const m = params.get("m");
+      const h = params.get("h");
+
+      // まずは KPI 更新
+      updateHtmlKpi();
+
+      if (!m) {
+        // 普通に開く
+        setStatus("", "コードを貼って「URL をコピー」を押してください。");
+        return;
+      }
+
+      if (!h) {
+        setStatus("warn", "m が指定されていますが、h（HTMLデータ）が見つかりません。");
+        return;
+      }
+
+      let html = "";
+      try {
+        html = fromBase64Url(h);
+      } catch (e) {
+        setStatus("warn", "URL の h（HTMLデータ）の復元に失敗しました。");
+        return;
+      }
+
+      if (m === "1") {
+        // URLからHTMLコードをtextareaに表示
+        const input = document.getElementById("htmlInput");
+        input.value = html;
+        updateHtmlKpi();
+        setStatus("ok", "m=1：URL から HTML を復元しました。必要なら編集して URL を再生成できます。");
+        // ついでに現在URLも表示
+        setUrlField(location.href);
+        return;
+      }
+
+      /*if (m === "2") {
+        // URLからHTMLを表示モード（同タブ置換）
+        openInThisTabAsHtml(html);
+        return;
+      }*/
+
+      setStatus("warn", "未知の m です。m=1 または m=2 を指定してください。");
+    })();
+
+    // ---------------------------
+    // UI events
+    // ---------------------------
+    const htmlInput = document.getElementById("htmlInput");
+    htmlInput.addEventListener("input", updateHtmlKpi);
+
+    document.getElementById("btnSample").addEventListener("click", () => {
+      const sample =
+`<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>サンプル</title>
+  <style>
+    body{font-family:system-ui;margin:0;background:#fff3db;color:#2b241a}
+    .box{max-width:720px;margin:48px auto;padding:20px;background:rgba(255,255,255,.7);border-radius:18px;border:1px solid rgba(43,36,26,.14)}
+    h1{margin:0 0 8px}
+    p{margin:0;color:rgba(43,36,26,.7)}
+    button{margin-top:14px;padding:10px 14px;border-radius:999px;border:0;background:#c06a2b;color:#fff;font-weight:700}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>こんにちは！</h1>
+    <p>これは URL に埋め込まれた HTML を表示しています。</p>
+    <button onclick="alert('OK!')">クリック</button>
+  </div>
+</body>
+</html>`;
+      htmlInput.value = sample;
+      updateHtmlKpi();
+      setStatus("", "サンプルを挿入しました。URL を生成できます。");
+    });
+
+    document.getElementById("btnClear").addEventListener("click", () => {
+      htmlInput.value = "";
+      updateHtmlKpi();
+      setUrlField("");
+      setStatus("", "クリアしました。");
+    });
+
+    document.getElementById("btnMakeUrl").addEventListener("click", async () => {
+      const html = htmlInput.value || "";
+      if (!html.trim()) {
+        setStatus("warn", "HTML が空です。コードを貼り付けてください。");
+        return;
+      }
+
+      const url = makeUrl(1, html); // m=1 を生成（復元モード）
+      setUrlField(url);
+
+      // 長さ目安（環境依存）
+      const len = url.length;
+      let msg = "URL を生成しました。コピーしています…";
+      let kind = "ok";
+      if (len > 7000) { kind = "warn"; msg = "URL がかなり長いです（共有先で扱えない可能性）。コピーは試みます。"; }
+      else if (len > 3000) { kind = "warn"; msg = "URL が長めです。貼り付け先で動作確認を推奨します。"; }
+
+      const ok = await copyText(url);
+      if (ok) setStatus(kind, msg + "（コピー完了）");
+      else setStatus("warn", "URL は生成されましたが、コピーに失敗しました。手動で選択してコピーしてください。");
+    });
+
+    document.getElementById("btnCopyOnly").addEventListener("click", async () => {
+      const url = document.getElementById("urlField").textContent.trim();
+      if (!url) return;
+      const ok = await copyText(url);
+      if (ok) setStatus("ok", "表示中の URL をコピーしました。");
+      else setStatus("warn", "コピーに失敗しました。手動で選択してコピーしてください。");
+    });
+
+    document.getElementById("btnOpenPreview").addEventListener("click", () => {
+      const html = htmlInput.value || "";
+      if (!html.trim()) {
+        setStatus("warn", "HTML が空です。");
+        return;
+      }
+      const url2 = makeUrl(2, html); // m=2 表示モードURL
+      // まず同タブ（要件）
+      try {
+        location.href = url2;
+      } catch (e) {
+        // ダメなら新タブ
+        window.open(url2, "_blank", "noopener");
+      }
+    });
+  </script>
+</body>
+</html>
