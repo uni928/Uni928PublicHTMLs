@@ -1,0 +1,1109 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>本日の作業報告</title>
+  <style>
+    :root{
+      --bg:#f6f0d9;          /* クリーム */
+      --card:#ffffffcc;
+      --card2:#ffffffa6;
+      --ink:#2c2a26;
+      --muted:#6b655d;
+      --line:#e7dcc0;
+      --shadow: 0 18px 45px rgba(36, 28, 18, .12);
+      --shadow2: 0 10px 22px rgba(36, 28, 18, .10);
+      --accent:#7a5cff;
+      --impl:#2bb673;
+      --dbg:#ff9f1c;
+      --danger:#ff4d4d;
+      --done:#2d6a4f;
+      --radius:22px;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Noto Sans JP", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      color:var(--ink);
+      background:
+        radial-gradient(1000px 600px at 10% 5%, #fff6, transparent 55%),
+        radial-gradient(900px 520px at 90% 20%, #fff8, transparent 50%),
+        radial-gradient(800px 520px at 50% 100%, #fff5, transparent 55%),
+        linear-gradient(180deg, #f8f1d7, var(--bg));
+      min-height:100vh;
+      padding:28px;
+    }
+
+    .app{
+      max-width:1100px;
+      margin:0 auto;
+      display:grid;
+      gap:18px;
+    }
+
+    header{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:16px;
+      padding:18px 20px;
+      background:linear-gradient(180deg, #fff, var(--card2));
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      position:relative;
+      overflow:hidden;
+    }
+    header::before{
+      content:"";
+      position:absolute;
+      inset:-120px -120px auto auto;
+      width:420px;
+      height:420px;
+      background: radial-gradient(circle at 30% 30%, rgba(122,92,255,.20), transparent 62%);
+      transform: rotate(18deg);
+    }
+    .title{
+      position:relative;
+      z-index:1;
+    }
+    .title h1{
+      margin:0;
+      font-size:26px;
+      letter-spacing:.02em;
+    }
+    .title p{
+      margin:6px 0 0;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+    }
+
+    .top-actions{
+      position:relative;
+      z-index:1;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:flex-end;
+    }
+
+    .pill{
+      font-size:12px;
+      padding:8px 12px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:#fff;
+      color:var(--muted);
+      box-shadow:0 6px 14px rgba(36, 28, 18, .06);
+      user-select:none;
+    }
+
+    .btn{
+      border:1px solid var(--line);
+      background:linear-gradient(180deg,#fff,#fff6);
+      color:var(--ink);
+      padding:10px 12px;
+      border-radius:14px;
+      cursor:pointer;
+      box-shadow:0 10px 20px rgba(36, 28, 18, .08);
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
+      font-weight:650;
+      letter-spacing:.01em;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+    }
+    .btn:hover{ transform: translateY(-1px); box-shadow:0 14px 24px rgba(36, 28, 18, .12); }
+    .btn:active{ transform: translateY(0px); box-shadow:0 8px 16px rgba(36, 28, 18, .10); }
+    .btn.primary{
+      border-color: rgba(122,92,255,.35);
+      background: linear-gradient(180deg, rgba(122,92,255,.18), rgba(122,92,255,.10));
+    }
+    .btn.ghost{
+      background:transparent;
+      box-shadow:none;
+    }
+    .btn.danger{
+      border-color: rgba(255,77,77,.35);
+      background: linear-gradient(180deg, rgba(255,77,77,.14), rgba(255,77,77,.08));
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap:18px;
+    }
+    @media (max-width: 920px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .panel{
+      background:linear-gradient(180deg, #fff, var(--card));
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow2);
+      padding:16px;
+      overflow:hidden;
+    }
+
+    .panel-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:10px;
+    }
+    .panel-head h2{
+      margin:0;
+      font-size:16px;
+      letter-spacing:.01em;
+    }
+    .count{
+      font-size:12px;
+      color:var(--muted);
+      background:#fff;
+      border:1px solid var(--line);
+      padding:6px 10px;
+      border-radius:999px;
+    }
+
+    .add{
+      display:flex;
+      gap:10px;
+      margin:12px 0 14px;
+    }
+    .input{
+      flex:1;
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:12px 14px;
+      outline:none;
+      background:#fff;
+      font-size:14px;
+      box-shadow: inset 0 1px 0 rgba(0,0,0,.03);
+      transition:border-color .12s ease, box-shadow .12s ease;
+    }
+    .input:focus{
+      border-color: rgba(122,92,255,.45);
+      box-shadow: 0 0 0 4px rgba(122,92,255,.15);
+    }
+
+    .list{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-height:120px;
+      padding:4px 2px 2px;
+    }
+
+    .empty{
+      padding:18px 14px;
+      border:1px dashed rgba(122,92,255,.25);
+      border-radius:18px;
+      color:var(--muted);
+      background: rgba(255,255,255,.5);
+      font-size:13px;
+      line-height:1.4;
+    }
+
+    .task{
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+      padding:12px;
+      border-radius:18px;
+      border:1px solid rgba(231,220,192,.9);
+      background:linear-gradient(180deg, #fff, rgba(255,255,255,.78));
+      box-shadow: 0 10px 20px rgba(36, 28, 18, .07);
+      position:relative;
+      overflow:hidden;
+    }
+    .task::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background: radial-gradient(260px 120px at 0% 0%, rgba(122,92,255,.10), transparent 62%);
+      opacity:.9;
+      pointer-events:none;
+    }
+
+    .task-main{ flex:1; position:relative; z-index:1; }
+    .task-title{
+      margin:0 0 8px;
+      font-size:14px;
+      font-weight:800;
+      letter-spacing:.01em;
+      word-break:break-word;
+    }
+    .meta{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      align-items:center;
+      color:var(--muted);
+      font-size:12px;
+    }
+
+    .tags{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .tbtn{
+      border:1px solid rgba(231,220,192,.9);
+      background:#fff;
+      padding:8px 10px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:800;
+      font-size:12px;
+      letter-spacing:.01em;
+      transition: transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+      box-shadow: 0 8px 16px rgba(36, 28, 18, .06);
+      user-select:none;
+    }
+    .tbtn:hover{ transform: translateY(-1px); box-shadow: 0 12px 18px rgba(36, 28, 18, .10); }
+    .tbtn:active{ transform: translateY(0px); box-shadow: 0 6px 12px rgba(36, 28, 18, .08); }
+
+    .tbtn.impl.on{
+      border-color: rgba(43,182,115,.45);
+      background: linear-gradient(180deg, rgba(43,182,115,.22), rgba(43,182,115,.12));
+    }
+    .tbtn.dbg.on{
+      border-color: rgba(255,159,28,.50);
+      background: linear-gradient(180deg, rgba(255,159,28,.22), rgba(255,159,28,.12));
+    }
+
+    .side{
+      display:flex;
+      flex-direction:row;        /* 横並び */
+      gap:10px;
+      align-items:center;
+      justify-content:flex-end;
+      position:relative;
+      z-index:1;
+    }
+
+    .iconbtn{
+      border:1px solid rgba(231,220,192,.9);
+      background:#fff;
+      width:38px;
+      height:38px;
+      border-radius:14px;
+      cursor:pointer;
+      display:grid;
+      place-items:center;
+      box-shadow: 0 10px 16px rgba(36, 28, 18, .08);
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }
+    .iconbtn:hover{ transform: translateY(-1px); box-shadow: 0 14px 20px rgba(36, 28, 18, .12); }
+    .iconbtn:active{ transform: translateY(0px); box-shadow: 0 8px 14px rgba(36, 28, 18, .10); }
+    .iconbtn.danger{ border-color: rgba(255,77,77,.35); }
+
+    .done-card .task{
+      border-color: rgba(45,106,79,.25);
+      background: linear-gradient(180deg, rgba(45,106,79,.08), rgba(255,255,255,.78));
+    }
+    .done-badge{
+      color: var(--done);
+      font-weight:900;
+      letter-spacing:.02em;
+      background: rgba(45,106,79,.10);
+      border:1px solid rgba(45,106,79,.22);
+      padding:4px 10px;
+      border-radius:999px;
+    }
+
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:22px;
+      transform:translateX(-50%);
+      background: rgba(35,31,24,.92);
+      color:#fff;
+      padding:12px 14px;
+      border-radius:14px;
+      font-size:13px;
+      box-shadow: 0 16px 38px rgba(0,0,0,.22);
+      opacity:0;
+      pointer-events:none;
+      transition: opacity .18s ease, transform .18s ease;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      max-width:min(560px, calc(100vw - 36px));
+    }
+    .toast.show{
+      opacity:1;
+      transform:translateX(-50%) translateY(-2px);
+    }
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      background: rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.18);
+      padding:2px 6px;
+      border-radius:8px;
+      font-size:12px;
+    }
+
+    .footer{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      color:var(--muted);
+      font-size:12px;
+      padding:0 6px;
+    }
+    .footer a{ color: var(--accent); text-decoration:none; font-weight:800; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="title">
+        <h1>本日の作業報告</h1>
+        <p>
+          状態はURLクエリのみで保存・復元。<span class="kbd">実装</span> と <span class="kbd">デバッグ</span> が両方ONで自動的に作業済みに移動します。
+        </p>
+      </div>
+      <div class="top-actions">
+        <span class="pill" id="urlHint">URL未保存</span>
+        <button class="btn primary" id="btnExport" type="button">🔗 URLで画面出力</button>
+<button class="btn" id="btnDownload" type="button">⬇️ ダウンロード</button>
+        <button class="btn danger" id="btnReset" type="button">🧹 全クリア</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>未完了</h2>
+          <span class="count" id="todoCount">0</span>
+        </div>
+
+        <div class="add">
+          <input class="input" id="newTask" placeholder="タスク名を入力（例：トップページのUI調整）" />
+          <button class="btn" id="btnAdd" type="button">＋ 追加</button>
+        </div>
+
+        <div class="list" id="todoList"></div>
+      </section>
+
+      <section class="panel done-card">
+        <div class="panel-head">
+          <h2>作業済み</h2>
+          <span class="count" id="doneCount">0</span>
+        </div>
+        <div class="list" id="doneList"></div>
+      </section>
+    </div>
+
+    <div class="footer">
+      <div>保存先：URLクエリ <span class="kbd">?s=...</span>（localStorage / IndexedDB 不使用）</div>
+      <div><a href="#" id="copyUrl">現在URLをコピー</a></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    /*****************************************************************
+     * LZString (minimal) - compressToEncodedURIComponent / decompress
+     * URL-safeな文字のみで圧縮（= などのパディング無し）
+     *****************************************************************/
+    const LZString = (function() {
+      const f = String.fromCharCode;
+      const keyStrUriSafe = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$";
+      const baseReverseDic = {};
+
+      function getBaseValue(alphabet, character) {
+        if (!baseReverseDic[alphabet]) {
+          baseReverseDic[alphabet] = {};
+          for (let i = 0; i < alphabet.length; i++) {
+            baseReverseDic[alphabet][alphabet.charAt(i)] = i;
+          }
+        }
+        return baseReverseDic[alphabet][character];
+      }
+
+      function compressToEncodedURIComponent(input) {
+        if (input == null) return "";
+        return _compress(input, 6, a => keyStrUriSafe.charAt(a));
+      }
+
+      function decompressFromEncodedURIComponent(input) {
+        if (input == null) return "";
+        if (input === "") return null;
+        input = input.replace(/ /g, "+");
+        return _decompress(input.length, 32, index => getBaseValue(keyStrUriSafe, input.charAt(index)));
+      }
+
+      function _compress(uncompressed, bitsPerChar, getCharFromInt) {
+        if (uncompressed == null) return "";
+        let i, value;
+        const context_dictionary = {};
+        const context_dictionaryToCreate = {};
+        let context_c = "";
+        let context_wc = "";
+        let context_w = "";
+        let context_enlargeIn = 2;
+        let context_dictSize = 3;
+        let context_numBits = 2;
+        const context_data = [];
+        let context_data_val = 0;
+        let context_data_position = 0;
+
+        for (i = 0; i < uncompressed.length; i += 1) {
+          context_c = uncompressed.charAt(i);
+          if (!Object.prototype.hasOwnProperty.call(context_dictionary, context_c)) {
+            context_dictionary[context_c] = context_dictSize++;
+            context_dictionaryToCreate[context_c] = true;
+          }
+
+          context_wc = context_w + context_c;
+          if (Object.prototype.hasOwnProperty.call(context_dictionary, context_wc)) {
+            context_w = context_wc;
+          } else {
+            if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
+              if (context_w.charCodeAt(0) < 256) {
+                for (let j = 0; j < context_numBits; j++) {
+                  context_data_val = (context_data_val << 1);
+                  if (context_data_position === bitsPerChar - 1) {
+                    context_data_position = 0;
+                    context_data.push(getCharFromInt(context_data_val));
+                    context_data_val = 0;
+                  } else {
+                    context_data_position++;
+                  }
+                }
+                value = context_w.charCodeAt(0);
+                for (let j = 0; j < 8; j++) {
+                  context_data_val = (context_data_val << 1) | (value & 1);
+                  if (context_data_position === bitsPerChar - 1) {
+                    context_data_position = 0;
+                    context_data.push(getCharFromInt(context_data_val));
+                    context_data_val = 0;
+                  } else {
+                    context_data_position++;
+                  }
+                  value = value >> 1;
+                }
+              } else {
+                value = 1;
+                for (let j = 0; j < context_numBits; j++) {
+                  context_data_val = (context_data_val << 1) | value;
+                  if (context_data_position === bitsPerChar - 1) {
+                    context_data_position = 0;
+                    context_data.push(getCharFromInt(context_data_val));
+                    context_data_val = 0;
+                  } else {
+                    context_data_position++;
+                  }
+                  value = 0;
+                }
+                value = context_w.charCodeAt(0);
+                for (let j = 0; j < 16; j++) {
+                  context_data_val = (context_data_val << 1) | (value & 1);
+                  if (context_data_position === bitsPerChar - 1) {
+                    context_data_position = 0;
+                    context_data.push(getCharFromInt(context_data_val));
+                    context_data_val = 0;
+                  } else {
+                    context_data_position++;
+                  }
+                  value = value >> 1;
+                }
+              }
+              context_enlargeIn--;
+              if (context_enlargeIn === 0) {
+                context_enlargeIn = Math.pow(2, context_numBits);
+                context_numBits++;
+              }
+              delete context_dictionaryToCreate[context_w];
+            } else {
+              value = context_dictionary[context_w];
+              for (let j = 0; j < context_numBits; j++) {
+                context_data_val = (context_data_val << 1) | (value & 1);
+                if (context_data_position === bitsPerChar - 1) {
+                  context_data_position = 0;
+                  context_data.push(getCharFromInt(context_data_val));
+                  context_data_val = 0;
+                } else {
+                  context_data_position++;
+                }
+                value = value >> 1;
+              }
+            }
+            context_enlargeIn--;
+            if (context_enlargeIn === 0) {
+              context_enlargeIn = Math.pow(2, context_numBits);
+              context_numBits++;
+            }
+            context_dictionary[context_wc] = context_dictSize++;
+            context_w = String(context_c);
+          }
+        }
+
+        if (context_w !== "") {
+          if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
+            if (context_w.charCodeAt(0) < 256) {
+              for (let j = 0; j < context_numBits; j++) {
+                context_data_val = (context_data_val << 1);
+                if (context_data_position === bitsPerChar - 1) {
+                  context_data_position = 0;
+                  context_data.push(getCharFromInt(context_data_val));
+                  context_data_val = 0;
+                } else {
+                  context_data_position++;
+                }
+              }
+              value = context_w.charCodeAt(0);
+              for (let j = 0; j < 8; j++) {
+                context_data_val = (context_data_val << 1) | (value & 1);
+                if (context_data_position === bitsPerChar - 1) {
+                  context_data_position = 0;
+                  context_data.push(getCharFromInt(context_data_val));
+                  context_data_val = 0;
+                } else {
+                  context_data_position++;
+                }
+                value = value >> 1;
+              }
+            } else {
+              value = 1;
+              for (let j = 0; j < context_numBits; j++) {
+                context_data_val = (context_data_val << 1) | value;
+                if (context_data_position === bitsPerChar - 1) {
+                  context_data_position = 0;
+                  context_data.push(getCharFromInt(context_data_val));
+                  context_data_val = 0;
+                } else {
+                  context_data_position++;
+                }
+                value = 0;
+              }
+              value = context_w.charCodeAt(0);
+              for (let j = 0; j < 16; j++) {
+                context_data_val = (context_data_val << 1) | (value & 1);
+                if (context_data_position === bitsPerChar - 1) {
+                  context_data_position = 0;
+                  context_data.push(getCharFromInt(context_data_val));
+                  context_data_val = 0;
+                } else {
+                  context_data_position++;
+                }
+                value = value >> 1;
+              }
+            }
+            context_enlargeIn--;
+            if (context_enlargeIn === 0) {
+              context_enlargeIn = Math.pow(2, context_numBits);
+              context_numBits++;
+            }
+            delete context_dictionaryToCreate[context_w];
+          } else {
+            value = context_dictionary[context_w];
+            for (let j = 0; j < context_numBits; j++) {
+              context_data_val = (context_data_val << 1) | (value & 1);
+              if (context_data_position === bitsPerChar - 1) {
+                context_data_position = 0;
+                context_data.push(getCharFromInt(context_data_val));
+                context_data_val = 0;
+              } else {
+                context_data_position++;
+              }
+              value = value >> 1;
+            }
+          }
+          context_enlargeIn--;
+          if (context_enlargeIn === 0) {
+            context_enlargeIn = Math.pow(2, context_numBits);
+            context_numBits++;
+          }
+        }
+
+        value = 2;
+        for (let j = 0; j < context_numBits; j++) {
+          context_data_val = (context_data_val << 1) | (value & 1);
+          if (context_data_position === bitsPerChar - 1) {
+            context_data_position = 0;
+            context_data.push(getCharFromInt(context_data_val));
+            context_data_val = 0;
+          } else {
+            context_data_position++;
+          }
+          value = value >> 1;
+        }
+
+        while (true) {
+          context_data_val = (context_data_val << 1);
+          if (context_data_position === bitsPerChar - 1) {
+            context_data.push(getCharFromInt(context_data_val));
+            break;
+          } else context_data_position++;
+        }
+        return context_data.join("");
+      }
+
+      function _decompress(length, resetValue, getNextValue) {
+        const dictionary = [];
+        let next;
+        let enlargeIn = 4;
+        let dictSize = 4;
+        let numBits = 3;
+        let entry = "";
+        const result = [];
+        let i;
+        let w;
+        let bits, resb, maxpower, power;
+        let c;
+        const data = { val: getNextValue(0), position: resetValue, index: 1 };
+
+        for (i = 0; i < 3; i += 1) dictionary[i] = i;
+
+        bits = 0; maxpower = Math.pow(2, 2); power = 1;
+        while (power !== maxpower) {
+          resb = data.val & data.position;
+          data.position >>= 1;
+          if (data.position === 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+          bits |= (resb > 0 ? 1 : 0) * power;
+          power <<= 1;
+        }
+
+        switch (next = bits) {
+          case 0:
+            bits = 0; maxpower = Math.pow(2, 8); power = 1;
+            while (power !== maxpower) {
+              resb = data.val & data.position;
+              data.position >>= 1;
+              if (data.position === 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+              bits |= (resb > 0 ? 1 : 0) * power;
+              power <<= 1;
+            }
+            c = f(bits);
+            break;
+          case 1:
+            bits = 0; maxpower = Math.pow(2, 16); power = 1;
+            while (power !== maxpower) {
+              resb = data.val & data.position;
+              data.position >>= 1;
+              if (data.position === 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+              bits |= (resb > 0 ? 1 : 0) * power;
+              power <<= 1;
+            }
+            c = f(bits);
+            break;
+          case 2:
+            return "";
+        }
+
+        dictionary[3] = c;
+        w = c;
+        result.push(c);
+
+        while (true) {
+          if (data.index > length) return "";
+
+          bits = 0; maxpower = Math.pow(2, numBits); power = 1;
+          while (power !== maxpower) {
+            resb = data.val & data.position;
+            data.position >>= 1;
+            if (data.position === 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+            bits |= (resb > 0 ? 1 : 0) * power;
+            power <<= 1;
+          }
+
+          switch (c = bits) {
+            case 0:
+              bits = 0; maxpower = Math.pow(2, 8); power = 1;
+              while (power !== maxpower) {
+                resb = data.val & data.position;
+                data.position >>= 1;
+                if (data.position === 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+                bits |= (resb > 0 ? 1 : 0) * power;
+                power <<= 1;
+              }
+              dictionary[dictSize++] = f(bits);
+              c = dictSize - 1;
+              enlargeIn--;
+              break;
+            case 1:
+              bits = 0; maxpower = Math.pow(2, 16); power = 1;
+              while (power !== maxpower) {
+                resb = data.val & data.position;
+                data.position >>= 1;
+                if (data.position === 0) { data.position = resetValue; data.val = getNextValue(data.index++); }
+                bits |= (resb > 0 ? 1 : 0) * power;
+                power <<= 1;
+              }
+              dictionary[dictSize++] = f(bits);
+              c = dictSize - 1;
+              enlargeIn--;
+              break;
+            case 2:
+              return result.join("");
+          }
+
+          if (enlargeIn === 0) {
+            enlargeIn = Math.pow(2, numBits);
+            numBits++;
+          }
+
+          if (dictionary[c]) {
+            entry = dictionary[c];
+          } else {
+            if (c === dictSize) entry = w + w.charAt(0);
+            else return null;
+          }
+          result.push(entry);
+
+          dictionary[dictSize++] = w + entry.charAt(0);
+          enlargeIn--;
+          w = entry;
+
+          if (enlargeIn === 0) {
+            enlargeIn = Math.pow(2, numBits);
+            numBits++;
+          }
+        }
+      }
+
+      return { compressToEncodedURIComponent, decompressFromEncodedURIComponent };
+    })();
+
+    /*****************************************************************
+     * App State
+     *****************************************************************/
+    // task: { id, t, impl, dbg, createdAt }
+    let tasks = [];
+
+    const $ = (sel) => document.querySelector(sel);
+    const todoList = $("#todoList");
+    const doneList = $("#doneList");
+    const todoCount = $("#todoCount");
+    const doneCount = $("#doneCount");
+    const newTask = $("#newTask");
+    const urlHint = $("#urlHint");
+    const toast = $("#toast");
+
+    function uid() {
+      return Math.random().toString(36).slice(2, 10) + "-" + Date.now().toString(36);
+    }
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add("show");
+      window.clearTimeout(showToast._t);
+      showToast._t = window.setTimeout(() => toast.classList.remove("show"), 1600);
+    }
+
+    function isDone(task) {
+      return !!task.impl && !!task.dbg;
+    }
+
+    function render() {
+      const todo = tasks.filter(t => !isDone(t));
+      const done = tasks.filter(t => isDone(t));
+
+      todoCount.textContent = todo.length;
+      doneCount.textContent = done.length;
+
+      todoList.innerHTML = "";
+      doneList.innerHTML = "";
+
+      if (todo.length === 0) {
+        const e = document.createElement("div");
+        e.className = "empty";
+        e.innerHTML = "未完了タスクがありません。<br>上の入力欄から追加してください。";
+        todoList.appendChild(e);
+      } else {
+        todo.forEach(t => todoList.appendChild(taskCard(t)));
+      }
+
+      if (done.length === 0) {
+        const e = document.createElement("div");
+        e.className = "empty";
+        e.innerHTML = "作業済みタスクがありません。<br>「実装」「デバッグ」両方ONでここに移動します。";
+        doneList.appendChild(e);
+      } else {
+        done.forEach(t => doneList.appendChild(taskCard(t, true)));
+      }
+
+      // URL hint
+      const hasState = new URLSearchParams(location.search).has("s");
+      urlHint.textContent = hasState ? "URL保存済み" : "URL未保存";
+      urlHint.style.borderColor = hasState ? "rgba(43,182,115,.35)" : "var(--line)";
+      urlHint.style.color = hasState ? "#21543b" : "var(--muted)";
+      urlHint.style.background = hasState ? "rgba(43,182,115,.10)" : "#fff";
+    }
+
+    function taskCard(task, doneMode=false) {
+      const card = document.createElement("div");
+      card.className = "task";
+
+      const main = document.createElement("div");
+      main.className = "task-main";
+
+      const h = document.createElement("p");
+      h.className = "task-title";
+      h.textContent = task.t;
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+
+      const tags = document.createElement("div");
+      tags.className = "tags";
+
+      const implBtn = document.createElement("button");
+      implBtn.type = "button";
+      implBtn.className = "tbtn impl" + (task.impl ? " on" : "");
+      implBtn.textContent = "実装";
+      implBtn.addEventListener("click", () => {
+        task.impl = !task.impl;
+        render();
+      });
+
+      const dbgBtn = document.createElement("button");
+      dbgBtn.type = "button";
+      dbgBtn.className = "tbtn dbg" + (task.dbg ? " on" : "");
+      dbgBtn.textContent = "デバッグ";
+      dbgBtn.addEventListener("click", () => {
+        task.dbg = !task.dbg;
+        render();
+      });
+
+      tags.appendChild(implBtn);
+      tags.appendChild(dbgBtn);
+
+      if (doneMode) {
+        const badge = document.createElement("span");
+        badge.className = "done-badge";
+        badge.textContent = "完了";
+        meta.appendChild(badge);
+      } else {
+        const tip = document.createElement("span");
+        tip.textContent = "両方ONで作業済みへ";
+        meta.appendChild(tip);
+      }
+
+      meta.appendChild(tags);
+
+      main.appendChild(h);
+      main.appendChild(meta);
+
+      const side = document.createElement("div");
+      side.className = "side";
+
+      // 上下移動（同じグループ内：未完了 or 作業済み のみで並び替え）
+      const up = document.createElement("button");
+      up.type = "button";
+      up.className = "iconbtn";
+      up.title = "上へ";
+      up.innerHTML = "⬆️";
+      up.addEventListener("click", () => {
+        moveWithinGroup(task.id, -1);
+        render();
+      });
+
+      const down = document.createElement("button");
+      down.type = "button";
+      down.className = "iconbtn";
+      down.title = "下へ";
+      down.innerHTML = "⬇️";
+      down.addEventListener("click", () => {
+        moveWithinGroup(task.id, +1);
+        render();
+      });
+
+      // 端では無効化（見た目だけ最小で）
+      const group = tasks.filter(x => isDone(x) === isDone(task));
+      const pos = group.findIndex(x => x.id === task.id);
+      if (pos <= 0) { up.disabled = true; up.style.opacity = .45; up.style.cursor = "default"; }
+      if (pos < 0 || pos >= group.length - 1) { down.disabled = true; down.style.opacity = .45; down.style.cursor = "default"; }
+
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "iconbtn danger";
+      del.title = "削除";
+      del.innerHTML = "🗑️";
+      del.addEventListener("click", () => {
+        tasks = tasks.filter(x => x.id !== task.id);
+        render();
+      });
+
+      side.appendChild(up);
+      side.appendChild(down);
+      side.appendChild(del);
+
+      card.appendChild(main);
+      card.appendChild(side);
+      return card;
+    }
+
+    // 同じグループ（未完了/作業済み）の中だけで上下移動
+    function moveWithinGroup(id, dir) {
+      const item = tasks.find(x => x.id === id);
+      if (!item) return;
+      const doneFlag = isDone(item);
+
+      const group = tasks.filter(x => isDone(x) === doneFlag);
+      const pos = group.findIndex(x => x.id === id);
+      const nextPos = pos + dir;
+      if (pos < 0 || nextPos < 0 || nextPos >= group.length) return;
+
+      const otherId = group[nextPos].id;
+      const i = tasks.findIndex(x => x.id === id);
+      const j = tasks.findIndex(x => x.id === otherId);
+      if (i < 0 || j < 0) return;
+
+      // 配列内の位置を入れ替えて順序を反映
+      const tmp = tasks[i];
+      tasks[i] = tasks[j];
+      tasks[j] = tmp;
+    }
+
+    function addTask(text) {
+      const t = (text || "").trim();
+      if (!t) return;
+      tasks.unshift({ id: uid(), t, impl:false, dbg:false, createdAt: Date.now() });
+      newTask.value = "";
+      render();
+    }
+
+    /*****************************************************************
+     * URL Export / Import
+     *****************************************************************/
+    function encodeState() {
+      // できるだけ短く： [ [t, impl, dbg], ... ]
+      const packed = tasks.map(x => [x.t, x.impl?1:0, x.dbg?1:0]);
+      const json = JSON.stringify(packed);
+      return LZString.compressToEncodedURIComponent(json);
+    }
+
+    function decodeState(s) {
+      try{
+        const json = LZString.decompressFromEncodedURIComponent(s);
+        if (!json) return null;
+        const packed = JSON.parse(json);
+        if (!Array.isArray(packed)) return null;
+        const out = [];
+        for (const row of packed) {
+          if (!Array.isArray(row) || typeof row[0] !== "string") continue;
+          out.push({
+            id: uid(),
+            t: row[0].slice(0, 2000),
+            impl: !!row[1],
+            dbg: !!row[2],
+            createdAt: Date.now()
+          });
+        }
+        return out;
+      }catch(e){
+        return null;
+      }
+    }
+
+    function exportToUrl() {
+      const s = encodeState();
+      const url = new URL(location.href);
+      url.searchParams.set("s", s);
+      history.replaceState(null, "", url.toString());
+navigator.clipboard?.writeText(url.toString());
+      render();
+      showToast("URLに状態を保存しました");
+    }
+
+    function loadFromUrlIfAny() {
+      const sp = new URLSearchParams(location.search);
+      const s = sp.get("s");
+      if (!s) return false;
+      const restored = decodeState(s);
+      if (!restored) {
+        showToast("URLの復元に失敗しました（データが壊れている可能性）");
+        return false;
+      }
+      tasks = restored;
+      return true;
+    }
+
+    function clearAll() {
+      tasks = [];
+      const url = new URL(location.href);
+      url.searchParams.delete("s");
+      history.replaceState(null, "", url.toString());
+      render();
+      showToast("全てクリアしました");
+    }
+
+    function tokyoStamp(){
+      const parts = new Intl.DateTimeFormat("ja-JP", {
+        timeZone: "Asia/Tokyo",
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", second: "2-digit",
+        hour12: false
+      }).formatToParts(new Date());
+      const m = Object.fromEntries(parts.filter(p=>p.type!=="literal").map(p=>[p.type,p.value]));
+      return `${m.year}${m.month}${m.day}_${m.hour}${m.minute}${m.second}`;
+    }
+
+    function downloadTaskUrl(){
+      // 現在状態をURLに反映して、そのURLをtxtでダウンロード
+      const s = encodeState();
+      const url = new URL(location.href);
+      url.searchParams.set("s", s);
+      history.replaceState(null, "", url.toString());
+      const finalUrl = url.toString();
+
+      const filename = `${tokyoStamp()}本日の作業報告.txt`;
+      const blob = new Blob([finalUrl], { type: "text/plain;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(a.href);
+
+      render();
+      showToast("タスクURLをダウンロードしました");
+    }
+
+    /*****************************************************************
+     * Wire up
+     *****************************************************************/
+    $("#btnAdd").addEventListener("click", () => addTask(newTask.value));
+    newTask.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") addTask(newTask.value);
+    });
+
+    $("#btnExport").addEventListener("click", exportToUrl);
+$("#btnDownload").addEventListener("click", downloadTaskUrl);
+
+    $("#btnReset").addEventListener("click", () => {
+      if (confirm("すべてのタスクとURL状態をクリアします。よろしいですか？")) clearAll();
+    });
+
+    $("#copyUrl").addEventListener("click", async (e) => {
+      e.preventDefault();
+      try{
+        await navigator.clipboard.writeText(location.href);
+        showToast("URLをコピーしました");
+      }catch{
+        showToast("コピーできませんでした（ブラウザ制限の可能性）");
+      }
+    });
+
+    // init
+    const restored = loadFromUrlIfAny();
+    render();
+    if (restored) showToast("URLから状態を復元しました");
+  </script>
+</body>
+</html>
