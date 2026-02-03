@@ -362,6 +362,12 @@
       padding:0 6px;
     }
     .footer a{ color: var(--accent); text-decoration:none; font-weight:800; }
+
+/* 本日のメイン作業：入力欄を横一杯に */
+#mainWork{
+  width: 100%;
+  display: block;
+}
   </style>
 </head>
 <body>
@@ -380,17 +386,21 @@
         <button class="btn danger" id="btnReset" type="button">🧹 全クリア</button>
       </div>
     </header>
+    <!-- 本日のメイン作業（未完了/作業済みの上） -->
+    <section class="panel" style="padding:16px;">
+      <div class="panel-head" style="margin-bottom:10px;">
+        <h2>本日のメイン作業</h2>
+        <span class="count" style="border-color: rgba(122,92,255,.28);">Daily</span>
+      </div>
+      <input class="input" id="mainWork"
+        placeholder="本日のメイン作業（例：◯◯機能の不具合対応）" />
+    </section>
 
     <div class="grid">
       <section class="panel">
         <div class="panel-head">
           <h2>未完了</h2>
           <span class="count" id="todoCount">0</span>
-        </div>
-
-        <div class="add">
-          <input class="input" id="mainWork"
-            placeholder="本日のメイン作業（例：◯◯機能の不具合対応）" />
         </div>
 
         <div class="add">
