@@ -25,3 +25,15 @@
 [ChatGPT API 料金シミュレーター](https://uni928.github.io/Uni928PublicHTMLs/index14.html)
 
 [Gemini 版](https://uni928.github.io/Uni928PublicHTMLs/index15.html) は目視で料金チェックが出来ていません。
+
+---
+
+[ズボラにその日のタスク状況を残すサイト](https://uni928.github.io/Uni928PublicHTMLs/index17.html)
+
+その日のタスク状況を URL として残すためのサイトです。
+
+出力した URL にアクセスすると、その状態から開始されます。
+
+URL の文字数制限の加減で、そこまで多くのタスクを残せません。
+
+使える URL の文字数が多い Chrome Edge 用です。
