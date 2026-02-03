@@ -376,6 +376,7 @@
       <div class="top-actions">
         <span class="pill" id="urlHint">URL未保存</span>
         <button class="btn primary" id="btnExport" type="button">🔗 URLで画面出力</button>
+<button class="btn" id="btnDownload" type="button">⬇️ タスクをダウンロード</button>
         <button class="btn danger" id="btnReset" type="button">🧹 全クリア</button>
       </div>
     </header>
@@ -1041,6 +1042,39 @@ navigator.clipboard?.writeText(url.toString());
       showToast("全てクリアしました");
     }
 
+    function tokyoStamp(){
+      const parts = new Intl.DateTimeFormat("ja-JP", {
+        timeZone: "Asia/Tokyo",
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", second: "2-digit",
+        hour12: false
+      }).formatToParts(new Date());
+      const m = Object.fromEntries(parts.filter(p=>p.type!=="literal").map(p=>[p.type,p.value]));
+      return `${m.year}${m.month}${m.day}_${m.hour}${m.minute}${m.second}`;
+    }
+
+    function downloadTaskUrl(){
+      // 現在状態をURLに反映して、そのURLをtxtでダウンロード
+      const s = encodeState();
+      const url = new URL(location.href);
+      url.searchParams.set("s", s);
+      history.replaceState(null, "", url.toString());
+      const finalUrl = url.toString();
+
+      const filename = `${tokyoStamp()}タスクダウンロード.txt`;
+      const blob = new Blob([finalUrl], { type: "text/plain;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(a.href);
+
+      render();
+      showToast("タスクURLをダウンロードしました");
+    }
+
     /*****************************************************************
      * Wire up
      *****************************************************************/
@@ -1050,6 +1084,7 @@ navigator.clipboard?.writeText(url.toString());
     });
 
     $("#btnExport").addEventListener("click", exportToUrl);
+$("#btnDownload").addEventListener("click", downloadTaskUrl);
 
     $("#btnReset").addEventListener("click", () => {
       if (confirm("すべてのタスクとURL状態をクリアします。よろしいですか？")) clearAll();
