@@ -1061,7 +1061,7 @@ navigator.clipboard?.writeText(url.toString());
       history.replaceState(null, "", url.toString());
       const finalUrl = url.toString();
 
-      const filename = `${tokyoStamp()}タスクダウンロード.txt`;
+      const filename = `${tokyoStamp()}タスク管理ダウンロード.txt`;
       const blob = new Blob([finalUrl], { type: "text/plain;charset=utf-8" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
@@ -1107,3 +1107,4 @@ $("#btnDownload").addEventListener("click", downloadTaskUrl);
   </script>
 </body>
 </html>
+
