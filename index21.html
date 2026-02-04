@@ -3,522 +3,263 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>毎日参拝みたいなサイト</title>
+  <title>参拝</title>
   <style>
     :root{
-      --cream:#FFF6E6;
-      --ink:#2b2620;
-      --muted:#6f6154;
-      --paper:#ffffffcc;
-      --gold:#b08a2e;
-      --line:#e7d7bf;
-      --shadow: 0 12px 30px rgba(0,0,0,.08);
-      --radius: 18px;
+      --bg1:#fffaf0;
+      --bg2:#fff2d9;
+      --ink:#221c16;
+      --gold:#b88a2b;
     }
     html,body{height:100%}
     body{
       margin:0;
-      font-family: ui-serif, "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
-      background: radial-gradient(1100px 800px at 20% 10%, #fffdf7 0%, var(--cream) 55%, #f6ecd9 100%);
-      color:var(--ink);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:22px;
-    }
-    .wrap{
-      width:min(880px, 100%);
-      display:grid;
-      gap:16px;
-    }
-    .card{
-      background: linear-gradient(180deg, var(--paper), #fff9eecc);
-      border:1px solid var(--line);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow:hidden;
-      position:relative;
-    }
-    .header{
-      padding:22px 22px 10px;
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:14px;
-    }
-    .title{
-      line-height:1.2;
-    }
-    .title h1{
-      font-size:22px;
-      margin:0 0 6px;
-      letter-spacing:.05em;
-    }
-    .title .sub{
-      color:var(--muted);
-      font-size:13px;
-      letter-spacing:.08em;
-    }
-    .seal{
-      width:56px; height:56px;
-      border-radius:50%;
-      border:2px solid rgba(176,138,46,.55);
+      background:
+        radial-gradient(1200px 900px at 50% 35%, rgba(255,255,255,.95) 0%, rgba(255,248,232,.85) 38%, rgba(255,238,210,.85) 65%, rgba(248,232,200,.95) 100%),
+        radial-gradient(900px 650px at 50% 30%, rgba(184,138,43,.10) 0%, rgba(184,138,43,0) 60%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
       display:grid;
       place-items:center;
-      color: var(--gold);
-      background: radial-gradient(circle at 30% 30%, #fff8e5 0%, #fff 45%, #fff3d4 100%);
-      box-shadow: 0 10px 25px rgba(176,138,46,.18);
-      user-select:none;
+      overflow:hidden;
     }
-    .seal span{
-      font-size:12px;
-      line-height:1.05;
-      text-align:center;
-      font-weight:700;
-      letter-spacing:.08em;
+    .vignette{
+      position:fixed; inset:-20px;
+      background:
+        radial-gradient(circle at 50% 40%, rgba(0,0,0,0) 0%, rgba(0,0,0,.06) 70%, rgba(0,0,0,.10) 100%);
+      pointer-events:none;
+      mix-blend-mode:multiply;
     }
-    .divider{
-      height:1px;
-      background: linear-gradient(90deg, transparent, var(--line), transparent);
-      margin:0 16px;
+    .rays{
+      position:fixed; inset:-20%;
+      background:
+        conic-gradient(from 180deg at 50% 35%,
+          rgba(184,138,43,.00) 0deg,
+          rgba(184,138,43,.08) 10deg,
+          rgba(184,138,43,.00) 22deg,
+          rgba(184,138,43,.06) 34deg,
+          rgba(184,138,43,.00) 48deg,
+          rgba(184,138,43,.09) 62deg,
+          rgba(184,138,43,.00) 78deg,
+          rgba(184,138,43,.07) 96deg,
+          rgba(184,138,43,.00) 120deg,
+          rgba(184,138,43,.08) 150deg,
+          rgba(184,138,43,.00) 180deg,
+          rgba(184,138,43,.06) 210deg,
+          rgba(184,138,43,.00) 240deg,
+          rgba(184,138,43,.09) 270deg,
+          rgba(184,138,43,.00) 300deg,
+          rgba(184,138,43,.07) 330deg,
+          rgba(184,138,43,.00) 360deg
+        );
+      filter: blur(0.4px);
+      opacity:.55;
+      animation: slowspin 18s linear infinite;
+      transform-origin: 50% 35%;
+      pointer-events:none;
+      mask-image: radial-gradient(circle at 50% 35%, rgba(0,0,0,1) 0%, rgba(0,0,0,.7) 45%, rgba(0,0,0,0) 75%);
     }
-    .main{
-      padding:18px 22px 22px;
+    @keyframes slowspin{
+      from{ transform: rotate(0deg); }
+      to{ transform: rotate(360deg); }
+    }
+
+    .frame{
+      width:min(920px, 92vw);
+      min-height: 36vh;
       display:grid;
-      gap:14px;
-    }
-
-    .todayRow{
-      display:flex;
-      flex-wrap:wrap;
-      gap:10px 14px;
-      align-items:center;
-      justify-content:space-between;
-    }
-    .datePill{
-      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Noto Sans JP", sans-serif;
-      font-size:12px;
-      letter-spacing:.08em;
-      color:var(--muted);
-      padding:8px 10px;
-      border:1px solid var(--line);
-      border-radius:999px;
-      background:#fffdf7;
-    }
-    .kigan{
-      font-size:12px;
-      color:var(--muted);
-      letter-spacing:.08em;
-    }
-
-    .quote{
-      border:1px solid var(--line);
-      border-radius: 14px;
-      background: #fffdf7;
-      padding:18px 18px;
+      place-items:center;
+      padding: 28px 18px;
       position:relative;
     }
-    .quote::before{
-      content:"“";
-      position:absolute;
-      left:14px;
-      top:6px;
-      font-size:38px;
-      color: rgba(176,138,46,.25);
-    }
-    .quoteText{
-      font-size:18px;
-      line-height:1.8;
-      margin:0;
-      padding-left:14px;
-      letter-spacing:.04em;
-    }
-    .quoteMeta{
-      margin-top:10px;
-      display:flex;
-      flex-wrap:wrap;
-      gap:10px 12px;
-      align-items:center;
-      justify-content:space-between;
-      color:var(--muted);
-      font-size:12px;
-      letter-spacing:.08em;
-    }
-
-    .actions{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-    button{
-      appearance:none;
-      border:1px solid var(--line);
-      background: #fff;
-      color: var(--ink);
-      border-radius: 999px;
-      padding:10px 14px;
-      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Noto Sans JP", sans-serif;
-      font-weight:600;
-      letter-spacing:.06em;
-      cursor:pointer;
-      transition: transform .08s ease, box-shadow .15s ease, background .15s ease;
-      box-shadow: 0 10px 18px rgba(0,0,0,.06);
-    }
-    button:hover{ transform: translateY(-1px); }
-    button:active{ transform: translateY(0px); box-shadow: 0 6px 12px rgba(0,0,0,.06); }
-    .primary{
-      border-color: rgba(176,138,46,.45);
-      background: linear-gradient(180deg, #fff8e6 0%, #fff 70%);
-    }
-    .danger{
-      border-color:#f1d1d1;
-      background: linear-gradient(180deg, #fff5f5 0%, #fff 70%);
-    }
-
-    .note{
-      font-size:12px;
-      color:var(--muted);
-      line-height:1.7;
-      letter-spacing:.04em;
-    }
-
-    /* “それっぽい”演出：ふわっと漂う紙片 */
-    .float{
-      position:absolute;
-      inset:0;
+    .glow{
+      position:absolute; inset:-40px -40px;
+      background:
+        radial-gradient(380px 240px at 50% 45%, rgba(255,255,255,.95) 0%, rgba(255,255,255,.65) 30%, rgba(255,255,255,0) 70%),
+        radial-gradient(560px 360px at 50% 45%, rgba(184,138,43,.20) 0%, rgba(184,138,43,0) 72%);
+      filter: blur(2px);
+      opacity:.9;
       pointer-events:none;
-      overflow:hidden;
-      opacity:.55;
-      mask-image: radial-gradient(circle at 50% 20%, rgba(0,0,0,1), rgba(0,0,0,.2) 60%, rgba(0,0,0,0) 100%);
     }
-    .petal{
-      position:absolute;
-      width:10px; height:18px;
-      border-radius: 10px 10px 10px 10px;
-      background: linear-gradient(180deg, rgba(176,138,46,.12), rgba(176,138,46,.02));
-      border: 1px solid rgba(176,138,46,.10);
-      filter: blur(.0px);
-      animation: drift linear infinite;
+    #text{
+      font-family: ui-serif, "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
+      font-size: clamp(22px, 3.2vw, 44px);
+      line-height: 1.55;
+      letter-spacing: .06em;
+      text-align:center;
+      color: var(--ink);
+      text-shadow:
+        0 1px 0 rgba(255,255,255,.9),
+        0 10px 24px rgba(0,0,0,.10),
+        0 0 22px rgba(184,138,43,.20);
+      padding: 12px 10px;
+      white-space: pre-line;
+      user-select:none;
+    }
+    .spark{
+      position:fixed;
+      width:6px; height:6px;
+      border-radius:50%;
+      background: radial-gradient(circle, rgba(255,255,255,.95) 0%, rgba(184,138,43,.55) 45%, rgba(184,138,43,0) 72%);
+      filter: blur(.2px);
+      opacity:.85;
+      pointer-events:none;
+      animation: drift 7s linear infinite;
     }
     @keyframes drift{
-      from{ transform: translateY(-40px) rotate(0deg); }
-      to{ transform: translateY(560px) rotate(210deg); }
+      from{ transform: translateY(30px) translateX(0px) scale(.9); opacity:0; }
+      10%{ opacity:.85; }
+      to{ transform: translateY(-520px) translateX(120px) scale(1.15); opacity:0; }
     }
 
-    .status{
-      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Noto Sans JP", sans-serif;
-      font-size:12px;
-      color: var(--muted);
-      letter-spacing:.06em;
-      min-height: 1.4em;
-    }
-
-    .smallRow{
-      display:flex;
-      flex-wrap:wrap;
-      gap:10px 12px;
-      align-items:center;
-      justify-content:space-between;
-    }
-
-    .footer{
-      padding:14px 22px 20px;
-      color:var(--muted);
-      font-size:11px;
-      letter-spacing:.06em;
-      text-align:center;
-    }
-
-    /* アクセシビリティ */
-    button:focus-visible{
-      outline: 3px solid rgba(176,138,46,.35);
-      outline-offset: 3px;
+    @media (prefers-reduced-motion: reduce){
+      .rays{ animation:none; }
+      .spark{ animation:none; display:none; }
     }
   </style>
 </head>
 <body>
-  <main class="wrap">
-    <section class="card" aria-label="毎日参拝みたいなページ">
-      <div class="float" aria-hidden="true" id="floatLayer"></div>
+  <div class="rays" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
 
-      <div class="header">
-        <div class="title">
-          <h1>今日の一拝（ひとはい）</h1>
-          <div class="sub">毎日ひらくだけ。お言葉を受け取り、読み上げて、心を整える。</div>
-        </div>
-        <div class="seal" aria-hidden="true"><span>奉<br>拝</span></div>
-      </div>
-
-      <div class="divider"></div>
-
-      <div class="main">
-        <div class="todayRow">
-          <div class="datePill" id="todayText">—</div>
-          <div class="kigan" id="kiganText">—</div>
-        </div>
-
-        <div class="quote" role="region" aria-label="今日のありがたいお言葉">
-          <p class="quoteText" id="quoteText">—</p>
-          <div class="quoteMeta">
-            <span id="quoteTag">—</span>
-            <span id="quoteHint">—</span>
-          </div>
-        </div>
-
-        <div class="smallRow">
-          <div class="actions" aria-label="操作">
-            <button class="primary" id="prayBtn">読み上げて参拝する</button>
-            <button id="newBtn">別のお言葉（今日の中で）</button>
-            <button id="muteBtn" class="danger">停止</button>
-          </div>
-          <div class="status" id="status" aria-live="polite"></div>
-        </div>
-
-        <p class="note">
-          ※このページは<strong>保存を行いません</strong>（端末内への記録なし）。<br>
-          ※読み上げはブラウザの音声機能（SpeechSynthesis）を使います。環境によっては日本語音声が選べない場合があります。<br>
-          ※効果は気分の問題です。でも、気分ってわりと大事。
-        </p>
-      </div>
-
-      <div class="footer">— 静かに整う、今日のための小さな場所 —</div>
-    </section>
+  <main class="frame">
+    <div class="glow" aria-hidden="true"></div>
+    <div id="text" aria-live="polite"></div>
   </main>
 
   <script>
-    // ----------------------------
-    //  保存しないために：
-    //  - 今日の日付から “同じ日なら同じ結果” のシードを作る
-    //  - 「別のお言葉」は同じ日のシードを少しずらして選ぶ
-    // ----------------------------
+    const DB_NAME = "sanpai_db";
+    const STORE = "kv";
+    const KEY = "lastDate";
 
-    const $ = (id) => document.getElementById(id);
-
-    const QUOTE_PARTS = {
-      opener: [
-        "焦らずとも、歩みは届く。",
-        "静けさは、心の整え役。",
-        "小さな一歩は、道を開く。",
-        "今日の自分を、今日の自分が救う。",
-        "縁は、急がず結ぶほど強い。",
-        "見えぬところで、運は育つ。",
-        "足りない日ほど、徳は積まれる。",
-        "“今ここ”に戻るほど、迷いは薄れる。"
-      ],
-      body: [
-        "正しさよりも、丁寧さを一つ。",
-        "相手を変えるより、呼吸を深く。",
-        "失う不安より、守りたいものを数える。",
-        "言葉を急がず、温度を整える。",
-        "うまくいかない日は、根が伸びている。",
-        "運は、静かに準備した人に寄る。",
-        "持てる分だけで、十分に尊い。",
-        "迷いは、次の一手が育つ合図。"
-      ],
-      closer: [
-        "今日の願いは、静かに叶う方へ向かう。",
-        "一礼のぶんだけ、心は軽くなる。",
-        "良い縁は、良い心持ちに宿る。",
-        "今日のあなたに、福が寄る。",
-        "整えた分だけ、道が見える。",
-        "大丈夫、進み方はちゃんとある。",
-        "感謝は巡り、巡りは守りになる。",
-        "焦らず、しかし止まらず。"
-      ],
-      tags: [
-        "【縁】", "【心】", "【運】", "【整】", "【道】", "【守】", "【福】", "【息】"
-      ],
-      hints: [
-        "ひと呼吸して、肩の力を抜く。",
-        "机の上をひとつ片づける。",
-        "水を一口、丁寧に飲む。",
-        "ありがとうを一回だけ口に出す。",
-        "今日は“急がない”を選ぶ。",
-        "目の前の一件を、ゆっくり終える。",
-        "誰かの良いところを一つ思い出す。",
-        "寝る前に、自分を責めない。"
-      ],
-      prayers: [
-        "ただいま、参りました。どうぞ今日も見守りください。",
-        "焦りを手放し、整えて進めますように。",
-        "よき縁、よき流れ、よき心をいただけますように。",
-        "今日ある分の感謝を、ここに置いていきます。"
-      ]
-    };
-
-    // 日付(ローカル)からシードを作る（保存なし）
-    function getTodayKey(){
+    function todayKey(){
       const d = new Date();
       const y = d.getFullYear();
-      const m = String(d.getMonth()+1).padStart(2,'0');
-      const day = String(d.getDate()).padStart(2,'0');
+      const m = String(d.getMonth()+1).padStart(2,"0");
+      const day = String(d.getDate()).padStart(2,"0");
       return `${y}-${m}-${day}`;
     }
 
-    // 文字列→32bit整数（簡易ハッシュ）
-    function hash32(str){
-      let h = 2166136261 >>> 0; // FNV-1a
-      for(let i=0;i<str.length;i++){
-        h ^= str.charCodeAt(i);
-        h = Math.imul(h, 16777619);
-      }
-      return h >>> 0;
+    function openDB(){
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
     }
 
-    // 乱数生成（LCG）
-    function lcg(seed){
-      let s = seed >>> 0;
-      return function(){
-        s = (Math.imul(1664525, s) + 1013904223) >>> 0;
-        return s / 4294967296;
-      }
+    function getValue(db, key){
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, "readonly");
+        const st = tx.objectStore(STORE);
+        const req = st.get(key);
+        req.onsuccess = () => resolve(req.result ?? null);
+        req.onerror = () => reject(req.error);
+      });
     }
 
-    function pick(rng, arr){
-      return arr[Math.floor(rng() * arr.length)];
+    function setValue(db, key, value){
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, "readwrite");
+        const st = tx.objectStore(STORE);
+        const req = st.put(value, key);
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject(req.error);
+      });
     }
 
-    function buildQuote(seed, variantIndex){
-      const rng = lcg((seed + variantIndex * 1013) >>> 0);
-      const a = pick(rng, QUOTE_PARTS.opener);
-      const b = pick(rng, QUOTE_PARTS.body);
-      const c = pick(rng, QUOTE_PARTS.closer);
-      const tag = pick(rng, QUOTE_PARTS.tags);
-      const hint = pick(rng, QUOTE_PARTS.hints);
-      const prayer = pick(rng, QUOTE_PARTS.prayers);
-      return {
-        text: `${a}\n${b}\n${c}`,
-        tag,
-        hint: `今日の小さな行い：${hint}`,
-        prayer
-      };
+    function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+    const el = document.getElementById("text");
+
+    function setText(t){
+      el.style.opacity = "0";
+      el.style.filter = "blur(1px)";
+      requestAnimationFrame(() => {
+        el.textContent = t;
+        el.style.transition = "opacity 520ms ease, filter 520ms ease";
+        el.style.opacity = "1";
+        el.style.filter = "blur(0px)";
+      });
     }
 
-    function formatDateJP(){
-      const d = new Date();
-      const w = ["日","月","火","水","木","金","土"][d.getDay()];
-      return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${w}）`;
-    }
-
-    // SpeechSynthesis
-    let currentUtter = null;
-
-    function stopSpeech(){
-      try { window.speechSynthesis.cancel(); } catch(e){}
-      currentUtter = null;
-      setStatus("停止しました。");
-    }
-
-    function setStatus(msg){
-      $("status").textContent = msg || "";
-    }
-
-    function pickJapaneseVoice(){
-      const voices = window.speechSynthesis.getVoices?.() || [];
-      // ja-JP優先、なければ日本語っぽいもの、最後はnull
-      return voices.find(v => (v.lang || "").toLowerCase().startsWith("ja"))
-          || voices.find(v => /japan|japanese|ja/i.test(v.name || ""))
-          || null;
-    }
-
-    function speakPrayerAndQuote(prayer, quote){
-      stopSpeech();
-
-      const full = [
-        "それでは、参拝の時間です。",
-        "二礼、二拍手、一礼。",
-        prayer,
-        "本日のお言葉。",
-        quote.replace(/\n/g, "。"),
-        "最後に、ひと呼吸。",
-        "ありがとうございました。"
-      ].join("　");
-
-      const u = new SpeechSynthesisUtterance(full);
-      const v = pickJapaneseVoice();
-      if(v) u.voice = v;
-      u.lang = v?.lang || "ja-JP";
-      u.rate = 0.95;
-      u.pitch = 0.95;
-      u.volume = 1;
-
-      u.onstart = () => setStatus("読み上げ中…");
-      u.onend = () => setStatus("今日も、よき一日を。");
-      u.onerror = () => setStatus("読み上げに失敗しました（環境によっては非対応の場合があります）。");
-
-      currentUtter = u;
-      window.speechSynthesis.speak(u);
-    }
-
-    // ふわふわ演出
-    function spawnFloat(){
-      const layer = $("floatLayer");
-      layer.innerHTML = "";
-      const seed = hash32(getTodayKey());
-      const rng = lcg(seed ^ 0x9e3779b9);
-
-      const count = 16;
+    function spawnSparks(){
+      const count = 14;
       for(let i=0;i<count;i++){
-        const p = document.createElement("div");
-        p.className = "petal";
-        const left = Math.floor(rng() * 100);
-        const delay = (rng() * 10).toFixed(2);
-        const dur = (10 + rng()*10).toFixed(2);
-        const top = - (20 + rng()*120);
-        const scale = (0.7 + rng()*1.1).toFixed(2);
-        p.style.left = left + "%";
-        p.style.top = top + "px";
-        p.style.animationDelay = delay + "s";
-        p.style.animationDuration = dur + "s";
-        p.style.transform = `translateY(-40px) rotate(0deg) scale(${scale})`;
-        layer.appendChild(p);
+        const s = document.createElement("div");
+        s.className = "spark";
+        const left = Math.random()*100;
+        const bottom = -20 - Math.random()*160;
+        const delay = Math.random()*6;
+        const dur = 6 + Math.random()*6;
+        const size = 4 + Math.random()*6;
+        s.style.left = left + "vw";
+        s.style.bottom = bottom + "px";
+        s.style.animationDelay = delay + "s";
+        s.style.animationDuration = dur + "s";
+        s.style.width = size + "px";
+        s.style.height = size + "px";
+        document.body.appendChild(s);
       }
     }
 
-    // 今日の表示
-    let variantIndex = 0;
-    function render(){
-      const key = getTodayKey();
-      const seed = hash32(key);
+    async function runSequence(db){
+      const lines = [
+        "参拝のお客様ですね？",
+        "私 AI が祈らせて頂きます",
+        "祈願中...",
+        "祈願が完了しました。",
+        "またのお越しをお待ちしています。",
+        "本日祈願済み"
+      ];
 
-      $("todayText").textContent = `今日：${formatDateJP()}`;
-      $("kiganText").textContent = "— 目を閉じて、ひと呼吸 —";
-
-      const q = buildQuote(seed, variantIndex);
-      $("quoteText").textContent = q.text;
-      $("quoteTag").textContent = q.tag;
-      $("quoteHint").textContent = q.hint;
-
-      // ボタン
-      $("prayBtn").onclick = () => speakPrayerAndQuote(q.prayer, q.text);
-      $("newBtn").onclick = () => {
-        variantIndex = (variantIndex + 1) % 12; // 今日の中で12パターン
-        render();
-        setStatus("別のお言葉にしました。");
-      };
-      $("muteBtn").onclick = stopSpeech;
-    }
-
-    // iOS/Safari対策：voicesが遅れて来ることがある
-    function initVoices(){
-      try { window.speechSynthesis.getVoices(); } catch(e){}
-    }
-
-    window.addEventListener("load", () => {
-      spawnFloat();
-      render();
-      initVoices();
-      // voiceschanged が来たら再取得
-      if ("onvoiceschanged" in speechSynthesis) {
-        speechSynthesis.onvoiceschanged = () => { initVoices(); };
+      for(let i=0;i<lines.length;i++){
+        setText(lines[i]);
+        if(i === 2){
+          await sleep(1800);
+          await sleep(900);
+        } else if(i === 3){
+          await sleep(1400);
+        } else {
+          await sleep(1250);
+        }
       }
-      setStatus("準備できました。");
-    });
 
-    // タブ非表示で止める（気遣い）
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden) stopSpeech();
-    });
+      await setValue(db, KEY, todayKey());
+    }
+
+    (async () => {
+      spawnSparks();
+      let db = null;
+      try{
+        db = await openDB();
+        const last = await getValue(db, KEY);
+        if(last === todayKey()){
+          setText("本日祈願済み");
+          return;
+        }
+        await runSequence(db);
+      }catch(e){
+        // IndexedDBが使えない環境は保存なしで毎回実行
+        const fallback = [
+          "参拝のお客様ですね？",
+          "私 AI が祈らせて頂きます",
+          "祈願中...",
+          "祈願が完了しました。",
+          "またのお越しをお待ちしています。",
+          "本日祈願済み"
+        ];
+        for(const t of fallback){
+          setText(t);
+          await sleep(1200);
+        }
+      }finally{
+        try{ db && db.close(); }catch(_){}
+      }
+    })();
   </script>
 </body>
 </html>
