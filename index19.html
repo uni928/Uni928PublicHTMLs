@@ -1120,6 +1120,11 @@ $("#btnDownload").addEventListener("click", downloadTaskUrl);
     $("#copyUrl").addEventListener("click", async (e) => {
       e.preventDefault();
       try{
+      const s = encodeState();
+      const url = new URL(location.href);
+      url.searchParams.set("s", s);
+      history.replaceState(null, "", url.toString());
+navigator.clipboard?.writeText(url.toString());
         await navigator.clipboard.writeText(location.href);
         showToast("URLをコピーしました");
       }catch{
