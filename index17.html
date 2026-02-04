@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>本日の作業報告</title>
+  <title>URLタスク管理</title>
   <style>
     :root{
       --bg:#f6f0d9;          /* クリーム */
@@ -362,19 +362,13 @@
       padding:0 6px;
     }
     .footer a{ color: var(--accent); text-decoration:none; font-weight:800; }
-
-/* 本日のメイン作業：入力欄を横一杯に */
-#mainWork{
-  width: 100%;
-  display: block;
-}
   </style>
 </head>
 <body>
   <div class="app">
     <header>
       <div class="title">
-        <h1>本日の作業報告</h1>
+        <h1>URLタスク管理</h1>
         <p>
           状態はURLクエリのみで保存・復元。<span class="kbd">実装</span> と <span class="kbd">デバッグ</span> が両方ONで自動的に作業済みに移動します。
         </p>
@@ -382,19 +376,10 @@
       <div class="top-actions">
         <span class="pill" id="urlHint">URL未保存</span>
         <button class="btn primary" id="btnExport" type="button">🔗 URLで画面出力</button>
-<button class="btn" id="btnDownload" type="button">⬇️ ダウンロード</button>
+<button class="btn" id="btnDownload" type="button">⬇️ タスクをダウンロード</button>
         <button class="btn danger" id="btnReset" type="button">🧹 全クリア</button>
       </div>
     </header>
-    <!-- 本日のメイン作業（未完了/作業済みの上） -->
-    <section class="panel" style="padding:16px;">
-      <div class="panel-head" style="margin-bottom:10px;">
-        <h2>本日のメイン作業</h2>
-        <span class="count" style="border-color: rgba(122,92,255,.28);">Daily</span>
-      </div>
-      <input class="input" id="mainWork"
-        placeholder="本日のメイン作業（例：◯◯機能の不具合対応）" />
-    </section>
 
     <div class="grid">
       <section class="panel">
@@ -798,7 +783,6 @@
      *****************************************************************/
     // task: { id, t, impl, dbg, createdAt }
     let tasks = [];
-    let mainWorkText = "";
 
     const $ = (sel) => document.querySelector(sel);
     const todoList = $("#todoList");
@@ -808,7 +792,6 @@
     const newTask = $("#newTask");
     const urlHint = $("#urlHint");
     const toast = $("#toast");
-const mainWorkInput = $("#mainWork");
 
     function uid() {
       return Math.random().toString(36).slice(2, 10) + "-" + Date.now().toString(36);
@@ -826,7 +809,6 @@ const mainWorkInput = $("#mainWork");
     }
 
     function render() {
-mainWorkInput.value = mainWorkText;
       const todo = tasks.filter(t => !isDone(t));
       const done = tasks.filter(t => isDone(t));
 
@@ -1000,11 +982,8 @@ mainWorkInput.value = mainWorkText;
      *****************************************************************/
     function encodeState() {
       // できるだけ短く： [ [t, impl, dbg], ... ]
-  const packed = {
-    m: mainWorkText,
-    t: tasks.map(x => [x.t, x.impl?1:0, x.dbg?1:0])
-  };
-  const json = JSON.stringify(packed);
+      const packed = tasks.map(x => [x.t, x.impl?1:0, x.dbg?1:0]);
+      const json = JSON.stringify(packed);
       return LZString.compressToEncodedURIComponent(json);
     }
 
@@ -1012,12 +991,10 @@ mainWorkInput.value = mainWorkText;
       try{
         const json = LZString.decompressFromEncodedURIComponent(s);
         if (!json) return null;
-    const parsed = JSON.parse(json);
-    if (!parsed || !Array.isArray(parsed.t)) return null;
-
-    mainWorkText = parsed.m || "";
-    const out = [];
-    for (const row of parsed.t) {
+        const packed = JSON.parse(json);
+        if (!Array.isArray(packed)) return null;
+        const out = [];
+        for (const row of packed) {
           if (!Array.isArray(row) || typeof row[0] !== "string") continue;
           out.push({
             id: uid(),
@@ -1084,7 +1061,7 @@ navigator.clipboard?.writeText(url.toString());
       history.replaceState(null, "", url.toString());
       const finalUrl = url.toString();
 
-      const filename = `${tokyoStamp()}本日の作業報告.txt`;
+      const filename = `${tokyoStamp()}タスク管理ダウンロード.txt`;
       const blob = new Blob([finalUrl], { type: "text/plain;charset=utf-8" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
@@ -1097,10 +1074,6 @@ navigator.clipboard?.writeText(url.toString());
       render();
       showToast("タスクURLをダウンロードしました");
     }
-
-    mainWorkInput.addEventListener("input", () => {
-      mainWorkText = mainWorkInput.value;
-    });
 
     /*****************************************************************
      * Wire up
