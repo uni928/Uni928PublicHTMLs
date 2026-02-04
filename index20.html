@@ -1,0 +1,762 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ChatGPTToLoadPDF - PDF → 画像＆テキスト ZIP</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- pdf.js -->
+  <style>
+    :root{
+      --bg: #fff4df;            /* クリーム色 */
+      --card: rgba(255,255,255,.72);
+      --card2: rgba(255,255,255,.52);
+      --ink: #2b2b2b;
+      --muted: rgba(43,43,43,.62);
+      --line: rgba(43,43,43,.10);
+      --shadow: 0 20px 60px rgba(0,0,0,.10);
+      --shadow2: 0 10px 28px rgba(0,0,0,.08);
+      --radius: 22px;
+      --radius2: 16px;
+      --accent: #ff7a59;
+      --accent2: #ffd0c4;
+      --good: #1e7f5a;
+      --bad: #b93a3a;
+    }
+
+    *{ box-sizing: border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: "Noto Sans JP", system-ui, -apple-system, Segoe UI, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 700px at 20% 10%, rgba(255,255,255,.65), transparent 55%),
+        radial-gradient(900px 600px at 80% 20%, rgba(255,255,255,.55), transparent 55%),
+        radial-gradient(1000px 700px at 50% 90%, rgba(255,255,255,.50), transparent 60%),
+        var(--bg);
+      overflow-x:hidden;
+    }
+
+    .wrap{
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 34px 18px 60px;
+    }
+
+    header{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom: 18px;
+    }
+
+    .brand{
+      display:flex; gap:14px; align-items:center;
+      padding: 16px 18px;
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, var(--card), var(--card2));
+      box-shadow: var(--shadow2);
+      border: 1px solid var(--line);
+      backdrop-filter: blur(10px);
+    }
+
+    .logo{
+      width: 44px; height:44px; border-radius: 16px;
+      background:
+        radial-gradient(circle at 30% 30%, #fff, rgba(255,255,255,0) 55%),
+        linear-gradient(135deg, var(--accent), #ffb07a);
+      box-shadow: 0 12px 26px rgba(255,122,89,.25);
+      position:relative;
+      flex:0 0 auto;
+    }
+    .logo::after{
+      content:"";
+      position:absolute; inset:10px;
+      border-radius: 12px;
+      border: 2px solid rgba(255,255,255,.85);
+    }
+
+    h1{
+      font-size: 18px;
+      margin:0;
+      letter-spacing:.2px;
+      line-height:1.25;
+    }
+    .subtitle{
+      margin:4px 0 0;
+      font-size: 12.5px;
+      color: var(--muted);
+      line-height:1.5;
+    }
+
+    .pillrow{
+      display:flex; gap:10px; flex-wrap:wrap;
+      justify-content:flex-end;
+      margin-top: 4px;
+    }
+    .pill{
+      font-size: 12px;
+      padding: 9px 11px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.62);
+      border: 1px solid var(--line);
+      box-shadow: 0 10px 20px rgba(0,0,0,.06);
+      backdrop-filter: blur(10px);
+      color: rgba(43,43,43,.78);
+      user-select:none;
+      display:flex; align-items:center; gap:8px;
+    }
+    .dot{
+      width: 8px; height: 8px; border-radius: 999px;
+      background: var(--good);
+      box-shadow: 0 0 0 4px rgba(30,127,90,.12);
+    }
+
+    main{
+      margin-top: 14px;
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 880px){
+      header{ flex-direction:column; }
+      .pillrow{ justify-content:flex-start; }
+      main{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, var(--card), var(--card2));
+      box-shadow: var(--shadow);
+      border: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+      overflow:hidden;
+      position:relative;
+    }
+    .card::before{
+      content:"";
+      position:absolute; inset:-2px;
+      background: radial-gradient(900px 260px at 20% 0%, rgba(255,122,89,.18), transparent 60%);
+      pointer-events:none;
+    }
+
+    .cardInner{
+      position:relative;
+      padding: 18px;
+    }
+
+    .drop{
+      border-radius: var(--radius);
+      padding: 18px;
+      border: 2px dashed rgba(43,43,43,.18);
+      background: rgba(255,255,255,.55);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.35);
+      transition: .18s ease;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      min-height: 260px;
+      position:relative;
+      overflow:hidden;
+    }
+    .drop::after{
+      content:"";
+      position:absolute; inset:-40px;
+      background:
+        radial-gradient(400px 220px at 20% 20%, rgba(255,122,89,.16), transparent 55%),
+        radial-gradient(360px 220px at 80% 60%, rgba(255,176,122,.16), transparent 55%);
+      transform: rotate(-6deg);
+      opacity:.9;
+      pointer-events:none;
+    }
+    .drop.active{
+      transform: translateY(-1px);
+      border-color: rgba(255,122,89,.55);
+      box-shadow:
+        0 18px 40px rgba(255,122,89,.12),
+        inset 0 0 0 1px rgba(255,255,255,.45);
+    }
+
+    .dropContent{
+      position:relative;
+      max-width: 520px;
+    }
+
+    .big{
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 0 8px;
+      letter-spacing:.2px;
+    }
+    .small{
+      margin:0;
+      font-size: 13px;
+      color: var(--muted);
+      line-height:1.7;
+    }
+
+    .actions{
+      margin-top: 14px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:center;
+    }
+
+    button, .btn{
+      border: 1px solid rgba(43,43,43,.12);
+      background: rgba(255,255,255,.75);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor:pointer;
+      transition: .16s ease;
+      box-shadow: 0 10px 22px rgba(0,0,0,.08);
+      backdrop-filter: blur(10px);
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      text-decoration:none;
+      user-select:none;
+    }
+    button:hover, .btn:hover{ transform: translateY(-1px); }
+    button:active, .btn:active{ transform: translateY(0px); }
+    button.primary{
+      background: linear-gradient(135deg, var(--accent), #ffb07a);
+      border-color: rgba(255,122,89,.35);
+      box-shadow: 0 16px 30px rgba(255,122,89,.20);
+      color: #1d0f0b;
+    }
+    button:disabled{
+      opacity:.55;
+      cursor:not-allowed;
+      transform:none !important;
+      box-shadow:none;
+    }
+
+    .rightCol .stat{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.58);
+      margin-bottom: 10px;
+    }
+    .stat .k{ font-size:12px; color: var(--muted); }
+    .stat .v{ font-size:13px; font-weight:700; }
+
+    .progressWrap{
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.58);
+    }
+
+    .bar{
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(43,43,43,.10);
+      overflow:hidden;
+      position:relative;
+    }
+    .bar > div{
+      height:100%;
+      width:0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), #ffb07a);
+      transition: width .18s ease;
+    }
+
+    .log{
+      margin-top: 10px;
+      font-size: 12px;
+      color: rgba(43,43,43,.78);
+      line-height:1.6;
+      max-height: 240px;
+      overflow:auto;
+      padding-right: 6px;
+    }
+    .log .muted{ color: var(--muted); }
+    .log .good{ color: var(--good); font-weight:700; }
+    .log .bad{ color: var(--bad); font-weight:700; }
+
+    .hint{
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height:1.6;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.50);
+    }
+
+    .footer{
+      margin-top: 16px;
+      font-size: 12px;
+      color: rgba(43,43,43,.62);
+      text-align:center;
+    }
+
+    input[type="file"]{ display:none; }
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.65);
+      color: rgba(43,43,43,.70);
+      display:inline-block;
+      margin: 0 2px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>ChatGPTToLoadPDF</h1>
+          <p class="subtitle">PDF をドラッグ＆ドロップ → 各ページを「画像(.png)」と「テキスト(.txt)」に分解し、<br>フォルダ構造付き ZIP を自動ダウンロードします。</p>
+        </div>
+      </div>
+
+      <div class="pillrow">
+        <div class="pill"><span class="dot"></span>ローカル処理（保存なし）</div>
+        <div class="pill">出力：<span class="kbd">ChatGPTToLoadPDF/</span></div>
+        <div class="pill">1ページ= 画像 + テキスト</div>
+      </div>
+    </header>
+
+    <main>
+      <section class="card">
+        <div class="cardInner">
+          <div id="drop" class="drop" role="button" tabindex="0" aria-label="PDFをドラッグ＆ドロップ">
+            <div class="dropContent">
+              <p class="big">PDF をここにドラッグ＆ドロップ</p>
+              <p class="small">
+                または「ファイルを選択」から PDF を指定してください。<br>
+                変換後、ZIP をダウンロードします（ページ数に応じて時間がかかります）。
+              </p>
+              <div class="actions">
+                <label class="btn" for="fileInput">📄 ファイルを選択</label>
+                <button id="btnDemo" type="button" title="操作説明をログに表示">✨ 使い方（ログ表示）</button>
+              </div>
+              <input id="fileInput" type="file" accept="application/pdf" />
+            </div>
+          </div>
+
+          <div class="footer">
+            解凍すると <span class="kbd">ChatGPTToLoadPDF</span> フォルダ → <span class="kbd">Nページ目フォルダ</span> →
+            <span class="kbd">Nページ目画像.png</span> / <span class="kbd">Nページ目テキスト.txt</span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="rightCol">
+        <div class="card">
+          <div class="cardInner">
+            <div class="stat">
+              <div class="k">選択中ファイル</div>
+              <div class="v" id="stFile">未選択</div>
+            </div>
+            <div class="stat">
+              <div class="k">ページ数</div>
+              <div class="v" id="stPages">-</div>
+            </div>
+            <div class="stat">
+              <div class="k">状態</div>
+              <div class="v" id="stState">待機中</div>
+            </div>
+
+            <div class="actions" style="justify-content:flex-start;margin-top:12px;">
+              <button id="btnConvert" class="primary" type="button" disabled>⬇️ 個別ダウンロード</button>
+              <button id="btnCancel" type="button" disabled>🛑 キャンセル</button>
+            </div>
+
+            <div class="progressWrap">
+              <div class="bar" aria-label="進捗バー"><div id="barFill"></div></div>
+              <div class="log" id="log" aria-live="polite"></div>
+            </div>
+
+            <div class="hint">
+              <b>補足：</b> PDF の内容（テキスト/画像）はブラウザ内で処理します。<br>
+              巨大PDFはメモリ負荷が高いので、必要なら分割してからお試しください。
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+<!-- pdf.js 本体 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+
+
+<script>
+
+(async() => {
+
+  async function loadPdfJsFromUrl({
+    pdfUrl = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
+    workerUrl = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js",
+    globalName = "pdfjsLib",
+    timeoutMs = 200,
+  } = {}) {
+    // 既に読み込まれているならそれを使う
+    if (window[globalName]) {
+      window[globalName].GlobalWorkerOptions.workerSrc = workerUrl;
+      return window[globalName];
+    }
+
+    // 読み込み済みscriptがあるか探す（重複防止）
+    const existing = [...document.scripts].find(s => s.src === pdfUrl);
+    if (existing) {
+      // すでにDOMにあるのにまだwindowに生えてない → 少し待つ
+      const start = Date.now();
+      while (!window[globalName]) {
+        if (Date.now() - start > timeoutMs) {
+          throw new Error("pdf.min.js は読み込み済みのはずですが pdfjsLib が生えません（タイムアウト）。CSP/ブロック/404等の可能性があります。");
+        }
+        await new Promise(r => setTimeout(r, 50));
+      }
+      window[globalName].GlobalWorkerOptions.workerSrc = workerUrl;
+      return window[globalName];
+    }
+
+    // 新規にscriptを挿入してロード完了を待つ
+    await new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = pdfUrl;
+      s.async = true;
+
+      const timer = setTimeout(() => {
+        reject(new Error("pdf.min.js の読み込みがタイムアウトしました。ネットワーク/CSP/URLを確認してください。"));
+      }, timeoutMs);
+
+      s.onload = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+      s.onerror = () => {
+        clearTimeout(timer);
+        reject(new Error("pdf.min.js の読み込みに失敗しました。URLが正しいか、CSPでブロックされていないか確認してください。"));
+      };
+
+      document.head.appendChild(s);
+    });
+
+    if (!window[globalName]) {
+      throw new Error("pdf.min.js はロード完了しましたが pdfjsLib が定義されません。別名で公開されている/壊れたスクリプトの可能性があります。");
+    }
+
+    // worker URL を設定
+    window[globalName].GlobalWorkerOptions.workerSrc = workerUrl;
+    return window[globalName];
+  }
+
+const pdfjsLib = await loadPdfJsFromUrl();
+  // --- pdf.js worker 設定（CDNに合わせる） ---
+  // pdfjsLib は pdf.min.js によりグローバル提供
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.js";
+
+  // --- UI refs ---
+  const drop = document.getElementById("drop");
+  const fileInput = document.getElementById("fileInput");
+  const btnConvert = document.getElementById("btnConvert");
+  const btnCancel = document.getElementById("btnCancel");
+  const btnDemo = document.getElementById("btnDemo");
+
+  const stFile = document.getElementById("stFile");
+  const stPages = document.getElementById("stPages");
+  const stState = document.getElementById("stState");
+  const barFill = document.getElementById("barFill");
+  const logEl = document.getElementById("log");
+
+  // --- state ---
+  let selectedFile = null;
+  let pdfDoc = null;
+  let cancelRequested = false;
+
+  // --- helpers ---
+  const padPageLabel = (n) => `${n}ページ目`;
+  const setState = (text) => (stState.textContent = text);
+
+  function logLine(html, cls="") {
+    const div = document.createElement("div");
+    if (cls) div.className = cls;
+    div.innerHTML = html;
+    logEl.appendChild(div);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function resetUI(keepLog=false) {
+    selectedFile = null;
+    pdfDoc = null;
+    cancelRequested = false;
+
+    stFile.textContent = "未選択";
+    stPages.textContent = "-";
+    setState("待機中");
+    barFill.style.width = "0%";
+
+    btnConvert.disabled = true;
+    btnCancel.disabled = true;
+
+    if (!keepLog) {
+      logEl.innerHTML = "";
+      logLine(`<span class="muted">PDF をドロップするか、ファイル選択してください。</span>`);
+    }
+  }
+
+  function setProgress(done, total) {
+    const pct = total <= 0 ? 0 : Math.max(0, Math.min(100, Math.round((done / total) * 100)));
+    barFill.style.width = pct + "%";
+  }
+
+  async function fileToArrayBuffer(file) {
+    return await file.arrayBuffer();
+  }
+
+  function canvasToBlob(canvas, type="image/png", quality=1.0) {
+    return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  // テキスト抽出：y座標の変化を見て改行を入れる簡易整形
+  function textContentToReadable(textContent) {
+    const items = textContent.items || [];
+    let out = [];
+    let lastY = null;
+
+    for (const it of items) {
+      const str = (it.str ?? "").replace(/\s+/g, " ").trim();
+      if (!str) continue;
+
+      // transform[5] が y（PDF座標）
+      const y = Array.isArray(it.transform) ? it.transform[5] : null;
+
+      if (lastY !== null && y !== null) {
+        // 行が変わったっぽいなら改行（閾値は適度に）
+        if (Math.abs(y - lastY) > 6) out.push("\n");
+        else out.push(" ");
+      } else {
+        if (out.length) out.push(" ");
+      }
+
+      out.push(str);
+      if (y !== null) lastY = y;
+    }
+
+    // 連続改行/スペースを整える
+    return out.join("")
+      .replace(/[ \t]+\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim() + "\n";
+  }
+
+  // --- file handling ---
+  async function loadPdfFromFile(file) {
+    if (!file || file.type !== "application/pdf") {
+      logLine(`<span class="bad">PDF ファイルを選択してください。</span>`);
+      return;
+    }
+    resetUI(true);
+    selectedFile = file;
+    stFile.textContent = file.name;
+
+    setState("PDF 読み込み中…");
+    logLine(`<span class="muted">PDF を読み込んでいます…</span>`);
+
+    const buf = await fileToArrayBuffer(file);
+    const loadingTask = pdfjsLib.getDocument({ data: buf });
+    pdfDoc = await loadingTask.promise;
+
+    stPages.textContent = String(pdfDoc.numPages);
+    btnConvert.disabled = false;
+
+    setState("準備完了");
+    logLine(`<span class="good">読み込み完了：</span> ${pdfDoc.numPages} ページ`);
+    logLine(`<span class="muted">「ZIP を作成してダウンロード」を押すと変換が始まります。</span>`);
+  }
+
+  // --- conversion ---
+  async function convertToZipAndDownload() {
+    if (!pdfDoc || !selectedFile) return;
+
+    cancelRequested = false;
+    btnConvert.disabled = true;
+    btnCancel.disabled = false;
+
+    const totalPages = pdfDoc.numPages;
+    const totalSteps = totalPages * 2; // (画像+テキスト)*ページ
+    let step = 0;
+
+    setState("変換中…");
+    logLine(`<hr style="border:none;border-top:1px solid rgba(43,43,43,.10);margin:10px 0;">`);
+    logLine(`<b>変換開始：</b> ${totalPages} ページ`);
+    setProgress(0, totalSteps);
+
+    // Canvas（再利用）
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d", { alpha: false });
+
+    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+      if (cancelRequested) throw new Error("CANCELLED");
+
+      const pageLabel = padPageLabel(pageNum);
+
+      // ---- 画像化 ----
+      logLine(`🖼️ ${pageLabel}：画像生成中… <span class="muted">(PNG)</span>`);
+      const page = await pdfDoc.getPage(pageNum);
+
+      // 見やすさ優先のスケール（大きすぎるPDFでも破綻しにくい値）
+      const targetMaxWidth = 1600; // px
+      const viewport1 = page.getViewport({ scale: 1.0 });
+      const scale = Math.max(1.0, Math.min(3.0, targetMaxWidth / viewport1.width));
+      const viewport = page.getViewport({ scale });
+
+      canvas.width = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
+
+      // 背景を白で塗る（透明を避ける）
+      ctx.save();
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+
+      await page.render({ canvasContext: ctx, viewport }).promise;
+
+      const imgBlob = await canvasToBlob(canvas, "image/png", 1.0);
+      if (!imgBlob) throw new Error("PNG 生成に失敗しました");
+
+      downloadBlob(imgBlob, `${pageLabel}画像.png`);
+      step++; setProgress(step, totalSteps);
+
+      // ---- テキスト抽出 ----
+      if (cancelRequested) throw new Error("CANCELLED");
+      logLine(`📝 ${pageLabel}：テキスト抽出中… <span class="muted">(TXT)</span>`);
+      const textContent = await page.getTextContent({ includeMarkedContent: true });
+      const txt = textContentToReadable(textContent);
+
+      // UTF-8テキストで格納
+      const txtBlob = new Blob([txt], { type: "text/plain;charset=utf-8" });
+      downloadBlob(txtBlob, `${pageLabel}テキスト.txt`);
+      step++; setProgress(step, totalSteps);
+
+      logLine(`✅ ${pageLabel}：完了`, "good");
+    }
+
+    setState("完了");
+    btnCancel.disabled = true;
+    logLine(`<span class="good">すべて完了！</span> 各ページの PNG / TXT を順にダウンロードしました。`);
+  }
+
+  // --- events: drag & drop ---
+  function prevent(e){ e.preventDefault(); e.stopPropagation(); }
+
+  ["dragenter","dragover"].forEach(ev => {
+    drop.addEventListener(ev, (e) => {
+      prevent(e);
+      drop.classList.add("active");
+    });
+  });
+
+  ["dragleave","drop"].forEach(ev => {
+    drop.addEventListener(ev, (e) => {
+      prevent(e);
+      drop.classList.remove("active");
+    });
+  });
+
+  drop.addEventListener("drop", async (e) => {
+    const files = e.dataTransfer?.files;
+    if (!files || !files.length) return;
+    const file = files[0];
+    await loadPdfFromFile(file);
+  });
+
+  // keyboard accessible
+  drop.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      fileInput.click();
+    }
+  });
+
+  fileInput.addEventListener("change", async () => {
+    const file = fileInput.files?.[0] || null;
+    if (file) await loadPdfFromFile(file);
+    fileInput.value = ""; // 同じファイル再選択できるように
+  });
+
+  btnConvert.addEventListener("click", async () => {
+    try{
+      btnDemo.disabled = true;
+      await convertToZipAndDownload();
+    }catch(err){
+      if (String(err?.message) === "CANCELLED") {
+        setState("キャンセル");
+        logLine(`<span class="bad">キャンセルしました。</span>`);
+      } else {
+        console.error(err);
+        setState("エラー");
+        logLine(`<span class="bad">エラー：</span> ${String(err?.message || err)}`);
+        logLine(`<span class="muted">※ PDF が非常に大きい場合、ブラウザのメモリ制限で失敗することがあります。</span>`);
+      }
+      btnConvert.disabled = !pdfDoc;
+      btnCancel.disabled = true;
+      btnDemo.disabled = false;
+    }
+  });
+
+  btnCancel.addEventListener("click", () => {
+    cancelRequested = true;
+    btnCancel.disabled = true;
+    setState("キャンセル要求中…");
+    logLine(`<span class="muted">キャンセル要求を受け付けました。安全に停止します…</span>`);
+  });
+
+  btnDemo.addEventListener("click", () => {
+    logLine(`<hr style="border:none;border-top:1px solid rgba(43,43,43,.10);margin:10px 0;">`);
+    logLine(`使い方：`);
+    logLine(`1) PDF をドロップ（または「ファイルを選択」）`);
+    logLine(`2) 右側の「ZIP を作成してダウンロード」を押す`);
+    logLine(`3) ZIP を解凍 → <span class="kbd">ChatGPTToLoadPDF</span> フォルダ内にページ別フォルダが生成されます。`);
+    logLine(`<span class="muted">ヒント：</span> ブラウザで直接開く（file://）でも動きますが、環境によってはローカル制限があるため、うまくいかない場合は簡易サーバー（例：VSCode Live Server）で開くと安定します。`);
+  });
+
+  // init
+  resetUI(false);
+})();
+</script>
+</body>
+</html>
