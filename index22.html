@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Sephiroth Proofread Diff Studio（diff-match-patch / Apache 2.0）</title>
+
+  <!-- diff-match-patch (Apache 2.0) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/diff_match_patch/20121119/diff_match_patch.js"></script>
+
+  <style>
+    :root{
+      --bg: #fbf3de;          /* クリーム色 */
+      --card: rgba(255,255,255,.72);
+      --card2: rgba(255,255,255,.55);
+      --stroke: rgba(50, 35, 10, .18);
+      --ink: #2b2418;
+      --muted: rgba(43,36,24,.70);
+      --shadow: 0 18px 45px rgba(43,36,24,.12);
+      --shadow2: 0 10px 24px rgba(43,36,24,.10);
+      --radius: 18px;
+      --radius2: 14px;
+
+      --ok: #1c7c3a;
+      --warn: #ad5f00;
+      --bad: #b51c1c;
+
+      --added: #d7f7df;
+      --removed: #ffd9d9;
+
+      --btn: #2b2418;
+      --btnText: #fff;
+      --btnGhostBg: rgba(255,255,255,.45);
+      --btnGhostStroke: rgba(43,36,24,.20);
+
+      --focus: 0 0 0 3px rgba(45, 120, 255, .20);
+    }
+
+    *{ box-sizing: border-box; }
+    html, body { height: 100%; }
+    body{
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Meiryo", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 650px at 15% 10%, rgba(255,255,255,.60), transparent 60%),
+        radial-gradient(900px 550px at 90% 15%, rgba(255,255,255,.45), transparent 55%),
+        radial-gradient(1200px 700px at 60% 110%, rgba(255,255,255,.38), transparent 65%),
+        var(--bg);
+    }
+
+    .wrap{
+      max-width: 1320px;
+      margin: 28px auto 40px;
+      padding: 0 18px;
+    }
+
+    header{
+      display:flex;
+      gap: 14px;
+      align-items:flex-end;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap: 6px;
+    }
+    h1{
+      margin:0;
+      font-size: 22px;
+      letter-spacing: .2px;
+    }
+    .subtitle{
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .pillrow{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 10px;
+      align-items:center;
+      justify-content:flex-end;
+    }
+    .pill{
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.45);
+      padding: 8px 10px;
+      border-radius: 999px;
+      box-shadow: 0 8px 18px rgba(43,36,24,.06);
+      font-size: 12px;
+      color: var(--muted);
+      display:flex;
+      gap: 10px;
+      align-items:center;
+      user-select:none;
+    }
+    .dot{
+      width: 8px; height: 8px; border-radius:999px;
+      background: rgba(43,36,24,.25);
+    }
+    .dot.ok{ background: rgba(28,124,58,.75); }
+    .dot.warn{ background: rgba(173,95,0,.78); }
+    .dot.bad{ background: rgba(181,28,28,.80); }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.25fr 1.25fr;
+      gap: 14px;
+    }
+
+    .card{
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+      overflow:hidden;
+    }
+    .card .hd{
+      padding: 14px 14px 12px;
+      border-bottom: 1px solid rgba(43,36,24,.10);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap: 12px;
+      background: linear-gradient(to bottom, rgba(255,255,255,.55), rgba(255,255,255,.28));
+    }
+    .hd .hgroup{
+      display:flex;
+      flex-direction:column;
+      gap: 4px;
+      min-width: 0;
+    }
+    .hd .htitle{
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: .2px;
+      margin: 0;
+    }
+    .hd .hmeta{
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card .bd{
+      padding: 12px 14px 14px;
+    }
+
+    textarea{
+      width: 100%;
+      min-height: 320px;
+      resize: vertical;
+      padding: 12px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(43,36,24,.20);
+      background: rgba(255,255,255,.65);
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.7;
+      outline: none;
+      box-shadow: 0 12px 24px rgba(43,36,24,.05);
+    }
+    textarea:focus{
+      box-shadow: var(--shadow2), var(--focus);
+      border-color: rgba(45, 120, 255, .35);
+    }
+
+    .controls{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 10px;
+      align-items:center;
+      justify-content:space-between;
+      margin: 14px 0 14px;
+    }
+    .controls .left{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 10px;
+      align-items:center;
+    }
+    .controls .right{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 10px;
+      align-items:center;
+      justify-content:flex-end;
+    }
+
+    .btn{
+      appearance:none;
+      border:none;
+      cursor:pointer;
+      background: var(--btn);
+      color: var(--btnText);
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: .2px;
+      box-shadow: 0 12px 24px rgba(43,36,24,.16);
+      transition: transform .06s ease, box-shadow .15s ease, opacity .15s ease;
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+    }
+    .btn:active{ transform: translateY(1px); }
+    .btn:disabled{
+      cursor:not-allowed;
+      opacity: .55;
+      box-shadow: none;
+    }
+
+    .btn.ghost{
+      background: var(--btnGhostBg);
+      color: var(--ink);
+      border: 1px solid var(--btnGhostStroke);
+      box-shadow: 0 10px 22px rgba(43,36,24,.08);
+      font-weight: 650;
+    }
+
+    .btn.warn{ background: #5b3a00; }
+    .btn.bad{ background: #5d0b0b; }
+
+    .select, .input{
+      border: 1px solid rgba(43,36,24,.20);
+      background: rgba(255,255,255,.65);
+      padding: 9px 10px;
+      border-radius: 12px;
+      outline:none;
+      font-size: 13px;
+      color: var(--ink);
+      box-shadow: 0 10px 22px rgba(43,36,24,.06);
+    }
+    .select:focus, .input:focus{
+      box-shadow: var(--shadow2), var(--focus);
+      border-color: rgba(45, 120, 255, .35);
+    }
+
+    .row{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 10px;
+      align-items:center;
+    }
+
+    .toggle{
+      display:flex;
+      gap: 8px;
+      align-items:center;
+      user-select:none;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .toggle input{ width: 16px; height: 16px; }
+
+    details{
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      background: var(--card2);
+      box-shadow: 0 14px 36px rgba(43,36,24,.10);
+      overflow: hidden;
+      margin: 12px 0 14px;
+    }
+    details summary{
+      list-style:none;
+      cursor:pointer;
+      padding: 12px 14px;
+      font-weight: 800;
+      font-size: 13px;
+      letter-spacing: .2px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      background: linear-gradient(to bottom, rgba(255,255,255,.55), rgba(255,255,255,.30));
+    }
+    details summary::-webkit-details-marker{ display:none; }
+    .summaryRight{
+      display:flex;
+      gap: 10px;
+      align-items:center;
+      color: var(--muted);
+      font-weight: 650;
+      font-size: 12px;
+    }
+
+    .apiGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 12px 14px 14px;
+    }
+    .apiBox{
+      border: 1px solid rgba(43,36,24,.14);
+      background: rgba(255,255,255,.55);
+      border-radius: 14px;
+      padding: 12px;
+      box-shadow: 0 10px 22px rgba(43,36,24,.06);
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+      min-width: 0;
+    }
+    .apiBox h3{
+      margin: 0;
+      font-size: 13px;
+      letter-spacing: .2px;
+    }
+    .apiBox .note{
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.55;
+      margin-top: -4px;
+    }
+
+    .small{
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .small code{
+      background: rgba(255,255,255,.55);
+      border: 1px solid rgba(43,36,24,.12);
+      padding: 2px 6px;
+      border-radius: 8px;
+    }
+
+    .diffCard{
+      margin-top: 14px;
+    }
+
+    .diff{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.75;
+      white-space: pre-wrap;
+      word-break: break-word;
+      padding: 14px;
+      background: rgba(255,255,255,.60);
+      border: 1px solid rgba(43,36,24,.14);
+      border-radius: 14px;
+      box-shadow: 0 12px 28px rgba(43,36,24,.06);
+    }
+
+    .chunk{
+      padding: 10px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(43,36,24,.10);
+      background: rgba(255,255,255,.45);
+      margin-bottom: 10px;
+    }
+
+    .seg{
+      padding: 2px 0;
+      border-radius: 8px;
+    }
+    .added{ background: var(--added); }
+    .removed{ background: var(--removed); }
+
+    .segWrap{
+      display:inline;
+      position:relative;
+    }
+
+    .segBtns{
+      display:inline-flex;
+      gap: 6px;
+      vertical-align: middle;
+      margin: 0 6px;
+      flex-wrap: wrap;
+    }
+
+    .miniBtn{
+      cursor:pointer;
+      border-radius: 999px;
+      padding: 6px 9px;
+      font-size: 12px;
+      font-weight: 800;
+      border: 1px solid rgba(43,36,24,.18);
+      background: rgba(255,255,255,.65);
+      color: var(--ink);
+      box-shadow: 0 8px 16px rgba(43,36,24,.08);
+      user-select:none;
+    }
+    .miniBtn.primary{
+      background: rgba(43,36,24,.92);
+      color: #fff;
+      border-color: rgba(43,36,24,.35);
+    }
+    .miniBtn:active{ transform: translateY(1px); }
+
+    .status{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(43,36,24,.14);
+      background: rgba(255,255,255,.55);
+      box-shadow: 0 10px 22px rgba(43,36,24,.06);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .kbd{
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(43,36,24,.18);
+      background: rgba(255,255,255,.60);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      font-size: 11px;
+      color: rgba(43,36,24,.85);
+    }
+
+    /* modal */
+    .modalBg{
+      position:fixed; inset:0;
+      background: rgba(20, 16, 10, .35);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 16px;
+      z-index: 50;
+    }
+    .modal{
+      width:min(720px, 100%);
+      background: rgba(255,255,255,.86);
+      border: 1px solid rgba(43,36,24,.22);
+      border-radius: 20px;
+      box-shadow: 0 26px 70px rgba(0,0,0,.22);
+      backdrop-filter: blur(10px);
+      overflow:hidden;
+    }
+    .modal .mhd{
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(43,36,24,.12);
+      background: linear-gradient(to bottom, rgba(255,255,255,.70), rgba(255,255,255,.40));
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap: 10px;
+    }
+    .modal .mhd h2{
+      margin:0;
+      font-size: 14px;
+      letter-spacing:.2px;
+    }
+    .modal .mbd{ padding: 14px 16px 16px; }
+    .modal .mrow{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:flex-end; margin-top: 12px; }
+    .hint{
+      font-size: 12px;
+      color: var(--muted);
+      line-height:1.6;
+      margin-top: 8px;
+    }
+
+    @media (max-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
+      .apiGrid{ grid-template-columns: 1fr; }
+      textarea{ min-height: 260px; }
+      header{ flex-direction:column; align-items:flex-start; }
+      .pillrow{ justify-content:flex-start; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <h1>Sephiroth Proofread Diff Studio</h1>
+        <div class="subtitle">
+          ChatGPT / Gemini で文章を添削 → diff から「どちらを採用するか」をクリックで確定。<br/>
+          <span class="small">※ diff は <code>diff-match-patch</code>（Apache 2.0）を使用。</span>
+        </div>
+      </div>
+
+      <div class="pillrow">
+        <div class="pill"><span id="netDot" class="dot"></span><span id="netText">ネットワーク待機</span></div>
+        <div class="pill"><span class="dot"></span><span id="saveBadge">保存: OFF</span></div>
+        <div class="pill"><span class="dot"></span><span id="modelBadge">モデル: -</span></div>
+      </div>
+    </header>
+
+    <details id="apiDetails">
+      <summary>
+        <span>API Key 設定 / モデル設定</span>
+        <span class="summaryRight">
+          <span id="apiSummary">未設定</span>
+          <span style="opacity:.6;">▾</span>
+        </span>
+      </summary>
+
+      <div class="apiGrid">
+        <div class="apiBox">
+          <h3>プロバイダ</h3>
+          <div class="note">
+            速度優先でストリーミング出力します。<br/>
+            <span class="small">（ブラウザ直叩きは環境により CORS で失敗することがあります。その場合はプロキシ（例: Cloudflare Workers）経由にしてください。）</span>
+          </div>
+
+          <div class="row">
+            <label class="toggle"><input type="radio" name="provider" value="openai" checked>ChatGPT（OpenAI）</label>
+            <label class="toggle"><input type="radio" name="provider" value="gemini">Gemini</label>
+          </div>
+
+          <div class="row">
+            <select id="openaiModel" class="select" style="flex:1; min-width: 210px;">
+              <option value="gpt-5-nano" selected>gpt-5-nano（高速）</option>
+              <option value="gpt-5-mini">gpt-5-mini</option>
+              <option value="gpt-5">gpt-5</option>
+            </select>
+
+            <select id="geminiModel" class="select" style="flex:1; min-width: 210px;" disabled>
+              <!-- ユーザー要望: gemini-2.5-flash-light（※公式は lite が多い） -->
+              <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
+              <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+            </select>
+          </div>
+
+          <div class="row">
+            <label class="toggle"><input type="checkbox" id="useFlex" checked>OpenAI: Flex を使用（service_tier="flex"）</label>
+            <label class="toggle"><input type="checkbox" id="minimalReasoning" checked>OpenAI: reasoning_effort="minimal"</label>
+          </div>
+
+          <div class="row">
+            <label class="toggle"><input type="checkbox" id="autoCompare" checked>生成後に自動で比較</label>
+            <label class="toggle"><input type="checkbox" id="autoScrollRight" checked>生成中に右欄へ追従</label>
+          </div>
+        </div>
+
+        <div class="apiBox">
+          <h3>API キー</h3>
+          <div class="note">
+            ここに入力したキーは、<b>保存を ON</b> かつ <b>「APIキーも保存（暗号化）」</b> を ON にした場合のみ、暗号化して IndexedDB に保存します。
+          </div>
+
+          <input id="openaiKey" class="input" type="password" placeholder="OpenAI API Key（sk-...）" autocomplete="off" />
+          <input id="geminiKey" class="input" type="password" placeholder="Gemini API Key" autocomplete="off" disabled />
+
+          <div class="row">
+            <label class="toggle"><input type="checkbox" id="saveEnabled">indexeddb に保存（暗号化）</label>
+            <label class="toggle"><input type="checkbox" id="saveKeys" disabled>APIキーも保存（暗号化）</label>
+
+<input id="passphrase" class="input" type="password" placeholder="長文の暗号化キー（復号にも必要）" autocomplete="off" disabled />
+
+          </div>
+
+          <div class="row" style="justify-content:space-between;">
+            <button id="btnDeleteSaved" class="btn ghost bad" type="button">保存内容を削除</button>
+            <div class="small">復元のため、暗号化キーは忘れないでください。</div>
+          </div>
+
+          <div class="small">
+            参考: OpenAI は Responses API の SSE ストリーミングをサポート :contentReference[oaicite:0]{index=0} / Flex は <code>service_tier</code> を使用 :contentReference[oaicite:1]{index=1} / GPT-5 nano のモデル名 :contentReference[oaicite:2]{index=2} / Gemini は <code>streamGenerateContent?alt=sse</code> :contentReference[oaicite:3]{index=3}
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <div class="grid">
+      <div class="card">
+        <div class="hd">
+          <div class="hgroup">
+            <div class="htitle">左：元の文章（作業中の確定版）</div>
+            <div class="hmeta">diff のボタン操作で、ここが更新されます（Undo/Redo 対応）</div>
+          </div>
+          <div class="row" style="gap:8px;">
+            <button id="btnUndo" class="btn ghost" type="button" title="Ctrl+Z">Undo</button>
+            <button id="btnRedo" class="btn ghost" type="button" title="Ctrl+Y">Redo</button>
+          </div>
+        </div>
+        <div class="bd">
+          <textarea id="leftText" placeholder="ここに元の文章を貼り付け"></textarea>
+          <div class="status">
+            <div>
+              <span class="kbd">Ctrl+Z</span>/<span class="kbd">Ctrl+Y</span> でも Undo/Redo
+            </div>
+            <div id="leftCount">0 chars</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd">
+          <div class="hgroup">
+            <div class="htitle">右：添削案（モデル出力）</div>
+            <div class="hmeta">「添削を生成」でストリーム出力。diff で採用/不採用を選べます</div>
+          </div>
+          <div class="row" style="gap:8px;">
+            <button id="btnStop" class="btn ghost warn" type="button" disabled>生成停止</button>
+            <button id="btnCompare" class="btn ghost" type="button">比較</button>
+          </div>
+        </div>
+        <div class="bd">
+          <textarea id="rightText" placeholder="ここに生成結果が入ります（右欄は手動編集してもOK）"></textarea>
+          <div class="status">
+            <div id="genStatus">待機中</div>
+            <div id="rightCount">0 chars</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="left">
+        <button id="btnGenerate" class="btn" type="button">添削を生成（ストリーム）</button>
+        <button id="btnApplyAll" class="btn ghost" type="button">右を全面採用（左←右）</button>
+        <button id="btnSwap" class="btn ghost" type="button">左右入れ替え</button>
+      </div>
+      <div class="right">
+        <button id="btnClearRight" class="btn ghost" type="button">右をクリア</button>
+        <button id="btnClearBoth" class="btn ghost bad" type="button">両方クリア</button>
+      </div>
+    </div>
+
+    <div class="card diffCard">
+      <div class="hd">
+        <div class="hgroup">
+          <div class="htitle">diff（差分をクリックで解決）</div>
+          <div class="hmeta">追加（緑）/削除（赤）。置換は 2 つのボタンで「元 / 提案」を選択。</div>
+        </div>
+        <div class="row" style="gap:8px;">
+          <button id="btnCopyLeft" class="btn ghost" type="button">左をコピー</button>
+          <button id="btnCopyRight" class="btn ghost" type="button">右をコピー</button>
+        </div>
+      </div>
+      <div class="bd">
+        <div id="diffResult" class="diff"></div>
+        <div class="status">
+          <div id="diffStatus">差分: -</div>
+          <div class="small">ヒント: diff のボタンは「差分を消す」方向に左 or 右を更新します。</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 復号モーダル -->
+  <div id="modalBg" class="modalBg">
+    <div class="modal">
+      <div class="mhd">
+        <h2>保存内容を復元（復号）</h2>
+        <button id="modalClose" class="btn ghost" type="button">閉じる</button>
+      </div>
+      <div class="mbd">
+        <div class="small">
+          保存が有効だったため、IndexedDB から状態を復元できます。<br/>
+          復号に必要な「長文の暗号化キー」を入力してください。
+        </div>
+        <input id="modalPass" class="input" type="password" placeholder="長文の暗号化キー" autocomplete="off" style="width:100%; margin-top: 10px;" />
+        <div id="modalErr" class="hint" style="color: var(--bad); display:none;"></div>
+        <div class="mrow">
+          <button id="modalRestore" class="btn" type="button">復元する</button>
+          <button id="modalSkip" class="btn ghost" type="button">今回は復元しない</button>
+        </div>
+        <div class="hint">
+          ※ キーが違うと復号できません。削除したい場合は「保存内容を削除」を使ってください。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================
+    // Utilities
+    // =========================
+    const $ = (id) => document.getElementById(id);
+    const dmp = new diff_match_patch();
+    const historyStack = [];
+    const redoStack = [];
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    function setNet(ok, text){
+      const dot = $("netDot");
+      const label = $("netText");
+      dot.className = "dot " + (ok === true ? "ok" : ok === false ? "bad" : "warn");
+      label.textContent = text;
+    }
+    setNet(null, "ネットワーク待機");
+
+    function selectedProvider(){
+      return [...document.querySelectorAll('input[name="provider"]')].find(x => x.checked)?.value || "openai";
+    }
+
+    function getModel(){
+      const p = selectedProvider();
+      if(p === "openai") return $("openaiModel").value;
+      return $("geminiModel").value;
+    }
+
+    function updateBadges(){
+      $("modelBadge").textContent = `モデル: ${getModel()}`;
+      $("saveBadge").textContent = `保存: ${$("saveEnabled").checked ? "ON" : "OFF"}`;
+      const hasKey = (selectedProvider()==="openai" ? $("openaiKey").value.trim() : $("geminiKey").value.trim());
+      $("apiSummary").textContent = hasKey ? "キー入力済" : "未設定";
+    }
+
+    function pushHistory(){
+      historyStack.push({ left: $("leftText").value, right: $("rightText").value });
+      if(historyStack.length > 200) historyStack.shift();
+      redoStack.length = 0;
+      updateUndoRedo();
+    }
+
+    function updateUndoRedo(){
+      $("btnUndo").disabled = historyStack.length === 0;
+      $("btnRedo").disabled = redoStack.length === 0;
+    }
+
+    function undo(){
+      if(historyStack.length === 0) return;
+      const prev = historyStack.pop();
+      redoStack.push({ left: $("leftText").value, right: $("rightText").value });
+      $("leftText").value = prev.left;
+      $("rightText").value = prev.right;
+      compareTexts();
+      updateUndoRedo();
+      scheduleAutosave();
+    }
+
+    function redo(){
+      if(redoStack.length === 0) return;
+      const next = redoStack.pop();
+      historyStack.push({ left: $("leftText").value, right: $("rightText").value });
+      $("leftText").value = next.left;
+      $("rightText").value = next.right;
+      compareTexts();
+      updateUndoRedo();
+      scheduleAutosave();
+    }
+
+    function countUI(){
+      $("leftCount").textContent = `${$("leftText").value.length} chars`;
+      $("rightCount").textContent = `${$("rightText").value.length} chars`;
+    }
+
+    // =========================
+    // IndexedDB + AES-GCM encrypt
+    // =========================
+    const DB_NAME = "sephiroth_proofread_diff_studio";
+    const STORE = "kv";
+    const KEY_STATE = "state_v1";
+
+    async function idb(){
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if(!db.objectStoreNames.contains(STORE)){
+            db.createObjectStore(STORE);
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function idbGet(key){
+      const db = await idb();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, "readonly");
+        const st = tx.objectStore(STORE);
+        const req = st.get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function idbSet(key, val){
+      const db = await idb();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, "readwrite");
+        const st = tx.objectStore(STORE);
+        const req = st.put(val, key);
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function idbDel(key){
+      const db = await idb();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, "readwrite");
+        const st = tx.objectStore(STORE);
+        const req = st.delete(key);
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function bufToB64(buf){
+      const bytes = new Uint8Array(buf);
+      let bin = "";
+      for(const b of bytes) bin += String.fromCharCode(b);
+      return btoa(bin);
+    }
+    function b64ToBuf(b64){
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+      return bytes.buffer;
+    }
+
+    async function deriveKey(passphrase, saltB64){
+      const enc = new TextEncoder();
+      const salt = new Uint8Array(b64ToBuf(saltB64));
+      const keyMaterial = await crypto.subtle.importKey(
+        "raw",
+        enc.encode(passphrase),
+        { name: "PBKDF2" },
+        false,
+        ["deriveKey"]
+      );
+      return crypto.subtle.deriveKey(
+        {
+          name: "PBKDF2",
+          salt,
+          iterations: 210000,
+          hash: "SHA-256",
+        },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+      );
+    }
+
+    async function encryptJson(passphrase, data){
+      const enc = new TextEncoder();
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const saltB64 = bufToB64(salt.buffer);
+      const key = await deriveKey(passphrase, saltB64);
+      const plaintext = enc.encode(JSON.stringify(data));
+      const ct = await crypto.subtle.encrypt({ name:"AES-GCM", iv }, key, plaintext);
+      return {
+        v: 1,
+        salt: saltB64,
+        iv: bufToB64(iv.buffer),
+        ct: bufToB64(ct),
+      };
+    }
+
+    async function decryptJson(passphrase, payload){
+      const dec = new TextDecoder();
+      const key = await deriveKey(passphrase, payload.salt);
+      const iv = new Uint8Array(b64ToBuf(payload.iv));
+      const pt = await crypto.subtle.decrypt({ name:"AES-GCM", iv }, key, b64ToBuf(payload.ct));
+      return JSON.parse(dec.decode(pt));
+    }
+
+    function buildStateForSave(){
+      const provider = selectedProvider();
+      const saveKeys = $("saveKeys").checked;
+      return {
+        ts: Date.now(),
+        provider,
+        openaiModel: $("openaiModel").value,
+        geminiModel: $("geminiModel").value,
+        useFlex: $("useFlex").checked,
+        minimalReasoning: $("minimalReasoning").checked,
+        autoCompare: $("autoCompare").checked,
+        autoScrollRight: $("autoScrollRight").checked,
+        left: $("leftText").value,
+        right: $("rightText").value,
+        saveEnabled: $("saveEnabled").checked,
+        saveKeys: saveKeys,
+        openaiKey: saveKeys ? $("openaiKey").value : "",
+        geminiKey: saveKeys ? $("geminiKey").value : "",
+        apiPanelClosed: $("apiDetails").open ? false : true
+      };
+    }
+
+    function applyStateToUI(state){
+      // settings
+      if(state.provider){
+        document.querySelectorAll('input[name="provider"]').forEach(r => r.checked = (r.value === state.provider));
+      }
+      if(state.openaiModel) $("openaiModel").value = state.openaiModel;
+      if(state.geminiModel) $("geminiModel").value = state.geminiModel;
+      $("useFlex").checked = !!state.useFlex;
+      $("minimalReasoning").checked = state.minimalReasoning !== false;
+      $("autoCompare").checked = state.autoCompare !== false;
+      $("autoScrollRight").checked = state.autoScrollRight !== false;
+
+      $("leftText").value = state.left || "";
+      $("rightText").value = state.right || "";
+
+      // save toggles
+      $("saveEnabled").checked = !!state.saveEnabled;
+      $("saveKeys").checked = !!state.saveKeys;
+
+      // keys (if stored)
+      if(state.saveKeys){
+        $("openaiKey").value = state.openaiKey || "";
+        $("geminiKey").value = state.geminiKey || "";
+      }
+
+      // api panel
+      if(state.apiPanelClosed){
+        $("apiDetails").open = false;
+      }else{
+        $("apiDetails").open = true;
+      }
+
+      syncProviderUI();
+      syncSaveUI();
+      countUI();
+      compareTexts();
+      updateBadges();
+    }
+
+    let autosaveTimer = null;
+    function scheduleAutosave(){
+      if(autosaveTimer) clearTimeout(autosaveTimer);
+      autosaveTimer = setTimeout(async () => {
+        if(!$("saveEnabled").checked) return;
+        const pass = $("modalPass").value;
+        if(!pass) return;
+        try{
+          const payload = await encryptJson(pass, buildStateForSave());
+          await idbSet(KEY_STATE, payload);
+          $("saveBadge").textContent = "保存: ON";
+        }catch(e){
+          console.warn(e);
+        }
+      }, 550);
+    }
+
+    async function deleteSaved(){
+      await idbDel(KEY_STATE);
+      // 画面側のキー保存もOFFに寄せる
+      $("saveKeys").checked = false;
+      $("saveKeys").disabled = !$("saveEnabled").checked;
+      $("openaiKey").value = $("openaiKey").value; // keep
+      $("geminiKey").value = $("geminiKey").value; // keep
+      $("saveBadge").textContent = "保存: OFF";
+      updateBadges();
+      alert("保存内容を削除しました。");
+    }
+
+    // Restore modal
+    function openModal(){ $("modalBg").style.display = "flex"; }
+    function closeModal(){ $("modalBg").style.display = "none"; $("modalErr").style.display="none"; }
+
+    async function tryRestoreWithPass(pass){
+      const saved = await idbGet(KEY_STATE);
+      if(!saved) return null;
+      return decryptJson(pass, saved);
+    }
+
+    // =========================
+    // Provider UI sync
+    // =========================
+    function syncProviderUI(){
+      const p = selectedProvider();
+      const isOpenAI = p === "openai";
+      $("openaiModel").disabled = !isOpenAI;
+      $("geminiModel").disabled = isOpenAI;
+
+      $("openaiKey").disabled = !isOpenAI;
+      $("geminiKey").disabled = isOpenAI;
+
+      updateBadges();
+    }
+
+    function syncSaveUI(){
+      const on = $("saveEnabled").checked;
+      $("passphrase").disabled = !on;
+      $("saveKeys").disabled = !on;
+      if(!on){
+        $("saveKeys").checked = false;
+        $("passphrase").value = "";
+      }
+      updateBadges();
+    }
+
+    // =========================
+    // Streaming helpers (SSE parser)
+    // =========================
+    function createSSEParser(onEvent){
+      let buffer = "";
+      return (chunkText) => {
+        buffer += chunkText;
+        // SSE event blocks separated by \n\n
+        let idx;
+        while((idx = buffer.indexOf("\n\n")) !== -1){
+          const block = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          const lines = block.split("\n");
+          for(const line of lines){
+            if(line.startsWith("data:")){
+              const data = line.slice(5).trim();
+              if(!data) continue;
+              onEvent(data);
+            }
+          }
+        }
+      };
+    }
+
+    // =========================
+    // OpenAI: Responses API (SSE)
+    // =========================
+    async function streamOpenAI({ apiKey, model, inputText, onDelta, onStatus, signal }){
+      // Docs: streaming via Responses API stream:true :contentReference[oaicite:4]{index=4}
+      // Flex: service_tier:"flex" :contentReference[oaicite:5]{index=5}
+      const url = "https://api.openai.com/v1/completions";
+
+      const useFlex = $("useFlex").checked;
+      const minimal = $("minimalReasoning").checked;
+
+      const instructions =
+`あなたは日本語文章の校正者です。指定した文章を、より良い文章に添削して下さい。
+- 出力は「添削後の本文のみ」（解説や箇条書きは禁止）`;
+
+        const messages = [
+
+          { role: "system", content: instructions },
+          { role: "user", content: inputText }
+        ];
+
+        let upstream = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model,
+            messages,
+            // gpt-5 系は temperature / max_tokens がエラー要因になりやすいので送らない
+            stream: true,
+        reasoning_effort: minimal ? "minimal" : "medium",
+        ...(useFlex ? { service_tier: "flex" } : {}),
+          }),
+        });
+
+      if(!upstream.ok){
+        const t = await upstream.text().catch(()=> "");
+        throw new Error(`OpenAI API Error (${upstream.status}): ${t}`);
+      }
+
+      onStatus?.("OpenAI ストリーミング中…");
+
+const reader = upstream.body.getReader();
+const decoder = new TextDecoder();
+
+let sawText = false;
+
+const handle = createSSEParser((data) => {
+  if (data === "[DONE]") return;
+
+  try {
+    const evt = JSON.parse(data);
+
+    // /v1/completions streaming: choices[].text
+    const t = evt?.choices?.[0]?.text ?? "";
+    if (t) {
+      sawText = true;
+      onDelta(t);
+      return;
+    }
+
+    // （念のため）/v1/chat/completions が混ざった時も拾えるように
+    const chatDelta = evt?.choices?.[0]?.delta?.content ?? "";
+    if (chatDelta) {
+      sawText = true;
+      onDelta(chatDelta);
+      return;
+    }
+
+    // エラー形式（APIやプロキシで変わる可能性があるため広めに）
+    if (evt?.error?.message) {
+      throw new Error(evt.error.message);
+    }
+  } catch (e) {
+    // JSON parse できない・想定外は黙ってスキップ（SSEは断片になることがある）
+  }
+});
+
+while (true) {
+  const { value, done } = await reader.read();
+  if (done) break;
+  handle(decoder.decode(value, { stream: true }));
+}
+
+// もし何も出てこなかった場合は、デバッグしやすいように状態を出す
+if (!sawText) {
+  // onStatus があれば軽く通知（不要なら消してOK）
+  onStatus?.("ストリームを受信しましたが、text/delta が見つかりませんでした。エンドポイント/モデルを確認してください。");
+}
+
+    }
+
+    // =========================
+    // Gemini: streamGenerateContent (SSE)
+    // =========================
+    async function streamGemini({ apiKey, model, inputText, onDelta, onStatus, signal }){
+      // Docs show SSE: streamGenerateContent?alt=sse :contentReference[oaicite:7]{index=7}
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`;
+
+      const systemInstruction = {
+        role: "user",
+        parts: [{ text:
+`あなたは日本語文章の校正者です。指定した文章を、より良い文章に添削して下さい。
+- 文章の内容・事実関係・ニュアンスは変えない
+- 可能なら段落構造は維持
+- 出力は「添削後の本文のみ」（解説や箇条書きは禁止）`
+        }]
+      };
+
+      const body = {
+        systemInstruction,
+        contents: [
+          { role: "user", parts: [{ text: inputText }] }
+        ],
+        generationConfig: {
+          temperature: 0.2,
+          candidateCount: 1,
+        }
+      };
+
+      const res = await fetch(url, {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "x-goog-api-key": apiKey
+        },
+        body: JSON.stringify(body),
+        signal
+      });
+
+      if(!res.ok){
+        const t = await res.text().catch(()=> "");
+        throw new Error(`Gemini API Error (${res.status}): ${t}`);
+      }
+
+      onStatus?.("Gemini ストリーミング中…");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+
+      const handle = createSSEParser((data) => {
+        if(data === "[DONE]") return;
+        try{
+          const evt = JSON.parse(data);
+          const cand = evt?.candidates?.[0];
+          const part = cand?.content?.parts?.[0];
+          const text = part?.text || "";
+          if(text) onDelta(text);
+        }catch(e){
+          // ignore
+        }
+      });
+
+      while(true){
+        const { value, done } = await reader.read();
+        if(done) break;
+        handle(decoder.decode(value, { stream:true }));
+      }
+    }
+
+    // =========================
+    // Diff + interactive resolve
+    // =========================
+    function compareTexts(){
+      const left = $("leftText").value;
+      const right = $("rightText").value;
+      const container = $("diffResult");
+      container.innerHTML = "";
+
+      let diffs = dmp.diff_main(left, right);
+      dmp.diff_cleanupSemantic(diffs);
+
+      // count diff segments (rough)
+      const diffCount = diffs.filter(d => d[0] !== 0 && d[1]).length;
+      $("diffStatus").textContent = `差分: ${diffCount} セグメント`;
+
+      // build view with indices
+      let idxL = 0;
+      let idxR = 0;
+
+      const chunk = document.createElement("div");
+      chunk.className = "chunk";
+
+      for(let i=0;i<diffs.length;i++){
+        const [op, data] = diffs[i];
+
+        // replacement pair: -1 followed by +1
+        if(op === -1 && i+1 < diffs.length && diffs[i+1][0] === 1){
+          const delText = data;
+          const insText = diffs[i+1][1];
+
+          const leftStart = idxL;
+          const rightStart = idxR;
+
+          // render deleted + inserted with 2-choice buttons
+          const delSpan = document.createElement("span");
+          delSpan.className = "seg removed";
+          delSpan.textContent = delText;
+
+          const insSpan = document.createElement("span");
+          insSpan.className = "seg added";
+          insSpan.textContent = insText;
+
+          const btns = document.createElement("span");
+          btns.className = "segBtns";
+
+          const btnKeepOrig = document.createElement("button");
+          btnKeepOrig.className = "miniBtn";
+          btnKeepOrig.textContent = "←";
+
+          const btnAccept = document.createElement("button");
+          btnAccept.className = "miniBtn primary";
+          btnAccept.textContent = "→";
+
+          btnKeepOrig.onclick = () => {
+            pushHistory();
+            // right側の置換を取り消して「元」に寄せる：右の ins を削除し、del を挿入
+            const r = $("rightText").value;
+            const newRight = r.slice(0, rightStart) + delText + r.slice(rightStart + insText.length);
+            $("rightText").value = newRight;
+            compareTexts();
+            scheduleAutosave();
+          };
+
+          btnAccept.onclick = () => {
+            pushHistory();
+            // left側に提案を反映：leftの del を ins に置換
+            const l = $("leftText").value;
+            const newLeft = l.slice(0, leftStart) + insText + l.slice(leftStart + delText.length);
+            $("leftText").value = newLeft;
+            compareTexts();
+            scheduleAutosave();
+          };
+
+          btns.appendChild(btnKeepOrig);
+          btns.appendChild(btnAccept);
+
+          chunk.appendChild(delSpan);
+          chunk.appendChild(btns);
+          chunk.appendChild(insSpan);
+
+          // advance indices: deletion consumes left, insertion consumes right
+          idxL += delText.length;
+          idxR += insText.length;
+          i++; // skip next (+1) since handled
+          continue;
+        }
+
+        // normal segments
+        if(op === 0){
+          const span = document.createElement("span");
+          span.textContent = data;
+          chunk.appendChild(span);
+          idxL += data.length;
+          idxR += data.length;
+          continue;
+        }
+
+        if(op === 1){
+          // insertion on right
+          const rightStart = idxR;
+          const leftStart = idxL;
+
+          const span = document.createElement("span");
+          span.className = "seg added";
+          span.textContent = data;
+
+          const btns = document.createElement("span");
+          btns.className = "segBtns";
+
+          const btnAccept = document.createElement("button");
+          btnAccept.className = "miniBtn primary";
+          btnAccept.textContent = "←";
+          btnAccept.onclick = () => {
+            pushHistory();
+            const l = $("leftText").value;
+            $("leftText").value = l.slice(0, leftStart) + data + l.slice(leftStart);
+            compareTexts();
+            scheduleAutosave();
+          };
+
+          const btnReject = document.createElement("button");
+          btnReject.className = "miniBtn";
+          btnReject.textContent = "→";
+          btnReject.onclick = () => {
+            pushHistory();
+            const r = $("rightText").value;
+            $("rightText").value = r.slice(0, rightStart) + r.slice(rightStart + data.length);
+            compareTexts();
+            scheduleAutosave();
+          };
+
+          btns.appendChild(btnReject);
+          btns.appendChild(btnAccept);
+
+          chunk.appendChild(btns);
+          chunk.appendChild(span);
+
+          idxR += data.length;
+          continue;
+        }
+
+        if(op === -1){
+          // deletion on left
+          const leftStart = idxL;
+          const rightStart = idxR;
+
+          const span = document.createElement("span");
+          span.className = "seg removed";
+          span.textContent = data;
+
+          const btns = document.createElement("span");
+          btns.className = "segBtns";
+
+          const btnKeep = document.createElement("button");
+          btnKeep.className = "miniBtn";
+          btnKeep.textContent = "←";
+          btnKeep.onclick = () => {
+            pushHistory();
+            const r = $("rightText").value;
+            $("rightText").value = r.slice(0, rightStart) + data + r.slice(rightStart);
+            compareTexts();
+            scheduleAutosave();
+          };
+
+          const btnAccept = document.createElement("button");
+          btnAccept.className = "miniBtn primary";
+          btnAccept.textContent = "→";
+          btnAccept.onclick = () => {
+            pushHistory();
+            const l = $("leftText").value;
+            $("leftText").value = l.slice(0, leftStart) + l.slice(leftStart + data.length);
+            compareTexts();
+            scheduleAutosave();
+          };
+
+          btns.appendChild(btnKeep);
+          btns.appendChild(btnAccept);
+
+          chunk.appendChild(span);
+          chunk.appendChild(btns);
+
+          idxL += data.length;
+          continue;
+        }
+      }
+
+      container.appendChild(chunk);
+      countUI();
+      updateBadges();
+    }
+
+    // =========================
+    // Generate (stream) -> right textarea
+    // =========================
+    let aborter = null;
+
+    async function generateProofread(){
+      const provider = selectedProvider();
+      const model = getModel();
+
+      const left = $("leftText").value;
+      if(!left.trim()){
+        alert("左（元の文章）が空です。文章を入れてから生成してください。");
+        return;
+      }
+
+      const apiKey = provider === "openai" ? $("openaiKey").value.trim() : $("geminiKey").value.trim();
+      if(!apiKey){
+        alert("API Key を入力してください。");
+        $("apiDetails").open = true;
+        return;
+      }
+
+      // prepare
+      pushHistory();
+      $("rightText").value = "";
+      compareTexts();
+
+      $("btnGenerate").disabled = true;
+      $("btnStop").disabled = false;
+      $("btnCompare").disabled = true;
+
+      setNet(null, "接続中…");
+      $("genStatus").textContent = "接続中…";
+
+      aborter = new AbortController();
+
+      const onDelta = (t) => {
+        $("rightText").value += t;
+        countUI();
+        if($("autoScrollRight").checked){
+          $("rightText").scrollTop = $("rightText").scrollHeight;
+        }
+        scheduleAutosave();
+      };
+      const onStatus = (s) => $("genStatus").textContent = s;
+
+      try{
+        const started = Date.now();
+        if(provider === "openai"){
+          // OpenAI: responses stream=true :contentReference[oaicite:8]{index=8}
+          await streamOpenAI({
+            apiKey,
+            model,
+            inputText: left,
+            onDelta,
+            onStatus,
+            signal: aborter.signal
+          });
+        }else{
+          // Gemini SSE streamGenerateContent?alt=sse :contentReference[oaicite:9]{index=9}
+          try{
+            await streamGemini({
+              apiKey,
+              model,
+              inputText: left,
+              onDelta,
+              onStatus,
+              signal: aborter.signal
+            });
+          }catch(e){
+            // ユーザー指定が "light" の場合の保険: 失敗したら "lite" へ自動フォールバック
+            if(String(model).includes("flash-light")){
+              onStatus("モデル名で失敗したため、flash-lite にフォールバック…");
+              $("geminiModel").value = "gemini-2.5-flash-lite";
+              updateBadges();
+              await streamGemini({
+                apiKey,
+                model: "gemini-2.5-flash-lite",
+                inputText: left,
+                onDelta,
+                onStatus,
+                signal: aborter.signal
+              });
+            }else{
+              throw e;
+            }
+          }
+        }
+
+        const ms = Date.now() - started;
+        setNet(true, `完了（${(ms/1000).toFixed(1)}s）`);
+        $("genStatus").textContent = "生成完了";
+      }catch(err){
+        if(aborter?.signal?.aborted){
+          setNet(null, "停止しました");
+          $("genStatus").textContent = "停止しました";
+        }else{
+          console.error(err);
+          setNet(false, "エラー");
+          $("genStatus").textContent = "エラー: " + (err?.message || String(err));
+          alert("生成に失敗しました。\n\n" + (err?.message || String(err)) + "\n\n（CORS 等でブラウザ直叩きできない場合は、プロキシ経由にしてください）");
+        }
+      }finally{
+        $("btnGenerate").disabled = false;
+        $("btnStop").disabled = true;
+        $("btnCompare").disabled = false;
+        aborter = null;
+
+        if($("autoCompare").checked){
+          compareTexts();
+        }else{
+          countUI();
+        }
+        scheduleAutosave();
+      }
+    }
+
+    function stopGenerate(){
+      if(aborter) aborter.abort();
+    }
+
+    // =========================
+    // Events
+    // =========================
+    document.addEventListener("keydown", (e) => {
+      if(e.ctrlKey && (e.key === "z" || e.key === "Z")){
+        e.preventDefault();
+        undo();
+      }else if(e.ctrlKey && (e.key === "y" || e.key === "Y")){
+        e.preventDefault();
+        redo();
+      }
+    });
+
+    $("btnUndo").onclick = undo;
+    $("btnRedo").onclick = redo;
+
+    $("btnGenerate").onclick = generateProofread;
+    $("btnStop").onclick = stopGenerate;
+    $("btnCompare").onclick = () => { compareTexts(); scheduleAutosave(); };
+
+    $("btnApplyAll").onclick = () => {
+      pushHistory();
+      $("leftText").value = $("rightText").value;
+      compareTexts();
+      scheduleAutosave();
+    };
+
+    $("btnSwap").onclick = () => {
+      pushHistory();
+      const a = $("leftText").value;
+      $("leftText").value = $("rightText").value;
+      $("rightText").value = a;
+      compareTexts();
+      scheduleAutosave();
+    };
+
+    $("btnClearRight").onclick = () => {
+      pushHistory();
+      $("rightText").value = "";
+      compareTexts();
+      scheduleAutosave();
+    };
+
+    $("btnClearBoth").onclick = () => {
+      if(!confirm("左右のテキストをクリアします。よろしいですか？")) return;
+      pushHistory();
+      $("leftText").value = "";
+      $("rightText").value = "";
+      compareTexts();
+      scheduleAutosave();
+    };
+
+    $("btnCopyLeft").onclick = async () => {
+      await navigator.clipboard.writeText($("leftText").value);
+      alert("左の文章をコピーしました。");
+    };
+    $("btnCopyRight").onclick = async () => {
+      await navigator.clipboard.writeText($("rightText").value);
+      alert("右の文章をコピーしました。");
+    };
+
+    // Provider switch
+    document.querySelectorAll('input[name="provider"]').forEach(r => {
+      r.addEventListener("change", () => {
+        syncProviderUI();
+        scheduleAutosave();
+      });
+    });
+
+    $("openaiModel").addEventListener("change", () => { updateBadges(); scheduleAutosave(); });
+    $("geminiModel").addEventListener("change", () => { updateBadges(); scheduleAutosave(); });
+
+    // Save toggles
+    $("saveEnabled").addEventListener("change", () => {
+      syncSaveUI();
+      scheduleAutosave();
+    });
+    $("saveKeys").addEventListener("change", () => scheduleAutosave());
+    $("passphrase").addEventListener("input", () => scheduleAutosave());
+
+    $("btnDeleteSaved").onclick = deleteSaved;
+
+    // Inputs autosave / counts
+    ["leftText","rightText","openaiKey","geminiKey"].forEach(id => {
+      $(id).addEventListener("input", () => {
+        countUI();
+        updateBadges();
+        scheduleAutosave();
+      });
+    });
+
+    // details open/close persistence
+    $("apiDetails").addEventListener("toggle", () => {
+      updateBadges();
+      scheduleAutosave();
+    });
+
+    $("useFlex").addEventListener("change", () => scheduleAutosave());
+    $("minimalReasoning").addEventListener("change", () => scheduleAutosave());
+    $("autoCompare").addEventListener("change", () => scheduleAutosave());
+    $("autoScrollRight").addEventListener("change", () => scheduleAutosave());
+
+    // Modal buttons
+    $("modalClose").onclick = closeModal;
+    $("modalSkip").onclick = () => { closeModal(); };
+    $("modalRestore").onclick = async () => {
+      let pass = $("modalPass").value;
+      try{
+        const state = await tryRestoreWithPass(pass);
+        // passphrase欄にも反映（以後の保存に使えるように）
+        $("passphrase").value = pass;
+        applyStateToUI(state);
+        closeModal();
+
+        // APIパネル: キーが保存されている場合は閉じた状態からスタート（要望）
+        const keysSaved = !!(state.saveKeys && (state.openaiKey || state.geminiKey));
+        if(keysSaved){
+          $("apiDetails").open = false;
+        }
+
+        alert("保存内容を復元しました。");
+      }catch(e){
+        $("modalErr").style.display = "block";
+        $("modalErr").textContent = "復号に失敗しました（キーが違う可能性があります）。";
+      }
+    };
+
+    // =========================
+    // Boot: restore if saved exists
+    // =========================
+    async function boot(){
+      updateUndoRedo();
+      countUI();
+      compareTexts();
+      syncProviderUI();
+      syncSaveUI();
+      updateBadges();
+
+      const saved = await idbGet(KEY_STATE);
+      if(saved){
+        // まずはモーダルで復号キーを求める
+        openModal();
+      }
+
+      // network indicator
+      try{
+        // lightweight check
+        await fetch("https://example.com", { method:"HEAD", mode:"no-cors" });
+        setNet(null, "ネットワークOK");
+      }catch{
+        setNet(null, "ネットワーク不明");
+      }
+    }
+
+    boot();
+  </script>
+</body>
+</html>
