@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>A3 トランプ 20枚配置 印刷テンプレート</title>
+  <style>
+    @page {
+      size: A3 portrait;
+      margin: 0;
+    }
+
+    :root {
+      --page-w: 297mm;
+      --page-h: 420mm;
+      --card-w-v: 63mm;
+      --card-h-v: 88mm;
+      --card-w-h: 88mm;
+      --card-h-h: 63mm;
+      --stroke: 0.25mm;
+      --safe-stroke: 0.15mm;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: #e9e9e9;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .screen-note {
+      max-width: 980px;
+      margin: 16px auto;
+      padding: 12px 16px;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .page-wrap {
+      display: flex;
+      justify-content: center;
+      padding: 12px 0 24px;
+    }
+
+    .sheet {
+      width: var(--page-w);
+      height: var(--page-h);
+      background: white;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+      position: relative;
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .card-cut {
+      fill: none;
+      stroke: #000;
+      stroke-width: var(--stroke);
+      vector-effect: non-scaling-stroke;
+    }
+
+    .safe {
+      fill: none;
+      stroke: #888;
+      stroke-width: var(--safe-stroke);
+      stroke-dasharray: 1.5 1.5;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .label {
+      font-size: 4.2px;
+      fill: #444;
+      user-select: none;
+    }
+
+    .title {
+      font-size: 5px;
+      fill: #111;
+      font-weight: 600;
+    }
+
+    .guide {
+      stroke: #bbb;
+      stroke-width: 0.2mm;
+      stroke-dasharray: 1 2;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .card-face {
+      fill: #fff;
+    }
+
+    @media print {
+      body { background: #fff; }
+      .screen-note { display: none; }
+      .page-wrap { padding: 0; }
+      .sheet { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="screen-note">
+    <strong>A3・トランプ20枚配置テンプレート</strong><br>
+    標準カードサイズ 63×88mm 前提です。黒実線が断裁線、灰色破線が安全線（内側3mm）です。<br>
+    印刷時は「実際のサイズ」「100%」「ページに合わせない」を選んでください。
+  </div>
+
+  <div class="page-wrap">
+    <div class="sheet">
+      <svg viewBox="0 0 297 420" xmlns="http://www.w3.org/2000/svg" aria-label="A3 トランプ 20枚配置テンプレート">
+        <!-- page border -->
+        <rect x="0" y="0" width="297" height="420" fill="#fff" stroke="#999" stroke-width="0.2" />
+
+        <!-- Optional title -->
+        <text x="4" y="7" class="title">A3 20-up Playing Card Template (63×88mm)</text>
+
+        <!-- Cards -->
+        <g id="cards">
+          <!-- 1 -->
+          <g transform="translate(20 5)">
+            <rect class="card-face" x="0" y="0" width="88" height="63"/>
+            <rect class="card-cut" x="0" y="0" width="88" height="63"/>
+            <rect class="safe" x="3" y="3" width="82" height="57"/>
+            <text class="label" x="44" y="31.5" text-anchor="middle" dominant-baseline="middle">1 H 88×63</text>
+          </g>
+          <!-- 2 -->
+          <g transform="translate(108 5)">
+            <rect class="card-face" x="0" y="0" width="63" height="88"/>
+            <rect class="card-cut" x="0" y="0" width="63" height="88"/>
+            <rect class="safe" x="3" y="3" width="57" height="82"/>
+            <text class="label" x="31.5" y="44" text-anchor="middle" dominant-baseline="middle">2 V 63×88</text>
+          </g>
+          <!-- 3 -->
+          <g transform="translate(171 5)">
+            <rect class="card-face" x="0" y="0" width="63" height="88"/>
+            <rect class="card-cut" x="0" y="0" width="63" height="88"/>
+            <rect class="safe" x="3" y="3" width="57" height="82"/>
+            <text class="label" x="31.5" y="44" text-anchor="middle" dominant-baseline="middle">3 V 63×88</text>
+          </g>
+          <!-- 4 -->
+          <g transform="translate(234 5)">
+            <rect class="card-face" x="0" y="0" width="63" height="88"/>
+            <rect class="card-cut" x="0" y="0" width="63" height="88"/>
+            <rect class="safe" x="3" y="3" width="57" height="82"/>
+            <text class="label" x="31.5" y="44" text-anchor="middle" dominant-baseline="middle">4 V 63×88</text>
+          </g>
+
+          <!-- 5 -->
+          <g transform="translate(20 68)">
+            <rect class="card-face" x="0" y="0" width="63" height="88"/>
+            <rect class="card-cut" x="0" y="0" width="63" height="88"/>
+            <rect class="safe" x="3" y="3" width="57" height="82"/>
+            <text class="label" x="31.5" y="44" text-anchor="middle" dominant-baseline="middle">5 V 63×88</text>
+          </g>
+          <!-- 6 -->
+          <g transform="translate(83 93)">
+            <rect class="card-face" x="0" y="0" width="88" height="63"/>
+            <rect class="card-cut" x="0" y="0" width="88" height="63"/>
+            <rect class="safe" x="3" y="3" width="82" height="57"/>
+            <text class="label" x="44" y="31.5" text-anchor="middle" dominant-baseline="middle">6 H 88×63</text>
+          </g>
+          <!-- 7 -->
+          <g transform="translate(171 93)">
+            <rect class="card-face" x="0" y="0" width="63" height="88"/>
+            <rect class="card-cut" x="0" y="0" width="63" height="88"/>
+            <rect class="safe" x="3" y="3" width="57" height="82"/>
+            <text class="label" x="31.5" y="44" text-anchor="middle" dominant-baseline="middle">7 V 63×88</text>
+          </g>
+          <!-- 8 -->
+          <g transform="translate(234 93)">
+            <rect class="card-face" x="0" y="0" width="63" height="88"/>
+            <rect class="card-cut" x="0" y="0" width="63" height="88"/>
+            <rect class="safe" x="3" y="3" width="57" height="82"/>
+            <text class="label" x="31.5" y="44" text-anchor="middle" dominant-baseline="middle">8 V 63×88</text>
+          </g>
+
+          <!-- 9 -->
+          <g transform="translate(20 156)">
+            <rect class="card-face" x="0" y="0" width="63" height="88"/>
+            <rect class="card-cut" x="0" y="0" width="63" height="88"/>
+            <rect class="safe" x="3" y="3" width="57" height="82"/>
+            <text class="label" x="31.5" y="44" text-anchor="middle" dominant-baseline="middle">9 V 63×88</text>
+          </g>
+          <!-- 10 -->
+          <g transform="translate(83 156)">
+            <rect class="card-face" x="0" y="0" width="63" height="88"/>
+            <rect class="card-cut" x="0" y="0" width="63" height="88"/>
+            <rect class="safe" x="3" y="3" width="57" height="82"/>
+            <text class="label" x="31.5" y="44" text-anchor="middle" dominant-baseline="middle">10 V 63×88</text>
+          </g>
+          <!-- 11 -->
+          <g transform="translate(146 181)">
+            <rect class="card-face" x="0" y="0" width="88" height="63"/>
+            <rect class="card-cut" x="0" y="0" width="88" height="63"/>
+            <rect class="safe" x="3" y="3" width="82" height="57"/>
+            <text class="label" x="44" y="31.5" text-anchor="middle" dominant-baseline="middle">11 H 88×63</text>
+          </g>
+          <!-- 12 -->
+          <g transform="translate(234 181)">
+            <rect class="card-face" x="0" y="0" width="63" height="88"/>
+            <rect class="card-cut" x="0" y="0" width="63" height="88"/>
+            <rect class="safe" x="3" y="3" width="57" height="82"/>
+            <text class="label" x="31.5" y="44" text-anchor="middle" dominant-baseline="middle">12 V 63×88</text>
+          </g>
+
+          <!-- 13 -->
+          <g transform="translate(20 244)">
+            <rect class="card-face" x="0" y="0" width="63" height="88"/>
+            <rect class="card-cut" x="0" y="0" width="63" height="88"/>
+            <rect class="safe" x="3" y="3" width="57" height="82"/>
+            <text class="label" x="31.5" y="44" text-anchor="middle" dominant-baseline="middle">13 V 63×88</text>
+          </g>
+          <!-- 14 -->
+          <g transform="translate(83 244)">
+            <rect class="card-face" x="0" y="0" width="63" height="88"/>
+            <rect class="card-cut" x="0" y="0" width="63" height="88"/>
+            <rect class="safe" x="3" y="3" width="57" height="82"/>
+            <text class="label" x="31.5" y="44" text-anchor="middle" dominant-baseline="middle">14 V 63×88</text>
+          </g>
+          <!-- 15 -->
+          <g transform="translate(146 244)">
+            <rect class="card-face" x="0" y="0" width="63" height="88"/>
+            <rect class="card-cut" x="0" y="0" width="63" height="88"/>
+            <rect class="safe" x="3" y="3" width="57" height="82"/>
+            <text class="label" x="31.5" y="44" text-anchor="middle" dominant-baseline="middle">15 V 63×88</text>
+          </g>
+          <!-- 16 -->
+          <g transform="translate(209 269)">
+            <rect class="card-face" x="0" y="0" width="88" height="63"/>
+            <rect class="card-cut" x="0" y="0" width="88" height="63"/>
+            <rect class="safe" x="3" y="3" width="82" height="57"/>
+            <text class="label" x="44" y="31.5" text-anchor="middle" dominant-baseline="middle">16 H 88×63</text>
+          </g>
+
+          <!-- 17 -->
+          <g transform="translate(20 332)">
+            <rect class="card-face" x="0" y="0" width="63" height="88"/>
+            <rect class="card-cut" x="0" y="0" width="63" height="88"/>
+            <rect class="safe" x="3" y="3" width="57" height="82"/>
+            <text class="label" x="31.5" y="44" text-anchor="middle" dominant-baseline="middle">17 V 63×88</text>
+          </g>
+          <!-- 18 -->
+          <g transform="translate(108 332)">
+            <rect class="card-face" x="0" y="0" width="63" height="88"/>
+            <rect class="card-cut" x="0" y="0" width="63" height="88"/>
+            <rect class="safe" x="3" y="3" width="57" height="82"/>
+            <text class="label" x="31.5" y="44" text-anchor="middle" dominant-baseline="middle">18 V 63×88</text>
+          </g>
+          <!-- 19 -->
+          <g transform="translate(171 332)">
+            <rect class="card-face" x="0" y="0" width="63" height="88"/>
+            <rect class="card-cut" x="0" y="0" width="63" height="88"/>
+            <rect class="safe" x="3" y="3" width="57" height="82"/>
+            <text class="label" x="31.5" y="44" text-anchor="middle" dominant-baseline="middle">19 V 63×88</text>
+          </g>
+          <!-- 20 -->
+          <g transform="translate(234 332)">
+            <rect class="card-face" x="0" y="0" width="63" height="88"/>
+            <rect class="card-cut" x="0" y="0" width="63" height="88"/>
+            <rect class="safe" x="3" y="3" width="57" height="82"/>
+            <text class="label" x="31.5" y="44" text-anchor="middle" dominant-baseline="middle">20 V 63×88</text>
+          </g>
+        </g>
+      </svg>
+    </div>
+  </div>
+</body>
+</html>
