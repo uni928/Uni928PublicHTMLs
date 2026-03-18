@@ -505,8 +505,10 @@
       { name: "gpt-5-nano",   inRate: 0.05, outRate: 0.40 },
       { name: "gpt-4.1-nano", inRate: 0.10, outRate: 0.40 },
       { name: "gpt-4o-mini",  inRate: 0.15, outRate: 0.60 },
+      { name: "gpt-5.4-nano", inRate: 0.20, outRate: 1.25 },
       { name: "gpt-5-mini",   inRate: 0.25, outRate: 2.00 },
       { name: "gpt-4.1-mini", inRate: 0.40, outRate: 1.60 },
+      { name: "gpt-5.4-mini", inRate: 0.75, outRate: 4.50 },
       { name: "gpt-5.1",      inRate: 1.25, outRate: 10.00 },
       { name: "gpt-5.2",      inRate: 1.75, outRate: 14.00 },
       { name: "gpt-5.4 (<272K)",      inRate: 2.50, outRate: 15.00 },
@@ -514,7 +516,9 @@
 
     const FLEX = [
       { base: "gpt-5-nano", label: "gpt-5-nano Flex", factor: 0.5 },
+      { base: "gpt-5.4-nano", label: "gpt-5.4-nano Flex", factor: 0.5 },
       { base: "gpt-5-mini", label: "gpt-5-mini Flex", factor: 0.5 },
+      { base: "gpt-5.4-mini", label: "gpt-5.4-mini Flex", factor: 0.5 },
       { base: "gpt-5.1",    label: "gpt-5.1 Flex",    factor: 0.5 },
       { base: "gpt-5.2",    label: "gpt-5.2 Flex",    factor: 0.5 },
       { base: "gpt-5.4 (<272K)",    label: "gpt-5.4 Flex",    factor: 0.5 },
