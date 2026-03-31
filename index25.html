@@ -362,6 +362,17 @@
         font-size: 16px;
       }
     }
+
+select {
+  width: 100%;
+  border: 1px solid rgba(201, 143, 82, 0.24);
+  background: var(--panel-strong);
+  color: var(--text);
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-size: 14px;
+  outline: none;
+}
   </style>
 </head>
 <body>
@@ -377,6 +388,16 @@
         <label for="fileName">保存ファイル名</label>
         <input id="fileName" type="text" placeholder="例：企画メモ" value="文章作成作業" />
       </div>
+
+<div class="field">
+  <label for="fontSelect">フォント</label>
+  <select id="fontSelect">
+    <option value="'Hiragino Mincho ProN', 'Yu Mincho', serif">明朝体</option>
+    <option value="'Hiragino Sans', 'Yu Gothic', sans-serif">ゴシック体</option>
+    <option value="'Meiryo', sans-serif">メイリオ</option>
+    <option value="'Arial', sans-serif">Arial</option>
+  </select>
+</div>
 
       <div class="section-title">操作</div>
       <div class="button-grid">
@@ -436,6 +457,7 @@
 
     const editor = document.getElementById('editor');
     const fileNameInput = document.getElementById('fileName');
+const fontSelect = document.getElementById('fontSelect');
     const exportBtn = document.getElementById('exportBtn');
     const manualSaveBtn = document.getElementById('manualSaveBtn');
     const clearBtn = document.getElementById('clearBtn');
@@ -536,6 +558,7 @@
           id: DOC_KEY,
           text: editor.value,
           fileName: fileNameInput.value,
+   font: fontSelect.value,
           updatedAt: now.toISOString()
         };
 
@@ -573,6 +596,10 @@
           if (result) {
             editor.value = result.text || '';
             fileNameInput.value = result.fileName || '';
+  if (result.font) {
+    fontSelect.value = result.font;
+    editor.style.fontFamily = result.font;
+  }
             if (result.updatedAt) {
               lastSaved.textContent = `最終保存: ${formatDateTime(new Date(result.updatedAt))}`;
               saveIndicator('saved', '前回の状態を復元しました');
@@ -647,6 +674,11 @@
       queueSave();
     });
 
+fontSelect.addEventListener('change', () => {
+  editor.style.fontFamily = fontSelect.value;
+  queueSave();
+});
+
     manualSaveBtn.addEventListener('click', async () => {
       try {
         await persistDocument();
@@ -694,6 +726,7 @@
         await loadDocument();
         updateCharCount();
         updatePreview();
+editor.style.fontFamily = fontSelect.value;
       } catch (error) {
         console.error(error);
         saveIndicator('', '初期化に失敗しました');
