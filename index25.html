@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>文章作成補助</title>
+  <style>
+    :root {
+      --bg: #fff7ea;
+      --bg-soft: #fffdf8;
+      --panel: rgba(255, 255, 255, 0.72);
+      --panel-strong: rgba(255, 255, 255, 0.9);
+      --line: rgba(120, 90, 40, 0.14);
+      --text: #4b3d2f;
+      --sub: #8d7458;
+      --accent: #c98f52;
+      --accent-strong: #b57533;
+      --shadow: 0 18px 45px rgba(147, 109, 62, 0.12);
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      font-family: "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", "Meiryo", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,0.85), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(255, 233, 203, 0.75), transparent 24%),
+        linear-gradient(180deg, #fffaf0 0%, #fff5e5 100%);
+    }
+
+    body {
+      padding: 28px;
+    }
+
+    .shell {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .sidebar {
+      padding: 24px;
+      position: sticky;
+      top: 28px;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .brand .label {
+      width: fit-content;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(201, 143, 82, 0.14);
+      color: var(--accent-strong);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.25;
+      letter-spacing: 0.02em;
+    }
+
+    .brand p {
+      margin: 0;
+      color: var(--sub);
+      line-height: 1.8;
+      font-size: 14px;
+    }
+
+    .section-title {
+      font-size: 13px;
+      color: var(--sub);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+    }
+
+    .field {
+      margin-bottom: 18px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--sub);
+    }
+
+    input[type="text"] {
+      width: 100%;
+      border: 1px solid rgba(201, 143, 82, 0.24);
+      background: var(--panel-strong);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 14px 16px;
+      font-size: 14px;
+      outline: none;
+      transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+    }
+
+    input[type="text"]:focus,
+    textarea:focus {
+      border-color: rgba(201, 143, 82, 0.6);
+      box-shadow: 0 0 0 4px rgba(201, 143, 82, 0.12);
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    button,
+    .file-label {
+      border: none;
+      border-radius: 16px;
+      padding: 14px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+      text-align: center;
+    }
+
+    button:hover,
+    .file-label:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 22px rgba(147, 109, 62, 0.14);
+    }
+
+    button:active,
+    .file-label:active {
+      transform: translateY(0);
+    }
+
+    .primary {
+      background: linear-gradient(135deg, #d9a168 0%, #bf7c39 100%);
+      color: white;
+    }
+
+    .secondary {
+      background: rgba(255,255,255,0.84);
+      color: var(--text);
+      border: 1px solid rgba(201, 143, 82, 0.2);
+    }
+
+    .danger {
+      background: rgba(176, 80, 64, 0.1);
+      color: #a14e43;
+      border: 1px solid rgba(176, 80, 64, 0.14);
+    }
+
+    .file-label input {
+      display: none;
+    }
+
+    .info-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .info-item {
+      background: rgba(255,255,255,0.58);
+      border: 1px solid rgba(201, 143, 82, 0.14);
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .info-item .k {
+      font-size: 12px;
+      color: var(--sub);
+      margin-bottom: 6px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+
+    .info-item .v {
+      font-size: 14px;
+      line-height: 1.6;
+      word-break: break-all;
+    }
+
+    .main {
+      padding: 24px;
+      min-height: calc(100vh - 56px);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      background: rgba(255,255,255,0.56);
+      border: 1px solid rgba(201, 143, 82, 0.14);
+      border-radius: 20px;
+      padding: 16px 18px;
+    }
+
+    .toolbar-left h2 {
+      margin: 0 0 5px;
+      font-size: 22px;
+    }
+
+    .toolbar-left p {
+      margin: 0;
+      color: var(--sub);
+      font-size: 13px;
+    }
+
+    .save-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.82);
+      border-radius: 999px;
+      border: 1px solid rgba(201, 143, 82, 0.16);
+      font-size: 13px;
+      color: var(--sub);
+      font-weight: 700;
+    }
+
+    .save-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #d0b18b;
+      transition: background 0.18s ease, transform 0.18s ease;
+    }
+
+    .save-dot.saved {
+      background: #7ab969;
+      transform: scale(1.08);
+    }
+
+    .save-dot.saving {
+      background: #d8a05f;
+    }
+
+    .editor-wrap {
+      position: relative;
+      flex: 1;
+      min-height: 540px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.82), rgba(255,255,255,0.7));
+      border: 1px solid rgba(201, 143, 82, 0.16);
+      border-radius: 26px;
+      overflow: hidden;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.65);
+    }
+
+    .editor-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 18px;
+      border-bottom: 1px solid rgba(201, 143, 82, 0.12);
+      background: rgba(255, 251, 243, 0.88);
+    }
+
+    .editor-top .meta {
+      font-size: 13px;
+      color: var(--sub);
+      font-weight: 700;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 620px;
+      resize: vertical;
+      border: none;
+      outline: none;
+      background: transparent;
+      padding: 24px 24px 30px;
+      font-size: 17px;
+      line-height: 1.95;
+      color: var(--text);
+      font-family: "Hiragino Mincho ProN", "Yu Mincho", "Hiragino Sans", serif;
+      letter-spacing: 0.02em;
+    }
+
+    .footer-note {
+      color: var(--sub);
+      font-size: 13px;
+      line-height: 1.8;
+      padding: 0 4px;
+    }
+
+    .shortcut {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 8px;
+      background: rgba(201, 143, 82, 0.14);
+      color: var(--accent-strong);
+      font-weight: 700;
+      margin: 0 4px;
+    }
+
+    @media (max-width: 980px) {
+      .shell {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+      }
+
+      .main {
+        min-height: auto;
+      }
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 16px;
+      }
+
+      .sidebar,
+      .main {
+        padding: 18px;
+      }
+
+      .button-grid {
+        grid-template-columns: 1fr;
+      }
+
+      textarea {
+        min-height: 460px;
+        padding: 18px;
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar card">
+      <div class="brand">
+        <div class="label">WRITING ASSIST</div>
+        <h1>文章作成補助</h1>
+        <p>クリーム色を基調にした、落ち着いた執筆空間です。入力内容はリアルタイムで IndexedDB に保存され、再起動後もそのまま再開できます。</p>
+      </div>
+
+      <div class="field">
+        <label for="fileName">保存ファイル名</label>
+        <input id="fileName" type="text" placeholder="例：企画メモ" value="文章作成作業" />
+      </div>
+
+      <div class="section-title">操作</div>
+      <div class="button-grid">
+        <button id="exportBtn" class="primary" type="button" hidden>今すぐダウンロード</button>
+        <label class="file-label secondary" for="importFile" >インポート</label>
+        <input id="importFile" type="file" accept=".txt" hidden/>
+        <button id="manualSaveBtn" class="secondary" type="button" hidden>今すぐ保存</button>
+        <button id="clearBtn" class="danger" type="button" hidden>入力欄をクリア</button>
+      </div>
+
+      <div class="info-list">
+        <div class="info-item">
+          <div class="k">最大の特徴</div>
+          <div class="v"> <strong>Ctrl + S</strong> で入力欄の内容を毎回ローカル保存し、そのままテキストファイルとしてダウンロードできます。通常入力時も IndexedDB に自動保存されます。</div>
+        </div>
+        <div class="info-item">
+          <div class="k">ファイル名形式</div>
+          <div class="v" id="fileNamePreview">YYYYMMDD_HHMMSS_保存名.txt</div>
+        </div>
+        <div class="info-item">
+          <div class="k">再開状態</div>
+          <div class="v">アプリを閉じても、次回は前回の内容と保存名から再開します。</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main card">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <h2>やわらかな執筆スペース</h2>
+          <p>思考を止めずに書けるよう、余計な装飾を抑えて上品に整えています。</p>
+        </div>
+        <div class="save-indicator">
+          <span id="saveDot" class="save-dot"></span>
+          <span id="saveStatus">保存待機中</span>
+        </div>
+      </div>
+
+      <section class="editor-wrap">
+        <div class="editor-top">
+          <div class="meta" id="charCount">0 文字</div>
+          <div class="meta" id="lastSaved">最終保存: まだありません</div>
+        </div>
+        <textarea id="editor" placeholder="ここに文章を入力してください。&#10;&#10;入力内容は IndexedDB にリアルタイム保存され、Ctrl + S でも即保存できます。"></textarea>
+      </section>
+
+      <div class="footer-note">
+        <span class="shortcut">Ctrl + S</span>で IndexedDB へ保存したうえで、そのままテキストファイルをダウンロードします。通常入力でも自動保存です。
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const DB_NAME = 'writingAssistDB';
+    const STORE_NAME = 'documents';
+    const DOC_KEY = 'currentDocument';
+
+    const editor = document.getElementById('editor');
+    const fileNameInput = document.getElementById('fileName');
+    const exportBtn = document.getElementById('exportBtn');
+    const manualSaveBtn = document.getElementById('manualSaveBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const importFile = document.getElementById('importFile');
+    const saveStatus = document.getElementById('saveStatus');
+    const saveDot = document.getElementById('saveDot');
+    const charCount = document.getElementById('charCount');
+    const lastSaved = document.getElementById('lastSaved');
+    const fileNamePreview = document.getElementById('fileNamePreview');
+
+    let db;
+    let saveTimer = null;
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+
+        request.onupgradeneeded = (event) => {
+          const database = event.target.result;
+          if (!database.objectStoreNames.contains(STORE_NAME)) {
+            database.createObjectStore(STORE_NAME, { keyPath: 'id' });
+          }
+        };
+
+        request.onsuccess = () => {
+          db = request.result;
+          resolve(db);
+        };
+
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    function getTransaction(mode = 'readonly') {
+      return db.transaction(STORE_NAME, mode).objectStore(STORE_NAME);
+    }
+
+    function saveIndicator(state, message) {
+      saveDot.classList.remove('saved', 'saving');
+      if (state === 'saving') saveDot.classList.add('saving');
+      if (state === 'saved') saveDot.classList.add('saved');
+      saveStatus.textContent = message;
+    }
+
+    function formatDateTime(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      const hh = String(date.getHours()).padStart(2, '0');
+      const mm = String(date.getMinutes()).padStart(2, '0');
+      const ss = String(date.getSeconds()).padStart(2, '0');
+      return `${y}/${m}/${d} ${hh}:${mm}:${ss}`;
+    }
+
+    function buildTimestampPrefix(date = new Date()) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      const hh = String(date.getHours()).padStart(2, '0');
+      const mm = String(date.getMinutes()).padStart(2, '0');
+      const ss = String(date.getSeconds()).padStart(2, '0');
+      return `${y}${m}${d}_${hh}${mm}${ss}`;
+    }
+
+    function sanitizeFileName(name) {
+      const trimmed = (name || '').trim();
+      const fallback = 'untitled';
+      return (trimmed || fallback).replace(/[\\/:*?"<>|]/g, '_');
+    }
+
+    function getExportFileName() {
+      const prefix = buildTimestampPrefix(new Date());
+      const base = sanitizeFileName(fileNameInput.value);
+      return `${prefix}_${base}.txt`;
+    }
+
+    function updatePreview() {
+      fileNamePreview.textContent = getExportFileName();
+    }
+
+    function updateCharCount() {
+      charCount.textContent = `${editor.value.length.toLocaleString('ja-JP')} 文字`;
+    }
+
+    function persistDocument() {
+      return new Promise((resolve, reject) => {
+        if (!db) {
+          reject(new Error('DB未初期化'));
+          return;
+        }
+
+        saveIndicator('saving', '保存中...');
+        const now = new Date();
+        const payload = {
+          id: DOC_KEY,
+          text: editor.value,
+          fileName: fileNameInput.value,
+          updatedAt: now.toISOString()
+        };
+
+        const request = getTransaction('readwrite').put(payload);
+
+        request.onsuccess = () => {
+          lastSaved.textContent = `最終保存: ${formatDateTime(now)}`;
+          saveIndicator('saved', '保存済み');
+          resolve();
+        };
+
+        request.onerror = () => {
+          saveIndicator('', '保存失敗');
+          reject(request.error);
+        };
+      });
+    }
+
+    function queueSave() {
+      saveIndicator('saving', '保存予約中...');
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        persistDocument().catch((error) => {
+          console.error(error);
+        });
+      }, 180);
+    }
+
+    async function loadDocument() {
+      return new Promise((resolve, reject) => {
+        const request = getTransaction('readonly').get(DOC_KEY);
+
+        request.onsuccess = () => {
+          const result = request.result;
+          if (result) {
+            editor.value = result.text || '';
+            fileNameInput.value = result.fileName || '';
+            if (result.updatedAt) {
+              lastSaved.textContent = `最終保存: ${formatDateTime(new Date(result.updatedAt))}`;
+              saveIndicator('saved', '前回の状態を復元しました');
+            }
+          }
+          updateCharCount();
+          updatePreview();
+          resolve();
+        };
+
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    function downloadTextFile() {
+      const blob = new Blob([editor.value], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = getExportFileName();
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    async function exportFile() {
+      try {
+        await persistDocument();
+        downloadTextFile();
+      } catch (error) {
+        console.error(error);
+        alert('保存または書き出しに失敗しました。');
+      }
+    }
+
+    function importTextFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async () => {
+        editor.value = typeof reader.result === 'string' ? reader.result : '';
+        updateCharCount();
+        try {
+          await persistDocument();
+          saveIndicator('saved', 'インポート内容を保存しました');
+        } catch (error) {
+          console.error(error);
+          alert('インポート後の保存に失敗しました。');
+        }
+      };
+      reader.onerror = () => {
+        alert('ファイルの読み込みに失敗しました。');
+      };
+      reader.readAsText(file, 'utf-8');
+    }
+
+    async function clearEditor() {
+      const ok = confirm('入力欄の内容を空にしますか？\n現在の状態は保存されます。');
+      if (!ok) return;
+      editor.value = '';
+      updateCharCount();
+      await persistDocument();
+    }
+
+    editor.addEventListener('input', () => {
+      updateCharCount();
+      queueSave();
+    });
+
+    fileNameInput.addEventListener('input', () => {
+      updatePreview();
+      queueSave();
+    });
+
+    manualSaveBtn.addEventListener('click', async () => {
+      try {
+        await persistDocument();
+      } catch (error) {
+        console.error(error);
+        alert('保存に失敗しました。');
+      }
+    });
+
+    exportBtn.addEventListener('click', exportFile);
+    clearBtn.addEventListener('click', () => {
+      clearEditor().catch((error) => {
+        console.error(error);
+        alert('クリア処理に失敗しました。');
+      });
+    });
+
+    importFile.addEventListener('change', (event) => {
+      const file = event.target.files?.[0];
+      importTextFile(file);
+      importFile.value = '';
+    });
+
+    document.addEventListener('keydown', async (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        try {
+          await persistDocument();
+          downloadTextFile();
+          saveIndicator('saved', '保存してダウンロードしました');
+        } catch (error) {
+          console.error(error);
+          alert('Ctrl + S での保存またはダウンロードに失敗しました。');
+        }
+      }
+    });
+
+    window.addEventListener('beforeunload', () => {
+      clearTimeout(saveTimer);
+    });
+
+    (async function init() {
+      try {
+        await openDB();
+        await loadDocument();
+        updateCharCount();
+        updatePreview();
+      } catch (error) {
+        console.error(error);
+        saveIndicator('', '初期化に失敗しました');
+        alert('IndexedDB の初期化に失敗しました。ブラウザ設定をご確認ください。');
+      }
+    })();
+  </script>
+</body>
+</html>
