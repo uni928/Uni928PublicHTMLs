@@ -1,0 +1,534 @@
+<!DOCTYPE html><html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Undo / Redo 入力サイト</title>
+  <style>
+    :root {
+      --header-h: 52px;
+      --bg: #f3f5f8;
+      --panel: rgba(255,255,255,0.92);
+      --border: #d8dee8;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --accent: #2563eb;
+      --shadow: 0 8px 24px rgba(0,0,0,0.10);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", "Yu Gothic UI", sans-serif;
+  overscroll-behavior: none;
+}
+
+body {
+  overflow: hidden;
+}
+
+.app {
+  width: 100%;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: var(--header-h) 1fr;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  position: relative;
+  z-index: 3;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.settings-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.icon-btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  border-radius: 999px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0 12px;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  cursor: pointer;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(310px, calc(100vw - 24px));
+  background: rgba(255,255,255,0.98);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 14px;
+  display: none;
+}
+
+.menu.open {
+  display: block;
+}
+
+.menu-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.setting-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.setting-label {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.setting-note {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.switch {
+  position: relative;
+  width: 52px;
+  height: 32px;
+  flex: 0 0 auto;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.slider {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: #cbd5e1;
+  transition: 0.2s ease;
+  cursor: pointer;
+}
+
+.slider::before {
+  content: "";
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  left: 4px;
+  top: 4px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.16);
+  transition: 0.2s ease;
+}
+
+.switch input:checked + .slider {
+  background: var(--accent);
+}
+
+.switch input:checked + .slider::before {
+  transform: translateX(20px);
+}
+
+.editor-wrap {
+  position: relative;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
+textarea {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: #fff;
+  color: var(--text);
+  padding: 16px 16px calc(92px + var(--safe-bottom)) 16px;
+  font-size: 18px;
+  line-height: 1.75;
+  caret-color: var(--accent);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.fab {
+  position: fixed;
+  bottom: calc(14px + var(--safe-bottom));
+  z-index: 5;
+  min-width: 76px;
+  height: 52px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(17,24,39,0.92);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 0 18px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.22);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  cursor: pointer;
+}
+
+.fab:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.fab.undo {
+  left: 14px;
+}
+
+.fab.redo {
+  right: 14px;
+}
+
+.status {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(74px + var(--safe-bottom));
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.status-chip {
+  background: rgba(17,24,39,0.74);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.status-chip.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="title">入力エリア</div>
+      <div class="settings-wrap">
+        <button id="settingsBtn" class="icon-btn" type="button" aria-expanded="false" aria-controls="settingsMenu">設定</button>
+        <div id="settingsMenu" class="menu" role="dialog" aria-label="設定画面">
+          <div class="menu-title">設定</div>
+          <div class="setting-row">
+            <div class="setting-text">
+              <div class="setting-label">IndexedDB にリアルタイム保存</div>
+              <div class="setting-note">ON のときは内容を随時保存し、次回もその状態から再開します。このモードでは Undo / Redo は無効になります。</div>
+            </div>
+            <label class="switch" aria-label="リアルタイム保存の切り替え">
+              <input id="autosaveToggle" type="checkbox" />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </header><main class="editor-wrap">
+  <textarea id="editor" placeholder="ここに入力してください"></textarea>
+  <div class="status"><div id="statusChip" class="status-chip"></div></div>
+</main>
+
+  </div><button id="undoBtn" class="fab undo" type="button">Undo</button> <button id="redoBtn" class="fab redo" type="button">Redo</button>
+
+  <script>
+    const DB_NAME = "undoRedoMobileEditorDB";
+    const STORE_NAME = "settings";
+    const AUTOSAVE_KEY = "autosaveEnabled";
+    const CONTENT_KEY = "savedContent";
+
+    const editor = document.getElementById("editor");
+    const undoBtn = document.getElementById("undoBtn");
+    const redoBtn = document.getElementById("redoBtn");
+    const settingsBtn = document.getElementById("settingsBtn");
+    const settingsMenu = document.getElementById("settingsMenu");
+    const autosaveToggle = document.getElementById("autosaveToggle");
+    const statusChip = document.getElementById("statusChip");
+
+    let db = null;
+    let isComposing = false;
+    let autosaveEnabled = false;
+    let history = [""];
+    let historyIndex = 0;
+    let commitTimer = null;
+    let saveTimer = null;
+    let statusTimer = null;
+
+    function showStatus(message) {
+      statusChip.textContent = message;
+      statusChip.classList.add("show");
+      clearTimeout(statusTimer);
+      statusTimer = setTimeout(() => {
+        statusChip.classList.remove("show");
+      }, 1300);
+    }
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+
+        request.onupgradeneeded = (event) => {
+          const database = event.target.result;
+          if (!database.objectStoreNames.contains(STORE_NAME)) {
+            database.createObjectStore(STORE_NAME, { keyPath: "key" });
+          }
+        };
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    function idbSet(key, value) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+        store.put({ key, value });
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    function idbGet(key) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const request = store.get(key);
+        request.onsuccess = () => resolve(request.result ? request.result.value : undefined);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    function scheduleAutosave() {
+      if (!autosaveEnabled) return;
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(async () => {
+        try {
+          await idbSet(CONTENT_KEY, editor.value);
+        } catch (error) {
+          console.error("保存に失敗しました", error);
+        }
+      }, 120);
+    }
+
+    function updateButtons() {
+      const disabledByAutosave = autosaveEnabled;
+      undoBtn.disabled = disabledByAutosave || historyIndex <= 0;
+      redoBtn.disabled = disabledByAutosave || historyIndex >= history.length - 1;
+    }
+
+    function resetHistory(text) {
+      history = [text];
+      historyIndex = 0;
+      updateButtons();
+    }
+
+    function commitSnapshot(force = false) {
+      if (autosaveEnabled) {
+        updateButtons();
+        return;
+      }
+
+      const current = editor.value;
+      const latest = history[historyIndex];
+      if (!force && current === latest) {
+        updateButtons();
+        return;
+      }
+
+      history = history.slice(0, historyIndex + 1);
+      history.push(current);
+      historyIndex = history.length - 1;
+      updateButtons();
+    }
+
+    function scheduleCommit() {
+      if (autosaveEnabled || isComposing) return;
+      clearTimeout(commitTimer);
+      commitTimer = setTimeout(() => commitSnapshot(false), 450);
+    }
+
+    function setCursorToEnd() {
+      requestAnimationFrame(() => {
+        const pos = editor.value.length;
+        editor.focus();
+        editor.setSelectionRange(pos, pos);
+      });
+    }
+
+    function undo() {
+      if (autosaveEnabled || historyIndex <= 0) return;
+      historyIndex -= 1;
+      editor.value = history[historyIndex];
+      setCursorToEnd();
+      updateButtons();
+    }
+
+    function redo() {
+      if (autosaveEnabled || historyIndex >= history.length - 1) return;
+      historyIndex += 1;
+      editor.value = history[historyIndex];
+      setCursorToEnd();
+      updateButtons();
+    }
+
+    async function applyAutosaveMode(enabled) {
+      autosaveEnabled = enabled;
+      autosaveToggle.checked = enabled;
+      await idbSet(AUTOSAVE_KEY, enabled);
+
+      if (enabled) {
+        clearTimeout(commitTimer);
+        resetHistory(editor.value);
+        await idbSet(CONTENT_KEY, editor.value);
+        showStatus("リアルタイム保存を ON にしました");
+      } else {
+        resetHistory(editor.value);
+        commitSnapshot(true);
+        showStatus("Undo / Redo モードに切り替えました");
+      }
+
+      updateButtons();
+    }
+
+    settingsBtn.addEventListener("click", () => {
+      const willOpen = !settingsMenu.classList.contains("open");
+      settingsMenu.classList.toggle("open", willOpen);
+      settingsBtn.setAttribute("aria-expanded", String(willOpen));
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest(".settings-wrap")) {
+        settingsMenu.classList.remove("open");
+        settingsBtn.setAttribute("aria-expanded", "false");
+      }
+    });
+
+    autosaveToggle.addEventListener("change", async () => {
+      try {
+        await applyAutosaveMode(autosaveToggle.checked);
+      } catch (error) {
+        console.error(error);
+        showStatus("設定変更に失敗しました");
+      }
+    });
+
+    undoBtn.addEventListener("click", undo);
+    redoBtn.addEventListener("click", redo);
+
+    editor.addEventListener("compositionstart", () => {
+      isComposing = true;
+      clearTimeout(commitTimer);
+    });
+
+    editor.addEventListener("compositionend", () => {
+      isComposing = false;
+      if (autosaveEnabled) {
+        scheduleAutosave();
+      } else {
+        commitSnapshot(false);
+      }
+    });
+
+    editor.addEventListener("input", () => {
+      if (autosaveEnabled) {
+        scheduleAutosave();
+        return;
+      }
+
+      if (!isComposing) {
+        scheduleCommit();
+      }
+    });
+
+    window.addEventListener("beforeunload", () => {
+      if (autosaveEnabled && db) {
+        try {
+          const tx = db.transaction(STORE_NAME, "readwrite");
+          const store = tx.objectStore(STORE_NAME);
+          store.put({ key: CONTENT_KEY, value: editor.value });
+        } catch (error) {
+          console.error(error);
+        }
+      }
+    });
+
+    async function init() {
+      try {
+        db = await openDB();
+        const savedAutosave = await idbGet(AUTOSAVE_KEY);
+        autosaveEnabled = Boolean(savedAutosave);
+        autosaveToggle.checked = autosaveEnabled;
+
+        if (autosaveEnabled) {
+          const savedContent = await idbGet(CONTENT_KEY);
+          editor.value = typeof savedContent === "string" ? savedContent : "";
+        }
+
+        resetHistory(editor.value);
+        updateButtons();
+        setCursorToEnd();
+      } catch (error) {
+        console.error("初期化に失敗しました", error);
+        showStatus("IndexedDB を利用できませんでした");
+        resetHistory(editor.value);
+        updateButtons();
+      }
+    }
+
+    init();
+  </script></body>
+  </html>
