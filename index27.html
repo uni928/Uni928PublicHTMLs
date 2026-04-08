@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>指示書作成 HTML版</title>
+<style>
+  :root{
+    --bg:#f5f7fb; --panel:#fff; --line:#d9dfeb; --text:#111827; --muted:#6b7280;
+    --primary:#2563eb; --danger:#dc2626; --accent:#e11d48;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic UI",Meiryo,sans-serif;background:var(--bg);color:var(--text)}
+  button,input,textarea{font:inherit}
+  .hidden{display:none!important}
+  .screen{min-height:100vh}
+  .start{display:flex;align-items:center;justify-content:center;padding:24px}
+  .start-card{width:min(760px,100%);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:28px;box-shadow:0 10px 30px rgba(15,23,42,.06)}
+  h1{margin:0 0 8px;font-size:28px}
+  h2{margin:0 0 12px;font-size:20px}
+  .sub{color:var(--muted);line-height:1.7}
+  .start-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:22px}
+  .bigbtn{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;min-height:92px;cursor:pointer;text-align:left;transition:.15s transform,.15s box-shadow,.15s border-color}
+  .bigbtn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(15,23,42,.06);border-color:#bfd0f7}
+  .bigbtn strong{display:block;margin-bottom:6px}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .toolbar button,.toolbar label.btn{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer}
+  .toolbar .primary{background:var(--primary);border-color:var(--primary);color:#fff}
+  .toolbar .danger{background:var(--danger);border-color:var(--danger);color:#fff}
+  .toolbar .ghost{background:#fff}
+  .toolbar .file-input{display:none}
+  .editor-layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(320px,.9fr);gap:16px;padding:16px;align-items:start}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 8px 24px rgba(15,23,42,.04)}
+  .canvas-wrap{position:relative;overflow:auto;max-height:calc(100vh - 220px);border:1px solid var(--line);border-radius:14px;background:#f8fafc}
+  #shotImage{display:block;max-width:100%;height:auto}
+  #overlay{position:absolute;left:0;top:0;width:100%;height:100%;touch-action:none}
+  .section-title{font-size:18px;margin:0 0 10px}
+  .info-list{display:flex;flex-direction:column;gap:10px;max-height:52vh;overflow:auto;padding-right:2px}
+  .info-item{border:1px solid var(--line);border-radius:14px;padding:10px;background:#fff}
+  .info-item.active{border-color:#9bb7ff;background:#f8fbff;box-shadow:0 0 0 3px rgba(37,99,235,.08)}
+  .info-head{font-weight:700;margin-bottom:8px}
+  .info-item textarea{width:100%;min-height:96px;border:1px solid var(--line);border-radius:10px;padding:10px;resize:vertical}
+  .preview-image{width:100%;height:auto;border:1px solid var(--line);border-radius:12px;background:#fff}
+  .footer-note{padding:0 16px 16px;color:var(--muted)}
+  .subhint{font-size:13px;color:var(--muted);line-height:1.6}
+  .floating-panel{position:fixed;right:20px;bottom:20px;width:min(420px,calc(100vw - 40px));background:rgba(17,24,39,.92);color:#fff;border-radius:18px;padding:14px 16px;box-shadow:0 14px 40px rgba(0,0,0,.28);z-index:9999;backdrop-filter:blur(8px)}
+  .floating-panel .fp-title{font-weight:700;margin-bottom:8px}
+  .floating-panel .fp-meta{font-size:13px;opacity:.88;margin-bottom:8px}
+  .floating-panel .fp-body{min-height:56px;max-height:180px;overflow:auto;white-space:pre-wrap;line-height:1.65;border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:10px;background:rgba(255,255,255,.05)}
+  .floating-panel .fp-tip{font-size:12px;opacity:.76;margin-top:8px}
+  @media (max-width: 980px){.editor-layout{grid-template-columns:1fr}.canvas-wrap{max-height:none}.info-list{max-height:none}}
+</style>
+</head>
+<body>
+<section id="startScreen" class="screen start">
+  <div class="start-card">
+    <h1>指示書作成 HTML版</h1>
+    <div class="sub">開始方法を選んでください。前回の続き、JSONインポート、画像読み込みから開始できます。</div>
+    <div class="start-actions">
+      <button id="resumeBtn" class="bigbtn"><strong>前回の続きから</strong><span class="sub">IndexedDB に自動保存された内容を復元します。</span></button>
+      <label class="bigbtn" for="importInput"><strong>インポートして再開</strong><span class="sub">以前エクスポートした JSON を読み込みます。</span></label>
+      <input id="importInput" type="file" accept=".json,application/json" class="file-input" hidden>
+      <label class="bigbtn" for="imageInput"><strong>画像を読み込んで開始</strong><span class="sub">PNG / JPG / WebP などの画像から開始します。</span></label>
+      <input id="imageInput" type="file" accept="image/*" class="file-input" hidden>
+    </div>
+    <div class="sub" style="margin-top:16px">最新仕様: 番号追加、ドラッグ移動、線回転、Delete 削除、キーボード直接入力、右下浮遊パネル、JSON エクスポート / インポート、PNG 出力、下部説明の横3列レイアウト。</div>
+  </div>
+</section>
+
+<section id="editorScreen" class="screen hidden">
+  <div class="editor-layout">
+    <section class="panel">
+      <div class="toolbar">
+        <button id="backBtn" class="ghost">開始画面へ戻る</button>
+        <button id="exportBtn" class="primary">エクスポート</button>
+        <button id="renderBtn">出力画像を作成</button>
+        <button id="deleteBtn" class="danger">選択中の数字を削除</button>
+        <span id="saveState" class="subhint">未保存</span>
+      </div>
+      <div class="subhint" id="captureModeNote" style="margin-bottom:10px;">現在のデータは画像読み込みです。</div>
+      <div class="canvas-wrap" id="canvasWrap">
+        <img id="shotImage" alt="Screenshot">
+        <canvas id="overlay"></canvas>
+      </div>
+      <div class="subhint" style="margin-top:10px;">
+        画像の空いている場所をクリックすると番号を追加できます。番号はドラッグ移動、先端の小さなハンドルをドラッグで線の向きを回転できます。Delete キーで選択中の番号を削除できます。画像外や説明欄を押すと番号のフォーカスは外れます。左で番号を選ぶと、右の説明一覧はその番号が見やすい位置まで自動スクロールします。
+      </div>
+    </section>
+
+    <aside class="panel">
+      <h2 class="section-title">各番号の説明</h2>
+      <div id="infoList" class="info-list"></div>
+      <h2 class="section-title" style="margin-top:16px;">出力プレビュー</h2>
+      <canvas id="previewCanvas" class="preview-image"></canvas>
+    </aside>
+  </div>
+
+  <div class="footer-note">Ctrl+SでJSONをエクスポートします。入力内容は IndexedDB に自動保存されます。</div>
+</section>
+
+<div id="floatingPanel" class="floating-panel hidden">
+  <div class="fp-title">選択中の番号: <span id="fpNumber">-</span></div>
+  <div class="fp-meta">現在の入力内容</div>
+  <div id="fpBody" class="fp-body"></div>
+  <div class="fp-tip">番号選択中はキーボードで直接入力できます。Backspace で削除、Enter で改行、Delete で番号削除です。</div>
+</div>
+
+<script>
+const APP_VERSION = '1.3.0-html';
+const DB_NAME = 'site-instruction-maker-html-db';
+const STORE_NAME = 'kv';
+const AUTOSAVE_KEY = 'autosave';
+
+const startScreen = document.getElementById('startScreen');
+const editorScreen = document.getElementById('editorScreen');
+const resumeBtn = document.getElementById('resumeBtn');
+const importInput = document.getElementById('importInput');
+const imageInput = document.getElementById('imageInput');
+const backBtn = document.getElementById('backBtn');
+
+const shotImage = document.getElementById('shotImage');
+const overlay = document.getElementById('overlay');
+const infoList = document.getElementById('infoList');
+const previewCanvas = document.getElementById('previewCanvas');
+const exportBtn = document.getElementById('exportBtn');
+const renderBtn = document.getElementById('renderBtn');
+const deleteBtn = document.getElementById('deleteBtn');
+const saveState = document.getElementById('saveState');
+const captureModeNote = document.getElementById('captureModeNote');
+
+const floatingPanel = document.getElementById('floatingPanel');
+const fpNumber = document.getElementById('fpNumber');
+const fpBody = document.getElementById('fpBody');
+
+const ctx = overlay.getContext('2d');
+const previewCtx = previewCanvas.getContext('2d');
+
+let state = null;
+let dragMode = null;
+let dragOffset = { x: 0, y: 0 };
+let initialLineAngle = 0;
+let initialPointerAngle = 0;
+
+setupStartEvents();
+setupEditorEvents();
+
+async function setupStartEvents() {
+  const has = await idbGet(AUTOSAVE_KEY);
+  resumeBtn.disabled = !has;
+  resumeBtn.style.opacity = has ? '1' : '.55';
+
+  resumeBtn.addEventListener('click', async () => {
+    const saved = await idbGet(AUTOSAVE_KEY);
+    if (!saved) {
+      alert('前回データがありません。');
+      return;
+    }
+    await startEditor(migrateState(saved));
+  });
+
+  importInput.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      await startEditor(migrateState(parsed));
+    } catch (err) {
+      alert('JSONの読み込みに失敗しました。');
+      console.error(err);
+    } finally {
+      e.target.value = '';
+    }
+  });
+
+  imageInput.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const screenshot = await fileToDataURL(file);
+      const newState = {
+        version: 4,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        screenshot,
+        originalCapture: screenshot,
+        markers: [],
+        nextId: 1,
+        selectedMarkerId: null,
+        captureMode: 'image',
+        sourcePage: null
+      };
+      await startEditor(newState);
+    } catch (err) {
+      alert('画像の読み込みに失敗しました。');
+      console.error(err);
+    } finally {
+      e.target.value = '';
+    }
+  });
+
+  backBtn.addEventListener('click', () => {
+    editorScreen.classList.add('hidden');
+    startScreen.classList.remove('hidden');
+    updateFloatingPanel();
+  });
+}
+
+async function startEditor(initialState) {
+  state = initialState;
+  startScreen.classList.add('hidden');
+  editorScreen.classList.remove('hidden');
+  updateCaptureModeNote();
+
+  shotImage.onload = async () => {
+    resizeOverlay();
+    draw();
+    renderInfoList();
+    updateFloatingPanel();
+    await renderPreview();
+  };
+  shotImage.src = state.screenshot;
+  await autosave();
+}
+
+function migrateState(value) {
+  if (!value) return null;
+  return {
+    version: 4,
+    createdAt: value.createdAt || new Date().toISOString(),
+    updatedAt: value.updatedAt || new Date().toISOString(),
+    screenshot: value.screenshot,
+    originalCapture: value.originalCapture || value.screenshot,
+    markers: Array.isArray(value.markers)
+      ? value.markers.map(m => ({
+          id: m.id,
+          number: m.number,
+          x: m.x,
+          y: m.y,
+          text: m.text || '',
+          lineAngle: typeof m.lineAngle === 'number' ? m.lineAngle : -Math.PI / 4,
+          lineLength: typeof m.lineLength === 'number' ? m.lineLength : 34
+        }))
+      : [],
+    nextId: value.nextId || ((value.markers?.length || 0) + 1),
+    selectedMarkerId: value.selectedMarkerId || null,
+    captureMode: value.captureMode || 'image',
+    sourcePage: value.sourcePage || null
+  };
+}
+
+function setupEditorEvents() {
+  window.addEventListener('resize', () => {
+    if (!state) return;
+    resizeOverlay();
+    draw();
+  });
+
+  document.addEventListener('pointerdown', onDocumentPointerDown, true);
+  overlay.addEventListener('pointerdown', onPointerDown);
+  overlay.addEventListener('pointermove', onPointerMove);
+  overlay.addEventListener('pointerup', onPointerUp);
+  overlay.addEventListener('pointerleave', onPointerUp);
+  document.addEventListener('keydown', onDocumentKeyDown);
+
+  exportBtn.addEventListener('click', exportState);
+  renderBtn.addEventListener('click', async () => {
+    if (!state) return;
+    await renderPreview();
+    downloadDataUrl(previewCanvas.toDataURL('image/png'), `instruction-sheet-${timestamp()}-ver${APP_VERSION}.png`);
+  });
+  deleteBtn.addEventListener('click', deleteSelectedMarker);
+}
+
+async function onDocumentKeyDown(event) {
+  if (!state || startScreen.classList.contains('hidden') === false) return;
+
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+    event.preventDefault();
+    await exportState();
+    return;
+  }
+
+  const activeEl = document.activeElement;
+  const isTextEditingElement = activeEl && (
+    activeEl.tagName === 'TEXTAREA' ||
+    activeEl.tagName === 'INPUT' ||
+    activeEl.isContentEditable
+  );
+
+  const selected = getSelectedMarker();
+  if (selected && !isTextEditingElement && !event.ctrlKey && !event.metaKey && !event.altKey) {
+    if (event.key === 'Delete') {
+      event.preventDefault();
+      await deleteSelectedMarker();
+      return;
+    }
+    if (event.key === 'Backspace') {
+      event.preventDefault();
+      selected.text = selected.text.slice(0, -1);
+      syncMarkerTextToTextarea(selected.id);
+      await syncAfterTextChange();
+      return;
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      selected.text += '\n';
+      syncMarkerTextToTextarea(selected.id);
+      await syncAfterTextChange();
+      return;
+    }
+    if (event.key.length === 1) {
+      event.preventDefault();
+      selected.text += event.key;
+      syncMarkerTextToTextarea(selected.id);
+      await syncAfterTextChange();
+      return;
+    }
+  }
+
+  if (event.key === 'Delete' && !isTextEditingElement) {
+    event.preventDefault();
+    await deleteSelectedMarker();
+  }
+}
+
+function updateCaptureModeNote() {
+  if (!state) return;
+  captureModeNote.textContent =
+    state.captureMode === 'fullpage' ? '現在のデータはフルページ撮影です。' :
+    state.captureMode === 'visible' ? '現在のデータは表示範囲のみの撮影です。' :
+    '現在のデータは画像読み込みです。';
+}
+
+function updateFloatingPanel() {
+  const marker = getSelectedMarker();
+  if (!marker || startScreen.classList.contains('hidden') === false) {
+    floatingPanel.classList.add('hidden');
+    return;
+  }
+  fpNumber.textContent = circledNumber(marker.number);
+  fpBody.textContent = marker.text || '';
+  //floatingPanel.classList.remove('hidden');
+}
+
+function resizeOverlay() {
+  const rect = shotImage.getBoundingClientRect();
+  overlay.width = Math.round(rect.width);
+  overlay.height = Math.round(rect.height);
+  overlay.style.width = rect.width + 'px';
+  overlay.style.height = rect.height + 'px';
+}
+
+function onDocumentPointerDown(event) {
+  if (!state) return;
+  if (overlay.contains(event.target)) return;
+  if (event.target.closest('.info-item')) {
+    if (event.target.closest('textarea, input, button, label, select')) clearSelection();
+    return;
+  }
+  if (event.target.closest('.floating-panel')) return;
+  clearSelection();
+}
+
+function onPointerDown(event) {
+  if (!state) return;
+  const point = toImagePoint(event);
+  const marker = findHitMarker(point);
+  if (marker?.hitType === 'rotate') {
+    selectMarker(marker.marker.id);
+    dragMode = 'rotate';
+    initialLineAngle = marker.marker.lineAngle;
+    initialPointerAngle = Math.atan2(point.y - marker.marker.y, point.x - marker.marker.x);
+    overlay.setPointerCapture(event.pointerId);
+    draw();
+    return;
+  }
+  if (marker?.hitType === 'body') {
+    selectMarker(marker.marker.id);
+    dragMode = 'move';
+    dragOffset.x = point.x - marker.marker.x;
+    dragOffset.y = point.y - marker.marker.y;
+    overlay.setPointerCapture(event.pointerId);
+    draw();
+    return;
+  }
+  const newMarker = createMarker(point.x, point.y);
+  selectMarker(newMarker.id);
+  dragMode = null;
+  draw();
+  renderInfoList();
+  scrollInfoItemIntoView(newMarker.id);
+  renderPreview();
+  autosave();
+}
+
+function onPointerMove(event) {
+  if (!dragMode || !state) return;
+  const point = toImagePoint(event);
+  const marker = getSelectedMarker();
+  if (!marker) return;
+  if (dragMode === 'move') {
+    marker.x = clamp(point.x - dragOffset.x, 28, imageWidth() - 28);
+    marker.y = clamp(point.y - dragOffset.y, 28, imageHeight() - 28);
+  } else if (dragMode === 'rotate') {
+    const currentAngle = Math.atan2(point.y - marker.y, point.x - marker.x);
+    marker.lineAngle = initialLineAngle + (currentAngle - initialPointerAngle);
+  }
+  state.updatedAt = new Date().toISOString();
+  draw();
+  renderPreview();
+}
+
+function onPointerUp(event) {
+  if (event?.pointerId != null && overlay.hasPointerCapture(event.pointerId)) {
+    overlay.releasePointerCapture(event.pointerId);
+  }
+  if (!dragMode) return;
+  dragMode = null;
+  autosave();
+}
+
+function toImagePoint(event) {
+  const rect = overlay.getBoundingClientRect();
+  const scaleX = imageWidth() / rect.width;
+  const scaleY = imageHeight() / rect.height;
+  return { x: (event.clientX - rect.left) * scaleX, y: (event.clientY - rect.top) * scaleY };
+}
+function imageWidth(){ return shotImage.naturalWidth || 1; }
+function imageHeight(){ return shotImage.naturalHeight || 1; }
+
+function createMarker(x, y) {
+  const id = state.nextId++;
+  const marker = { id, number: getNextNumber(), x, y, text:'', lineAngle:-Math.PI/4, lineLength:34 };
+  state.markers.push(marker);
+  state.updatedAt = new Date().toISOString();
+  return marker;
+}
+function getNextNumber() {
+  const numbers = state.markers.map(m => m.number).sort((a,b)=>a-b);
+  let n = 1;
+  for (const value of numbers) { if (value === n) n++; else if (value > n) break; }
+  return n;
+}
+function findHitMarker(point) {
+  const radius = 20, rotateRadius = 10;
+  for (const marker of [...state.markers].reverse()) {
+    const dx = point.x - marker.x, dy = point.y - marker.y;
+    if (Math.hypot(dx,dy) <= radius) return { marker, hitType:'body' };
+    const handle = getRotateHandle(marker);
+    if (Math.hypot(point.x-handle.x, point.y-handle.y) <= rotateRadius) return { marker, hitType:'rotate' };
+  }
+  return null;
+}
+function getRotateHandle(marker) {
+  const len = marker.lineLength + 8;
+  return { x: marker.x + Math.cos(marker.lineAngle) * len, y: marker.y + Math.sin(marker.lineAngle) * len };
+}
+function selectMarker(id) {
+  state.selectedMarkerId = id;
+  renderInfoList();
+  scrollInfoItemIntoView(id);
+  draw();
+  updateFloatingPanel();
+}
+function clearSelection() {
+  if (!state?.selectedMarkerId) return;
+  state.selectedMarkerId = null;
+  renderInfoList();
+  draw();
+  updateFloatingPanel();
+}
+function getSelectedMarker() {
+  return state?.markers.find(m => m.id === state.selectedMarkerId) || null;
+}
+function getMarkerTextarea(markerId) {
+  return infoList.querySelector(`textarea[data-marker-id="${markerId}"]`);
+}
+function syncMarkerTextToTextarea(markerId) {
+  const marker = state.markers.find(m => m.id === markerId);
+  const textarea = getMarkerTextarea(markerId);
+  if (marker && textarea && textarea.value !== marker.text) textarea.value = marker.text;
+}
+async function deleteSelectedMarker() {
+  if (!state) return;
+  const marker = getSelectedMarker();
+  if (!marker) return;
+  state.markers = state.markers.filter(m => m.id !== marker.id);
+  renumberMarkers();
+  state.selectedMarkerId = null;
+  state.updatedAt = new Date().toISOString();
+  draw();
+  renderInfoList();
+  updateFloatingPanel();
+  await renderPreview();
+  await autosave();
+}
+function renumberMarkers() {
+  state.markers.sort((a,b)=>a.number-b.number).forEach((m,i)=>m.number=i+1);
+}
+function draw() {
+  if (!state) return;
+  ctx.clearRect(0,0,overlay.width,overlay.height);
+  drawMarkers(ctx, overlay.width / imageWidth(), overlay.height / imageHeight(), true, state.selectedMarkerId);
+}
+function drawMarkers(targetCtx, scaleX, scaleY, includeHandle, selectedId = null) {
+  targetCtx.save(); targetCtx.scale(scaleX, scaleY);
+  for (const marker of state.markers) {
+    const isSelected = marker.id === selectedId;
+    const handle = getRotateHandle(marker);
+    targetCtx.strokeStyle = '#e11d48';
+    targetCtx.fillStyle = '#ffffff';
+    targetCtx.lineWidth = 4;
+    targetCtx.beginPath();
+    targetCtx.moveTo(marker.x + Math.cos(marker.lineAngle)*22, marker.y + Math.sin(marker.lineAngle)*22);
+    targetCtx.lineTo(marker.x + Math.cos(marker.lineAngle)*(marker.lineLength+8), marker.y + Math.sin(marker.lineAngle)*(marker.lineLength+8));
+    targetCtx.stroke();
+
+    targetCtx.beginPath();
+    targetCtx.arc(marker.x, marker.y, 20, 0, Math.PI * 2);
+    targetCtx.fill(); targetCtx.stroke();
+
+    targetCtx.fillStyle = '#e11d48';
+    targetCtx.font = 'bold 20px sans-serif';
+    targetCtx.textAlign = 'center';
+    targetCtx.textBaseline = 'middle';
+    targetCtx.fillText(circledNumber(marker.number), marker.x, marker.y + 1);
+
+    if (includeHandle && isSelected) {
+      targetCtx.fillStyle = '#2563eb';
+      targetCtx.beginPath();
+      targetCtx.arc(handle.x, handle.y, 7, 0, Math.PI * 2);
+      targetCtx.fill();
+    }
+  }
+  targetCtx.restore();
+}
+function circledNumber(n) {
+  const map = ['⓪','①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳'];
+  return map[n] || String(n);
+}
+
+function renderInfoList() {
+  const selectedId = state?.selectedMarkerId;
+  const markers = [...(state?.markers || [])].sort((a,b)=>a.number-b.number);
+  infoList.innerHTML = '';
+  if (!markers.length) {
+    const empty = document.createElement('div');
+    empty.className = 'subhint';
+    empty.textContent = 'まだ番号がありません。画像をクリックすると追加されます。';
+    infoList.appendChild(empty);
+    return;
+  }
+  for (const marker of markers) {
+    const item = document.createElement('div');
+    item.className = 'info-item' + (marker.id === selectedId ? ' active' : '');
+    item.dataset.id = marker.id;
+
+    const head = document.createElement('div');
+    head.className = 'info-head';
+    head.textContent = `${circledNumber(marker.number)} 入力内容`;
+
+    const textarea = document.createElement('textarea');
+    textarea.value = marker.text;
+    textarea.placeholder = '修正指示を入力';
+    textarea.dataset.markerId = marker.id;
+    textarea.addEventListener('focus', () => clearSelection());
+    textarea.addEventListener('pointerdown', () => clearSelection());
+    textarea.addEventListener('input', async () => {
+      marker.text = textarea.value;
+      updateFloatingPanel();
+      await syncAfterTextChange(false);
+    });
+
+    item.addEventListener('pointerdown', (event) => {
+      if (event.target.closest('textarea')) return;
+      selectMarker(marker.id);
+    });
+    item.append(head, textarea);
+    infoList.appendChild(item);
+  }
+}
+function scrollInfoItemIntoView(markerId) {
+  if (!markerId) return;
+  const item = infoList.querySelector(`.info-item[data-id="${markerId}"]`);
+  if (!item) return;
+  const listRect = infoList.getBoundingClientRect();
+  const itemRect = item.getBoundingClientRect();
+  const margin = 16;
+  if (itemRect.top < listRect.top + margin) infoList.scrollTop -= (listRect.top + margin) - itemRect.top;
+  else if (itemRect.bottom > listRect.bottom - margin) infoList.scrollTop += itemRect.bottom - (listRect.bottom - margin);
+}
+async function syncAfterTextChange(refreshList = true) {
+  state.updatedAt = new Date().toISOString();
+  if (refreshList) renderInfoList();
+  updateFloatingPanel();
+  await renderPreview();
+  await autosave();
+}
+async function exportState() {
+  if (!state) return;
+  state.updatedAt = new Date().toISOString();
+  await autosave();
+  downloadBlob(new Blob([JSON.stringify(state, null, 2)], {type:'application/json'}), `instruction-sheet-${timestamp()}-ver${APP_VERSION}.json`);
+  saveState.textContent = 'JSONを書き出しました';
+}
+
+async function renderPreview() {
+  const markers = [...state.markers].sort((a, b) => a.number - b.number);
+  const width = imageWidth();
+  const layout = buildBottomLayout(previewCtx, markers, width);
+  const bottomHeight = Math.max(120, layout.height);
+
+  previewCanvas.width = width;
+  previewCanvas.height = imageHeight() + bottomHeight;
+
+  const img = await loadImage(state.screenshot);
+  previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+  previewCtx.fillStyle = '#ffffff';
+  previewCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+  previewCtx.drawImage(img, 0, 0, imageWidth(), imageHeight());
+  drawMarkers(previewCtx, 1, 1, false, null);
+
+  previewCtx.fillStyle = '#ffffff';
+  previewCtx.fillRect(0, imageHeight(), width, bottomHeight);
+  previewCtx.strokeStyle = '#d9dfeb';
+  previewCtx.lineWidth = 2;
+  previewCtx.beginPath();
+  previewCtx.moveTo(0, imageHeight());
+  previewCtx.lineTo(width, imageHeight());
+  previewCtx.stroke();
+
+  drawBottomLayout(previewCtx, layout, imageHeight());
+}
+
+function buildBottomLayout(targetCtx, markers, width) {
+  const paddingX = 36;
+  const paddingTop = 28;
+  const paddingBottom = 28;
+  const gutterX = 24;
+  const gutterY = 20;
+  const boxPaddingX = 20;
+  const boxPaddingY = 16;
+  const maxColumnsPerRow = 3;
+  const lineHeight = 34;
+  const titleGap = 10;
+
+  const usableWidth = Math.max(1, width - paddingX * 2);
+  const columnCount = Math.max(1, Math.min(maxColumnsPerRow, markers.length || 1));
+  const columnWidth = (usableWidth - gutterX * (columnCount - 1)) / columnCount;
+
+  targetCtx.save();
+  targetCtx.font = '28px sans-serif';
+
+  const items = [];
+  let currentY = paddingTop;
+
+  for (let start = 0; start < markers.length; start += columnCount) {
+    const rowMarkers = markers.slice(start, start + columnCount);
+    const rowItems = rowMarkers.map((marker, index) => {
+      const title = `${circledNumber(marker.number)} 入力内容`;
+      const bodyText = marker.text || '入力内容';
+      const lines = wrapText(targetCtx, bodyText, Math.max(80, columnWidth - boxPaddingX * 2));
+      const bodyHeight = Math.max(lineHeight, lines.length * lineHeight);
+      const itemHeight = boxPaddingY * 2 + lineHeight + titleGap + bodyHeight;
+      const x = paddingX + index * (columnWidth + gutterX);
+      return {
+        x,
+        width: columnWidth,
+        title,
+        lines,
+        measuredHeight: itemHeight
+      };
+    });
+
+    const rowHeight = rowItems.length
+      ? Math.max(...rowItems.map(item => item.measuredHeight))
+      : 0;
+
+    for (const item of rowItems) {
+      items.push({
+        x: item.x,
+        y: currentY,
+        width: item.width,
+        height: rowHeight,
+        title: item.title,
+        lines: item.lines
+      });
+    }
+
+    currentY += rowHeight + gutterY;
+  }
+
+  targetCtx.restore();
+
+  const contentBottom = items.length
+    ? Math.max(...items.map(item => item.y + item.height))
+    : paddingTop + 32;
+
+  return {
+    width,
+    height: contentBottom + paddingBottom,
+    columnWidth,
+    items,
+    style: {
+      paddingX,
+      paddingTop,
+      paddingBottom,
+      gutterX,
+      gutterY,
+      boxPaddingX,
+      boxPaddingY,
+      lineHeight,
+      titleGap,
+      maxColumnsPerRow
+    }
+  };
+}
+
+function drawBottomLayout(targetCtx, layout, offsetY) {
+  const { items, style } = layout;
+  for (const item of items) {
+    const x = item.x, y = offsetY + item.y;
+    targetCtx.fillStyle = '#f8fafc';
+    targetCtx.strokeStyle = '#d9dfeb';
+    targetCtx.lineWidth = 2;
+    roundRect(targetCtx, x, y, item.width, item.height, 16);
+    targetCtx.fill(); targetCtx.stroke();
+
+    targetCtx.fillStyle = '#111827';
+    targetCtx.font = 'bold 28px sans-serif';
+    targetCtx.textAlign = 'left'; targetCtx.textBaseline = 'top';
+    targetCtx.fillText(item.title, x + style.boxPaddingX, y + style.boxPaddingY);
+
+    targetCtx.fillStyle = '#1f2937';
+    targetCtx.font = '28px sans-serif';
+    let lineY = y + style.boxPaddingY + style.lineHeight + style.titleGap;
+    for (const line of item.lines) {
+      targetCtx.fillText(line, x + style.boxPaddingX, lineY);
+      lineY += style.lineHeight;
+    }
+  }
+}
+
+function wrapText(targetCtx, text, maxWidth) {
+  const raw = String(text || '').replace(/\r\n/g, '\n').split('\n');
+  const lines = [];
+  for (const paragraph of raw) {
+    if (!paragraph) { lines.push(''); continue; }
+    let current = '';
+    for (const char of Array.from(paragraph)) {
+      const candidate = current + char;
+      if (current && targetCtx.measureText(candidate).width > maxWidth) { lines.push(current); current = char; }
+      else current = candidate;
+    }
+    lines.push(current || '');
+  }
+  return lines.length ? lines : [''];
+}
+function roundRect(targetCtx, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
+  targetCtx.beginPath();
+  targetCtx.moveTo(x+r,y);
+  targetCtx.arcTo(x+width,y,x+width,y+height,r);
+  targetCtx.arcTo(x+width,y+height,x,y+height,r);
+  targetCtx.arcTo(x,y+height,x,y,r);
+  targetCtx.arcTo(x,y,x+width,y,r);
+  targetCtx.closePath();
+}
+function loadImage(src) {
+  return new Promise((resolve,reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+async function autosave() {
+  if (!state) return;
+  state.updatedAt = new Date().toISOString();
+  await idbSet(AUTOSAVE_KEY, state);
+  saveState.textContent = `自動保存済み (${new Date().toLocaleTimeString('ja-JP')})`;
+  const has = await idbGet(AUTOSAVE_KEY);
+  resumeBtn.disabled = !has;
+  resumeBtn.style.opacity = has ? '1' : '.55';
+}
+function timestamp() {
+  const d = new Date(), pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+}
+function clamp(v,min,max){ return Math.min(max, Math.max(min, v)); }
+
+function fileToDataURL(file) {
+  return new Promise((resolve,reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function downloadDataUrl(dataUrl, filename) {
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = filename;
+  a.click();
+}
+
+function openDb() {
+  return new Promise((resolve,reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(STORE_NAME);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbGet(key) {
+  const db = await openDb();
+  return new Promise((resolve,reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).get(key);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbSet(key, value) {
+  const db = await openDb();
+  return new Promise((resolve,reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).put(value, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+</script>
+</body>
+</html>
