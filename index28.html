@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>左上→右下グラデーション見本</title>
+<style>
+:root{
+  --bg:#eef6fb;
+  --panel:#ffffff;
+  --panel2:#f7fbff;
+  --ink:#243447;
+  --muted:#6b7c8f;
+  --acc:#4aa3a2;
+  --acc2:#2f7e8d;
+  --line:#d7e4ee;
+  --line2:#bdd2e0;
+  --soft:#eef8fb;
+  --soft2:#e7f7f6;
+  --danger:#d9687b;
+  --danger-soft:#fff1f3;
+  --shadow:0 12px 40px rgb(57 95 128 / 10%);
+}
+
+*{
+  box-sizing:border-box;
+}
+
+html,body{
+  margin:0;
+  min-height:100%;
+  background:
+    radial-gradient(circle at top left, #eef7ff 0%, transparent 34%),
+    radial-gradient(circle at top right, #f0fff8 0%, transparent 30%),
+    linear-gradient(180deg, #f7fbff 0%, #eef6fb 100%);
+  color:var(--ink);
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Hiragino Sans","Noto Sans JP","Yu Gothic UI","Meiryo",sans-serif;
+}
+
+body{
+  background-repeat:no-repeat;
+  background-attachment:scroll;
+}
+
+.wrap{
+  max-width:1280px;
+  margin:28px auto;
+  padding:0 16px 40px;
+}
+
+.hero{
+  background:linear-gradient(135deg, #ffffff 0%, #f3fbff 45%, #e8f7f5 100%);
+  border:1px solid var(--line);
+  border-radius:18px;
+  box-shadow:var(--shadow);
+  padding:20px 22px;
+  margin-bottom:18px;
+}
+
+.hero h1{
+  margin:0 0 8px;
+  font-size:24px;
+}
+
+.hero p{
+  margin:0;
+  color:var(--muted);
+  line-height:1.7;
+}
+
+.note{
+  margin-top:10px;
+  font-size:13px;
+  color:#486072;
+}
+
+.section{
+  margin-top:22px;
+}
+
+.section-title{
+  margin:0 0 12px;
+  font-size:18px;
+  color:var(--ink);
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(250px, 1fr));
+  gap:16px;
+}
+
+.card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:0 8px 24px rgba(57,95,128,.08);
+  overflow:hidden;
+}
+
+.card-preview{
+  min-height:140px;
+  padding:18px;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+  gap:8px;
+  border-bottom:1px solid rgba(255,255,255,.35);
+}
+
+.card-preview h3{
+  margin:0;
+  font-size:18px;
+}
+
+.card-preview p{
+  margin:0;
+  font-size:13px;
+  line-height:1.6;
+  color:#355066;
+}
+
+.card-meta{
+  padding:12px 14px;
+  background:#ffffff;
+  border-top:1px solid var(--line);
+}
+
+.code{
+  margin:0;
+  font-size:12px;
+  line-height:1.6;
+  color:var(--muted);
+  word-break:break-word;
+}
+
+.buttons{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(190px, 1fr));
+  gap:14px;
+}
+
+.button-card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:0 8px 24px rgba(57,95,128,.08);
+  padding:16px;
+}
+
+.button-card h3{
+  margin:0 0 12px;
+  font-size:16px;
+}
+
+.demo-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center;
+}
+
+.demo-btn{
+  appearance:none;
+  border-radius:12px;
+  padding:11px 16px;
+  border:1px solid var(--line2);
+  color:var(--ink);
+  font-weight:700;
+  cursor:pointer;
+  box-shadow:0 6px 18px rgba(57,95,128,.08);
+  transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease, filter .15s ease;
+}
+
+.demo-btn:hover{
+  transform:translateY(-1px);
+  box-shadow:0 10px 24px rgba(57,95,128,.12);
+  filter:brightness(1.02);
+}
+
+.demo-btn:focus-visible{
+  outline:none;
+  border-color:var(--acc2);
+  box-shadow:0 0 0 4px rgba(74,163,162,.18);
+}
+
+.tag{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-size:12px;
+  font-weight:700;
+  color:#355066;
+  background:#f7fbff;
+  border:1px solid var(--line);
+  border-radius:999px;
+  padding:6px 10px;
+}
+
+.tag::before{
+  content:"";
+  width:8px;
+  height:8px;
+  border-radius:999px;
+  background:linear-gradient(135deg, var(--acc), #5b8def);
+  box-shadow:0 0 0 4px rgba(74,163,162,.10);
+}
+
+.panel-a{ background:linear-gradient(135deg, #ffffff 0%, #f8fcff 55%, #eef8fb 100%); }
+.panel-b{ background:linear-gradient(135deg, #ffffff 0%, #f5fbff 45%, #e7f7f6 100%); }
+.panel-c{ background:linear-gradient(135deg, #fbfdff 0%, #eef7ff 52%, #dff5f2 100%); }
+.panel-d{ background:linear-gradient(135deg, #ffffff 0%, #f3faff 40%, #d8eef7 100%); }
+.panel-e{ background:linear-gradient(135deg, #ffffff 0%, #f9fcff 35%, #edf4ff 100%); }
+.panel-f{ background:linear-gradient(135deg, #ffffff 0%, #f8fcff 38%, #fff3f6 100%); }
+.panel-g{ background:linear-gradient(135deg, #fafdff 0%, #eef8fb 50%, #d8f0ef 100%); }
+.panel-h{ background:linear-gradient(135deg, #ffffff 0%, #f4fbf8 42%, #def6ea 100%); }
+.panel-i{ background:linear-gradient(135deg, #ffffff 0%, #f7fbff 45%, #e8eefc 100%); }
+.panel-j{ background:linear-gradient(135deg, #ffffff 0%, #fefcff 48%, #f5edf8 100%); }
+.panel-k{ background:linear-gradient(135deg, #ffffff 0%, #f7fbff 42%, #e7f2ff 100%); }
+.panel-l{ background:linear-gradient(135deg, #ffffff 0%, #f4fbff 42%, #d9edf7 100%); }
+
+.btn-a{ background:linear-gradient(135deg, #ffffff 0%, #eef8fb 100%); }
+.btn-b{ background:linear-gradient(135deg, #ffffff 0%, #e7f7f6 100%); }
+.btn-c{ background:linear-gradient(135deg, #ffffff 0%, #edf4ff 100%); }
+.btn-d{ background:linear-gradient(135deg, #ffffff 0%, #fff1f3 100%); border-color:#efc7d0; color:#8b4252; }
+.btn-e{ background:linear-gradient(135deg, #ffffff 0%, #e8f7f5 55%, #d8eef7 100%); }
+.btn-f{ background:linear-gradient(135deg, #ffffff 0%, #f3fbff 50%, #e6eefb 100%); }
+.btn-g{ background:linear-gradient(135deg, #ffffff 0%, #f4fbf8 45%, #def6ea 100%); }
+.btn-h{ background:linear-gradient(135deg, #ffffff 0%, #fdfcff 48%, #f2eafa 100%); }
+
+.preview-chip{
+  display:inline-flex;
+  align-items:center;
+  align-self:flex-start;
+  min-height:30px;
+  padding:6px 10px;
+  border-radius:999px;
+  background:rgba(255,255,255,.72);
+  backdrop-filter:blur(6px);
+  border:1px solid rgba(255,255,255,.65);
+  font-size:12px;
+  font-weight:700;
+  color:#355066;
+}
+
+@media (max-width:700px){
+  .hero h1{
+    font-size:21px;
+  }
+}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <h1>左上 → 右下 グラデーション見本</h1>
+      <p>
+        情報源サイトの配色トーンをもとに、左上から右下へ色が変化するパネル・ボタンを比較できる確認用ページです。
+        元サイトに近い淡い青緑系を中心に、青寄り・緑寄り・赤寄り・紫寄りも並べています。
+      </p>
+      <div class="note">
+        現行情報源では縦方向グラデーションが多いため、これは「情報源の色味に寄せた候補比較サイト」です。
+      </div>
+    </div>
+
+    <section class="section">
+      <h2 class="section-title">パネル候補</h2>
+      <div class="grid">
+        <article class="card">
+          <div class="card-preview panel-a">
+            <span class="preview-chip">標準・かなり近い方向</span>
+            <h3>やわらか青水色</h3>
+            <p>最も無難で、既存サイトの空気感にかなり寄せやすい組み合わせです。</p>
+          </div>
+          <div class="card-meta"><p class="code">linear-gradient(135deg, #ffffff 0%, #f8fcff 55%, #eef8fb 100%)</p></div>
+        </article>
+
+        <article class="card">
+          <div class="card-preview panel-b">
+            <span class="preview-chip">青緑を少し強め</span>
+            <h3>ミント寄り</h3>
+            <p>やさしい清潔感を出しつつ、ボタンとも合わせやすい見た目です。</p>
+          </div>
+          <div class="card-meta"><p class="code">linear-gradient(135deg, #ffffff 0%, #f5fbff 45%, #e7f7f6 100%)</p></div>
+        </article>
+
+        <article class="card">
+          <div class="card-preview panel-c">
+            <span class="preview-chip">やや彩度あり</span>
+            <h3>少しはっきりした青緑</h3>
+            <p>見た目の変化が分かりやすく、比較検証向きです。</p>
+          </div>
+          <div class="card-meta"><p class="code">linear-gradient(135deg, #fbfdff 0%, #eef7ff 52%, #dff5f2 100%)</p></div>
+        </article>
+
+        <article class="card">
+          <div class="card-preview panel-d">
+            <span class="preview-chip">青寄り</span>
+            <h3>淡いブルーガラス風</h3>
+            <p>プレビューや説明カードなど、少し情報感を出したい箇所向けです。</p>
+          </div>
+          <div class="card-meta"><p class="code">linear-gradient(135deg, #ffffff 0%, #f3faff 40%, #d8eef7 100%)</p></div>
+        </article>
+
+        <article class="card">
+          <div class="card-preview panel-e">
+            <span class="preview-chip">かなり薄め</span>
+            <h3>ほぼ白の上品系</h3>
+            <p>主張を抑えたいが、完全な単色にはしたくない場合に向いています。</p>
+          </div>
+          <div class="card-meta"><p class="code">linear-gradient(135deg, #ffffff 0%, #f9fcff 35%, #edf4ff 100%)</p></div>
+        </article>
+
+        <article class="card">
+          <div class="card-preview panel-f">
+            <span class="preview-chip">差し色用</span>
+            <h3>やわらか赤み</h3>
+            <p>警告や注目エリア向けの派生候補です。既存の danger 系と相性があります。</p>
+          </div>
+          <div class="card-meta"><p class="code">linear-gradient(135deg, #ffffff 0%, #f8fcff 38%, #fff3f6 100%)</p></div>
+        </article>
+
+        <article class="card">
+          <div class="card-preview panel-g">
+            <span class="preview-chip">アクセント系</span>
+            <h3>青緑の中間</h3>
+            <p>全体を青にも緑にも寄せすぎない、バランス型の候補です。</p>
+          </div>
+          <div class="card-meta"><p class="code">linear-gradient(135deg, #fafdff 0%, #eef8fb 50%, #d8f0ef 100%)</p></div>
+        </article>
+
+        <article class="card">
+          <div class="card-preview panel-h">
+            <span class="preview-chip">緑寄り</span>
+            <h3>明るいミント</h3>
+            <p>補助ページや成功メッセージ寄りのエリアに使いやすいです。</p>
+          </div>
+          <div class="card-meta"><p class="code">linear-gradient(135deg, #ffffff 0%, #f4fbf8 42%, #def6ea 100%)</p></div>
+        </article>
+
+        <article class="card">
+          <div class="card-preview panel-i">
+            <span class="preview-chip">青紫寄り</span>
+            <h3>やわらか知的系</h3>
+            <p>少しだけクールさを足したい場合の候補です。</p>
+          </div>
+          <div class="card-meta"><p class="code">linear-gradient(135deg, #ffffff 0%, #f7fbff 45%, #e8eefc 100%)</p></div>
+        </article>
+
+        <article class="card">
+          <div class="card-preview panel-j">
+            <span class="preview-chip">変化球</span>
+            <h3>白×淡い紫</h3>
+            <p>姉妹サイト感を残しつつ、別ページ感を出したいとき向けです。</p>
+          </div>
+          <div class="card-meta"><p class="code">linear-gradient(135deg, #ffffff 0%, #fefcff 48%, #f5edf8 100%)</p></div>
+        </article>
+
+        <article class="card">
+          <div class="card-preview panel-k">
+            <span class="preview-chip">青をやや強調</span>
+            <h3>澄んだライトブルー</h3>
+            <p>情報表示や参照ページらしい見た目を出しやすい候補です。</p>
+          </div>
+          <div class="card-meta"><p class="code">linear-gradient(135deg, #ffffff 0%, #f7fbff 42%, #e7f2ff 100%)</p></div>
+        </article>
+
+        <article class="card">
+          <div class="card-preview panel-l">
+            <span class="preview-chip">現行にかなり近い</span>
+            <h3>プレビューカード風</h3>
+            <p>既存の preview-card を斜め化したイメージに近い候補です。</p>
+          </div>
+          <div class="card-meta"><p class="code">linear-gradient(135deg, #ffffff 0%, #f4fbff 42%, #d9edf7 100%)</p></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">ボタン候補</h2>
+      <div class="buttons">
+        <article class="button-card">
+          <h3>基本ボタンA</h3>
+          <div class="demo-row">
+            <button class="demo-btn btn-a">通常操作</button>
+            <span class="tag">素直な青水色</span>
+          </div>
+        </article>
+
+        <article class="button-card">
+          <h3>基本ボタンB</h3>
+          <div class="demo-row">
+            <button class="demo-btn btn-b">保存する</button>
+            <span class="tag">緑みを少し追加</span>
+          </div>
+        </article>
+
+        <article class="button-card">
+          <h3>基本ボタンC</h3>
+          <div class="demo-row">
+            <button class="demo-btn btn-c">読み込む</button>
+            <span class="tag">青寄り</span>
+          </div>
+        </article>
+
+        <article class="button-card">
+          <h3>注意系ボタン</h3>
+          <div class="demo-row">
+            <button class="demo-btn btn-d">削除する</button>
+            <span class="tag">danger派生</span>
+          </div>
+        </article>
+
+        <article class="button-card">
+          <h3>混合系ボタン</h3>
+          <div class="demo-row">
+            <button class="demo-btn btn-e">プレビュー</button>
+            <span class="tag">青緑バランス型</span>
+          </div>
+        </article>
+
+        <article class="button-card">
+          <h3>淡いガラス風</h3>
+          <div class="demo-row">
+            <button class="demo-btn btn-f">比較する</button>
+            <span class="tag">軽めの透明感</span>
+          </div>
+        </article>
+
+        <article class="button-card">
+          <h3>ミント系</h3>
+          <div class="demo-row">
+            <button class="demo-btn btn-g">候補を表示</button>
+            <span class="tag">やさしい緑感</span>
+          </div>
+        </article>
+
+        <article class="button-card">
+          <h3>姉妹サイト差別化用</h3>
+          <div class="demo-row">
+            <button class="demo-btn btn-h">特別ページ</button>
+            <span class="tag">少し紫寄り</span>
+          </div>
+        </article>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
