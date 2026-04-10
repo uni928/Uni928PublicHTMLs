@@ -1446,7 +1446,7 @@ function applyDemoBtnInline(el) {
     WebkitAppearance: "none",
     boxSizing: "border-box",
     borderRadius: "12px",
-    padding: "15px 16px",
+    padding: "11px 16px",
     minHeight: "44px",
     fontWeight: "700",
     fontSize: "14px",
@@ -1458,7 +1458,9 @@ function applyDemoBtnInline(el) {
     alignItems: "center",
     justifyContent: "center",
     textAlign: "center",
-    whiteSpace: "nowrap"
+    verticalAlign: "middle",
+    whiteSpace: "nowrap",
+    transition: "transform .15s ease, box-shadow .15s ease, border-color .15s ease, filter .15s ease"
   });
 
   if (!el.style.border) {
@@ -1469,6 +1471,40 @@ function applyDemoBtnInline(el) {
   }
   if (!el.style.background) {
     el.style.background = "#ffffff";
+  }
+
+  if (!el.dataset.copyInteractiveBound) {
+    el.dataset.copyInteractiveBound = "true";
+
+    el.setAttribute(
+      "onmouseover",
+      "this.style.transform='translateY(-1px)';this.style.boxShadow='0 10px 24px rgba(57,95,128,.12)';this.style.filter='brightness(1.02)'"
+    );
+
+    el.setAttribute(
+      "onmouseout",
+      "this.style.transform='';this.style.boxShadow='0 6px 18px rgba(57,95,128,.08)';this.style.filter=''"
+    );
+
+    el.setAttribute(
+      "onfocus",
+      "this.style.outline='none';this.style.borderColor='#2f7e8d';this.style.boxShadow='0 0 0 4px rgba(74,163,162,.18), 0 10px 24px rgba(57,95,128,.12)'"
+    );
+
+    el.setAttribute(
+      "onblur",
+      "this.style.outline='';this.style.borderColor='';this.style.boxShadow='0 6px 18px rgba(57,95,128,.08)'"
+    );
+
+    el.setAttribute(
+      "onmousedown",
+      "this.style.transform='translateY(0) scale(0.98)';this.style.filter='brightness(0.98)'"
+    );
+
+    el.setAttribute(
+      "onmouseup",
+      "this.style.transform='translateY(-1px) scale(1)';this.style.filter='brightness(1.02)'"
+    );
   }
 }
 
