@@ -253,26 +253,33 @@ body{
 <body>
   <div class="wrap">
     <div class="hero">
-      <h1>左上 → 右下 グラデーション見本</h1>
+      <h1>グラデーション早見表</h1>
       <p>
-        情報源サイトの配色トーンをもとに、左上から右下へ色が変化するパネル・ボタンを比較できる確認用ページです。
-        元サイトに近い淡い青緑系を中心に、青寄り・緑寄り・赤寄り・紫寄りも並べています。
+        見た目を確認しながら、そのままコピペできる形に整理した一覧です。
+        パネル用は <code>&lt;article&gt;</code>、ボタン用は <code>&lt;button&gt;</code> の形式で載せています。
       </p>
       <div class="note">
-        現行情報源では縦方向グラデーションが多いため、これは「情報源の色味に寄せた候補比較サイト」です。
+        「見本」ではなく「実用寄り」に寄せ、プレビュー・説明・コード・コピー操作をひとつのカードにまとめています。
       </div>
     </div>
 
     <section class="section">
       <h2 class="section-title">パネル候補</h2>
       <div class="grid">
+
+        <!-- パターン：情報量維持 + コード拡張 -->
         <article class="card">
           <div class="card-preview panel-a">
             <span class="preview-chip">標準・かなり近い方向</span>
             <h3>やわらか青水色</h3>
             <p>最も無難で、既存サイトの空気感にかなり寄せやすい組み合わせです。</p>
           </div>
-          <div class="card-meta"><p class="code">linear-gradient(135deg, #ffffff 0%, #f8fcff 55%, #eef8fb 100%)</p></div>
+          <div class="card-meta">
+            <p class="code">
+              linear-gradient(135deg, #ffffff 0%, #f8fcff 55%, #eef8fb 100%)<br>
+              &lt;article style="background:linear-gradient(135deg,#ffffff 0%,#f8fcff 55%,#eef8fb 100%);padding:20px;min-height:120px;border-radius:16px;border:1px solid #d7e4ee;"&gt;&lt;/article&gt;
+            </p>
+          </div>
         </article>
 
         <article class="card">
@@ -281,7 +288,12 @@ body{
             <h3>ミント寄り</h3>
             <p>やさしい清潔感を出しつつ、ボタンとも合わせやすい見た目です。</p>
           </div>
-          <div class="card-meta"><p class="code">linear-gradient(135deg, #ffffff 0%, #f5fbff 45%, #e7f7f6 100%)</p></div>
+          <div class="card-meta">
+            <p class="code">
+              linear-gradient(135deg, #ffffff 0%, #f5fbff 45%, #e7f7f6 100%)<br>
+              &lt;article style="background:linear-gradient(135deg,#ffffff 0%,#f5fbff 45%,#e7f7f6 100%);padding:20px;min-height:120px;border-radius:16px;border:1px solid #d7e4ee;"&gt;&lt;/article&gt;
+            </p>
+          </div>
         </article>
 
         <article class="card">
@@ -290,62 +302,197 @@ body{
             <h3>少しはっきりした青緑</h3>
             <p>見た目の変化が分かりやすく、比較検証向きです。</p>
           </div>
-          <div class="card-meta"><p class="code">linear-gradient(135deg, #fbfdff 0%, #eef7ff 52%, #dff5f2 100%)</p></div>
+          <div class="card-meta">
+            <p class="code">
+              linear-gradient(135deg, #fbfdff 0%, #eef7ff 52%, #dff5f2 100%)<br>
+              &lt;article style="background:linear-gradient(135deg,#fbfdff 0%,#eef7ff 52%,#dff5f2 100%);padding:20px;min-height:120px;border-radius:16px;border:1px solid #d7e4ee;"&gt;&lt;/article&gt;
+            </p>
+          </div>
         </article>
 
-        <article class="card">
-          <div class="card-preview panel-d">
-            <span class="preview-chip">青寄り</span>
-            <h3>淡いブルーガラス風</h3>
-            <p>プレビューや説明カードなど、少し情報感を出したい箇所向けです。</p>
-          </div>
-          <div class="card-meta"><p class="code">linear-gradient(135deg, #ffffff 0%, #f3faff 40%, #d8eef7 100%)</p></div>
-        </article>
 
-        <article class="card">
-          <div class="card-preview panel-e">
-            <span class="preview-chip">かなり薄め</span>
-            <h3>ほぼ白の上品系</h3>
-            <p>主張を抑えたいが、完全な単色にはしたくない場合に向いています。</p>
-          </div>
-          <div class="card-meta"><p class="code">linear-gradient(135deg, #ffffff 0%, #f9fcff 35%, #edf4ff 100%)</p></div>
-        </article>
+<!-- panel-a -->
+<article class="card">
+  <div class="card-preview panel-a">
+    <span class="preview-chip">標準・かなり近い方向</span>
+    <h3>やわらか青水色</h3>
+    <p>最も無難で、既存サイトに寄せやすい基本パターンです。</p>
+  </div>
+  <div class="card-meta">
+    <p class="code">
+      linear-gradient(135deg, #ffffff 0%, #f8fcff 55%, #eef8fb 100%)<br>
+      &lt;article style="background:linear-gradient(135deg,#ffffff 0%,#f8fcff 55%,#eef8fb 100%);padding:20px;min-height:120px;border-radius:16px;border:1px solid #d7e4ee;"&gt;&lt;/article&gt;
+    </p>
+  </div>
+</article>
 
-        <article class="card">
-          <div class="card-preview panel-f">
-            <span class="preview-chip">差し色用</span>
-            <h3>やわらか赤み</h3>
-            <p>警告や注目エリア向けの派生候補です。既存の danger 系と相性があります。</p>
-          </div>
-          <div class="card-meta"><p class="code">linear-gradient(135deg, #ffffff 0%, #f8fcff 38%, #fff3f6 100%)</p></div>
-        </article>
+<!-- panel-b -->
+<article class="card">
+  <div class="card-preview panel-b">
+    <span class="preview-chip">青緑強め</span>
+    <h3>ミント寄り</h3>
+    <p>清潔感が強く、UI全体を爽やかに見せる配色です。</p>
+  </div>
+  <div class="card-meta">
+    <p class="code">
+      linear-gradient(135deg, #ffffff 0%, #f5fbff 45%, #e7f7f6 100%)<br>
+      &lt;article style="background:linear-gradient(135deg,#ffffff 0%,#f5fbff 45%,#e7f7f6 100%);padding:20px;min-height:120px;border-radius:16px;border:1px solid #d7e4ee;"&gt;&lt;/article&gt;
+    </p>
+  </div>
+</article>
 
-        <article class="card">
-          <div class="card-preview panel-g">
-            <span class="preview-chip">アクセント系</span>
-            <h3>青緑の中間</h3>
-            <p>全体を青にも緑にも寄せすぎない、バランス型の候補です。</p>
-          </div>
-          <div class="card-meta"><p class="code">linear-gradient(135deg, #fafdff 0%, #eef8fb 50%, #d8f0ef 100%)</p></div>
-        </article>
+<!-- panel-c -->
+<article class="card">
+  <div class="card-preview panel-c">
+    <span class="preview-chip">彩度あり</span>
+    <h3>少しはっきりした青緑</h3>
+    <p>視認性が高く、比較表示や強調用途に向いています。</p>
+  </div>
+  <div class="card-meta">
+    <p class="code">
+      linear-gradient(135deg, #fbfdff 0%, #eef7ff 52%, #dff5f2 100%)<br>
+      &lt;article style="background:linear-gradient(135deg,#fbfdff 0%,#eef7ff 52%,#dff5f2 100%);padding:20px;min-height:120px;border-radius:16px;border:1px solid #d7e4ee;"&gt;&lt;/article&gt;
+    </p>
+  </div>
+</article>
 
-        <article class="card">
-          <div class="card-preview panel-h">
-            <span class="preview-chip">緑寄り</span>
-            <h3>明るいミント</h3>
-            <p>補助ページや成功メッセージ寄りのエリアに使いやすいです。</p>
-          </div>
-          <div class="card-meta"><p class="code">linear-gradient(135deg, #ffffff 0%, #f4fbf8 42%, #def6ea 100%)</p></div>
-        </article>
+<!-- panel-d -->
+<article class="card">
+  <div class="card-preview panel-d">
+    <span class="preview-chip">青寄り</span>
+    <h3>ブルーガラス風</h3>
+    <p>情報UI・ダッシュボード系に相性の良いカラーです。</p>
+  </div>
+  <div class="card-meta">
+    <p class="code">
+      linear-gradient(135deg, #ffffff 0%, #f3faff 40%, #d8eef7 100%)<br>
+      &lt;article style="background:linear-gradient(135deg,#ffffff 0%,#f3faff 40%,#d8eef7 100%);padding:20px;min-height:120px;border-radius:16px;border:1px solid #d7e4ee;"&gt;&lt;/article&gt;
+    </p>
+  </div>
+</article>
 
-        <article class="card">
-          <div class="card-preview panel-i">
-            <span class="preview-chip">青紫寄り</span>
-            <h3>やわらか知的系</h3>
-            <p>少しだけクールさを足したい場合の候補です。</p>
-          </div>
-          <div class="card-meta"><p class="code">linear-gradient(135deg, #ffffff 0%, #f7fbff 45%, #e8eefc 100%)</p></div>
-        </article>
+<!-- panel-e -->
+<article class="card">
+  <div class="card-preview panel-e">
+    <span class="preview-chip">極薄</span>
+    <h3>上品ホワイト</h3>
+    <p>ほぼ白で主張を抑えつつ、単色より柔らかい印象です。</p>
+  </div>
+  <div class="card-meta">
+    <p class="code">
+      linear-gradient(135deg, #ffffff 0%, #f9fcff 35%, #edf4ff 100%)<br>
+      &lt;article style="background:linear-gradient(135deg,#ffffff 0%,#f9fcff 35%,#edf4ff 100%);padding:20px;min-height:120px;border-radius:16px;border:1px solid #d7e4ee;"&gt;&lt;/article&gt;
+    </p>
+  </div>
+</article>
+
+<!-- panel-f -->
+<article class="card">
+  <div class="card-preview panel-f">
+    <span class="preview-chip">注意系</span>
+    <h3>やわらか赤み</h3>
+    <p>警告・重要情報などのアクセント表示に適しています。</p>
+  </div>
+  <div class="card-meta">
+    <p class="code">
+      linear-gradient(135deg, #ffffff 0%, #f8fcff 38%, #fff3f6 100%)<br>
+      &lt;article style="background:linear-gradient(135deg,#ffffff 0%,#f8fcff 38%,#fff3f6 100%);padding:20px;min-height:120px;border-radius:16px;border:1px solid #d7e4ee;"&gt;&lt;/article&gt;
+    </p>
+  </div>
+</article>
+
+<!-- panel-g -->
+<article class="card">
+  <div class="card-preview panel-g">
+    <span class="preview-chip">中間型</span>
+    <h3>青緑バランス</h3>
+    <p>青・緑どちらにも寄せすぎない万能カラーです。</p>
+  </div>
+  <div class="card-meta">
+    <p class="code">
+      linear-gradient(135deg, #fafdff 0%, #eef8fb 50%, #d8f0ef 100%)<br>
+      &lt;article style="background:linear-gradient(135deg,#fafdff 0%,#eef8fb 50%,#d8f0ef 100%);padding:20px;min-height:120px;border-radius:16px;border:1px solid #d7e4ee;"&gt;&lt;/article&gt;
+    </p>
+  </div>
+</article>
+
+<!-- panel-h -->
+<article class="card">
+  <div class="card-preview panel-h">
+    <span class="preview-chip">緑寄り</span>
+    <h3>ミントグリーン</h3>
+    <p>成功表示・完了メッセージなどに適した配色です。</p>
+  </div>
+  <div class="card-meta">
+    <p class="code">
+      linear-gradient(135deg, #ffffff 0%, #f4fbf8 42%, #def6ea 100%)<br>
+      &lt;article style="background:linear-gradient(135deg,#ffffff 0%,#f4fbf8 42%,#def6ea 100%);padding:20px;min-height:120px;border-radius:16px;border:1px solid #d7e4ee;"&gt;&lt;/article&gt;
+    </p>
+  </div>
+</article>
+
+<!-- panel-i -->
+<article class="card">
+  <div class="card-preview panel-i">
+    <span class="preview-chip">青紫</span>
+    <h3>知的系</h3>
+    <p>クールで落ち着いた印象を与える色合いです。</p>
+  </div>
+  <div class="card-meta">
+    <p class="code">
+      linear-gradient(135deg, #ffffff 0%, #f7fbff 45%, #e8eefc 100%)<br>
+      &lt;article style="background:linear-gradient(135deg,#ffffff 0%,#f7fbff 45%,#e8eefc 100%);padding:20px;min-height:120px;border-radius:16px;border:1px solid #d7e4ee;"&gt;&lt;/article&gt;
+    </p>
+  </div>
+</article>
+
+<!-- panel-j -->
+<article class="card">
+  <div class="card-preview panel-j">
+    <span class="preview-chip">変化球</span>
+    <h3>淡い紫</h3>
+    <p>別ページ感・ブランド差別化に使いやすい配色です。</p>
+  </div>
+  <div class="card-meta">
+    <p class="code">
+      linear-gradient(135deg, #ffffff 0%, #fefcff 48%, #f5edf8 100%)<br>
+      &lt;article style="background:linear-gradient(135deg,#ffffff 0%,#fefcff 48%,#f5edf8 100%);padding:20px;min-height:120px;border-radius:16px;border:1px solid #d7e4ee;"&gt;&lt;/article&gt;
+    </p>
+  </div>
+</article>
+
+<!-- panel-k -->
+<article class="card">
+  <div class="card-preview panel-k">
+    <span class="preview-chip">青強め</span>
+    <h3>ライトブルー</h3>
+    <p>情報ページ・リスト表示に最適な色合いです。</p>
+  </div>
+  <div class="card-meta">
+    <p class="code">
+      linear-gradient(135deg, #ffffff 0%, #f7fbff 42%, #e7f2ff 100%)<br>
+      &lt;article style="background:linear-gradient(135deg,#ffffff 0%,#f7fbff 42%,#e7f2ff 100%);padding:20px;min-height:120px;border-radius:16px;border:1px solid #d7e4ee;"&gt;&lt;/article&gt;
+    </p>
+  </div>
+</article>
+
+<!-- panel-l -->
+<article class="card">
+  <div class="card-preview panel-l">
+    <span class="preview-chip">既存近似</span>
+    <h3>プレビューカード風</h3>
+    <p>既存UIに自然に溶け込む安定したカラーです。</p>
+  </div>
+  <div class="card-meta">
+    <p class="code">
+      linear-gradient(135deg, #ffffff 0%, #f4fbff 42%, #d9edf7 100%)<br>
+      &lt;article style="background:linear-gradient(135deg,#ffffff 0%,#f4fbff 42%,#d9edf7 100%);padding:20px;min-height:120px;border-radius:16px;border:1px solid #d7e4ee;"&gt;&lt;/article&gt;
+    </p>
+  </div>
+</article>
+
+
+        <!-- 以下同じ構造で続く -->
 
         <article class="card">
           <div class="card-preview panel-j">
@@ -353,54 +500,31 @@ body{
             <h3>白×淡い紫</h3>
             <p>姉妹サイト感を残しつつ、別ページ感を出したいとき向けです。</p>
           </div>
-          <div class="card-meta"><p class="code">linear-gradient(135deg, #ffffff 0%, #fefcff 48%, #f5edf8 100%)</p></div>
+          <div class="card-meta">
+            <p class="code">
+              linear-gradient(135deg, #ffffff 0%, #fefcff 48%, #f5edf8 100%)<br>
+              &lt;article style="background:linear-gradient(135deg,#ffffff 0%,#fefcff 48%,#f5edf8 100%);padding:20px;min-height:120px;border-radius:16px;border:1px solid #d7e4ee;"&gt;&lt;/article&gt;
+            </p>
+          </div>
         </article>
 
-        <article class="card">
-          <div class="card-preview panel-k">
-            <span class="preview-chip">青をやや強調</span>
-            <h3>澄んだライトブルー</h3>
-            <p>情報表示や参照ページらしい見た目を出しやすい候補です。</p>
-          </div>
-          <div class="card-meta"><p class="code">linear-gradient(135deg, #ffffff 0%, #f7fbff 42%, #e7f2ff 100%)</p></div>
-        </article>
-
-        <article class="card">
-          <div class="card-preview panel-l">
-            <span class="preview-chip">現行にかなり近い</span>
-            <h3>プレビューカード風</h3>
-            <p>既存の preview-card を斜め化したイメージに近い候補です。</p>
-          </div>
-          <div class="card-meta"><p class="code">linear-gradient(135deg, #ffffff 0%, #f4fbff 42%, #d9edf7 100%)</p></div>
-        </article>
       </div>
     </section>
 
     <section class="section">
       <h2 class="section-title">ボタン候補</h2>
       <div class="buttons">
+
         <article class="button-card">
           <h3>基本ボタンA</h3>
           <div class="demo-row">
             <button class="demo-btn btn-a">通常操作</button>
             <span class="tag">素直な青水色</span>
           </div>
-        </article>
-
-        <article class="button-card">
-          <h3>基本ボタンB</h3>
-          <div class="demo-row">
-            <button class="demo-btn btn-b">保存する</button>
-            <span class="tag">緑みを少し追加</span>
-          </div>
-        </article>
-
-        <article class="button-card">
-          <h3>基本ボタンC</h3>
-          <div class="demo-row">
-            <button class="demo-btn btn-c">読み込む</button>
-            <span class="tag">青寄り</span>
-          </div>
+          <p class="code">
+            linear-gradient(135deg, #ffffff 0%, #eef8fb 100%)<br>
+            &lt;button style="background:linear-gradient(135deg,#ffffff 0%,#eef8fb 100%);padding:12px 18px;border-radius:12px;border:1px solid #bdd2e0;"&gt;&lt;/button&gt;
+          </p>
         </article>
 
         <article class="button-card">
@@ -409,41 +533,194 @@ body{
             <button class="demo-btn btn-d">削除する</button>
             <span class="tag">danger派生</span>
           </div>
+          <p class="code">
+            linear-gradient(135deg, #ffffff 0%, #fff1f3 100%)<br>
+            &lt;button style="background:linear-gradient(135deg,#ffffff 0%,#fff1f3 100%);padding:12px 18px;border-radius:12px;border:1px solid #efc7d0;color:#8b4252;"&gt;&lt;/button&gt;
+          </p>
         </article>
+<!-- btn-a -->
+<article class="button-card">
+  <h3>基本ボタンA</h3>
+  <div class="demo-row">
+    <button class="demo-btn btn-a">通常操作</button>
+    <span class="tag">素直な青水色</span>
+  </div>
+  <p class="code">
+    linear-gradient(135deg, #ffffff 0%, #eef8fb 100%)<br>
+    &lt;button style="background:linear-gradient(135deg,#ffffff 0%,#eef8fb 100%);padding:12px 18px;border-radius:12px;border:1px solid #bdd2e0;"&gt;&lt;/button&gt;
+  </p>
+</article>
 
-        <article class="button-card">
-          <h3>混合系ボタン</h3>
-          <div class="demo-row">
-            <button class="demo-btn btn-e">プレビュー</button>
-            <span class="tag">青緑バランス型</span>
-          </div>
-        </article>
+<!-- btn-b -->
+<article class="button-card">
+  <h3>基本ボタンB</h3>
+  <div class="demo-row">
+    <button class="demo-btn btn-b">保存する</button>
+    <span class="tag">ミント寄り</span>
+  </div>
+  <p class="code">
+    linear-gradient(135deg, #ffffff 0%, #e7f7f6 100%)<br>
+    &lt;button style="background:linear-gradient(135deg,#ffffff 0%,#e7f7f6 100%);padding:12px 18px;border-radius:12px;border:1px solid #bdd2e0;"&gt;&lt;/button&gt;
+  </p>
+</article>
 
-        <article class="button-card">
-          <h3>淡いガラス風</h3>
-          <div class="demo-row">
-            <button class="demo-btn btn-f">比較する</button>
-            <span class="tag">軽めの透明感</span>
-          </div>
-        </article>
+<!-- btn-c -->
+<article class="button-card">
+  <h3>基本ボタンC</h3>
+  <div class="demo-row">
+    <button class="demo-btn btn-c">読み込む</button>
+    <span class="tag">青寄り</span>
+  </div>
+  <p class="code">
+    linear-gradient(135deg, #ffffff 0%, #edf4ff 100%)<br>
+    &lt;button style="background:linear-gradient(135deg,#ffffff 0%,#edf4ff 100%);padding:12px 18px;border-radius:12px;border:1px solid #bdd2e0;"&gt;&lt;/button&gt;
+  </p>
+</article>
 
-        <article class="button-card">
-          <h3>ミント系</h3>
-          <div class="demo-row">
-            <button class="demo-btn btn-g">候補を表示</button>
-            <span class="tag">やさしい緑感</span>
-          </div>
-        </article>
+<!-- btn-d -->
+<article class="button-card">
+  <h3>注意ボタン</h3>
+  <div class="demo-row">
+    <button class="demo-btn btn-d">削除</button>
+    <span class="tag">danger</span>
+  </div>
+  <p class="code">
+    linear-gradient(135deg, #ffffff 0%, #fff1f3 100%)<br>
+    &lt;button style="background:linear-gradient(135deg,#ffffff 0%,#fff1f3 100%);padding:12px 18px;border-radius:12px;border:1px solid #efc7d0;color:#8b4252;"&gt;&lt;/button&gt;
+  </p>
+</article>
 
-        <article class="button-card">
-          <h3>姉妹サイト差別化用</h3>
-          <div class="demo-row">
-            <button class="demo-btn btn-h">特別ページ</button>
-            <span class="tag">少し紫寄り</span>
-          </div>
-        </article>
+<!-- btn-e -->
+<article class="button-card">
+  <h3>混合ボタン</h3>
+  <div class="demo-row">
+    <button class="demo-btn btn-e">プレビュー</button>
+    <span class="tag">青緑バランス</span>
+  </div>
+  <p class="code">
+    linear-gradient(135deg, #ffffff 0%, #e8f7f5 55%, #d8eef7 100%)<br>
+    &lt;button style="background:linear-gradient(135deg,#ffffff 0%,#e8f7f5 55%,#d8eef7 100%);padding:12px 18px;border-radius:12px;border:1px solid #bdd2e0;"&gt;&lt;/button&gt;
+  </p>
+</article>
+
+<!-- btn-f -->
+<article class="button-card">
+  <h3>ガラス風ボタン</h3>
+  <div class="demo-row">
+    <button class="demo-btn btn-f">比較</button>
+    <span class="tag">透明感</span>
+  </div>
+  <p class="code">
+    linear-gradient(135deg, #ffffff 0%, #f3fbff 50%, #e6eefb 100%)<br>
+    &lt;button style="background:linear-gradient(135deg,#ffffff 0%,#f3fbff 50%,#e6eefb 100%);padding:12px 18px;border-radius:12px;border:1px solid #bdd2e0;"&gt;&lt;/button&gt;
+  </p>
+</article>
+
+<!-- btn-g -->
+<article class="button-card">
+  <h3>ミント系ボタン</h3>
+  <div class="demo-row">
+    <button class="demo-btn btn-g">表示</button>
+    <span class="tag">爽やか</span>
+  </div>
+  <p class="code">
+    linear-gradient(135deg, #ffffff 0%, #f4fbf8 45%, #def6ea 100%)<br>
+    &lt;button style="background:linear-gradient(135deg,#ffffff 0%,#f4fbf8 45%,#def6ea 100%);padding:12px 18px;border-radius:12px;border:1px solid #bdd2e0;"&gt;&lt;/button&gt;
+  </p>
+</article>
+
+<!-- btn-h -->
+<article class="button-card">
+  <h3>紫系ボタン</h3>
+  <div class="demo-row">
+    <button class="demo-btn btn-h">特別</button>
+    <span class="tag">差別化</span>
+  </div>
+  <p class="code">
+    linear-gradient(135deg, #ffffff 0%, #fdfcff 48%, #f2eafa 100%)<br>
+    &lt;button style="background:linear-gradient(135deg,#ffffff 0%,#fdfcff 48%,#f2eafa 100%);padding:12px 18px;border-radius:12px;border:1px solid #bdd2e0;"&gt;&lt;/button&gt;
+  </p>
+</article>
+
+<!-- 派生：濃いめ -->
+<article class="button-card">
+  <h3>強調ボタン（濃）</h3>
+  <div class="demo-row">
+    <button style="background:linear-gradient(135deg,#4aa3a2,#2f7e8d);color:#fff;padding:12px 18px;border-radius:12px;border:none;">実行</button>
+    <span class="tag">アクセント</span>
+  </div>
+  <p class="code">
+    linear-gradient(135deg, #4aa3a2, #2f7e8d)<br>
+    &lt;button style="background:linear-gradient(135deg,#4aa3a2,#2f7e8d);color:#fff;padding:12px 18px;border-radius:12px;border:none;"&gt;&lt;/button&gt;
+  </p>
+</article>
+
+<!-- 派生：白強め -->
+<article class="button-card">
+  <h3>ほぼ白ボタン</h3>
+  <div class="demo-row">
+    <button style="background:#fff;padding:12px 18px;border-radius:12px;border:1px solid #d7e4ee;">通常</button>
+    <span class="tag">最小主張</span>
+  </div>
+  <p class="code">
+    background: #ffffff<br>
+    &lt;button style="background:#fff;padding:12px 18px;border-radius:12px;border:1px solid #d7e4ee;"&gt;&lt;/button&gt;
+  </p>
+</article>
       </div>
     </section>
   </div>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const cards = document.querySelectorAll(".card, .button-card");
+
+  cards.forEach(card => {
+    card.style.cursor = "pointer";
+
+    card.addEventListener("click", async (e) => {
+      const codeEl = card.querySelector(".code");
+      if (!codeEl) return;
+
+      const html = codeEl.innerHTML;
+      const brIndex = html.indexOf("<br");
+
+      if (brIndex === -1) return;
+
+      const afterBrHtml = html.slice(html.indexOf(">", brIndex) + 1);
+
+      const temp = document.createElement("div");
+      temp.innerHTML = afterBrHtml;
+
+      const textToCopy = temp.textContent.trim();
+      if (!textToCopy) return;
+
+      try {
+        await navigator.clipboard.writeText(textToCopy);
+        showCopied(card);
+      } catch {
+        fallbackCopy(textToCopy);
+        showCopied(card);
+      }
+    });
+  });
+
+  function fallbackCopy(text) {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+  }
+
+  function showCopied(card) {
+    const oldOutline = card.style.outline;
+    card.style.outline = "3px solid rgba(74,163,162,.35)";
+    setTimeout(() => {
+      card.style.outline = oldOutline;
+    }, 700);
+  }
+});
+</script>
 </body>
 </html>
