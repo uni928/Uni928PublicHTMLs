@@ -1441,6 +1441,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 function applyDemoBtnInline(el) {
+  const baseBorderColor = "#bdd2e0";
+  const baseBoxShadow = "0 6px 18px rgba(57,95,128,.08)";
+  const hoverBoxShadow = "0 10px 24px rgba(57,95,128,.12)";
+  const focusBoxShadow = "0 0 0 4px rgba(74,163,162,.18), 0 10px 24px rgba(57,95,128,.12)";
+
   mergeStyleIfMissing(el, {
     appearance: "none",
     WebkitAppearance: "none",
@@ -1452,7 +1457,7 @@ function applyDemoBtnInline(el) {
     fontSize: "14px",
     fontFamily: "inherit",
     cursor: "pointer",
-    boxShadow: "0 6px 18px rgba(57,95,128,.08)",
+    boxShadow: baseBoxShadow,
     lineHeight: "1",
     display: "inline-flex",
     alignItems: "center",
@@ -1460,12 +1465,15 @@ function applyDemoBtnInline(el) {
     textAlign: "center",
     verticalAlign: "middle",
     whiteSpace: "nowrap",
-    transition: "transform .15s ease, box-shadow .15s ease, border-color .15s ease, filter .15s ease"
+    transition: "transform .15s ease, box-shadow .15s ease, border-color .15s ease, filter .15s ease",
+    outline: "none",
+    outlineOffset: "0",
+    userSelect: "none",
+    WebkitTapHighlightColor: "transparent",
+    border: `1px solid ${baseBorderColor}`,
+    borderColor: baseBorderColor
   });
 
-  if (!el.style.border) {
-    el.style.border = "1px solid #bdd2e0";
-  }
   if (!el.style.color) {
     el.style.color = "#243447";
   }
@@ -1473,17 +1481,21 @@ function applyDemoBtnInline(el) {
     el.style.background = "#ffffff";
   }
 
+  if (!el.hasAttribute("tabindex")) {
+    el.setAttribute("tabindex", "0");
+  }
+
   if (!el.dataset.copyInteractiveBound) {
     el.dataset.copyInteractiveBound = "true";
 
     el.setAttribute(
       "onmouseover",
-      "this.style.transform='translateY(-1px)';this.style.boxShadow='0 10px 24px rgba(57,95,128,.12)';this.style.filter='brightness(1.02)'"
+      "this.style.outline='none';this.style.transform='translateY(-1px)';this.style.borderColor='#bdd2e0';this.style.boxShadow='0 10px 24px rgba(57,95,128,.12)';this.style.filter='brightness(1.02)'"
     );
 
     el.setAttribute(
       "onmouseout",
-      "this.style.transform='';this.style.boxShadow='0 6px 18px rgba(57,95,128,.08)';this.style.filter=''"
+      "this.style.outline='none';this.style.transform='';this.style.borderColor='#bdd2e0';this.style.boxShadow='0 6px 18px rgba(57,95,128,.08)';this.style.filter=''"
     );
 
     el.setAttribute(
@@ -1493,17 +1505,27 @@ function applyDemoBtnInline(el) {
 
     el.setAttribute(
       "onblur",
-      "this.style.outline='';this.style.borderColor='';this.style.boxShadow='0 6px 18px rgba(57,95,128,.08)'"
+      "this.style.outline='none';this.style.transform='';this.style.borderColor='#bdd2e0';this.style.boxShadow='0 6px 18px rgba(57,95,128,.08)';this.style.filter=''"
     );
 
     el.setAttribute(
       "onmousedown",
-      "this.style.transform='translateY(0) scale(0.98)';this.style.filter='brightness(0.98)'"
+      "this.style.outline='none';this.style.transform='translateY(0) scale(0.98)';this.style.borderColor='#bdd2e0';this.style.filter='brightness(0.98)'"
     );
 
     el.setAttribute(
       "onmouseup",
-      "this.style.transform='translateY(-1px) scale(1)';this.style.filter='brightness(1.02)'"
+      "this.style.outline='none';this.style.transform='';this.style.borderColor='#bdd2e0';this.style.boxShadow='0 6px 18px rgba(57,95,128,.08)';this.style.filter='';this.blur()"
+    );
+
+    el.setAttribute(
+      "onclick",
+      "this.style.outline='none';this.style.transform='';this.style.borderColor='#bdd2e0';this.style.boxShadow='0 6px 18px rgba(57,95,128,.08)';this.style.filter='';this.blur()"
+    );
+
+    el.setAttribute(
+      "onmouseleave",
+      "this.style.outline='none';this.style.transform='';this.style.borderColor='#bdd2e0';this.style.boxShadow='0 6px 18px rgba(57,95,128,.08)';this.style.filter=''"
     );
   }
 }
@@ -1597,7 +1619,9 @@ function applyDemoBtnInline(el) {
       display: "flex",
       flexWrap: "wrap",
       gap: "10px",
-      alignItems: "center"
+      alignItems: "center",
+outline: "none",
+outlineOffset: "0"
     });
   }
 
