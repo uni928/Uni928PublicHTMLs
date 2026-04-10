@@ -1440,31 +1440,37 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function applyDemoBtnInline(el) {
-    mergeStyleIfMissing(el, {
-      appearance: "none",
-      WebkitAppearance: "none",
-      borderRadius: "12px",
-      padding: "11px 16px",
-      fontWeight: "700",
-      cursor: "pointer",
-      boxShadow: "0 6px 18px rgba(57,95,128,.08)",
-      lineHeight: "1.2",
-      display: "inline-block",
-      textAlign: "center",
-      verticalAlign: "middle"
-    });
+function applyDemoBtnInline(el) {
+  mergeStyleIfMissing(el, {
+    appearance: "none",
+    WebkitAppearance: "none",
+    boxSizing: "border-box",
+    borderRadius: "12px",
+    padding: "16px 16px",
+    minHeight: "44px",
+    fontWeight: "700",
+    fontSize: "14px",
+    fontFamily: "inherit",
+    cursor: "pointer",
+    boxShadow: "0 6px 18px rgba(57,95,128,.08)",
+    lineHeight: "1",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    textAlign: "center",
+    whiteSpace: "nowrap"
+  });
 
-    if (!el.style.border) {
-      el.style.border = "1px solid #bdd2e0";
-    }
-    if (!el.style.color) {
-      el.style.color = "#243447";
-    }
-    if (!el.style.background) {
-      el.style.background = "#ffffff";
-    }
+  if (!el.style.border) {
+    el.style.border = "1px solid #bdd2e0";
   }
+  if (!el.style.color) {
+    el.style.color = "#243447";
+  }
+  if (!el.style.background) {
+    el.style.background = "#ffffff";
+  }
+}
 
   function applyBtnAInline(el) {
     if (!el.style.background || isPlainWhite(el.style.background)) {
