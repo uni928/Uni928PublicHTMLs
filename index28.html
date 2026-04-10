@@ -1412,123 +1412,116 @@ document.addEventListener("DOMContentLoaded", () => {
     const all = [root, ...root.querySelectorAll("*")];
 
     all.forEach(el => {
-      if (el.classList.contains("demo-btn")) {
-        applyDemoBtnInline(el);
-        el.classList.remove("demo-btn");
+      if (el.classList.contains("demo-row")) {
+        applyDemoRowInline(el);
+        el.classList.remove("demo-row");
       }
 
-      if (el.classList.contains("btn-a")) {
-        applyBtnAInline(el);
-        el.classList.remove("btn-a");
-      }
-      if (el.classList.contains("btn-b")) {
-        applyBtnBInline(el);
-        el.classList.remove("btn-b");
-      }
-      if (el.classList.contains("btn-c")) {
-        applyBtnCInline(el);
-        el.classList.remove("btn-c");
-      }
-      if (el.classList.contains("btn-d")) {
-        applyBtnDInline(el);
-        el.classList.remove("btn-d");
-      }
-      if (el.classList.contains("btn-e")) {
-        applyBtnEInline(el);
-        el.classList.remove("btn-e");
-      }
-      if (el.classList.contains("btn-f")) {
-        applyBtnFInline(el);
-        el.classList.remove("btn-f");
-      }
-      if (el.classList.contains("btn-g")) {
-        applyBtnGInline(el);
-        el.classList.remove("btn-g");
-      }
-      if (el.classList.contains("btn-h")) {
-        applyBtnHInline(el);
-        el.classList.remove("btn-h");
+      if (el.classList.contains("demo-btn")) {
+        applyDemoBtnInline(el);
+
+        if (el.classList.contains("btn-a")) applyBtnAInline(el);
+        if (el.classList.contains("btn-b")) applyBtnBInline(el);
+        if (el.classList.contains("btn-c")) applyBtnCInline(el);
+        if (el.classList.contains("btn-d")) applyBtnDInline(el);
+        if (el.classList.contains("btn-e")) applyBtnEInline(el);
+        if (el.classList.contains("btn-f")) applyBtnFInline(el);
+        if (el.classList.contains("btn-g")) applyBtnGInline(el);
+        if (el.classList.contains("btn-h")) applyBtnHInline(el);
+
+        el.classList.remove("demo-btn");
+        el.classList.remove("btn-a", "btn-b", "btn-c", "btn-d", "btn-e", "btn-f", "btn-g", "btn-h");
       }
 
       if (el.classList.contains("tag")) {
         applyTagInline(el);
         el.classList.remove("tag");
       }
-
-      if (el.classList.contains("demo-row")) {
-        applyDemoRowInline(el);
-        el.classList.remove("demo-row");
-      }
     });
   }
 
   function applyDemoBtnInline(el) {
-    mergeStyle(el, {
+    mergeStyleIfMissing(el, {
       appearance: "none",
+      WebkitAppearance: "none",
       borderRadius: "12px",
       padding: "11px 16px",
-      border: "1px solid #bdd2e0",
-      color: "#243447",
       fontWeight: "700",
       cursor: "pointer",
       boxShadow: "0 6px 18px rgba(57,95,128,.08)",
-      background: "#ffffff",
-      fontFamily: "system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Hiragino Sans','Noto Sans JP','Yu Gothic UI','Meiryo',sans-serif"
+      lineHeight: "1.2",
+      display: "inline-block",
+      textAlign: "center",
+      verticalAlign: "middle"
     });
+
+    if (!el.style.border) {
+      el.style.border = "1px solid #bdd2e0";
+    }
+    if (!el.style.color) {
+      el.style.color = "#243447";
+    }
+    if (!el.style.background) {
+      el.style.background = "#ffffff";
+    }
   }
 
   function applyBtnAInline(el) {
-    mergeStyle(el, {
-      background: "linear-gradient(135deg, #ffffff 0%, #eef8fb 100%)"
-    });
+    if (!el.style.background || isPlainWhite(el.style.background)) {
+      el.style.background = "linear-gradient(135deg, #ffffff 0%, #eef8fb 100%)";
+    }
   }
 
   function applyBtnBInline(el) {
-    mergeStyle(el, {
-      background: "linear-gradient(135deg, #ffffff 0%, #e7f7f6 100%)"
-    });
+    if (!el.style.background || isPlainWhite(el.style.background)) {
+      el.style.background = "linear-gradient(135deg, #ffffff 0%, #e7f7f6 100%)";
+    }
   }
 
   function applyBtnCInline(el) {
-    mergeStyle(el, {
-      background: "linear-gradient(135deg, #ffffff 0%, #edf4ff 100%)"
-    });
+    if (!el.style.background || isPlainWhite(el.style.background)) {
+      el.style.background = "linear-gradient(135deg, #ffffff 0%, #edf4ff 100%)";
+    }
   }
 
   function applyBtnDInline(el) {
-    mergeStyle(el, {
-      background: "linear-gradient(135deg, #ffffff 0%, #fff1f3 100%)",
-      border: "1px solid #efc7d0",
-      color: "#8b4252"
-    });
+    if (!el.style.background || isPlainWhite(el.style.background)) {
+      el.style.background = "linear-gradient(135deg, #ffffff 0%, #fff1f3 100%)";
+    }
+    if (!el.style.border || el.style.border === "1px solid rgb(189, 210, 224)" || el.style.border === "1px solid #bdd2e0") {
+      el.style.border = "1px solid #efc7d0";
+    }
+    if (!el.style.color || el.style.color === "rgb(36, 52, 71)" || el.style.color === "#243447") {
+      el.style.color = "#8b4252";
+    }
   }
 
   function applyBtnEInline(el) {
-    mergeStyle(el, {
-      background: "linear-gradient(135deg, #ffffff 0%, #e8f7f5 55%, #d8eef7 100%)"
-    });
+    if (!el.style.background || isPlainWhite(el.style.background)) {
+      el.style.background = "linear-gradient(135deg, #ffffff 0%, #e8f7f5 55%, #d8eef7 100%)";
+    }
   }
 
   function applyBtnFInline(el) {
-    mergeStyle(el, {
-      background: "linear-gradient(135deg, #ffffff 0%, #f3fbff 50%, #e6eefb 100%)"
-    });
+    if (!el.style.background || isPlainWhite(el.style.background)) {
+      el.style.background = "linear-gradient(135deg, #ffffff 0%, #f3fbff 50%, #e6eefb 100%)";
+    }
   }
 
   function applyBtnGInline(el) {
-    mergeStyle(el, {
-      background: "linear-gradient(135deg, #ffffff 0%, #f4fbf8 45%, #def6ea 100%)"
-    });
+    if (!el.style.background || isPlainWhite(el.style.background)) {
+      el.style.background = "linear-gradient(135deg, #ffffff 0%, #f4fbf8 45%, #def6ea 100%)";
+    }
   }
 
   function applyBtnHInline(el) {
-    mergeStyle(el, {
-      background: "linear-gradient(135deg, #ffffff 0%, #fdfcff 48%, #f2eafa 100%)"
-    });
+    if (!el.style.background || isPlainWhite(el.style.background)) {
+      el.style.background = "linear-gradient(135deg, #ffffff 0%, #fdfcff 48%, #f2eafa 100%)";
+    }
   }
 
   function applyTagInline(el) {
-    mergeStyle(el, {
+    mergeStyleIfMissing(el, {
       display: "inline-flex",
       alignItems: "center",
       gap: "6px",
@@ -1539,7 +1532,8 @@ document.addEventListener("DOMContentLoaded", () => {
       border: "1px solid #d7e4ee",
       borderRadius: "999px",
       padding: "6px 10px",
-      fontFamily: "system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Hiragino Sans','Noto Sans JP','Yu Gothic UI','Meiryo',sans-serif"
+      lineHeight: "1.2",
+      verticalAlign: "middle"
     });
 
     if (!el.querySelector('[data-tag-dot="true"]')) {
@@ -1557,12 +1551,25 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function applyDemoRowInline(el) {
-    mergeStyle(el, {
+    mergeStyleIfMissing(el, {
       display: "flex",
       flexWrap: "wrap",
       gap: "10px",
       alignItems: "center"
     });
+  }
+
+  function mergeStyleIfMissing(el, styleMap) {
+    Object.entries(styleMap).forEach(([key, value]) => {
+      if (!el.style[key]) {
+        el.style[key] = value;
+      }
+    });
+  }
+
+  function isPlainWhite(value) {
+    const v = String(value).replace(/\s+/g, "").toLowerCase();
+    return v === "#fff" || v === "#ffffff" || v === "rgb(255,255,255)";
   }
 
   function removeCopyOnlyClasses(root) {
@@ -1572,12 +1579,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (el.getAttribute("class") === "") {
         el.removeAttribute("class");
       }
-    });
-  }
-
-  function mergeStyle(el, styleMap) {
-    Object.entries(styleMap).forEach(([key, value]) => {
-      el.style[key] = value;
     });
   }
 
