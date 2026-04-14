@@ -433,20 +433,26 @@ function toggleTooltip(wrap){
 }
 
 function initInfoTooltips(){
+  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
   document.querySelectorAll('.info-wrap').forEach(wrap => {
     const btn = wrap.querySelector('.info-btn');
     const tip = wrap.querySelector('.info-tooltip');
     if(!btn || !tip) return;
 
-    btn.addEventListener('mouseenter', () => openTooltip(wrap));
-btn.addEventListener('mouseleave', () => {
-  setTimeout(() => {
-    if(document.activeElement !== btn){
-      closeTooltip(wrap);
+    // ▼ PCのみ hover
+    if(!isTouch){
+      btn.addEventListener('mouseenter', () => openTooltip(wrap));
+      btn.addEventListener('mouseleave', () => {
+        setTimeout(() => {
+          if(document.activeElement !== btn){
+            closeTooltip(wrap);
+          }
+        }, 150);
+      });
     }
-  }, 150);
-});
 
+    // ▼ 共通
     btn.addEventListener('focus', () => openTooltip(wrap));
     btn.addEventListener('blur', () => {
       setTimeout(() => {
@@ -456,6 +462,7 @@ btn.addEventListener('mouseleave', () => {
       }, 0);
     });
 
+    // ▼ スマホはこれだけでOK
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
