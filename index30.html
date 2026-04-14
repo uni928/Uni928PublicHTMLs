@@ -3,207 +3,344 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CSS改善用サンプルページ</title>
+  <title>見た目サンプルサイト</title>
   <style>
+    :root{
+      --bg:#eef6fb;
+      --panel:#ffffff;
+      --panel2:#f8fcff;
+      --ink:#243447;
+      --muted:#6b7c8f;
+      --acc:#4aa3a2;
+      --acc2:#2f7e8d;
+      --line:#d7e4ee;
+      --line2:#bdd2e0;
+      --soft:#eef8fb;
+      --soft2:#e7f7f6;
+      --shadow:0 12px 40px rgba(57,95,128,.10);
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ margin:0; min-height:100%; }
     body{
-      margin:0;
-      font-family:Arial, sans-serif;
-      background:#f3f3f3;
-      color:#222;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Hiragino Sans","Noto Sans JP","Yu Gothic UI","Meiryo",sans-serif;
+      color:var(--ink);
+      background:
+        radial-gradient(circle at top left, #eef7ff 0%, transparent 34%),
+        radial-gradient(circle at top right, #f0fff8 0%, transparent 30%),
+        linear-gradient(180deg, #f7fbff 0%, #eef6fb 100%);
+      background-attachment:fixed;
     }
 
-    .container{
-      width:980px;
-      margin:20px auto;
+    .wrap{
+      max-width:1120px;
+      margin:28px auto;
+      padding:0 16px 32px;
     }
 
-    .title{
-      font-size:28px;
-      margin-bottom:12px;
-    }
-
-    .top-box,
-    .left-box,
-    .right-box,
-    .bottom-box{
-      background:#fff;
-      border:1px solid #ccc;
-      padding:14px;
-      margin-bottom:14px;
-    }
-
-    .layout{
+    .hero{
       display:flex;
-      gap:14px;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:20px;
+      margin-bottom:18px;
     }
 
-    .left-box{
-      flex:2;
+    .hero h1{
+      margin:0 0 10px;
+      font-size:24px;
+      letter-spacing:.02em;
     }
 
-    .right-box{
-      flex:1;
+    .hero p{
+      margin:0;
+      color:var(--muted);
+      line-height:1.75;
     }
 
-    h2{
-      margin:0 0 12px;
-      font-size:18px;
+    .chip-row{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:12px;
+    }
+
+    .chip{
+      padding:8px 12px;
+      border:1px solid var(--line2);
+      border-radius:999px;
+      background:linear-gradient(180deg, #fff 0%, var(--soft) 100%);
+      color:var(--acc2);
+      font-weight:700;
+      font-size:12px;
+      box-shadow:0 6px 18px rgba(57,95,128,.06);
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:1.15fr .85fr;
+      gap:16px;
+      align-items:start;
+    }
+
+    .card{
+      background:linear-gradient(180deg, #ffffff 0%, var(--panel2) 100%);
+      border:1px solid var(--line);
+      border-radius:16px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+
+    .card h2{
+      margin:0;
+      padding:14px 16px;
+      border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg, #ffffff 0%, #f1f9ff 100%);
+      color:var(--muted);
+      font-size:15px;
+    }
+
+    .section{
+      padding:16px;
+    }
+
+    .row{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:12px;
+      margin-bottom:12px;
     }
 
     label{
       display:block;
       margin:0 0 6px;
       font-size:12px;
-      color:#555;
+      font-weight:700;
+      color:var(--muted);
+      letter-spacing:.02em;
     }
 
-    input,
-    select,
-    textarea{
+    input, select, textarea{
       width:100%;
-      padding:8px;
-      margin-bottom:10px;
-      border:1px solid #bbb;
-      font-size:14px;
+      border:1px solid var(--line2);
+      border-radius:12px;
+      background:#fff;
+      color:var(--ink);
+      padding:11px 12px;
+      font:inherit;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.65);
     }
 
     textarea{
       min-height:120px;
       resize:vertical;
+      line-height:1.7;
     }
 
-    .row{
+    input:focus, select:focus, textarea:focus, button:focus-visible{
+      outline:none;
+      border-color:var(--acc2);
+      box-shadow:0 0 0 4px rgba(74,163,162,.18);
+    }
+
+    .button-row{
       display:flex;
+      flex-wrap:wrap;
       gap:10px;
-    }
-
-    .row > div{
-      flex:1;
+      margin-top:14px;
     }
 
     button{
-      padding:10px 12px;
-      border:1px solid #aaa;
-      background:#eee;
+      appearance:none;
+      border:1px solid var(--line2);
+      background:linear-gradient(180deg, #ffffff 0%, var(--soft) 100%);
+      color:var(--ink);
+      padding:10px 14px;
+      border-radius:12px;
       cursor:pointer;
-      margin-right:8px;
-      margin-bottom:8px;
+      font-weight:700;
+      box-shadow:0 6px 18px rgba(57,95,128,.08);
+      transition:background .15s ease,border-color .15s ease,transform .15s ease,box-shadow .15s ease;
     }
 
-    ul{
-      margin:0;
-      padding-left:20px;
+    button:hover{
+      border-color:#97c7cf;
+      background:linear-gradient(180deg, #ffffff 0%, var(--soft2) 100%);
+      box-shadow:0 10px 24px rgba(57,95,128,.12);
+      transform:translateY(-1px);
     }
 
-    .card-list{
+    .primary{
+      background:linear-gradient(180deg, #ffffff 0%, #def5f3 100%);
+      color:var(--acc2);
+    }
+
+    .list{
       display:grid;
-      grid-template-columns:1fr;
       gap:10px;
     }
 
-    .mini-card{
-      border:1px solid #d0d0d0;
-      padding:10px;
-      background:#fafafa;
+    .item{
+      padding:12px;
+      border:1px solid #e2edf4;
+      border-radius:12px;
+      background:#fff;
+      box-shadow:0 4px 12px rgba(57,95,128,.04);
     }
 
-    .status{
-      color:#2f6b2f;
+    .item strong{
+      display:block;
+      margin-bottom:4px;
+    }
+
+    .item p{
+      margin:0;
+      color:var(--muted);
+      line-height:1.7;
+      font-size:14px;
+    }
+
+    .stats{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:10px;
+    }
+
+    .stat{
+      padding:14px 12px;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:linear-gradient(180deg, #fff 0%, #fafeff 100%);
+      text-align:center;
+    }
+
+    .stat .num{
+      display:block;
+      font-size:24px;
+      font-weight:800;
+      color:var(--acc2);
+      margin-bottom:4px;
+    }
+
+    .stat .cap{
+      font-size:12px;
+      color:var(--muted);
+      font-weight:700;
+    }
+
+    .note{
+      margin-top:12px;
+      padding:12px 14px;
+      border-radius:12px;
+      background:#fbfdff;
+      border:1px dashed var(--line2);
+      color:var(--muted);
+      line-height:1.8;
       font-size:13px;
-      margin-top:8px;
     }
 
-    .subtext{
-      color:#777;
-      font-size:13px;
-      line-height:1.6;
+    @media (max-width: 860px){
+      .grid{ grid-template-columns:1fr; }
+      .hero{ flex-direction:column; }
     }
 
-    @media (max-width: 1000px){
-      .container{
-        width:auto;
-        margin:14px;
-      }
-      .layout{
-        flex-direction:column;
-      }
+    @media (max-width: 560px){
+      .wrap{ margin:18px auto; padding:0 12px 24px; }
+      .row, .stats{ grid-template-columns:1fr; }
+      .hero h1{ font-size:21px; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="title">CSS改善用サンプルページ</div>
-
-    <div class="top-box">
-      <h2>概要</h2>
-      <div class="subtext">このページは、見た目改善の練習用として使う公開向けサンプルです。機能や文言はすべてダミーです。</div>
+  <div class="wrap">
+    <div class="hero">
+      <div>
+        <h1>見た目サンプルサイト</h1>
+        <p>淡い背景、白いカード、やわらかい影、青緑アクセントの組み合わせを確認するための公開用サンプルです。内容はダミーです。</p>
+        <div class="chip-row">
+          <div class="chip">カードUI</div>
+          <div class="chip">やわらかい配色</div>
+          <div class="chip">細い境界線</div>
+        </div>
+      </div>
+      <div class="chip">ver. sample-1.0</div>
     </div>
 
-    <div class="layout">
-      <div class="left-box">
-        <h2>入力フォーム</h2>
-        <div class="row">
-          <div>
-            <label>件名</label>
-            <input type="text" value="公開用サンプルの入力例">
+    <div class="grid">
+      <div class="card">
+        <h2>入力エリア</h2>
+        <div class="section">
+          <div class="row">
+            <div>
+              <label>タイトル</label>
+              <input type="text" value="週末イベントのメモ">
+            </div>
+            <div>
+              <label>カテゴリ</label>
+              <select>
+                <option>お知らせ</option>
+                <option>メモ</option>
+                <option>タスク</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label>担当</label>
+              <input type="text" value="サンプル担当者">
+            </div>
+            <div>
+              <label>優先度</label>
+              <select>
+                <option>中</option>
+                <option>高</option>
+                <option>低</option>
+              </select>
+            </div>
           </div>
           <div>
-            <label>種類</label>
-            <select>
-              <option>メモ</option>
-              <option>案内</option>
-              <option>記録</option>
-            </select>
+            <label>詳細メモ</label>
+            <textarea>公開記事や説明用のスクリーンショットに使えるよう、一般的なダミー文を入れています。ここには業務データや個人情報を含めない想定です。</textarea>
           </div>
+          <div class="button-row">
+            <button class="primary">保存する</button>
+            <button>下書きにする</button>
+            <button>内容をコピー</button>
+          </div>
+          <div class="note">このHTML自体が「見た目の参照用サンプル」です。実運用サイトの内容や機能とは無関係です。</div>
         </div>
-        <div class="row">
-          <div>
-            <label>作成者</label>
-            <input type="text" value="サンプル作成者">
-          </div>
-          <div>
-            <label>状態</label>
-            <select>
-              <option>作業中</option>
-              <option>確認待ち</option>
-              <option>完了</option>
-            </select>
-          </div>
-        </div>
-        <label>本文</label>
-        <textarea>ここには一般公開しても問題ないダミーテキストだけを入れています。ChatGPTに添付して、CSSだけを改善してもらう用途を想定したサンプルです。</textarea>
-        <div>
-          <button>保存</button>
-          <button>複製</button>
-          <button>クリア</button>
-        </div>
-        <div class="status">状態: 入力内容はサンプルです。</div>
       </div>
 
-      <div class="right-box">
-        <h2>サイド情報</h2>
-        <ul>
-          <li>カードUIを含む</li>
-          <li>フォーム部品を含む</li>
-          <li>ボタンを含む</li>
-        </ul>
-      </div>
-    </div>
+      <div>
+        <div class="card" style="margin-bottom:16px;">
+          <h2>概要</h2>
+          <div class="section">
+            <div class="stats">
+              <div class="stat"><span class="num">12</span><span class="cap">項目数</span></div>
+              <div class="stat"><span class="num">3</span><span class="cap">カード数</span></div>
+              <div class="stat"><span class="num">A</span><span class="cap">評価例</span></div>
+            </div>
+          </div>
+        </div>
 
-    <div class="bottom-box">
-      <h2>表示例</h2>
-      <div class="card-list">
-        <div class="mini-card">
-          <strong>表示例 A</strong>
-          <div class="subtext">シンプルなカード風ブロックです。</div>
-        </div>
-        <div class="mini-card">
-          <strong>表示例 B</strong>
-          <div class="subtext">余白、境界線、文字サイズの改善を依頼しやすい構成です。</div>
-        </div>
-        <div class="mini-card">
-          <strong>表示例 C</strong>
-          <div class="subtext">記事用のキャプチャにも使いやすい一般的な内容です。</div>
+        <div class="card">
+          <h2>表示サンプル</h2>
+          <div class="section">
+            <div class="list">
+              <div class="item">
+                <strong>表示ブロック 01</strong>
+                <p>カード内の本文や補助テキストの雰囲気を確認するためのダミーコンテンツです。</p>
+              </div>
+              <div class="item">
+                <strong>表示ブロック 02</strong>
+                <p>入力欄・ボタン・カードの組み合わせで、配色と余白のバランスを見やすくしています。</p>
+              </div>
+              <div class="item">
+                <strong>表示ブロック 03</strong>
+                <p>公開可能なサンプルとして、そのまま配布や添付に使いやすい最小構成です。</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
