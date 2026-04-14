@@ -383,7 +383,7 @@
         try{
           await navigator.clipboard.writeText(text);
           const label = button.textContent.trim();
-          status.textContent = `${label}をコピーしました。`;
+          status.textContent = `${label}しました。`;
         }catch(error){
           status.textContent = 'コピーに失敗しました。ブラウザの権限設定をご確認ください。';
         }
