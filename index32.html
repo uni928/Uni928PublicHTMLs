@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>補足ツールチップ丸ボタン</title>
+  <style>
+    :root{
+      --bg:#eef6fb;
+      --panel:#ffffff;
+      --ink:#243447;
+      --muted:#6b7c8f;
+      --acc:#4aa3a2;
+      --acc2:#2f7e8d;
+      --line:#d7e4ee;
+      --line2:#bdd2e0;
+      --soft:#eef8fb;
+      --soft2:#e7f7f6;
+      --shadow:0 12px 40px rgb(57 95 128 / 10%);
+    }
+
+    *{ box-sizing:border-box; }
+
+    html,body{
+      margin:0;
+      color:var(--ink);
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Hiragino Sans","Noto Sans JP","Yu Gothic UI","Meiryo",sans-serif;
+      background:
+        radial-gradient(circle at top left, #eef7ff 0%, transparent 34%),
+        radial-gradient(circle at top right, #f0fff8 0%, transparent 30%),
+        linear-gradient(180deg, #f7fbff 0%, #eef6fb 100%);
+      background-attachment:fixed;
+    }
+
+    body{
+      padding:28px 16px 48px;
+    }
+
+    .wrap{
+      max-width:1040px;
+      margin:0 auto;
+    }
+
+    .hero{
+      background:linear-gradient(180deg, #ffffff 0%, #f8fcff 100%);
+      border:1px solid var(--line);
+      border-radius:18px;
+      box-shadow:var(--shadow);
+      padding:22px;
+      margin-bottom:18px;
+    }
+
+    h1{
+      margin:0 0 8px;
+      font-size:24px;
+    }
+
+    .lead{
+      margin:0;
+      color:var(--muted);
+      line-height:1.7;
+    }
+
+    .demo-card,
+    .code-card{
+      background:linear-gradient(180deg, #ffffff 0%, #f8fcff 100%);
+      border:1px solid var(--line);
+      border-radius:18px;
+      box-shadow:var(--shadow);
+      padding:22px;
+      margin-bottom:18px;
+    }
+
+    .section-title{
+      margin:0 0 16px;
+      font-size:18px;
+      color:#355066;
+    }
+
+    .demo-list{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+      gap:14px;
+    }
+
+    .demo-item{
+      padding:16px;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:#fbfdff;
+      min-height:96px;
+    }
+
+    .group-title{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin-bottom:12px;
+      font-size:14px;
+      font-weight:700;
+      color:#355066;
+      letter-spacing:.02em;
+    }
+
+    .group-title::before{
+      content:"";
+      width:10px;
+      height:10px;
+      border-radius:999px;
+      background:linear-gradient(135deg, var(--acc), #5b8def);
+      flex:0 0 auto;
+      box-shadow:0 0 0 5px rgba(74,163,162,.10);
+    }
+
+    .group-title-text{
+      display:inline-flex;
+      align-items:center;
+    }
+
+    .info-wrap{
+      position:relative;
+      display:inline-flex;
+      align-items:center;
+    }
+
+    .info-btn{
+      appearance:none;
+      width:20px;
+      height:20px;
+      min-width:20px;
+      padding:0;
+      border:1px solid #9fc1d6;
+      border-radius:999px;
+      background:linear-gradient(180deg, #ffffff 0%, #eef7ff 100%);
+      color:#2f7e8d;
+      font-size:12px;
+      font-weight:700;
+      line-height:1;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      box-shadow:none;
+      transform:none;
+      transition:background .15s ease,border-color .15s ease,box-shadow .15s ease;
+    }
+
+    .info-btn:hover{
+      background:linear-gradient(180deg, #ffffff 0%, #e7f7f6 100%);
+      border-color:#97c7cf;
+      box-shadow:none;
+      transform:none;
+    }
+
+    .info-btn:focus-visible{
+      outline:none;
+      border-color:var(--acc2);
+      box-shadow:0 0 0 4px rgba(74,163,162,.18);
+    }
+
+.info-tooltip{
+  position:fixed;
+  top:0;
+  left:0;
+  z-index:2000;
+  width:min(320px, 78vw);
+  margin:0;
+  padding:10px 12px;
+  border:1px solid rgba(36,52,71,0.12);
+  border-radius:12px;
+  background:rgba(36,52,71,0.96);
+  color:#ffffff;
+  font-size:12px;
+  font-weight:500;
+  line-height:1.6;
+  box-shadow:0 12px 28px rgba(36,52,71,0.22);
+  white-space:normal;
+  overflow:visible;
+  isolation:isolate;
+}
+
+/* Popover本体の初期化 */
+.info-tooltip[popover]{
+  opacity:0;
+  visibility:hidden;
+  transform:translateY(-4px);
+  transition:opacity .16s ease, transform .16s ease, visibility .16s ease;
+  pointer-events:none;
+}
+
+/* Popover対応ブラウザ */
+.info-tooltip[popover]:popover-open{
+  opacity:1;
+  visibility:visible;
+  transform:translateY(0);
+  pointer-events:auto;
+}
+
+/* 非対応ブラウザ用フォールバック */
+.info-tooltip.is-open{
+  opacity:1;
+  visibility:visible;
+  transform:translateY(0);
+  pointer-events:auto;
+}
+
+.info-tooltip::before{
+  content:"";
+  position:absolute;
+  top:-6px;
+  left:10px;
+  width:10px;
+  height:10px;
+  background:rgba(36,52,71,0.96);
+  transform:rotate(45deg);
+}
+
+    .demo-body{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.7;
+    }
+
+    .actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      margin-bottom:14px;
+    }
+
+    button.copy-btn{
+      appearance:none;
+      border:1px solid var(--line2);
+      background:linear-gradient(180deg, #ffffff 0%, var(--soft) 100%);
+      color:var(--ink);
+      padding:10px 14px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:600;
+      box-shadow:0 6px 18px rgba(57,95,128,.08);
+      transition:background .15s ease,border-color .15s ease,transform .15s ease,box-shadow .15s ease;
+    }
+
+    button.copy-btn:hover{
+      border-color:#97c7cf;
+      background:linear-gradient(180deg, #ffffff 0%, var(--soft2) 100%);
+      box-shadow:0 10px 24px rgba(57,95,128,.12);
+      transform:translateY(-1px);
+    }
+
+    .copy-status{
+      min-height:22px;
+      color:var(--muted);
+      font-size:13px;
+      margin-bottom:10px;
+    }
+
+    pre{
+      margin:0;
+      padding:16px;
+      border-radius:14px;
+      background:#1f2937;
+      color:#f8fafc;
+      overflow:auto;
+      line-height:1.55;
+      font-size:12px;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+
+    @media (max-width: 640px){
+      .info-tooltip{
+        width:min(280px, 82vw);
+        font-size:11px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>マウスオーバーで補足が出る丸ボタン - <a href="index29.html">旧版はこちら</a></h1>
+      <p class="lead">添付HTML内の丸ボタン・ツールチップ・開閉用JavaScriptを抜き出して、単体で確認しやすい形にまとめたページです。</p>
+    </section>
+
+    <section class="demo-card">
+      <h2 class="section-title">表示テスト</h2>
+      <div class="demo-list" id="demoArea"></div>
+    </section>
+
+    <section class="code-card">
+      <h2 class="section-title">コピー用コード</h2>
+      <div class="actions">
+        <button class="copy-btn" data-copy-target="cssCode">CSS をコピー</button>
+        <button class="copy-btn" data-copy-target="htmlCode">要素をコピー</button>
+        <button class="copy-btn" data-copy-target="jsCode">JavaScript をコピー</button>
+      </div>
+      <div class="copy-status" id="copyStatus">まだコピーしていません。</div>
+      <pre id="cssCode"></pre><br>
+      <pre id="htmlCode"></pre><br>
+      <pre id="jsCode"></pre>
+    </section>
+  </div>
+
+  <script>
+    const demoItems = [
+      {
+        title: '自由入力例A',
+        help: 'このテキストはテスト用です。少し長めの補足でも折り返して表示されるか確認できます。'
+      },
+      {
+        title: '自由入力例B',
+        help: 'クリックするとスマホ向けに開閉もできます。PCではホバーだけでも表示されます。'
+      }
+    ];
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;');
+    }
+
+function buildInfoItem(title, help, index){
+  const popId = `info-popover-${index}`;
+
+  return `
+    <div class="demo-item">
+      <div class="group-title">
+        <span class="group-title-text">${escapeHtml(title)}</span>
+        <span class="info-wrap">
+          <button
+            type="button"
+            class="info-btn"
+            aria-label="${escapeHtml(title)}の補足"
+            aria-describedby="${popId}"
+            data-popover-id="${popId}"
+          >i</button>
+          <span
+            class="info-tooltip"
+            id="${popId}"
+            role="tooltip"
+            popover="manual"
+          >${escapeHtml(help)}</span>
+        </span>
+      </div>
+      <div class="demo-body">丸ボタンにマウスオーバー、またはクリックして補足表示を確認できます。</div>
+    </div>
+  `;
+}
+
+function supportsPopover(){
+  return typeof HTMLElement !== 'undefined'
+    && typeof HTMLElement.prototype.showPopover === 'function';
+}
+
+function positionTooltip(wrap){
+  const btn = wrap.querySelector('.info-btn');
+  const tip = wrap.querySelector('.info-tooltip');
+  if(!btn || !tip) return;
+
+  const rect = btn.getBoundingClientRect();
+  const gap = 8;
+
+  tip.style.top = '0px';
+  tip.style.left = '0px';
+
+  const tipRect = tip.getBoundingClientRect();
+
+  let left = rect.left;
+  let top = rect.bottom + gap;
+
+  const maxLeft = window.innerWidth - tipRect.width - 8;
+  const maxTop = window.innerHeight - tipRect.height - 8;
+
+  if(left > maxLeft) left = Math.max(8, maxLeft);
+  if(top > maxTop){
+    top = rect.top - tipRect.height - gap;
+  }
+  if(top < 8) top = 8;
+
+  tip.style.left = `${Math.max(8, left)}px`;
+  tip.style.top = `${top}px`;
+}
+
+function openTooltip(wrap){
+  const tip = wrap.querySelector('.info-tooltip');
+  if(!tip) return;
+
+  document.querySelectorAll('.info-wrap').forEach(other => {
+    if(other !== wrap) closeTooltip(other);
+  });
+
+  if(supportsPopover()){
+    if(!tip.matches(':popover-open')){
+      tip.showPopover();
+    }
+    positionTooltip(wrap);
+  }else{
+    tip.classList.add('is-open');
+    positionTooltip(wrap);
+  }
+
+  wrap.classList.add('open');
+}
+
+function closeTooltip(wrap){
+  const tip = wrap.querySelector('.info-tooltip');
+  if(!tip) return;
+
+  if(supportsPopover()){
+    if(tip.matches(':popover-open')){
+      tip.hidePopover();
+    }
+  }else{
+    tip.classList.remove('is-open');
+  }
+
+  wrap.classList.remove('open');
+}
+
+function toggleTooltip(wrap){
+  const tip = wrap.querySelector('.info-tooltip');
+  if(!tip) return;
+
+  const isOpen = supportsPopover()
+    ? tip.matches(':popover-open')
+    : tip.classList.contains('is-open');
+
+  if(isOpen) closeTooltip(wrap);
+  else openTooltip(wrap);
+}
+
+function initInfoTooltips(){
+  document.querySelectorAll('.info-wrap').forEach(wrap => {
+    const btn = wrap.querySelector('.info-btn');
+    const tip = wrap.querySelector('.info-tooltip');
+    if(!btn || !tip) return;
+
+    btn.addEventListener('mouseenter', () => openTooltip(wrap));
+btn.addEventListener('mouseleave', () => {
+  setTimeout(() => {
+    if(document.activeElement !== btn){
+      closeTooltip(wrap);
+    }
+  }, 150);
+});
+
+    btn.addEventListener('focus', () => openTooltip(wrap));
+    btn.addEventListener('blur', () => {
+      setTimeout(() => {
+        if(!wrap.contains(document.activeElement)){
+          closeTooltip(wrap);
+        }
+      }, 0);
+    });
+
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleTooltip(wrap);
+    });
+  });
+}
+
+document.addEventListener('click', (e) => {
+  document.querySelectorAll('.info-wrap').forEach(wrap => {
+    if(!wrap.contains(e.target)){
+      closeTooltip(wrap);
+    }
+  });
+});
+
+window.addEventListener('resize', () => {
+  document.querySelectorAll('.info-wrap.open').forEach(wrap => {
+    positionTooltip(wrap);
+  });
+});
+
+window.addEventListener('scroll', () => {
+  document.querySelectorAll('.info-wrap.open').forEach(wrap => {
+    positionTooltip(wrap);
+  });
+}, true);
+
+const extractedCss = `.info-wrap{\n  position:relative;\n  display:inline-flex;\n  align-items:center;\n}\n\n.info-btn{\n  appearance:none;\n  width:20px;\n  height:20px;\n  min-width:20px;\n  padding:0;\n  border:1px solid #9fc1d6;\n  border-radius:999px;\n  background:linear-gradient(180deg, #ffffff 0%, #eef7ff 100%);\n  color:#2f7e8d;\n  font-size:12px;\n  font-weight:700;\n  line-height:1;\n  display:inline-flex;\n  align-items:center;\n  justify-content:center;\n  cursor:pointer;\n  box-shadow:none;\n  transform:none;\n  transition:background .15s ease,border-color .15s ease,box-shadow .15s ease;\n}\n\n.info-btn:hover{\n  background:linear-gradient(180deg, #ffffff 0%, #e7f7f6 100%);\n  border-color:#97c7cf;\n  box-shadow:none;\n  transform:none;\n}\n\n.info-btn:focus-visible{\n  outline:none;\n  border-color:var(--acc2, #2f7e8d);\n  box-shadow:0 0 0 4px rgba(74,163,162,.18);\n}\n\n.info-tooltip{\n  position:fixed;\n  top:0;\n  left:0;\n  z-index:2000;\n  width:min(320px, 78vw);\n  margin:0;\n  padding:10px 12px;\n  border:1px solid rgba(36,52,71,0.12);\n  border-radius:12px;\n  background:rgba(36,52,71,0.96);\n  color:#ffffff;\n  font-size:12px;\n  font-weight:500;\n  line-height:1.6;\n  box-shadow:0 12px 28px rgba(36,52,71,0.22);\n  white-space:normal;\n  overflow:visible;\n  isolation:isolate;\n}\n\n.info-tooltip[popover]{\n  opacity:0;\n  visibility:hidden;\n  transform:translateY(-4px);\n  transition:opacity .16s ease, transform .16s ease, visibility .16s ease;\n  pointer-events:none;\n}\n\n.info-tooltip[popover]:popover-open{\n  opacity:1;\n  visibility:visible;\n  transform:translateY(0);\n  pointer-events:auto;\n}\n\n.info-tooltip.is-open{\n  opacity:1;\n  visibility:visible;\n  transform:translateY(0);\n  pointer-events:auto;\n}\n\n.info-tooltip::before{\n  content:\"\";\n  position:absolute;\n  top:-6px;\n  left:10px;\n  width:10px;\n  height:10px;\n  background:rgba(36,52,71,0.96);\n  transform:rotate(45deg);\n}\n\n@media (max-width: 640px){\n  .info-tooltip{\n    width:min(280px, 82vw);\n    font-size:11px;\n  }\n}`;
+
+const extractedHtml = `<div class="info-wrap">
+  <button
+    type="button"
+    class="info-btn"
+    aria-label="補足"
+    aria-describedby="info-popover-1"
+    data-popover-id="info-popover-1"
+  >i</button>
+  <span
+    class="info-tooltip"
+    id="info-popover-1"
+    role="tooltip"
+    popover="manual"
+  >
+    このテキストはテスト用です。少し長めの補足でも折り返して表示されるか確認できます。
+  </span>
+</div>`;
+
+const extractedJs = `function supportsPopover(){\n  return typeof HTMLElement !== 'undefined'\n    && typeof HTMLElement.prototype.showPopover === 'function';\n}\n\nfunction positionTooltip(wrap){\n  const btn = wrap.querySelector('.info-btn');\n  const tip = wrap.querySelector('.info-tooltip');\n  if(!btn || !tip) return;\n\n  const rect = btn.getBoundingClientRect();\n  const gap = 8;\n\n  tip.style.top = '0px';\n  tip.style.left = '0px';\n\n  const tipRect = tip.getBoundingClientRect();\n\n  let left = rect.left;\n  let top = rect.bottom + gap;\n\n  const maxLeft = window.innerWidth - tipRect.width - 8;\n  const maxTop = window.innerHeight - tipRect.height - 8;\n\n  if(left > maxLeft) left = Math.max(8, maxLeft);\n  if(top > maxTop){\n    top = rect.top - tipRect.height - gap;\n  }\n  if(top < 8) top = 8;\n\n  tip.style.left = Math.max(8, left) + 'px';\n  tip.style.top = top + 'px';\n}\n\nfunction openTooltip(wrap){\n  const tip = wrap.querySelector('.info-tooltip');\n  if(!tip) return;\n\n  document.querySelectorAll('.info-wrap').forEach(other => {\n    if(other !== wrap) closeTooltip(other);\n  });\n\n  if(supportsPopover()){\n    if(!tip.matches(':popover-open')){\n      tip.showPopover();\n    }\n    positionTooltip(wrap);\n  }else{\n    tip.classList.add('is-open');\n    positionTooltip(wrap);\n  }\n\n  wrap.classList.add('open');\n}\n\nfunction closeTooltip(wrap){\n  const tip = wrap.querySelector('.info-tooltip');\n  if(!tip) return;\n\n  if(supportsPopover()){\n    if(tip.matches(':popover-open')){\n      tip.hidePopover();\n    }\n  }else{\n    tip.classList.remove('is-open');\n  }\n\n  wrap.classList.remove('open');\n}\n\nfunction toggleTooltip(wrap){\n  const tip = wrap.querySelector('.info-tooltip');\n  if(!tip) return;\n\n  const isOpen = supportsPopover()\n    ? tip.matches(':popover-open')\n    : tip.classList.contains('is-open');\n\n  if(isOpen) closeTooltip(wrap);\n  else openTooltip(wrap);\n}\n\nfunction initInfoTooltips(){\n  document.querySelectorAll('.info-wrap').forEach(wrap => {\n    const btn = wrap.querySelector('.info-btn');\n    const tip = wrap.querySelector('.info-tooltip');\n    if(!btn || !tip) return;\n\n    btn.addEventListener('mouseenter', () => openTooltip(wrap));\n    btn.addEventListener('mouseleave', () => {\n      setTimeout(() => {\n        if(document.activeElement !== btn){\n          closeTooltip(wrap);\n        }\n      }, 150);\n    });\n\n    btn.addEventListener('focus', () => openTooltip(wrap));\n    btn.addEventListener('blur', () => {\n      setTimeout(() => {\n        if(!wrap.contains(document.activeElement)){\n          closeTooltip(wrap);\n        }\n      }, 0);\n    });\n\n    btn.addEventListener('click', (e) => {\n      e.preventDefault();\n      e.stopPropagation();\n      toggleTooltip(wrap);\n    });\n  });\n}\n\ndocument.addEventListener('click', (e) => {\n  document.querySelectorAll('.info-wrap').forEach(wrap => {\n    if(!wrap.contains(e.target)){\n      closeTooltip(wrap);\n    }\n  });\n});\n\nwindow.addEventListener('resize', () => {\n  document.querySelectorAll('.info-wrap.open').forEach(wrap => {\n    positionTooltip(wrap);\n  });\n});\n\nwindow.addEventListener('scroll', () => {\n  document.querySelectorAll('.info-wrap.open').forEach(wrap => {\n    positionTooltip(wrap);\n  });\n}, true);\n\ninitInfoTooltips();`;
+
+document.getElementById('demoArea').innerHTML = demoItems
+  .map((item, index) => buildInfoItem(item.title, item.help, index))
+  .join('');
+
+initInfoTooltips();
+
+document.getElementById('cssCode').textContent = extractedCss;
+document.getElementById('htmlCode').textContent = extractedHtml;
+document.getElementById('jsCode').textContent = extractedJs;
+
+document.querySelectorAll('[data-copy-target]').forEach(button => {
+  button.addEventListener('click', async () => {
+    const targetId = button.getAttribute('data-copy-target');
+    const text = document.getElementById(targetId)?.textContent || '';
+    const status = document.getElementById('copyStatus');
+
+    try{
+      await navigator.clipboard.writeText(text);
+      const label = button.textContent.trim();
+      status.textContent = label + 'をコピーしました。';
+    }catch(error){
+      status.textContent = 'コピーに失敗しました。ブラウザの権限設定をご確認ください。';
+    }
+  });
+});
+  </script>
+</body>
+</html>
