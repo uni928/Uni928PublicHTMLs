@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CSS改善用サンプルページ</title>
+  <style>
+    body{
+      margin:0;
+      font-family:Arial, sans-serif;
+      background:#f3f3f3;
+      color:#222;
+    }
+
+    .container{
+      width:980px;
+      margin:20px auto;
+    }
+
+    .title{
+      font-size:28px;
+      margin-bottom:12px;
+    }
+
+    .top-box,
+    .left-box,
+    .right-box,
+    .bottom-box{
+      background:#fff;
+      border:1px solid #ccc;
+      padding:14px;
+      margin-bottom:14px;
+    }
+
+    .layout{
+      display:flex;
+      gap:14px;
+    }
+
+    .left-box{
+      flex:2;
+    }
+
+    .right-box{
+      flex:1;
+    }
+
+    h2{
+      margin:0 0 12px;
+      font-size:18px;
+    }
+
+    label{
+      display:block;
+      margin:0 0 6px;
+      font-size:12px;
+      color:#555;
+    }
+
+    input,
+    select,
+    textarea{
+      width:100%;
+      padding:8px;
+      margin-bottom:10px;
+      border:1px solid #bbb;
+      font-size:14px;
+    }
+
+    textarea{
+      min-height:120px;
+      resize:vertical;
+    }
+
+    .row{
+      display:flex;
+      gap:10px;
+    }
+
+    .row > div{
+      flex:1;
+    }
+
+    button{
+      padding:10px 12px;
+      border:1px solid #aaa;
+      background:#eee;
+      cursor:pointer;
+      margin-right:8px;
+      margin-bottom:8px;
+    }
+
+    ul{
+      margin:0;
+      padding-left:20px;
+    }
+
+    .card-list{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:10px;
+    }
+
+    .mini-card{
+      border:1px solid #d0d0d0;
+      padding:10px;
+      background:#fafafa;
+    }
+
+    .status{
+      color:#2f6b2f;
+      font-size:13px;
+      margin-top:8px;
+    }
+
+    .subtext{
+      color:#777;
+      font-size:13px;
+      line-height:1.6;
+    }
+
+    @media (max-width: 1000px){
+      .container{
+        width:auto;
+        margin:14px;
+      }
+      .layout{
+        flex-direction:column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="title">CSS改善用サンプルページ</div>
+
+    <div class="top-box">
+      <h2>概要</h2>
+      <div class="subtext">このページは、見た目改善の練習用として使う公開向けサンプルです。機能や文言はすべてダミーです。</div>
+    </div>
+
+    <div class="layout">
+      <div class="left-box">
+        <h2>入力フォーム</h2>
+        <div class="row">
+          <div>
+            <label>件名</label>
+            <input type="text" value="公開用サンプルの入力例">
+          </div>
+          <div>
+            <label>種類</label>
+            <select>
+              <option>メモ</option>
+              <option>案内</option>
+              <option>記録</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>作成者</label>
+            <input type="text" value="サンプル作成者">
+          </div>
+          <div>
+            <label>状態</label>
+            <select>
+              <option>作業中</option>
+              <option>確認待ち</option>
+              <option>完了</option>
+            </select>
+          </div>
+        </div>
+        <label>本文</label>
+        <textarea>ここには一般公開しても問題ないダミーテキストだけを入れています。ChatGPTに添付して、CSSだけを改善してもらう用途を想定したサンプルです。</textarea>
+        <div>
+          <button>保存</button>
+          <button>複製</button>
+          <button>クリア</button>
+        </div>
+        <div class="status">状態: 入力内容はサンプルです。</div>
+      </div>
+
+      <div class="right-box">
+        <h2>サイド情報</h2>
+        <ul>
+          <li>カードUIを含む</li>
+          <li>フォーム部品を含む</li>
+          <li>ボタンを含む</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="bottom-box">
+      <h2>表示例</h2>
+      <div class="card-list">
+        <div class="mini-card">
+          <strong>表示例 A</strong>
+          <div class="subtext">シンプルなカード風ブロックです。</div>
+        </div>
+        <div class="mini-card">
+          <strong>表示例 B</strong>
+          <div class="subtext">余白、境界線、文字サイズの改善を依頼しやすい構成です。</div>
+        </div>
+        <div class="mini-card">
+          <strong>表示例 C</strong>
+          <div class="subtext">記事用のキャプチャにも使いやすい一般的な内容です。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
