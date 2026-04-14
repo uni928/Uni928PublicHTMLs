@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>補足ツールチップ丸ボタン 抽出版</title>
+  <style>
+    :root{
+      --bg:#eef6fb;
+      --panel:#ffffff;
+      --ink:#243447;
+      --muted:#6b7c8f;
+      --acc:#4aa3a2;
+      --acc2:#2f7e8d;
+      --line:#d7e4ee;
+      --line2:#bdd2e0;
+      --soft:#eef8fb;
+      --soft2:#e7f7f6;
+      --shadow:0 12px 40px rgb(57 95 128 / 10%);
+    }
+
+    *{ box-sizing:border-box; }
+
+    html,body{
+      margin:0;
+      color:var(--ink);
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Hiragino Sans","Noto Sans JP","Yu Gothic UI","Meiryo",sans-serif;
+      background:
+        radial-gradient(circle at top left, #eef7ff 0%, transparent 34%),
+        radial-gradient(circle at top right, #f0fff8 0%, transparent 30%),
+        linear-gradient(180deg, #f7fbff 0%, #eef6fb 100%);
+      background-attachment:fixed;
+    }
+
+    body{
+      padding:28px 16px 48px;
+    }
+
+    .wrap{
+      max-width:1040px;
+      margin:0 auto;
+    }
+
+    .hero{
+      background:linear-gradient(180deg, #ffffff 0%, #f8fcff 100%);
+      border:1px solid var(--line);
+      border-radius:18px;
+      box-shadow:var(--shadow);
+      padding:22px;
+      margin-bottom:18px;
+    }
+
+    h1{
+      margin:0 0 8px;
+      font-size:24px;
+    }
+
+    .lead{
+      margin:0;
+      color:var(--muted);
+      line-height:1.7;
+    }
+
+    .demo-card,
+    .code-card{
+      background:linear-gradient(180deg, #ffffff 0%, #f8fcff 100%);
+      border:1px solid var(--line);
+      border-radius:18px;
+      box-shadow:var(--shadow);
+      padding:22px;
+      margin-bottom:18px;
+    }
+
+    .section-title{
+      margin:0 0 16px;
+      font-size:18px;
+      color:#355066;
+    }
+
+    .demo-list{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+      gap:14px;
+    }
+
+    .demo-item{
+      padding:16px;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:#fbfdff;
+      min-height:96px;
+    }
+
+    .group-title{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin-bottom:12px;
+      font-size:14px;
+      font-weight:700;
+      color:#355066;
+      letter-spacing:.02em;
+    }
+
+    .group-title::before{
+      content:"";
+      width:10px;
+      height:10px;
+      border-radius:999px;
+      background:linear-gradient(135deg, var(--acc), #5b8def);
+      flex:0 0 auto;
+      box-shadow:0 0 0 5px rgba(74,163,162,.10);
+    }
+
+    .group-title-text{
+      display:inline-flex;
+      align-items:center;
+    }
+
+    .info-wrap{
+      position:relative;
+      display:inline-flex;
+      align-items:center;
+    }
+
+    .info-btn{
+      appearance:none;
+      width:20px;
+      height:20px;
+      min-width:20px;
+      padding:0;
+      border:1px solid #9fc1d6;
+      border-radius:999px;
+      background:linear-gradient(180deg, #ffffff 0%, #eef7ff 100%);
+      color:#2f7e8d;
+      font-size:12px;
+      font-weight:700;
+      line-height:1;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      box-shadow:none;
+      transform:none;
+      transition:background .15s ease,border-color .15s ease,box-shadow .15s ease;
+    }
+
+    .info-btn:hover{
+      background:linear-gradient(180deg, #ffffff 0%, #e7f7f6 100%);
+      border-color:#97c7cf;
+      box-shadow:none;
+      transform:none;
+    }
+
+    .info-btn:focus-visible{
+      outline:none;
+      border-color:var(--acc2);
+      box-shadow:0 0 0 4px rgba(74,163,162,.18);
+    }
+
+    .info-tooltip{
+      position:absolute;
+      top:calc(100% + 8px);
+      left:0;
+      z-index:2000;
+      width:min(320px, 78vw);
+      padding:10px 12px;
+      border:1px solid rgba(36,52,71,0.12);
+      border-radius:12px;
+      background:rgba(36,52,71,0.96);
+      color:#ffffff;
+      font-size:12px;
+      font-weight:500;
+      line-height:1.6;
+      box-shadow:0 12px 28px rgba(36,52,71,0.22);
+      opacity:0;
+      visibility:hidden;
+      transform:translateY(-4px);
+      transition:opacity .16s ease, transform .16s ease, visibility .16s ease;
+      pointer-events:none;
+      white-space:normal;
+    }
+
+    .info-tooltip::before{
+      content:"";
+      position:absolute;
+      top:-6px;
+      left:12px;
+      width:10px;
+      height:10px;
+      background:rgba(36,52,71,0.96);
+      transform:rotate(45deg);
+      border-left:1px solid rgba(36,52,71,0.12);
+      border-top:1px solid rgba(36,52,71,0.12);
+    }
+
+    .info-wrap:hover .info-tooltip,
+    .info-wrap:focus-within .info-tooltip,
+    .info-wrap.open .info-tooltip{
+      opacity:1;
+      visibility:visible;
+      transform:translateY(0);
+      pointer-events:auto;
+    }
+
+    .demo-body{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.7;
+    }
+
+    .actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      margin-bottom:14px;
+    }
+
+    button.copy-btn{
+      appearance:none;
+      border:1px solid var(--line2);
+      background:linear-gradient(180deg, #ffffff 0%, var(--soft) 100%);
+      color:var(--ink);
+      padding:10px 14px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:600;
+      box-shadow:0 6px 18px rgba(57,95,128,.08);
+      transition:background .15s ease,border-color .15s ease,transform .15s ease,box-shadow .15s ease;
+    }
+
+    button.copy-btn:hover{
+      border-color:#97c7cf;
+      background:linear-gradient(180deg, #ffffff 0%, var(--soft2) 100%);
+      box-shadow:0 10px 24px rgba(57,95,128,.12);
+      transform:translateY(-1px);
+    }
+
+    .copy-status{
+      min-height:22px;
+      color:var(--muted);
+      font-size:13px;
+      margin-bottom:10px;
+    }
+
+    pre{
+      margin:0;
+      padding:16px;
+      border-radius:14px;
+      background:#1f2937;
+      color:#f8fafc;
+      overflow:auto;
+      line-height:1.55;
+      font-size:12px;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+
+    @media (max-width: 640px){
+      .info-tooltip{
+        width:min(280px, 82vw);
+        font-size:11px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>マウスオーバーで補足が出る丸ボタン 抽出版</h1>
+      <p class="lead">添付HTML内の丸ボタン・ツールチップ・開閉用JavaScriptを抜き出して、単体で確認しやすい形にまとめたテストページです。</p>
+    </section>
+
+    <section class="demo-card">
+      <h2 class="section-title">表示テスト</h2>
+      <div class="demo-list" id="demoArea"></div>
+    </section>
+
+    <section class="code-card">
+      <h2 class="section-title">コピー用コード</h2>
+      <div class="actions">
+        <button class="copy-btn" data-copy-target="cssCode">CSS をコピー</button>
+        <button class="copy-btn" data-copy-target="htmlCode">要素をコピー</button>
+        <button class="copy-btn" data-copy-target="jsCode">JavaScript をコピー</button>
+      </div>
+      <div class="copy-status" id="copyStatus">まだコピーしていません。</div>
+      <pre id="cssCode"></pre><br>
+      <pre id="htmlCode"></pre><br>
+      <pre id="jsCode"></pre>
+    </section>
+  </div>
+
+  <script>
+    const demoItems = [
+      {
+        title: '自由入力例A',
+        help: 'このテキストはテスト用です。少し長めの補足でも折り返して表示されるか確認できます。'
+      },
+      {
+        title: '自由入力例B',
+        help: 'クリックするとスマホ向けに開閉もできます。PCではホバーだけでも表示されます。'
+      }
+    ];
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;');
+    }
+
+    function buildInfoItem(title, help){
+      return `
+        <div class="demo-item">
+          <div class="group-title">
+            <span class="group-title-text">${escapeHtml(title)}</span>
+            <span class="info-wrap">
+              <button
+                type="button"
+                class="info-btn"
+                aria-label="${escapeHtml(title)}の補足"
+              >i</button>
+              <span class="info-tooltip" role="tooltip">${escapeHtml(help)}</span>
+            </span>
+          </div>
+          <div class="demo-body">丸ボタンにマウスオーバー、またはクリックして補足表示を確認できます。</div>
+        </div>
+      `;
+    }
+
+    function initInfoTooltips(){
+      document.querySelectorAll('.info-wrap').forEach(wrap => {
+        const btn = wrap.querySelector('.info-btn');
+        if(!btn) return;
+
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const isOpen = wrap.classList.contains('open');
+          document.querySelectorAll('.info-wrap.open').forEach(el => {
+            if(el !== wrap) el.classList.remove('open');
+          });
+          wrap.classList.toggle('open', !isOpen);
+        });
+      });
+    }
+
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.info-wrap.open').forEach(el => {
+        el.classList.remove('open');
+      });
+    });
+
+    const extractedCss = `.info-wrap{\n  position:relative;\n  display:inline-block;\n  width:300px;\n}\n\n.info-btn{\n  appearance:none;\n  width:20px;\n  height:20px;\n  border:1px solid #9fc1d6;\n  border-radius:999px;\n  background:#ffffff;\n  color:#2f7e8d;\n  font-size:12px;\n  font-weight:700;\n  display:flex;\n  align-items:center;\n  justify-content:center;\n  cursor:pointer;\n}\n\n.info-tooltip{\n  position:absolute;\n  top:100%;\n  left:0;\n  margin-top:6px;\n  padding:8px;\n  background:#333;\n  color:#fff;\n  font-size:12px;\n  border-radius:6px;\n  opacity:0;\n  pointer-events:none;\n  transition:.15s;\n}\n\n.info-wrap:hover .info-tooltip{\n  opacity:1;\n}`;
+
+    const extractedHtml = `<div class="info-wrap">
+  <button class="info-btn" type="button">i</button>
+  <span class="info-tooltip" role="tooltip">
+    このテキストはテスト用です。少し長めの補足でも折り返して表示されるか確認できます。
+  </span>
+</div>`;
+
+    const extractedJs = `function initInfoTooltips(){\n  document.querySelectorAll('.info-wrap').forEach(wrap => {\n    const btn = wrap.querySelector('.info-btn');\n    if(!btn) return;\n\n    btn.addEventListener('click', (e) => {\n      e.preventDefault();\n      e.stopPropagation();\n\n      const isOpen = wrap.classList.contains('open');\n      document.querySelectorAll('.info-wrap.open').forEach(el => {\n        if(el !== wrap) el.classList.remove('open');\n      });\n      wrap.classList.toggle('open', !isOpen);\n    });\n  });\n}\n\ndocument.addEventListener('click', () => {\n  document.querySelectorAll('.info-wrap.open').forEach(el => {\n    el.classList.remove('open');\n  });\n});\n\ninitInfoTooltips();`;
+
+    document.getElementById('demoArea').innerHTML = demoItems
+      .map(item => buildInfoItem(item.title, item.help))
+      .join('');
+
+    initInfoTooltips();
+
+    document.getElementById('cssCode').textContent = extractedCss;
+    document.getElementById('htmlCode').textContent = extractedHtml;
+    document.getElementById('jsCode').textContent = extractedJs;
+
+    document.querySelectorAll('[data-copy-target]').forEach(button => {
+      button.addEventListener('click', async () => {
+        const targetId = button.getAttribute('data-copy-target');
+        const text = document.getElementById(targetId)?.textContent || '';
+        const status = document.getElementById('copyStatus');
+
+        try{
+          await navigator.clipboard.writeText(text);
+          const label = button.textContent.trim();
+          status.textContent = `${label}をコピーしました。`;
+        }catch(error){
+          status.textContent = 'コピーに失敗しました。ブラウザの権限設定をご確認ください。';
+        }
+      });
+    });
+  </script>
+</body>
+</html>
