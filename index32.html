@@ -177,6 +177,7 @@
   white-space:normal;
   overflow:visible;
   isolation:isolate;
+  --tip-arrow-left: 10px;
 }
 
 /* Popover本体の初期化 */
@@ -208,7 +209,7 @@
   content:"";
   position:absolute;
   top:-6px;
-  left:10px;
+  left:var(--tip-arrow-left);
   width:10px;
   height:10px;
   background:rgba(36,52,71,0.96);
@@ -362,6 +363,9 @@ function positionTooltip(wrap){
 
   const rect = btn.getBoundingClientRect();
   const gap = 8;
+  const arrowHalf = 5;
+  const minArrowLeft = 10;
+  const maxViewportPadding = 8;
 
   tip.style.top = '0px';
   tip.style.left = '0px';
@@ -371,17 +375,28 @@ function positionTooltip(wrap){
   let left = rect.left;
   let top = rect.bottom + gap;
 
-  const maxLeft = window.innerWidth - tipRect.width - 8;
-  const maxTop = window.innerHeight - tipRect.height - 8;
+  const maxLeft = window.innerWidth - tipRect.width - maxViewportPadding;
+  const maxTop = window.innerHeight - tipRect.height - maxViewportPadding;
 
-  if(left > maxLeft) left = Math.max(8, maxLeft);
+  if(left > maxLeft) left = Math.max(maxViewportPadding, maxLeft);
   if(top > maxTop){
     top = rect.top - tipRect.height - gap;
   }
-  if(top < 8) top = 8;
+  if(top < maxViewportPadding) top = maxViewportPadding;
 
-  tip.style.left = `${Math.max(8, left)}px`;
-  tip.style.top = `${top}px`;
+  tip.style.left = Math.max(maxViewportPadding, left) + 'px';
+  tip.style.top = top + 'px';
+
+  // ▼ ちょぼ位置を「?ボタンの中央」に近づける
+  const buttonCenterX = rect.left + rect.width / 2;
+  let arrowLeft = buttonCenterX - left - arrowHalf;
+
+  // ▼ 角丸やはみ出しを避けるための制限
+  const maxArrowLeft = tipRect.width - 20;
+  if(arrowLeft < minArrowLeft) arrowLeft = minArrowLeft;
+  if(arrowLeft > maxArrowLeft) arrowLeft = maxArrowLeft;
+
+  tip.style.setProperty('--tip-arrow-left', arrowLeft + 'px');
 }
 
 function openTooltip(wrap){
@@ -495,7 +510,7 @@ window.addEventListener('scroll', () => {
   });
 }, true);
 
-const extractedCss = `.info-wrap{\n  position:relative;\n  display:inline-flex;\n  align-items:center;\n}\n\n.info-btn{\n  appearance:none;\n  width:20px;\n  height:20px;\n  min-width:20px;\n  padding:0;\n  border:1px solid #9fc1d6;\n  border-radius:999px;\n  background:linear-gradient(180deg, #ffffff 0%, #eef7ff 100%);\n  color:#2f7e8d;\n  font-size:12px;\n  font-weight:700;\n  line-height:1;\n  display:inline-flex;\n  align-items:center;\n  justify-content:center;\n  cursor:pointer;\n  box-shadow:none;\n  transform:none;\n  transition:background .15s ease,border-color .15s ease,box-shadow .15s ease;\n}\n\n.info-btn:hover{\n  background:linear-gradient(180deg, #ffffff 0%, #e7f7f6 100%);\n  border-color:#97c7cf;\n  box-shadow:none;\n  transform:none;\n}\n\n.info-btn:focus-visible{\n  outline:none;\n  border-color:var(--acc2, #2f7e8d);\n  box-shadow:0 0 0 4px rgba(74,163,162,.18);\n}\n\n.info-tooltip{\n  position:fixed;\n  top:0;\n  left:0;\n  z-index:2000;\n  width:min(320px, 78vw);\n  margin:0;\n  padding:10px 12px;\n  border:1px solid rgba(36,52,71,0.12);\n  border-radius:12px;\n  background:rgba(36,52,71,0.96);\n  color:#ffffff;\n  font-size:12px;\n  font-weight:500;\n  line-height:1.6;\n  box-shadow:0 12px 28px rgba(36,52,71,0.22);\n  white-space:normal;\n  overflow:visible;\n  isolation:isolate;\n}\n\n.info-tooltip[popover]{\n  opacity:0;\n  visibility:hidden;\n  transform:translateY(-4px);\n  transition:opacity .16s ease, transform .16s ease, visibility .16s ease;\n  pointer-events:none;\n}\n\n.info-tooltip[popover]:popover-open{\n  opacity:1;\n  visibility:visible;\n  transform:translateY(0);\n  pointer-events:auto;\n}\n\n.info-tooltip.is-open{\n  opacity:1;\n  visibility:visible;\n  transform:translateY(0);\n  pointer-events:auto;\n}\n\n.info-tooltip::before{\n  content:\"\";\n  position:absolute;\n  top:-6px;\n  left:10px;\n  width:10px;\n  height:10px;\n  background:rgba(36,52,71,0.96);\n  transform:rotate(45deg);\n}\n\n@media (max-width: 640px){\n  .info-tooltip{\n    width:min(280px, 82vw);\n    font-size:11px;\n  }\n}`;
+const extractedCss = `.info-wrap{\n  position:relative;\n  display:inline-flex;\n  align-items:center;\n}\n\n.info-btn{\n  appearance:none;\n  width:20px;\n  height:20px;\n  min-width:20px;\n  padding:0;\n  border:1px solid #9fc1d6;\n  border-radius:999px;\n  background:linear-gradient(180deg, #ffffff 0%, #eef7ff 100%);\n  color:#2f7e8d;\n  font-size:12px;\n  font-weight:700;\n  line-height:1;\n  display:inline-flex;\n  align-items:center;\n  justify-content:center;\n  cursor:pointer;\n}\n\n.info-tooltip{\n  position:fixed;\n  top:0;\n  left:0;\n  z-index:2000;\n  width:min(320px, 78vw);\n  margin:0;\n  padding:10px 12px;\n  border:1px solid rgba(36,52,71,0.12);\n  border-radius:12px;\n  background:rgba(36,52,71,0.96);\n  color:#ffffff;\n  font-size:12px;\n  line-height:1.6;\n  box-shadow:0 12px 28px rgba(36,52,71,0.22);\n  white-space:normal;\n  overflow:visible;\n  --tip-arrow-left:10px;\n}\n\n.info-tooltip::before{\n  content:\"\";\n  position:absolute;\n  top:-6px;\n  left:var(--tip-arrow-left);\n  width:10px;\n  height:10px;\n  background:rgba(36,52,71,0.96);\n  transform:rotate(45deg);\n}\n\n.info-tooltip[popover]{\n  opacity:0;\n  visibility:hidden;\n}\n\n.info-tooltip[popover]:popover-open,\n.info-tooltip.is-open{\n  opacity:1;\n  visibility:visible;\n}\n`;
 
 const extractedHtml = `<div class="info-wrap">
   <button
@@ -515,7 +530,7 @@ const extractedHtml = `<div class="info-wrap">
   </span>
 </div>`;
 
-const extractedJs = `function supportsPopover(){\n  return typeof HTMLElement !== 'undefined'\n    && typeof HTMLElement.prototype.showPopover === 'function';\n}\n\nfunction positionTooltip(wrap){\n  const btn = wrap.querySelector('.info-btn');\n  const tip = wrap.querySelector('.info-tooltip');\n  if(!btn || !tip) return;\n\n  const rect = btn.getBoundingClientRect();\n  const gap = 8;\n\n  tip.style.top = '0px';\n  tip.style.left = '0px';\n\n  const tipRect = tip.getBoundingClientRect();\n\n  let left = rect.left;\n  let top = rect.bottom + gap;\n\n  const maxLeft = window.innerWidth - tipRect.width - 8;\n  const maxTop = window.innerHeight - tipRect.height - 8;\n\n  if(left > maxLeft) left = Math.max(8, maxLeft);\n  if(top > maxTop){\n    top = rect.top - tipRect.height - gap;\n  }\n  if(top < 8) top = 8;\n\n  tip.style.left = Math.max(8, left) + 'px';\n  tip.style.top = top + 'px';\n}\n\nfunction openTooltip(wrap){\n  const tip = wrap.querySelector('.info-tooltip');\n  if(!tip) return;\n\n  document.querySelectorAll('.info-wrap').forEach(other => {\n    if(other !== wrap) closeTooltip(other);\n  });\n\n  if(supportsPopover()){\n    if(!tip.matches(':popover-open')){\n      tip.showPopover();\n    }\n    positionTooltip(wrap);\n  }else{\n    tip.classList.add('is-open');\n    positionTooltip(wrap);\n  }\n\n  wrap.classList.add('open');\n}\n\nfunction closeTooltip(wrap){\n  const tip = wrap.querySelector('.info-tooltip');\n  if(!tip) return;\n\n  if(supportsPopover()){\n    if(tip.matches(':popover-open')){\n      tip.hidePopover();\n    }\n  }else{\n    tip.classList.remove('is-open');\n  }\n\n  wrap.classList.remove('open');\n}\n\nfunction toggleTooltip(wrap){\n  const tip = wrap.querySelector('.info-tooltip');\n  if(!tip) return;\n\n  const isOpen = supportsPopover()\n    ? tip.matches(':popover-open')\n    : tip.classList.contains('is-open');\n\n  if(isOpen) closeTooltip(wrap);\n  else openTooltip(wrap);\n}\n\nfunction initInfoTooltips(){\n  document.querySelectorAll('.info-wrap').forEach(wrap => {\n    const btn = wrap.querySelector('.info-btn');\n    const tip = wrap.querySelector('.info-tooltip');\n    if(!btn || !tip) return;\n\n    btn.addEventListener('mouseenter', () => openTooltip(wrap));\n    btn.addEventListener('mouseleave', () => {\n      setTimeout(() => {\n        if(document.activeElement !== btn){\n          closeTooltip(wrap);\n        }\n      }, 150);\n    });\n\n    btn.addEventListener('focus', () => openTooltip(wrap));\n    btn.addEventListener('blur', () => {\n      setTimeout(() => {\n        if(!wrap.contains(document.activeElement)){\n          closeTooltip(wrap);\n        }\n      }, 0);\n    });\n\n    btn.addEventListener('click', (e) => {\n      e.preventDefault();\n      e.stopPropagation();\n      toggleTooltip(wrap);\n    });\n  });\n}\n\ndocument.addEventListener('click', (e) => {\n  document.querySelectorAll('.info-wrap').forEach(wrap => {\n    if(!wrap.contains(e.target)){\n      closeTooltip(wrap);\n    }\n  });\n});\n\nwindow.addEventListener('resize', () => {\n  document.querySelectorAll('.info-wrap.open').forEach(wrap => {\n    positionTooltip(wrap);\n  });\n});\n\nwindow.addEventListener('scroll', () => {\n  document.querySelectorAll('.info-wrap.open').forEach(wrap => {\n    positionTooltip(wrap);\n  });\n}, true);\n\ninitInfoTooltips();`;
+const extractedJs = `function supportsPopover(){\n  return typeof HTMLElement !== 'undefined'\n    && typeof HTMLElement.prototype.showPopover === 'function';\n}\n\nfunction positionTooltip(wrap){\n  const btn = wrap.querySelector('.info-btn');\n  const tip = wrap.querySelector('.info-tooltip');\n  if(!btn || !tip) return;\n\n  const rect = btn.getBoundingClientRect();\n  const gap = 8;\n\n  tip.style.top = '0px';\n  tip.style.left = '0px';\n\n  const tipRect = tip.getBoundingClientRect();\n\n  let left = rect.left;\n  let top = rect.bottom + gap;\n\n  const maxLeft = window.innerWidth - tipRect.width - 8;\n  const maxTop = window.innerHeight - tipRect.height - 8;\n\n  if(left > maxLeft) left = Math.max(8, maxLeft);\n  if(top > maxTop){\n    top = rect.top - tipRect.height - gap;\n  }\n  if(top < 8) top = 8;\n\n  tip.style.left = Math.max(8, left) + 'px';\n  tip.style.top = top + 'px';\n\n  const btnCenter = rect.left + rect.width / 2;\n  let arrowLeft = btnCenter - left - 5;\n\n  if(arrowLeft < 10) arrowLeft = 10;\n  if(arrowLeft > tipRect.width - 20) arrowLeft = tipRect.width - 20;\n\n  tip.style.setProperty('--tip-arrow-left', arrowLeft + 'px');\n}\n\nfunction openTooltip(wrap){\n  const tip = wrap.querySelector('.info-tooltip');\n  if(!tip) return;\n\n  document.querySelectorAll('.info-wrap').forEach(other => {\n    if(other !== wrap) closeTooltip(other);\n  });\n\n  if(supportsPopover()){\n    if(!tip.matches(':popover-open')){\n      tip.showPopover();\n    }\n    positionTooltip(wrap);\n  }else{\n    tip.classList.add('is-open');\n    positionTooltip(wrap);\n  }\n\n  wrap.classList.add('open');\n}\n\nfunction closeTooltip(wrap){\n  const tip = wrap.querySelector('.info-tooltip');\n  if(!tip) return;\n\n  if(supportsPopover()){\n    if(tip.matches(':popover-open')){\n      tip.hidePopover();\n    }\n  }else{\n    tip.classList.remove('is-open');\n  }\n\n  wrap.classList.remove('open');\n}\n\nfunction toggleTooltip(wrap){\n  const tip = wrap.querySelector('.info-tooltip');\n  if(!tip) return;\n\n  const isOpen = supportsPopover()\n    ? tip.matches(':popover-open')\n    : tip.classList.contains('is-open');\n\n  if(isOpen) closeTooltip(wrap);\n  else openTooltip(wrap);\n}\n\nfunction initInfoTooltips(){\n  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;\n\n  document.querySelectorAll('.info-wrap').forEach(wrap => {\n    const btn = wrap.querySelector('.info-btn');\n    const tip = wrap.querySelector('.info-tooltip');\n    if(!btn || !tip) return;\n\n    if(isTouch){\n      btn.addEventListener('click', function(e){\n        e.preventDefault();\n        e.stopPropagation();\n        toggleTooltip(wrap);\n      });\n      return;\n    }\n\n    btn.addEventListener('mouseenter', function(){\n      openTooltip(wrap);\n    });\n\n    btn.addEventListener('mouseleave', function(){\n      setTimeout(function(){\n        if(document.activeElement !== btn){\n          closeTooltip(wrap);\n        }\n      }, 150);\n    });\n\n    btn.addEventListener('focus', function(){\n      openTooltip(wrap);\n    });\n\n    btn.addEventListener('blur', function(){\n      setTimeout(function(){\n        if(!wrap.contains(document.activeElement)){\n          closeTooltip(wrap);\n        }\n      }, 0);\n    });\n\n    btn.addEventListener('click', function(e){\n      e.preventDefault();\n      e.stopPropagation();\n      toggleTooltip(wrap);\n    });\n  });\n}\n\ndocument.addEventListener('click', function(e){\n  document.querySelectorAll('.info-wrap').forEach(function(wrap){\n    if(!wrap.contains(e.target)){\n      closeTooltip(wrap);\n    }\n  });\n});\n\nwindow.addEventListener('resize', function(){\n  document.querySelectorAll('.info-wrap.open').forEach(function(wrap){\n    positionTooltip(wrap);\n  });\n});\n\nwindow.addEventListener('scroll', function(){\n  document.querySelectorAll('.info-wrap.open').forEach(function(wrap){\n    positionTooltip(wrap);\n  });\n}, true);\n\ninitInfoTooltips();`;
 
 document.getElementById('demoArea').innerHTML = demoItems
   .map((item, index) => buildInfoItem(item.title, item.help, index))
