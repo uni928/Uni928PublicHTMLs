@@ -440,19 +440,24 @@ function initInfoTooltips(){
     const tip = wrap.querySelector('.info-tooltip');
     if(!btn || !tip) return;
 
-    // ▼ PCのみ hover
-    if(!isTouch){
-      btn.addEventListener('mouseenter', () => openTooltip(wrap));
-      btn.addEventListener('mouseleave', () => {
-        setTimeout(() => {
-          if(document.activeElement !== btn){
-            closeTooltip(wrap);
-          }
-        }, 150);
+    if(isTouch){
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleTooltip(wrap);
       });
+      return;
     }
 
-    // ▼ 共通
+    btn.addEventListener('mouseenter', () => openTooltip(wrap));
+    btn.addEventListener('mouseleave', () => {
+      setTimeout(() => {
+        if(document.activeElement !== btn){
+          closeTooltip(wrap);
+        }
+      }, 150);
+    });
+
     btn.addEventListener('focus', () => openTooltip(wrap));
     btn.addEventListener('blur', () => {
       setTimeout(() => {
@@ -462,7 +467,6 @@ function initInfoTooltips(){
       }, 0);
     });
 
-    // ▼ スマホはこれだけでOK
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
