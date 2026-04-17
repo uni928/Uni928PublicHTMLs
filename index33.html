@@ -1685,21 +1685,13 @@ async function copyText(text) {
   }
 }
 
-function escapeHtml(text) {
-  return text
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
-
 function ensureCopyAreaUI() {
   const copyArea = document.querySelector(".copy-area");
   if (!copyArea) return null;
 
   copyArea.innerHTML = `
     <h2>直近でコピーしたHTML</h2>
-    <p>見本ボタンを押すと、HTML一式をここに表示します。下の3ボタンで必要な部分だけコピーできます。</p>
+    <p>見本ボタンを押すと、通常・ホバー・クリック時の挙動を含むHTML一式をここに表示します。下の3ボタンで必要な部分だけコピーできます。</p>
 
     <div class="btn-row" style="margin-bottom:12px;">
       <button type="button" id="copyCssBtn" class="btn btn-sm tone-soft shadow-light" data-copy-tool="1">css をコピー</button>
@@ -1751,7 +1743,18 @@ function ensureCopyAreaUI() {
   return copyArea;
 }
 
-function buildLazyButtonHtml(button) {
+function toKebabCase(name) {
+  return name.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+}
+
+function buildInlineStyle(styleMap) {
+  return Object.entries(styleMap)
+    .filter(([_, value]) => value !== "" && value !== null && value !== undefined)
+    .map(([key, value]) => `${key}:${value}`)
+    .join(";");
+}
+
+function pickStateStyle(button) {
   const cs = getComputedStyle(button);
 
   const styleMap = {
@@ -1759,7 +1762,7 @@ function buildLazyButtonHtml(button) {
     "padding": cs.padding,
     "min-height": cs.minHeight,
     "min-width": cs.minWidth,
-    "width": cs.width !== "auto" ? cs.width : "",
+    "width": button.classList.contains("full") ? "100%" : (cs.width !== "auto" ? cs.width : ""),
     "border": cs.border,
     "border-radius": cs.borderRadius,
     "background": cs.background,
@@ -1770,67 +1773,84 @@ function buildLazyButtonHtml(button) {
     "line-height": cs.lineHeight,
     "text-align": cs.textAlign,
     "box-shadow": cs.boxShadow,
-    "backdrop-filter": cs.backdropFilter,
-    "-webkit-backdrop-filter": cs.backdropFilter,
+    "backdrop-filter": cs.backdropFilter !== "none" ? cs.backdropFilter : "",
+    "-webkit-backdrop-filter": cs.backdropFilter !== "none" ? cs.backdropFilter : "",
     "cursor": "pointer",
     "white-space": cs.whiteSpace,
     "user-select": "none",
     "vertical-align": "middle",
-    "box-sizing": "border-box"
+    "box-sizing": "border-box",
+    "transition": "transform .15s ease, filter .15s ease, box-shadow .15s ease",
+    "transform": cs.transform !== "none" ? cs.transform : "",
+    "filter": cs.filter !== "none" ? cs.filter : ""
   };
 
-  if (button.classList.contains("full")) {
-    styleMap.width = "100%";
-  }
-
-  const entries = Object.entries(styleMap)
-    .filter(([key, value]) => {
+  return Object.fromEntries(
+    Object.entries(styleMap).filter(([key, value]) => {
       if (!value) return false;
       if (key === "box-shadow") return true;
       return value !== "normal" && value !== "none";
     })
-    .filter(([key, value]) => !(key === "backdrop-filter" && value === "none"))
-    .filter(([key, value]) => !(key === "-webkit-backdrop-filter" && value === "none"));
+  );
+}
 
-  const styleText = entries
-    .map(([key, value]) => `${key}:${value}`)
-    .join(";");
+function captureButtonStates(button) {
+  const baseStyle = pickStateStyle(button);
 
-  return `<button style="${styleText}">${button.textContent.trim()}</button>`;
+  const hoverStyle = {
+    ...baseStyle,
+    transform: "translateY(-1px)",
+    filter: "brightness(1.02)"
+  };
+
+  const activeStyle = {
+    ...baseStyle,
+    transform: "translateY(0) scale(0.98)",
+    filter: "brightness(0.98)"
+  };
+
+  return {
+    baseStyle,
+    hoverStyle,
+    activeStyle
+  };
+}
+
+function buildCssRule(selector, styleMap) {
+  const lines = Object.entries(styleMap)
+    .map(([key, value]) => `  ${toKebabCase(key)}:${value};`);
+
+  return [
+    `${selector}{`,
+    ...lines,
+    `}`
+  ].join("\n");
+}
+
+function buildLazyButtonHtml(button) {
+  const { baseStyle, hoverStyle, activeStyle } = captureButtonStates(button);
+
+  const baseText = buildInlineStyle(baseStyle);
+  const hoverText = buildInlineStyle(hoverStyle);
+  const activeText = buildInlineStyle(activeStyle);
+
+  return `<button style="${baseText}" onmouseover="this.style.cssText='${hoverText}'" onmouseout="this.style.cssText='${baseText}'" onmousedown="this.style.cssText='${activeText}'" onmouseup="this.style.cssText='${hoverText}'" onmouseleave="this.style.cssText='${baseText}'">${button.textContent.trim()}</button>`;
 }
 
 function buildCssButtonParts(button) {
-  const cs = getComputedStyle(button);
   const className = "copied-sample-button";
+  const { baseStyle, hoverStyle, activeStyle } = captureButtonStates(button);
 
-  const cssLines = [
-    `.${className}{`,
-    `  display:inline-block;`,
-    `  padding:${cs.padding};`,
-    `  min-height:${cs.minHeight};`,
-    `  min-width:${cs.minWidth};`,
-    button.classList.contains("full") ? `  width:100%;` : (cs.width !== "auto" ? `  width:${cs.width};` : ""),
-    `  border:${cs.border};`,
-    `  border-radius:${cs.borderRadius};`,
-    `  background:${cs.background};`,
-    `  color:${cs.color};`,
-    `  font-size:${cs.fontSize};`,
-    `  font-weight:${cs.fontWeight};`,
-    `  font-family:${cs.fontFamily};`,
-    `  line-height:${cs.lineHeight};`,
-    `  text-align:${cs.textAlign};`,
-    `  box-shadow:${cs.boxShadow};`,
-    cs.backdropFilter && cs.backdropFilter !== "none" ? `  backdrop-filter:${cs.backdropFilter};` : "",
-    cs.backdropFilter && cs.backdropFilter !== "none" ? `  -webkit-backdrop-filter:${cs.backdropFilter};` : "",
-    `  cursor:pointer;`,
-    `  white-space:${cs.whiteSpace};`,
-    `  user-select:none;`,
-    `  vertical-align:middle;`,
-    `  box-sizing:border-box;`,
+  const cssText = [
+    buildCssRule(`.${className}`, baseStyle),
+    buildCssRule(`.${className}:hover`, hoverStyle),
+    buildCssRule(`.${className}:active`, activeStyle),
+    `.${className}:focus,`,
+    `.${className}:focus-visible{`,
+    `  outline:none;`,
     `}`
-  ].filter(Boolean);
+  ].join("\n\n");
 
-  const cssText = cssLines.join("\n");
   const elementHtml = `<button class="${className}">${button.textContent.trim()}</button>`;
 
   return {
