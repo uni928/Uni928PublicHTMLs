@@ -1,0 +1,1899 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ボタン見本市（クリックで最小HTMLコピー）</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", Meiryo, sans-serif;
+      color: #243447;
+      background:
+        radial-gradient(circle at top left, #eef6ff 0%, #f8fbff 35%, #f3f7fb 100%);
+    }
+
+    .page {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .hero {
+      margin-bottom: 24px;
+      padding: 24px;
+      border: 1px solid rgba(189, 210, 224, 0.9);
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(8px);
+      box-shadow: rgba(57, 95, 128, 0.10) 0px 16px 36px 0px;
+    }
+
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: 30px;
+      line-height: 1.2;
+    }
+
+    .hero p {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.7;
+      color: #476179;
+    }
+
+    .info {
+      margin-top: 14px;
+      padding: 12px 14px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #4c647b;
+      background: #f7fbff;
+      border: 1px solid #d8e7f2;
+      border-radius: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      padding: 18px;
+      border: 1px solid rgba(189, 210, 224, 0.9);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.86);
+      box-shadow: rgba(57, 95, 128, 0.08) 0px 12px 28px 0px;
+    }
+
+    .card h2 {
+      margin: 0 0 8px;
+      font-size: 18px;
+      line-height: 1.3;
+    }
+
+    .card p {
+      margin: 0 0 14px;
+      font-size: 13px;
+      color: #5c748a;
+      line-height: 1.6;
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn {
+      border: 1px solid rgb(189, 210, 224);
+      color: rgb(36, 52, 71);
+      font-weight: 700;
+      text-align: center;
+      cursor: pointer;
+      transition: transform .15s ease, filter .15s ease, box-shadow .15s ease;
+      font-family: Arial, system-ui, sans-serif;
+      line-height: 1;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.02);
+    }
+
+    .btn:active {
+      transform: translateY(0) scale(0.98);
+      filter: brightness(0.98);
+    }
+
+    .btn:focus,
+    .btn:focus-visible {
+      outline: none;
+    }
+
+    .btn-sm {
+      padding: 9px 13px;
+      min-height: 36px;
+      font-size: 12px;
+      border-radius: 10px;
+    }
+
+    .btn-md {
+      padding: 11px 16px;
+      min-height: 43px;
+      font-size: 13.3333px;
+      border-radius: 12px;
+    }
+
+    .btn-lg {
+      padding: 15px 22px;
+      min-height: 52px;
+      font-size: 15px;
+      border-radius: 14px;
+    }
+
+    .pill {
+      border-radius: 999px;
+    }
+
+    .square {
+      border-radius: 8px;
+    }
+
+    .soft {
+      border-radius: 16px;
+    }
+
+    .shadow-light {
+      box-shadow: rgba(57, 95, 128, 0.08) 0px 6px 18px 0px;
+    }
+
+    .shadow-strong {
+      box-shadow: rgba(57, 95, 128, 0.16) 0px 12px 28px 0px;
+    }
+
+    .no-shadow {
+      box-shadow: none;
+    }
+
+    .tone-main {
+      background: linear-gradient(135deg, rgb(255,255,255) 0%, rgb(237,244,255) 100%);
+    }
+
+    .tone-sub {
+      background: linear-gradient(135deg, rgb(255,255,255) 0%, rgb(232,247,245) 55%, rgb(216,238,247) 100%);
+    }
+
+    .tone-soft {
+      background: linear-gradient(135deg, rgb(255,255,255) 0%, rgb(238,248,251) 100%);
+    }
+
+    .tone-warm {
+      background: linear-gradient(135deg, rgb(255,255,255) 0%, rgb(255,247,232) 55%, rgb(255,238,214) 100%);
+    }
+
+    .tone-pink {
+      background: linear-gradient(135deg, rgb(255,255,255) 0%, rgb(255,238,246) 55%, rgb(250,233,255) 100%);
+    }
+
+    .tone-purple {
+      background: linear-gradient(135deg, rgb(255,255,255) 0%, rgb(244,240,255) 55%, rgb(232,240,255) 100%);
+    }
+
+    .tone-gray {
+      background: linear-gradient(135deg, rgb(255,255,255) 0%, rgb(242,246,249) 100%);
+    }
+
+    .outline-main {
+      background: rgba(255,255,255,0.72);
+      border: 1px solid #9ec4e5;
+      box-shadow: none;
+    }
+
+    .outline-success {
+      background: rgba(255,255,255,0.72);
+      border: 1px solid #9bcdbd;
+      box-shadow: none;
+    }
+
+    .outline-danger {
+      background: rgba(255,255,255,0.72);
+      border: 1px solid #e1b3b3;
+      box-shadow: none;
+    }
+
+    .solid-main {
+      color: white;
+      border-color: #5d97d6;
+      background: linear-gradient(135deg, #79ace5 0%, #5e8fd3 100%);
+      box-shadow: rgba(70, 115, 170, 0.22) 0px 10px 24px 0px;
+    }
+
+    .solid-success {
+      color: white;
+      border-color: #5cab94;
+      background: linear-gradient(135deg, #76c6af 0%, #5ca992 100%);
+      box-shadow: rgba(71, 136, 118, 0.22) 0px 10px 24px 0px;
+    }
+
+    .solid-danger {
+      color: white;
+      border-color: #d58484;
+      background: linear-gradient(135deg, #e9a0a0 0%, #d27a7a 100%);
+      box-shadow: rgba(163, 86, 86, 0.22) 0px 10px 24px 0px;
+    }
+
+    .solid-dark {
+      color: white;
+      border-color: #3d556d;
+      background: linear-gradient(135deg, #536d87 0%, #394e63 100%);
+      box-shadow: rgba(32, 48, 65, 0.25) 0px 10px 24px 0px;
+    }
+
+    .glass {
+      background: linear-gradient(135deg, rgba(255,255,255,0.90) 0%, rgba(231,241,250,0.65) 100%);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(189, 210, 224, 0.75);
+      box-shadow: rgba(57, 95, 128, 0.10) 0px 8px 20px 0px;
+    }
+
+    .flat {
+      box-shadow: none;
+    }
+
+    .wide {
+      min-width: 160px;
+    }
+
+    .full {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .copy-area {
+      margin-top: 24px;
+      padding: 18px;
+      border: 1px solid rgba(189, 210, 224, 0.9);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.88);
+      box-shadow: rgba(57, 95, 128, 0.08) 0px 12px 28px 0px;
+    }
+
+    .copy-area h2 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+
+    .copy-area p {
+      margin: 0 0 12px;
+      font-size: 13px;
+      color: #5c748a;
+      line-height: 1.6;
+    }
+
+    pre {
+      margin: 0;
+      padding: 14px;
+      overflow: auto;
+      border-radius: 14px;
+      background: #f7fafc;
+      border: 1px solid #dbe7ef;
+      font-size: 13px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 1000;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: rgba(36, 52, 71, 0.95);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: rgba(0,0,0,0.18) 0px 10px 30px;
+      transform: translateY(16px);
+      opacity: 0;
+      pointer-events: none;
+      transition: .2s ease;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .copied {
+      outline: 3px solid rgba(113, 177, 255, 0.28);
+      outline-offset: 3px;
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 16px;
+      }
+
+      .hero {
+        padding: 18px;
+      }
+    }
+/* ===== 追加CSS：1ボタン1css版 ===== */
+
+.btn-u01{
+  color:#fff;
+  border-color:#648bc7;
+  background:linear-gradient(135deg,#9cc4ff 0%,#6d95d8 55%,#587fc4 100%);
+  box-shadow:0 12px 26px rgba(84,121,185,.28);
+}
+.btn-u02{
+  color:#1f3f56;
+  border-color:#b8dbe8;
+  background:linear-gradient(135deg,#ffffff 0%,#e7fbff 48%,#cfeff6 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 8px 18px rgba(85,141,160,.16);
+}
+.btn-u03{
+  color:#fff;
+  border-color:#4a9d8b;
+  background:linear-gradient(135deg,#7be0bf 0%,#51bb9b 52%,#38917a 100%);
+  box-shadow:0 12px 26px rgba(55,138,115,.24);
+}
+.btn-u04{
+  color:#7a3c2d;
+  border-color:#e6c2a5;
+  background:linear-gradient(135deg,#fffaf1 0%,#ffe4c6 50%,#ffd0aa 100%);
+  box-shadow:0 10px 22px rgba(193,137,96,.18);
+}
+
+.btn-u05{
+  color:#fff;
+  border-color:#d88484;
+  background:linear-gradient(135deg,#ffb0b0 0%,#ea8686 52%,#d06c6c 100%);
+  box-shadow:0 12px 24px rgba(179,92,92,.24);
+}
+.btn-u06{
+  color:#7b295e;
+  border-color:#ebc4dd;
+  background:linear-gradient(135deg,#fff8fc 0%,#ffdff1 55%,#f7c7e8 100%);
+  box-shadow:0 9px 18px rgba(190,110,159,.18);
+}
+.btn-u07{
+  color:#fff;
+  border-color:#7a6cd1;
+  background:linear-gradient(135deg,#b6a7ff 0%,#8e7ee8 52%,#7261ca 100%);
+  box-shadow:0 12px 24px rgba(105,92,182,.24);
+}
+.btn-u08{
+  color:#3d425e;
+  border-color:#ccd2e8;
+  background:linear-gradient(135deg,#ffffff 0%,#eef1ff 60%,#dde5ff 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 8px 18px rgba(116,128,186,.14);
+}
+
+.btn-u09{
+  color:#fff;
+  border-color:#4b6f97;
+  background:linear-gradient(180deg,#6f95bf 0%,#4f7399 100%);
+  box-shadow:0 14px 24px rgba(54,82,113,.24);
+  letter-spacing:.03em;
+}
+.btn-u10{
+  color:#244458;
+  border:1px dashed #9fc1d8;
+  background:linear-gradient(135deg,#fbfeff 0%,#edf8ff 100%);
+  box-shadow:none;
+}
+.btn-u11{
+  color:#fff;
+  border-color:#a36c36;
+  background:linear-gradient(135deg,#f0c27b 0%,#d89d4a 50%,#b97b2b 100%);
+  box-shadow:0 12px 22px rgba(165,112,47,.24);
+}
+.btn-u12{
+  color:#604737;
+  border-color:#ddcabd;
+  background:linear-gradient(135deg,#fffdfb 0%,#f8ede5 55%,#eedfd4 100%);
+  box-shadow:0 8px 16px rgba(135,102,78,.14);
+}
+
+.btn-u13{
+  color:#fff;
+  border-color:#3e5e4d;
+  background:linear-gradient(135deg,#5f8970 0%,#486b58 55%,#375142 100%);
+  box-shadow:0 12px 22px rgba(52,78,64,.24);
+}
+.btn-u14{
+  color:#2b4b3e;
+  border-color:#b5d7ca;
+  background:linear-gradient(135deg,#f9fffc 0%,#e4f8ef 58%,#d5f0e4 100%);
+  box-shadow:0 8px 18px rgba(79,145,118,.15);
+}
+.btn-u15{
+  color:#fff;
+  border-color:#7d8794;
+  background:linear-gradient(135deg,#a2acb8 0%,#7e8793 58%,#666e79 100%);
+  box-shadow:0 10px 20px rgba(79,87,96,.22);
+}
+.btn-u16{
+  color:#5b5575;
+  border-color:#d8d0f0;
+  background:linear-gradient(135deg,#fff 0%,#f3edff 52%,#e5dbff 100%);
+  box-shadow:0 8px 16px rgba(126,103,182,.14);
+}
+
+.btn-u17{
+  color:#fff;
+  border-color:#3385a3;
+  background:linear-gradient(135deg,#48c2e8 0%,#2da3ca 50%,#247e9c 100%);
+  box-shadow:0 12px 22px rgba(40,127,156,.24);
+}
+.btn-u18{
+  color:#225165;
+  border-color:#a9d2e0;
+  background:linear-gradient(135deg,#ffffff 0%,#def7ff 55%,#c9eefa 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 8px 18px rgba(68,145,170,.14);
+}
+.btn-u19{
+  color:#fff;
+  border-color:#b16f38;
+  background:linear-gradient(135deg,#ffc56d 0%,#f2a849 55%,#d8852b 100%);
+  box-shadow:0 12px 24px rgba(188,122,47,.25);
+}
+.btn-u20{
+  color:#6c4a1d;
+  border-color:#ebd4a0;
+  background:linear-gradient(135deg,#fffdf3 0%,#fff2be 55%,#ffe7a0 100%);
+  box-shadow:0 9px 18px rgba(181,146,66,.16);
+}
+
+.btn-u21{
+  color:#fff;
+  border-color:#2f2f39;
+  background:linear-gradient(135deg,#50505f 0%,#373743 58%,#262630 100%);
+  box-shadow:0 14px 24px rgba(31,31,40,.28);
+}
+.btn-u22{
+  color:#3c3f4a;
+  border-color:#d8dde5;
+  background:linear-gradient(135deg,#fff 0%,#f4f6f9 60%,#e8edf2 100%);
+  box-shadow:0 8px 16px rgba(98,108,120,.12);
+}
+.btn-u23{
+  color:#fff;
+  border-color:#6e4f9c;
+  background:linear-gradient(135deg,#b68cff 0%,#916bd5 55%,#6d4fa6 100%);
+  box-shadow:0 12px 24px rgba(111,82,163,.24);
+}
+.btn-u24{
+  color:#5b355d;
+  border-color:#e2c0e2;
+  background:linear-gradient(135deg,#fffaff 0%,#f7ddfb 55%,#efc9f5 100%);
+  box-shadow:0 8px 16px rgba(169,110,171,.15);
+}
+
+.btn-u25{
+  color:#fff;
+  border-color:#2d7a67;
+  background:linear-gradient(135deg,#3fd7ab 0%,#24b189 52%,#188268 100%);
+  box-shadow:0 12px 22px rgba(30,125,100,.24);
+}
+.btn-u26{
+  color:#245a4a;
+  border-color:#aedde0;
+  background:linear-gradient(135deg,#fbfffe 0%,#ddfaf1 58%,#c7f3e5 100%);
+  box-shadow:0 8px 18px rgba(57,145,118,.14);
+}
+.btn-u27{
+  color:#fff;
+  border-color:#9b4f5f;
+  background:linear-gradient(135deg,#ee889d 0%,#d86480 55%,#b94d69 100%);
+  box-shadow:0 12px 22px rgba(154,72,97,.24);
+}
+.btn-u28{
+  color:#6b3a44;
+  border-color:#ebc0ca;
+  background:linear-gradient(135deg,#fffafb 0%,#ffdbe2 58%,#f8c6d2 100%);
+  box-shadow:0 8px 16px rgba(174,102,122,.15);
+}
+
+.btn-u29{
+  color:#fff;
+  border-color:#7b6747;
+  background:linear-gradient(135deg,#bba07a 0%,#9a7f5f 55%,#7a6248 100%);
+  box-shadow:0 12px 22px rgba(110,87,63,.24);
+}
+.btn-u30{
+  color:#5d4935;
+  border-color:#ddcfbf;
+  background:linear-gradient(135deg,#fffdfb 0%,#f3e8dd 58%,#e7d7c6 100%);
+  box-shadow:0 8px 16px rgba(140,111,81,.14);
+}
+.btn-u31{
+  color:#fff;
+  border-color:#46709d;
+  background:linear-gradient(135deg,#8bb7ea 0%,#5f8fc8 55%,#426f9c 100%);
+  box-shadow:0 12px 22px rgba(71,108,152,.24);
+}
+.btn-u32{
+  color:#24415f;
+  border-color:#b4cde4;
+  background:linear-gradient(135deg,#ffffff 0%,#e6f0fb 58%,#d5e5f8 100%);
+  box-shadow:0 8px 16px rgba(90,127,173,.14);
+}
+
+.btn-u33{
+  color:#fff;
+  border-color:#7d7fd6;
+  background:linear-gradient(135deg,#b0b4ff 0%,#8b90ee 55%,#6a6fca 100%);
+  box-shadow:0 12px 24px rgba(103,106,186,.24);
+}
+.btn-u34{
+  color:#4d4f79;
+  border-color:#d2d3f3;
+  background:linear-gradient(135deg,#fff 0%,#efefff 60%,#e0e2ff 100%);
+  box-shadow:0 8px 16px rgba(113,116,180,.14);
+}
+.btn-u35{
+  color:#fff;
+  border-color:#4e8f84;
+  background:linear-gradient(135deg,#89d6c9 0%,#58b1a3 55%,#3f8b7f 100%);
+  box-shadow:0 12px 22px rgba(67,137,125,.24);
+}
+.btn-u36{
+  color:#2f5d57;
+  border-color:#bbddd7;
+  background:linear-gradient(135deg,#fbfffe 0%,#e2f6f2 60%,#d4efea 100%);
+  box-shadow:0 8px 16px rgba(88,145,135,.14);
+}
+/* ===== 追加CSS：拡充分 1ボタン1css ===== */
+
+.btn-u37{
+  color:#fff;
+  border-color:#3867a8;
+  background:linear-gradient(135deg,#6ea8ff 0%,#4f84dc 52%,#3565ac 100%);
+  box-shadow:0 12px 24px rgba(53,101,172,.26);
+}
+.btn-u38{
+  color:#234b68;
+  border-color:#b9d8ea;
+  background:linear-gradient(135deg,#ffffff 0%,#e9f8ff 55%,#d3edf8 100%);
+  box-shadow:0 8px 18px rgba(88,143,170,.15);
+}
+.btn-u39{
+  color:#fff;
+  border-color:#2f8d7a;
+  background:linear-gradient(135deg,#53d8bc 0%,#31b797 52%,#1f8f76 100%);
+  box-shadow:0 12px 24px rgba(35,128,106,.24);
+}
+.btn-u40{
+  color:#6f4c1f;
+  border-color:#e7cf98;
+  background:linear-gradient(135deg,#fffdf5 0%,#fff2c9 52%,#ffe5a0 100%);
+  box-shadow:0 8px 18px rgba(185,150,72,.16);
+}
+
+.btn-u41{
+  color:#fff;
+  border-color:#b85f74;
+  background:linear-gradient(135deg,#f39aaf 0%,#db6e89 55%,#b8526c 100%);
+  box-shadow:0 12px 22px rgba(173,86,111,.24);
+}
+.btn-u42{
+  color:#6d3353;
+  border-color:#e8bfd1;
+  background:linear-gradient(135deg,#fffafe 0%,#fbe2ee 55%,#f3cddd 100%);
+  box-shadow:0 8px 16px rgba(174,106,140,.15);
+}
+.btn-u43{
+  color:#fff;
+  border-color:#6f66d2;
+  background:linear-gradient(135deg,#a89eff 0%,#8579e6 55%,#655bc4 100%);
+  box-shadow:0 12px 24px rgba(96,88,181,.24);
+}
+.btn-u44{
+  color:#454b75;
+  border-color:#d1d6f0;
+  background:linear-gradient(135deg,#ffffff 0%,#eef1ff 55%,#dfe5ff 100%);
+  box-shadow:0 8px 16px rgba(110,119,181,.14);
+}
+
+.btn-u45{
+  color:#fff;
+  border-color:#8d6b2f;
+  background:linear-gradient(135deg,#f0cf7d 0%,#d6aa45 55%,#a97a23 100%);
+  box-shadow:0 12px 24px rgba(155,115,42,.25);
+}
+.btn-u46{
+  color:#634a22;
+  border-color:#e8d4ab;
+  background:linear-gradient(135deg,#fffdf7 0%,#fff1d0 55%,#ffe6b2 100%);
+  box-shadow:0 8px 16px rgba(172,135,67,.15);
+}
+.btn-u47{
+  color:#fff;
+  border-color:#406b54;
+  background:linear-gradient(135deg,#6aa985 0%,#4f8668 55%,#355c47 100%);
+  box-shadow:0 12px 22px rgba(58,94,74,.24);
+}
+.btn-u48{
+  color:#2d5748;
+  border-color:#bdd9cd;
+  background:linear-gradient(135deg,#fbfffd 0%,#e7f6ef 55%,#d6ecdf 100%);
+  box-shadow:0 8px 16px rgba(88,137,114,.14);
+}
+
+.btn-u49{
+  color:#fff;
+  border-color:#7b5252;
+  background:linear-gradient(135deg,#b88a8a 0%,#956969 55%,#754d4d 100%);
+  box-shadow:0 12px 22px rgba(115,77,77,.24);
+}
+.btn-u50{
+  color:#624141;
+  border-color:#dfc6c6;
+  background:linear-gradient(135deg,#fffdfd 0%,#f7eaea 55%,#edd9d9 100%);
+  box-shadow:0 8px 16px rgba(146,104,104,.14);
+}
+.btn-u51{
+  color:#fff;
+  border-color:#397d96;
+  background:linear-gradient(135deg,#62c6e8 0%,#3aa6cb 55%,#277c97 100%);
+  box-shadow:0 12px 22px rgba(45,125,153,.24);
+}
+.btn-u52{
+  color:#214f60;
+  border-color:#b5d7e3;
+  background:linear-gradient(135deg,#ffffff 0%,#e7f8ff 55%,#d2eef8 100%);
+  box-shadow:0 8px 16px rgba(78,142,166,.14);
+}
+
+.btn-u53{
+  color:#fff;
+  border-color:#5a5a66;
+  background:linear-gradient(135deg,#81818f 0%,#666673 55%,#4b4b55 100%);
+  box-shadow:0 12px 22px rgba(72,72,82,.24);
+}
+.btn-u54{
+  color:#464651;
+  border-color:#d8d8df;
+  background:linear-gradient(135deg,#ffffff 0%,#f3f3f6 55%,#e8e8ee 100%);
+  box-shadow:0 8px 16px rgba(110,110,124,.12);
+}
+.btn-u55{
+  color:#fff;
+  border-color:#a24a8f;
+  background:linear-gradient(135deg,#df7fd0 0%,#bf5dab 55%,#973f84 100%);
+  box-shadow:0 12px 22px rgba(146,66,128,.24);
+}
+.btn-u56{
+  color:#6a3561;
+  border-color:#e6c3df;
+  background:linear-gradient(135deg,#fffaff 0%,#f8e1f5 55%,#efcbea 100%);
+  box-shadow:0 8px 16px rgba(171,104,157,.15);
+}
+
+.btn-u57{
+  color:#fff;
+  border-color:#4d88a2;
+  background:linear-gradient(135deg,#8ccbe0 0%,#65aeca 55%,#447f98 100%);
+  box-shadow:0 12px 22px rgba(70,128,153,.22);
+}
+.btn-u58{
+  color:#2a5565;
+  border-color:#c0dce6;
+  background:linear-gradient(135deg,#fcfeff 0%,#edf8fb 55%,#ddeff5 100%);
+  box-shadow:0 8px 16px rgba(89,141,160,.13);
+}
+.btn-u59{
+  color:#fff;
+  border-color:#9f6d3d;
+  background:linear-gradient(135deg,#e7b57a 0%,#cb8d4d 55%,#a56b31 100%);
+  box-shadow:0 12px 22px rgba(156,105,53,.23);
+}
+.btn-u60{
+  color:#664522;
+  border-color:#e5cfba;
+  background:linear-gradient(135deg,#fffdfa 0%,#f7ebdf 55%,#eddcc8 100%);
+  box-shadow:0 8px 16px rgba(145,111,77,.14);
+}
+
+.btn-u61{
+  color:#fff;
+  border-color:#5c7e39;
+  background:linear-gradient(135deg,#9fcb66 0%,#7faa48 55%,#5f8133 100%);
+  box-shadow:0 12px 22px rgba(95,129,51,.23);
+}
+.btn-u62{
+  color:#435a27;
+  border-color:#d3e1b6;
+  background:linear-gradient(135deg,#fdfff9 0%,#f0f8df 55%,#e2efc8 100%);
+  box-shadow:0 8px 16px rgba(121,145,72,.14);
+}
+.btn-u63{
+  color:#fff;
+  border-color:#7d4f8d;
+  background:linear-gradient(135deg,#c08fdd 0%,#9d6bbb 55%,#7b4f97 100%);
+  box-shadow:0 12px 22px rgba(121,79,151,.23);
+}
+.btn-u64{
+  color:#5b3f66;
+  border-color:#dbc9e5;
+  background:linear-gradient(135deg,#fffaff 0%,#f2e7f8 55%,#e8d8f0 100%);
+  box-shadow:0 8px 16px rgba(144,110,164,.14);
+}
+
+.btn-u65{
+  color:#fff;
+  border-color:#8c4444;
+  background:linear-gradient(135deg,#d87e7e 0%,#bb5959 55%,#933f3f 100%);
+  box-shadow:0 12px 22px rgba(140,68,68,.24);
+}
+.btn-u66{
+  color:#6a3b3b;
+  border-color:#e3c2c2;
+  background:linear-gradient(135deg,#fffafa 0%,#f8e4e4 55%,#efd1d1 100%);
+  box-shadow:0 8px 16px rgba(160,105,105,.14);
+}
+.btn-u67{
+  color:#fff;
+  border-color:#2c6d89;
+  background:linear-gradient(135deg,#4fb2d7 0%,#348db1 55%,#235f77 100%);
+  box-shadow:0 12px 22px rgba(38,104,129,.24);
+}
+.btn-u68{
+  color:#1f485a;
+  border-color:#b2d2df;
+  background:linear-gradient(135deg,#ffffff 0%,#e5f5fb 55%,#d0ebf5 100%);
+  box-shadow:0 8px 16px rgba(73,132,154,.14);
+}
+
+.btn-u69{
+  color:#fff;
+  border-color:#74592d;
+  background:linear-gradient(135deg,#d1af68 0%,#b38d45 55%,#8a692e 100%);
+  box-shadow:0 12px 22px rgba(123,93,46,.23);
+}
+.btn-u70{
+  color:#5f4a26;
+  border-color:#e2d2b4;
+  background:linear-gradient(135deg,#fffef9 0%,#f8efd9 55%,#efe1bf 100%);
+  box-shadow:0 8px 16px rgba(150,126,82,.14);
+}
+.btn-u71{
+  color:#fff;
+  border-color:#4d7f72;
+  background:linear-gradient(135deg,#7bc8b4 0%,#56a894 55%,#3d7e6d 100%);
+  box-shadow:0 12px 22px rgba(64,123,107,.23);
+}
+.btn-u72{
+  color:#2e5a51;
+  border-color:#b9ddd4;
+  background:linear-gradient(135deg,#fbfffe 0%,#e3f5f0 55%,#d3ece6 100%);
+  box-shadow:0 8px 16px rgba(86,143,129,.14);
+}
+/* ===== 追加CSS：基本操作ボタン系・うっすらグラデ版 ===== */
+
+.btn-b01{
+  color:#2a455d;
+  border-color:#bfd8e7;
+  background:linear-gradient(135deg,#ffffff 0%,#f2f9ff 58%,#e5f1fb 100%);
+  box-shadow:0 8px 18px rgba(96,138,168,.14);
+}
+.btn-b02{
+  color:#29475f;
+  border-color:#c5dbea;
+  background:linear-gradient(135deg,#ffffff 0%,#eef8ff 48%,#e4f1fb 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.96),0 8px 16px rgba(92,136,166,.12);
+}
+.btn-b03{
+  color:#315067;
+  border-color:#c9ddea;
+  background:linear-gradient(135deg,#ffffff 0%,#f4faff 60%,#e7f2fa 100%);
+  box-shadow:0 8px 16px rgba(105,141,165,.12);
+}
+.btn-b04{
+  color:#38556b;
+  border-color:#cedfea;
+  background:linear-gradient(135deg,#ffffff 0%,#f7fbff 62%,#eaf2f8 100%);
+  box-shadow:0 7px 15px rgba(112,142,161,.11);
+}
+
+.btn-b05{
+  color:#2b4e56;
+  border-color:#c1dfdf;
+  background:linear-gradient(135deg,#ffffff 0%,#f0fcfb 56%,#e0f2f1 100%);
+  box-shadow:0 8px 16px rgba(93,150,145,.12);
+}
+.btn-b06{
+  color:#33515f;
+  border-color:#c9dfe9;
+  background:linear-gradient(135deg,#ffffff 0%,#f4fbff 55%,#e7f3f8 100%);
+  box-shadow:0 8px 16px rgba(101,142,162,.12);
+}
+.btn-b07{
+  color:#3d5660;
+  border-color:#d0dfe5;
+  background:linear-gradient(135deg,#ffffff 0%,#f7fafc 58%,#ecf2f5 100%);
+  box-shadow:0 8px 16px rgba(115,136,146,.11);
+}
+.btn-b08{
+  color:#355261;
+  border-color:#c7dce8;
+  background:linear-gradient(135deg,#ffffff 0%,#f3f9fd 54%,#e5eff7 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.94),0 8px 16px rgba(101,138,159,.12);
+}
+
+.btn-b09{
+  color:#2f4760;
+  border-color:#bfd6e5;
+  background:linear-gradient(135deg,#ffffff 0%,#edf6ff 52%,#dfebf8 100%);
+  box-shadow:0 8px 16px rgba(90,129,158,.13);
+}
+.btn-b10{
+  color:#35505c;
+  border-color:#c6dbde;
+  background:linear-gradient(135deg,#ffffff 0%,#f2fbfb 58%,#e4f0ef 100%);
+  box-shadow:0 8px 16px rgba(106,145,144,.11);
+}
+.btn-b11{
+  color:#405463;
+  border-color:#d2dee6;
+  background:linear-gradient(135deg,#ffffff 0%,#f7fafc 55%,#eaf1f5 100%);
+  box-shadow:0 7px 15px rgba(118,136,149,.10);
+}
+.btn-b12{
+  color:#314d63;
+  border-color:#c4d9e6;
+  background:linear-gradient(135deg,#ffffff 0%,#f1f8fd 57%,#e3edf6 100%);
+  box-shadow:0 8px 16px rgba(97,134,156,.11);
+}
+
+.btn-b13{
+  color:#3d4f66;
+  border-color:#d4dced;
+  background:linear-gradient(135deg,#ffffff 0%,#f5f6ff 58%,#e8ecfb 100%);
+  box-shadow:0 8px 16px rgba(118,127,170,.11);
+}
+.btn-b14{
+  color:#3f5260;
+  border-color:#d2dde4;
+  background:linear-gradient(135deg,#ffffff 0%,#f7fafb 55%,#edf2f4 100%);
+  box-shadow:0 7px 15px rgba(124,136,144,.10);
+}
+.btn-b15{
+  color:#35535d;
+  border-color:#c9dce0;
+  background:linear-gradient(135deg,#ffffff 0%,#f2faf9 56%,#e4f0ee 100%);
+  box-shadow:0 8px 16px rgba(104,142,141,.10);
+}
+.btn-b16{
+  color:#334d67;
+  border-color:#c5d9ea;
+  background:linear-gradient(135deg,#ffffff 0%,#f1f7ff 52%,#e3edf9 100%);
+  box-shadow:0 8px 16px rgba(97,129,171,.11);
+}
+
+.btn-b17{
+  color:#365162;
+  border-color:#cadde6;
+  background:linear-gradient(135deg,#ffffff 0%,#f5fafe 58%,#e8f0f6 100%);
+  box-shadow:0 7px 15px rgba(109,138,152,.10);
+}
+.btn-b18{
+  color:#3c4f57;
+  border-color:#d4dde1;
+  background:linear-gradient(135deg,#ffffff 0%,#f8fafb 56%,#edf1f2 100%);
+  box-shadow:0 7px 15px rgba(126,136,139,.10);
+}
+.btn-b19{
+  color:#355562;
+  border-color:#cadce7;
+  background:linear-gradient(135deg,#ffffff 0%,#f3fbff 56%,#e5f0f6 100%);
+  box-shadow:0 8px 16px rgba(101,141,157,.11);
+}
+.btn-b20{
+  color:#315261;
+  border-color:#c7dde8;
+  background:linear-gradient(135deg,#ffffff 0%,#f2faff 58%,#e3f0f8 100%);
+  box-shadow:0 8px 16px rgba(97,140,164,.11);
+}
+
+.btn-b21{
+  color:#38535d;
+  border-color:#cfdee2;
+  background:linear-gradient(135deg,#ffffff 0%,#f5fbfb 55%,#e8f0f0 100%);
+  box-shadow:0 7px 15px rgba(114,140,139,.10);
+}
+.btn-b22{
+  color:#3a5063;
+  border-color:#cfdae7;
+  background:linear-gradient(135deg,#ffffff 0%,#f5f9fe 58%,#e8eef7 100%);
+  box-shadow:0 7px 15px rgba(112,132,155,.10);
+}
+.btn-b23{
+  color:#42505d;
+  border-color:#d7dde4;
+  background:linear-gradient(135deg,#ffffff 0%,#f8fafb 57%,#eef1f4 100%);
+  box-shadow:0 7px 14px rgba(126,134,143,.09);
+}
+.btn-b24{
+  color:#34515f;
+  border-color:#cadce5;
+  background:linear-gradient(135deg,#ffffff 0%,#f3fafc 58%,#e5eff3 100%);
+  box-shadow:0 7px 15px rgba(101,137,149,.10);
+}
+/* ===== 基本操作ボタン（濃さミックス版 追加） ===== */
+
+/* --- やや濃い青 --- */
+.btn-b25{
+  color:#ffffff;
+  border-color:#6c9fd3;
+  background:linear-gradient(135deg,#9ec2f0 0%,#7fa6d9 55%,#6b93c7 100%);
+  box-shadow:0 10px 20px rgba(85,120,165,.22);
+}
+.btn-b26{
+  color:#1f3d56;
+  border-color:#a9cbe2;
+  background:linear-gradient(135deg,#ffffff 0%,#dbeeff 60%,#c7e0f5 100%);
+  box-shadow:0 8px 16px rgba(80,120,150,.16);
+}
+
+/* --- やや濃いグリーン --- */
+.btn-b27{
+  color:#ffffff;
+  border-color:#63a894;
+  background:linear-gradient(135deg,#8fd3c1 0%,#6bb8a4 55%,#539b88 100%);
+  box-shadow:0 10px 20px rgba(70,140,120,.22);
+}
+.btn-b28{
+  color:#244d44;
+  border-color:#b6dcd4;
+  background:linear-gradient(135deg,#ffffff 0%,#dcf5f0 55%,#c8e9e2 100%);
+  box-shadow:0 8px 16px rgba(90,140,130,.14);
+}
+
+/* --- やや濃いグレー --- */
+.btn-b29{
+  color:#ffffff;
+  border-color:#7d8a96;
+  background:linear-gradient(135deg,#a0acb6 0%,#86939f 55%,#6f7c88 100%);
+  box-shadow:0 10px 18px rgba(90,100,110,.22);
+}
+.btn-b30{
+  color:#3f4a54;
+  border-color:#cfd8de;
+  background:linear-gradient(135deg,#ffffff 0%,#edf2f5 60%,#e2e8ec 100%);
+  box-shadow:0 8px 16px rgba(120,130,140,.14);
+}
+
+/* --- やや濃いパープル --- */
+.btn-b31{
+  color:#ffffff;
+  border-color:#8a7fd6;
+  background:linear-gradient(135deg,#b9b2ff 0%,#9c92e8 55%,#8076d0 100%);
+  box-shadow:0 10px 20px rgba(120,110,180,.22);
+}
+.btn-b32{
+  color:#4a4470;
+  border-color:#d6d2f0;
+  background:linear-gradient(135deg,#ffffff 0%,#efecff 55%,#e1dcfa 100%);
+  box-shadow:0 8px 16px rgba(130,120,170,.14);
+}
+
+/* --- やや濃い暖色 --- */
+.btn-b33{
+  color:#ffffff;
+  border-color:#d19a6c;
+  background:linear-gradient(135deg,#f6c89a 0%,#e3a974 55%,#cc8f57 100%);
+  box-shadow:0 10px 20px rgba(170,120,80,.22);
+}
+.btn-b34{
+  color:#6b4b2d;
+  border-color:#ead3bb;
+  background:linear-gradient(135deg,#ffffff 0%,#fff1e0 55%,#f6e0c7 100%);
+  box-shadow:0 8px 16px rgba(160,120,90,.14);
+}
+
+/* --- 中間トーン（ほんのり強調） --- */
+.btn-b35{
+  color:#2f4f63;
+  border-color:#bcd4e3;
+  background:linear-gradient(135deg,#ffffff 0%,#e6f4ff 50%,#d4e9f7 100%);
+  box-shadow:0 9px 18px rgba(90,130,160,.16);
+}
+.btn-b36{
+  color:#2c5a57;
+  border-color:#bfe0db;
+  background:linear-gradient(135deg,#ffffff 0%,#e4f7f4 50%,#d1ece8 100%);
+  box-shadow:0 9px 18px rgba(90,140,135,.16);
+}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <h1>ボタン見本市</h1>
+      <p>
+        各ボタンを押すと、そのボタン単体で再利用しやすい最小限のHTMLをコピーします。
+      </p>
+      <p>
+        画面下の「直近でコピーしたHTML」欄で適切な「css」または「要素」のみをコピーできます。
+      </p>
+      <div class="info">
+        コピーされる内容は、通常時の見た目を再現するための
+        <strong>&lt;button style="..."&gt;文字&lt;/button&gt;</strong>
+        です。CSSクラスや外部スタイルには依存しません。
+      </div>
+    </section>
+
+    <div class="grid">
+
+      <section class="card">
+        <h2>基本操作ボタン</h2>
+        <p>保存・読込・確認など、日常的によく使う操作向けです。</p>
+        <div class="btn-row">
+          <button class="btn btn-md tone-main shadow-light">保存する</button>
+          <button class="btn btn-md tone-sub shadow-light">読み込む</button>
+          <button class="btn btn-md tone-soft shadow-light">確認する</button>
+          <button class="btn btn-md tone-gray shadow-light">閉じる</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>主要アクション</h2>
+        <p>申し込み・送信・確定など、目立たせたい操作向けです。</p>
+        <div class="btn-row">
+          <button class="btn btn-md solid-main">送信する</button>
+          <button class="btn btn-md solid-success">登録する</button>
+          <button class="btn btn-md solid-dark">今すぐ始める</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>やさしい印象のボタン</h2>
+        <p>案内・補助・プレビューなど、圧を出しすぎたくない場面向けです。</p>
+        <div class="btn-row">
+          <button class="btn btn-md tone-sub soft shadow-light">プレビュー</button>
+          <button class="btn btn-md tone-soft soft shadow-light">内容を見る</button>
+          <button class="btn btn-md tone-purple soft shadow-light">おすすめを見る</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>警告・危険操作</h2>
+        <p>削除・解除・停止など、注意喚起したい操作向けです。</p>
+        <div class="btn-row">
+          <button class="btn btn-md solid-danger">削除する</button>
+          <button class="btn btn-md outline-danger soft">登録を解除</button>
+          <button class="btn btn-md tone-warm soft shadow-light">処理を中止</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>成功・完了系</h2>
+        <p>完了・承認・反映など、ポジティブな状態変化向けです。</p>
+        <div class="btn-row">
+          <button class="btn btn-md solid-success">承認する</button>
+          <button class="btn btn-md outline-success pill">反映する</button>
+          <button class="btn btn-md tone-sub pill shadow-light">完了しました</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>枠線だけの軽量ボタン</h2>
+        <p>サブ操作や補助リンクに近い役割のボタン向けです。</p>
+        <div class="btn-row">
+          <button class="btn btn-md outline-main">詳細を見る</button>
+          <button class="btn btn-md outline-success">候補を追加</button>
+          <button class="btn btn-md outline-danger">元に戻す</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>ガラス風ボタン</h2>
+        <p>少し未来感のある、半透明表現のボタンです。</p>
+        <div class="btn-row">
+          <button class="btn btn-md glass soft">ダッシュボードへ</button>
+          <button class="btn btn-md glass pill">通知を確認</button>
+          <button class="btn btn-md glass square">設定を開く</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>ピル型ボタン</h2>
+        <p>タグ風・選択肢風・柔らかいUIによく合う形です。</p>
+        <div class="btn-row">
+          <button class="btn btn-sm tone-main pill shadow-light">人気順</button>
+          <button class="btn btn-sm tone-sub pill shadow-light">新着順</button>
+          <button class="btn btn-sm tone-pink pill shadow-light">おすすめ</button>
+          <button class="btn btn-sm tone-purple pill shadow-light">あとで見る</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>大きめボタン</h2>
+        <p>スマホ画面やLPのCTAとして使いやすいサイズです。</p>
+        <div class="btn-row">
+          <button class="btn btn-lg solid-main wide">無料で試してみる</button>
+          <button class="btn btn-lg tone-sub wide shadow-strong">資料を請求する</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>小型ボタン</h2>
+        <p>表やカード内の細かな操作に向いています。</p>
+        <div class="btn-row">
+          <button class="btn btn-sm tone-gray flat">編集</button>
+          <button class="btn btn-sm tone-soft flat">複製</button>
+          <button class="btn btn-sm tone-warm flat">保留</button>
+          <button class="btn btn-sm tone-sub flat">更新</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>濃色系ボタン</h2>
+        <p>管理画面や重厚感のあるUIで使いやすい印象です。</p>
+        <div class="btn-row">
+          <button class="btn btn-md solid-dark soft">管理画面へ</button>
+          <button class="btn btn-md solid-dark pill">権限を変更</button>
+          <button class="btn btn-md solid-dark square">ログを確認</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>1カラム幅ボタン</h2>
+        <p>フォームの送信欄や、スマホ用の横幅いっぱいボタン向けです。</p>
+        <div class="btn-row" style="width:100%;">
+          <button class="btn btn-lg solid-main full">この内容で申し込む</button>
+          <button class="btn btn-lg outline-main full">入力内容を確認する</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>暖色系ボタン</h2>
+        <p>親しみや温かみを出したいページに合わせやすいです。</p>
+        <div class="btn-row">
+          <button class="btn btn-md tone-warm shadow-light">予約する</button>
+          <button class="btn btn-md tone-pink shadow-light">お気に入りに追加</button>
+          <button class="btn btn-md tone-warm pill shadow-light">相談してみる</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>角を抑えたボタン</h2>
+        <p>ややシャープで整った印象にしたいときの形です。</p>
+        <div class="btn-row">
+          <button class="btn btn-md tone-main square shadow-light">ダウンロード</button>
+          <button class="btn btn-md tone-sub square shadow-light">アップロード</button>
+          <button class="btn btn-md tone-gray square shadow-light">同期する</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>影を強めたボタン</h2>
+        <p>浮いて見えるため、押せる印象を強調したい場面に向きます。</p>
+        <div class="btn-row">
+          <button class="btn btn-md tone-main soft shadow-strong">新規作成</button>
+          <button class="btn btn-md tone-purple soft shadow-strong">続きを見る</button>
+          <button class="btn btn-md tone-sub soft shadow-strong">おすすめを開く</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>フラットボタン</h2>
+        <p>ミニマルで軽いUIに合わせやすい、影なしの表現です。</p>
+        <div class="btn-row">
+          <button class="btn btn-md tone-gray flat">キャンセル</button>
+          <button class="btn btn-md tone-soft flat">スキップ</button>
+          <button class="btn btn-md tone-main flat">次へ進む</button>
+        </div>
+      </section>
+
+<section class="card">
+  <h2>定番アクション</h2>
+  <p>最初に置きやすい、汎用性の高い基本ボタン群です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u01">保存する</button>
+    <button class="btn btn-md btn-u02">プレビュー</button>
+    <button class="btn btn-md btn-u03">公開する</button>
+    <button class="btn btn-md btn-u04">下書き保存</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>注意・変更系</h2>
+  <p>削除や差し戻しなど、注意を促したい操作向けです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u05">削除する</button>
+    <button class="btn btn-md btn-u06">修正する</button>
+    <button class="btn btn-md btn-u07">差し戻す</button>
+    <button class="btn btn-md btn-u08">内容を確認</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>資料・配布</h2>
+  <p>作成、配布、出力など、資料まわりの見本です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u09">資料を作成</button>
+    <button class="btn btn-md btn-u10">PDFを書き出す</button>
+    <button class="btn btn-md btn-u11">ダウンロード</button>
+    <button class="btn btn-md btn-u12">印刷する</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>管理画面向け</h2>
+  <p>少し重厚で落ち着いた印象の管理系ボタンです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u13">権限を変更</button>
+    <button class="btn btn-md btn-u14">ユーザー一覧</button>
+    <button class="btn btn-md btn-u15">ログを確認</button>
+    <button class="btn btn-md btn-u16">詳細設定</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>通知・進行</h2>
+  <p>確認、案内、進行用として置きやすいセットです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u17">通知を確認</button>
+    <button class="btn btn-md btn-u18">メッセージを見る</button>
+    <button class="btn btn-md btn-u19">次へ進む</button>
+    <button class="btn btn-md btn-u20">あとで見る</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>モダン濃色</h2>
+  <p>暗色基調の画面にも合わせやすい見た目です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u21">今すぐ始める</button>
+    <button class="btn btn-md btn-u22">機能を見る</button>
+    <button class="btn btn-md btn-u23">おすすめプラン</button>
+    <button class="btn btn-md btn-u24">比較してみる</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>予約・相談導線</h2>
+  <p>やわらかさと押しやすさを両立した案内向けボタンです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u25">予約する</button>
+    <button class="btn btn-md btn-u26">空き状況を見る</button>
+    <button class="btn btn-md btn-u27">相談してみる</button>
+    <button class="btn btn-md btn-u28">お気に入りに追加</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>落ち着いた業務系</h2>
+  <p>社内ツールや業務サイトに置きやすい穏やかな配色です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u29">承認依頼を送る</button>
+    <button class="btn btn-md btn-u30">履歴を見る</button>
+    <button class="btn btn-md btn-u31">アップロード</button>
+    <button class="btn btn-md btn-u32">ファイルを選択</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>やわらかい補助操作</h2>
+  <p>主張しすぎず、補助導線として使いやすいボタンです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u33">テンプレートを使う</button>
+    <button class="btn btn-md btn-u34">条件を絞り込む</button>
+    <button class="btn btn-md btn-u35">同期する</button>
+    <button class="btn btn-md btn-u36">再読み込み</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>申込・導入導線</h2>
+  <p>サービス開始や資料請求の流れで使いやすい追加セットです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u37">無料で試す</button>
+    <button class="btn btn-md btn-u38">詳しく見る</button>
+    <button class="btn btn-md btn-u39">導入相談する</button>
+    <button class="btn btn-md btn-u40">料金を確認</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>やわらかい訴求</h2>
+  <p>親しみやすさや軽やかさを出したい場面向けです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u41">お気に入り登録</button>
+    <button class="btn btn-md btn-u42">あとで読む</button>
+    <button class="btn btn-md btn-u43">おすすめを見る</button>
+    <button class="btn btn-md btn-u44">候補を比べる</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>金色・格上げ系</h2>
+  <p>プレミアム感や特別感を少し出したいときに使えます。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u45">特典を受け取る</button>
+    <button class="btn btn-md btn-u46">プランを見る</button>
+    <button class="btn btn-md btn-u47">優先案内を受ける</button>
+    <button class="btn btn-md btn-u48">内容を確認する</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>落ち着いた事務系</h2>
+  <p>派手すぎず、業務画面に馴染みやすい見た目です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u49">申請を作成</button>
+    <button class="btn btn-md btn-u50">申請内容を見る</button>
+    <button class="btn btn-md btn-u51">提出する</button>
+    <button class="btn btn-md btn-u52">差分を確認</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>グレー・紫系モダン</h2>
+  <p>管理画面でも使いやすい、少し今風な印象のセットです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u53">ワークスペースへ</button>
+    <button class="btn btn-md btn-u54">設定一覧</button>
+    <button class="btn btn-md btn-u55">テンプレート作成</button>
+    <button class="btn btn-md btn-u56">テンプレート確認</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>情報閲覧・確認</h2>
+  <p>レポートやお知らせ、データ確認系に置きやすい内容です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u57">レポートを見る</button>
+    <button class="btn btn-md btn-u58">集計結果を確認</button>
+    <button class="btn btn-md btn-u59">CSVを出力</button>
+    <button class="btn btn-md btn-u60">履歴を開く</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>一覧・整理操作</h2>
+  <p>整理、仕分け、一覧確認などの補助導線向けです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u61">カテゴリを追加</button>
+    <button class="btn btn-md btn-u62">条件を絞る</button>
+    <button class="btn btn-md btn-u63">タグを付ける</button>
+    <button class="btn btn-md btn-u64">分類を確認</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>警告寄りの補助操作</h2>
+  <p>削除ほど強くないが、少し注意を促したいときに使えます。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u65">無効にする</button>
+    <button class="btn btn-md btn-u66">元に戻す</button>
+    <button class="btn btn-md btn-u67">再送する</button>
+    <button class="btn btn-md btn-u68">再確認する</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>上品な補助導線</h2>
+  <p>案内や確認のボタンを上品に見せたいときの追加案です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u69">案内を見る</button>
+    <button class="btn btn-md btn-u70">手順を確認</button>
+    <button class="btn btn-md btn-u71">同期を開始</button>
+    <button class="btn btn-md btn-u72">完了を確認</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>基本操作（少し強め）</h2>
+  <p>通常より少しだけ強調したい基本操作に向いています。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b25">保存する</button>
+    <button class="btn btn-md btn-b26">読み込む</button>
+    <button class="btn btn-md btn-b35">確認する</button>
+    <button class="btn btn-md btn-b30">閉じる</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>編集・更新（濃淡ミックス）</h2>
+  <p>主要操作と補助操作の差を自然に出した構成です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b27">変更を保存</button>
+    <button class="btn btn-md btn-b28">内容を更新</button>
+    <button class="btn btn-md btn-b36">再読み込み</button>
+    <button class="btn btn-md btn-b07">元に戻す</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>確認フロー（段階表現）</h2>
+  <p>濃さで「重要度の段階」を表現したいときに便利です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b25">内容を確定</button>
+    <button class="btn btn-md btn-b32">確認する</button>
+    <button class="btn btn-md btn-b12">見直す</button>
+    <button class="btn btn-md btn-b18">戻る</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>一覧操作（自然な強弱）</h2>
+  <p>一覧系UIで、主操作だけ少し強く見せる構成です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b29">選択して進む</button>
+    <button class="btn btn-md btn-b30">表示更新</button>
+    <button class="btn btn-md btn-b11">詳細を見る</button>
+    <button class="btn btn-md btn-b23">戻る</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>軽い強調（暖色混ぜ）</h2>
+  <p>少しだけ注意を引きたい操作に暖色を混ぜた例です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b33">変更を保存</button>
+    <button class="btn btn-md btn-b34">内容を確認</button>
+    <button class="btn btn-md btn-b05">補助確認</button>
+    <button class="btn btn-md btn-b07">キャンセル</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>落ち着き＋操作性</h2>
+  <p>全体は淡いが、主ボタンだけ少し強くした実務向け構成です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b27">設定を保存</button>
+    <button class="btn btn-md btn-b36">再取得</button>
+    <button class="btn btn-md btn-b14">設定確認</button>
+    <button class="btn btn-md btn-b18">終了</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>基本操作ボタン・標準セット</h2>
+  <p>保存・読込・確認など、最も基本になる操作をうっすら青系で揃えたセットです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b01">保存する</button>
+    <button class="btn btn-md btn-b02">読み込む</button>
+    <button class="btn btn-md btn-b03">確認する</button>
+    <button class="btn btn-md btn-b04">閉じる</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>編集画面の基本操作</h2>
+  <p>編集中の画面で並べやすい、落ち着いた標準アクションです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b05">変更を保存</button>
+    <button class="btn btn-md btn-b06">再読み込み</button>
+    <button class="btn btn-md btn-b07">入力を戻す</button>
+    <button class="btn btn-md btn-b08">内容を反映</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>ファイル操作の基本</h2>
+  <p>ファイルまわりでよく使う操作を、やわらかい淡色でまとめています。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b09">ファイルを開く</button>
+    <button class="btn btn-md btn-b10">名前を変更</button>
+    <button class="btn btn-md btn-b11">別名で保存</button>
+    <button class="btn btn-md btn-b12">一覧へ戻る</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>確認・見直し系</h2>
+  <p>送信前や公開前に、内容を見直す場面に置きやすいセットです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b13">プレビュー</button>
+    <button class="btn btn-md btn-b14">差分を確認</button>
+    <button class="btn btn-md btn-b15">内容を見直す</button>
+    <button class="btn btn-md btn-b16">前の画面へ</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>一覧画面向け基本操作</h2>
+  <p>一覧、検索結果、管理表などに置いても馴染みやすい基本ボタンです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b17">詳細を見る</button>
+    <button class="btn btn-md btn-b18">表示を更新</button>
+    <button class="btn btn-md btn-b19">選択内容を確認</button>
+    <button class="btn btn-md btn-b20">このまま進む</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>設定画面の基本操作</h2>
+  <p>設定ページで使いやすい、主張しすぎない基本導線です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b21">設定を保存</button>
+    <button class="btn btn-md btn-b22">初期値を確認</button>
+    <button class="btn btn-md btn-b23">変更をやめる</button>
+    <button class="btn btn-md btn-b24">設定一覧へ</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>フォーム操作の基本</h2>
+  <p>フォームの入力完了前後で使いやすい、淡色寄りの定番文言です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b01">入力内容を確認</button>
+    <button class="btn btn-md btn-b05">一時保存する</button>
+    <button class="btn btn-md btn-b09">内容を修正</button>
+    <button class="btn btn-md btn-b18">フォームを更新</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>読込・反映の基本</h2>
+  <p>データの取得、読み込み、反映など、実務的な操作に向いた構成です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b02">データを読み込む</button>
+    <button class="btn btn-md btn-b06">再取得する</button>
+    <button class="btn btn-md btn-b12">反映内容を見る</button>
+    <button class="btn btn-md btn-b16">変更を反映する</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>閉じる・戻る系</h2>
+  <p>画面移動や操作終了時によく使う文言で揃えたセットです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b04">閉じる</button>
+    <button class="btn btn-md btn-b14">前に戻る</button>
+    <button class="btn btn-md btn-b20">次へ進む</button>
+    <button class="btn btn-md btn-b23">操作を中止</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>文書作成の基本操作</h2>
+  <p>文書、記事、設定文面などを編集するときに自然な並びです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b03">内容を確認</button>
+    <button class="btn btn-md btn-b07">下書きに戻す</button>
+    <button class="btn btn-md btn-b11">コピーを保存</button>
+    <button class="btn btn-md btn-b21">編集内容を保存</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>作業継続の基本操作</h2>
+  <p>軽い確認をしながら次へ進めたい画面に向いています。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b08">この内容で更新</button>
+    <button class="btn btn-md btn-b10">修正箇所を見る</button>
+    <button class="btn btn-md btn-b17">詳細を確認</button>
+    <button class="btn btn-md btn-b24">作業一覧へ戻る</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>業務画面の定番操作</h2>
+  <p>業務サイトや社内ツールでよく見る基本導線に寄せたセットです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b13">内容確認</button>
+    <button class="btn btn-md btn-b15">入力内容を整える</button>
+    <button class="btn btn-md btn-b19">結果を確認</button>
+    <button class="btn btn-md btn-b22">設定を見直す</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>静かな補助操作</h2>
+  <p>目立ちすぎず、それでも押しやすい補助導線として使えるセットです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b06">再表示する</button>
+    <button class="btn btn-md btn-b11">別で保存</button>
+    <button class="btn btn-md btn-b18">再確認する</button>
+    <button class="btn btn-md btn-b23">あとで閉じる</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>読み物・確認ページ向け</h2>
+  <p>確認画面、説明画面、ガイド画面などに相性のよい基本操作です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b04">説明を閉じる</button>
+    <button class="btn btn-md btn-b09">内容を開く</button>
+    <button class="btn btn-md btn-b14">前の説明へ</button>
+    <button class="btn btn-md btn-b20">次の説明へ</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>入力補助の基本セット</h2>
+  <p>入力途中のユーザーに、やさしく次の動きを促すためのセットです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b01">一時的に保存</button>
+    <button class="btn btn-md btn-b05">この内容を保持</button>
+    <button class="btn btn-md btn-b10">入力例を見る</button>
+    <button class="btn btn-md btn-b16">確認画面へ進む</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>標準UIの追加案</h2>
+  <p>ベースカラーをそろえつつ、少しだけ表情を変えた標準ボタン群です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b02">標準で保存</button>
+    <button class="btn btn-md btn-b07">元の内容に戻す</button>
+    <button class="btn btn-md btn-b12">内容を表示</button>
+    <button class="btn btn-md btn-b24">一覧画面に戻る</button>
+  </div>
+</section>
+
+    </div>
+
+    <section class="copy-area">
+      <h2>直近でコピーしたHTML</h2>
+      <p>クリックしたボタンの最小限HTMLがここにも表示されます。</p>
+      <pre id="copiedHtml">&lt;button style="...">保存する&lt;/button&gt;</pre>
+    </section>
+  </div>
+
+  <div class="toast" id="toast">コピーしました</div>
+
+  <script>
+const toastEl = document.getElementById("toast");
+
+let currentCopiedData = {
+  cssText: "",
+  elementHtml: "",
+  lazyElementHtml: "",
+  fullHtml: ""
+};
+
+function showToast(message) {
+  toastEl.textContent = message;
+  toastEl.classList.add("show");
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(() => {
+    toastEl.classList.remove("show");
+  }, 1400);
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
+  }
+}
+
+function escapeHtml(text) {
+  return text
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function ensureCopyAreaUI() {
+  const copyArea = document.querySelector(".copy-area");
+  if (!copyArea) return null;
+
+  copyArea.innerHTML = `
+    <h2>直近でコピーしたHTML</h2>
+    <p>見本ボタンを押すと、HTML一式をここに表示します。下の3ボタンで必要な部分だけコピーできます。</p>
+
+    <div class="btn-row" style="margin-bottom:12px;">
+      <button type="button" id="copyCssBtn" class="btn btn-sm tone-soft shadow-light" data-copy-tool="1">css をコピー</button>
+      <button type="button" id="copyElementBtn" class="btn btn-sm tone-main shadow-light" data-copy-tool="1">要素をコピー</button>
+      <button type="button" id="copyLazyBtn" class="btn btn-sm tone-gray shadow-light" data-copy-tool="1">ズボラ版要素をコピー</button>
+    </div>
+
+    <pre id="copiedHtml">&lt;html&gt;
+&lt;style&gt;
+...
+&lt;/style&gt;
+&lt;body&gt;
+...
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+  `;
+
+  const copyCssBtn = document.getElementById("copyCssBtn");
+  const copyElementBtn = document.getElementById("copyElementBtn");
+  const copyLazyBtn = document.getElementById("copyLazyBtn");
+
+  copyCssBtn.addEventListener("click", async () => {
+    if (!currentCopiedData.cssText) {
+      showToast("先に見本ボタンを押してください");
+      return;
+    }
+    const ok = await copyText(currentCopiedData.cssText);
+    showToast(ok ? "CSSをコピーしました" : "コピーに失敗しました");
+  });
+
+  copyElementBtn.addEventListener("click", async () => {
+    if (!currentCopiedData.elementHtml) {
+      showToast("先に見本ボタンを押してください");
+      return;
+    }
+    const ok = await copyText(currentCopiedData.elementHtml);
+    showToast(ok ? "要素をコピーしました" : "コピーに失敗しました");
+  });
+
+  copyLazyBtn.addEventListener("click", async () => {
+    if (!currentCopiedData.lazyElementHtml) {
+      showToast("先に見本ボタンを押してください");
+      return;
+    }
+    const ok = await copyText(currentCopiedData.lazyElementHtml);
+    showToast(ok ? "ズボラ版要素をコピーしました" : "コピーに失敗しました");
+  });
+
+  return copyArea;
+}
+
+function buildLazyButtonHtml(button) {
+  const cs = getComputedStyle(button);
+
+  const styleMap = {
+    "display": "inline-block",
+    "padding": cs.padding,
+    "min-height": cs.minHeight,
+    "min-width": cs.minWidth,
+    "width": cs.width !== "auto" ? cs.width : "",
+    "border": cs.border,
+    "border-radius": cs.borderRadius,
+    "background": cs.background,
+    "color": cs.color,
+    "font-size": cs.fontSize,
+    "font-weight": cs.fontWeight,
+    "font-family": cs.fontFamily,
+    "line-height": cs.lineHeight,
+    "text-align": cs.textAlign,
+    "box-shadow": cs.boxShadow,
+    "backdrop-filter": cs.backdropFilter,
+    "-webkit-backdrop-filter": cs.backdropFilter,
+    "cursor": "pointer",
+    "white-space": cs.whiteSpace,
+    "user-select": "none",
+    "vertical-align": "middle",
+    "box-sizing": "border-box"
+  };
+
+  if (button.classList.contains("full")) {
+    styleMap.width = "100%";
+  }
+
+  const entries = Object.entries(styleMap)
+    .filter(([key, value]) => {
+      if (!value) return false;
+      if (key === "box-shadow") return true;
+      return value !== "normal" && value !== "none";
+    })
+    .filter(([key, value]) => !(key === "backdrop-filter" && value === "none"))
+    .filter(([key, value]) => !(key === "-webkit-backdrop-filter" && value === "none"));
+
+  const styleText = entries
+    .map(([key, value]) => `${key}:${value}`)
+    .join(";");
+
+  return `<button style="${styleText}">${button.textContent.trim()}</button>`;
+}
+
+function buildCssButtonParts(button) {
+  const cs = getComputedStyle(button);
+  const className = "copied-sample-button";
+
+  const cssLines = [
+    `.${className}{`,
+    `  display:inline-block;`,
+    `  padding:${cs.padding};`,
+    `  min-height:${cs.minHeight};`,
+    `  min-width:${cs.minWidth};`,
+    button.classList.contains("full") ? `  width:100%;` : (cs.width !== "auto" ? `  width:${cs.width};` : ""),
+    `  border:${cs.border};`,
+    `  border-radius:${cs.borderRadius};`,
+    `  background:${cs.background};`,
+    `  color:${cs.color};`,
+    `  font-size:${cs.fontSize};`,
+    `  font-weight:${cs.fontWeight};`,
+    `  font-family:${cs.fontFamily};`,
+    `  line-height:${cs.lineHeight};`,
+    `  text-align:${cs.textAlign};`,
+    `  box-shadow:${cs.boxShadow};`,
+    cs.backdropFilter && cs.backdropFilter !== "none" ? `  backdrop-filter:${cs.backdropFilter};` : "",
+    cs.backdropFilter && cs.backdropFilter !== "none" ? `  -webkit-backdrop-filter:${cs.backdropFilter};` : "",
+    `  cursor:pointer;`,
+    `  white-space:${cs.whiteSpace};`,
+    `  user-select:none;`,
+    `  vertical-align:middle;`,
+    `  box-sizing:border-box;`,
+    `}`
+  ].filter(Boolean);
+
+  const cssText = cssLines.join("\n");
+  const elementHtml = `<button class="${className}">${button.textContent.trim()}</button>`;
+
+  return {
+    cssText,
+    elementHtml
+  };
+}
+
+function buildFullHtml(button) {
+  const { cssText, elementHtml } = buildCssButtonParts(button);
+
+  const fullHtml = [
+    `<html>`,
+    `<style>`,
+    cssText,
+    `</style>`,
+    `<body>`,
+    elementHtml,
+    `</body>`,
+    `</html>`
+  ].join("\n");
+
+  return {
+    cssText,
+    elementHtml,
+    fullHtml
+  };
+}
+
+function updateCopyAreaPreview(fullHtml) {
+  const copiedHtmlEl = document.getElementById("copiedHtml");
+  if (!copiedHtmlEl) return;
+  copiedHtmlEl.textContent = fullHtml;
+}
+
+function bindSampleButtons() {
+  const sampleButtons = document.querySelectorAll(".btn:not([data-copy-tool='1'])");
+
+  sampleButtons.forEach((button) => {
+    button.addEventListener("click", async () => {
+      document.querySelectorAll(".copied").forEach(el => el.classList.remove("copied"));
+      button.classList.add("copied");
+
+      const lazyElementHtml = buildLazyButtonHtml(button);
+      const { cssText, elementHtml, fullHtml } = buildFullHtml(button);
+
+      currentCopiedData = {
+        cssText,
+        elementHtml,
+        lazyElementHtml,
+        fullHtml
+      };
+
+      updateCopyAreaPreview(fullHtml);
+
+      const ok = await copyText(lazyElementHtml);
+      showToast(ok ? "ズボラ版要素をコピーしました" : "コピーに失敗しました");
+    });
+  });
+}
+
+ensureCopyAreaUI();
+bindSampleButtons();
+  </script>
+</body>
+</html>
