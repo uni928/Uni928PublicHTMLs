@@ -1661,6 +1661,8 @@ let currentCopiedData = {
   fullHtml: ""
 };
 
+let lastSelectedButton = null;
+
 function showToast(message) {
   toastEl.textContent = message;
   toastEl.classList.add("show");
@@ -1918,6 +1920,43 @@ function updateCopyAreaPreview(fullHtml) {
   copiedHtmlEl.textContent = fullHtml;
 }
 
+function refreshGeneratedContent(button, shouldCopy = false) {
+  if (!button) return;
+
+  const lazyElementHtml = buildLazyButtonHtml(button);
+  const { cssText, elementHtml, fullHtml } = buildFullHtml(button);
+
+  currentCopiedData = {
+    cssText,
+    elementHtml,
+    lazyElementHtml,
+    fullHtml
+  };
+
+  updateCopyAreaPreview(fullHtml);
+
+  if (shouldCopy) {
+    copyText(lazyElementHtml).then((ok) => {
+      showToast(ok ? "ズボラ版要素をコピーしました" : "コピーに失敗しました");
+    });
+  }
+}
+
+function bindClassNameInput() {
+  const input = document.getElementById("classNameInput");
+  if (!input) return;
+
+  input.addEventListener("input", () => {
+    if (!lastSelectedButton) return;
+    refreshGeneratedContent(lastSelectedButton, false);
+  });
+
+  input.addEventListener("change", () => {
+    if (!lastSelectedButton) return;
+    refreshGeneratedContent(lastSelectedButton, false);
+  });
+}
+
 function bindSampleButtons() {
   const sampleButtons = document.querySelectorAll(".btn:not([data-copy-tool='1'])");
 
@@ -1925,26 +1964,15 @@ function bindSampleButtons() {
     button.addEventListener("click", async () => {
       document.querySelectorAll(".copied").forEach(el => el.classList.remove("copied"));
       button.classList.add("copied");
+      lastSelectedButton = button;
 
-      const lazyElementHtml = buildLazyButtonHtml(button);
-      const { cssText, elementHtml, fullHtml } = buildFullHtml(button);
-
-      currentCopiedData = {
-        cssText,
-        elementHtml,
-        lazyElementHtml,
-        fullHtml
-      };
-
-      updateCopyAreaPreview(fullHtml);
-
-      const ok = await copyText(lazyElementHtml);
-      showToast(ok ? "ズボラ版要素をコピーしました" : "コピーに失敗しました");
+      refreshGeneratedContent(button, true);
     });
   });
 }
 
 ensureCopyAreaUI();
+bindClassNameInput();
 bindSampleButtons();
   </script>
 </body>
