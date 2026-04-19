@@ -250,6 +250,7 @@
       </div>
       <div class="toolbar">
         <button id="exportBtn" class="ghost">JSON書き出し</button>
+        <button id="copyUrlBtn" class="ghost">URLをコピー</button>
         <button id="importBtn" class="ghost">JSON読み込み</button>
         <input id="importFile" type="file" accept="application/json" class="hidden" />
       </div>
@@ -386,6 +387,7 @@
       chartSvg: document.getElementById('chartSvg'),
       exportBtn: document.getElementById('exportBtn'),
       importBtn: document.getElementById('importBtn'),
+      copyUrlBtn: document.getElementById('copyUrlBtn'),
       importFile: document.getElementById('importFile')
     };
 
@@ -993,6 +995,99 @@
       });
     });
 
+    function utf8ToBase64Url(bytes) {
+      let binary = '';
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+      }
+      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+    }
+
+    function base64UrlToUint8Array(base64url) {
+      const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((base64url.length + 3) % 4);
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    }
+
+    async function compressStateToParam(obj) {
+      const json = JSON.stringify(obj);
+      const input = new TextEncoder().encode(json);
+      if (window.CompressionStream) {
+        const compressed = await new Response(new Blob([input]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();
+        return 'gz.' + utf8ToBase64Url(new Uint8Array(compressed));
+      }
+      return 'raw.' + utf8ToBase64Url(input);
+    }
+
+    async function expandStateFromParam(value) {
+      if (!value || typeof value !== 'string') throw new Error('missing');
+      const dot = value.indexOf('.');
+      const mode = dot >= 0 ? value.slice(0, dot) : 'raw';
+      const payload = dot >= 0 ? value.slice(dot + 1) : value;
+      const bytes = base64UrlToUint8Array(payload);
+      let decoded;
+      if (mode === 'gz') {
+        if (!window.DecompressionStream) throw new Error('decompression_not_supported');
+        const expanded = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+        decoded = new TextDecoder().decode(expanded);
+      } else {
+        decoded = new TextDecoder().decode(bytes);
+      }
+      const data = JSON.parse(decoded);
+      if (!data || !Array.isArray(data.people)) throw new Error('invalid');
+      return data;
+    }
+
+    async function copyShareUrl() {
+      try {
+        const param = await compressStateToParam(state);
+        const url = new URL(location.href);
+        url.searchParams.set('data', param);
+        const text = url.toString();
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          ta.remove();
+        }
+        alert('共有用URLをコピーしました。');
+      } catch (err) {
+        console.error(err);
+        alert('URLのコピーに失敗しました。');
+      }
+    }
+
+    async function applyQueryStateIfNeeded() {
+      const param = new URL(location.href).searchParams.get('data');
+      if (!param) return;
+      let incoming;
+      try {
+        incoming = await expandStateFromParam(param);
+      } catch (err) {
+        console.error(err);
+        alert('URLのデータを読み込めませんでした。');
+        return;
+      }
+
+      const hasSavedData = Array.isArray(state.people) && state.people.length > 0;
+      let useQuery = true;
+      if (hasSavedData) {
+        useQuery = confirm('URLに共有データがあります。\nOK: URLのデータを優先\nキャンセル: 端末に保存済みのデータを優先');
+      }
+      if (!useQuery) return;
+
+      state = incoming;
+      normalizeState();
+      await saveState();
+    }
+
     els.exportBtn.addEventListener('click', () => {
       const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -1002,6 +1097,8 @@
       a.click();
       URL.revokeObjectURL(url);
     });
+
+    els.copyUrlBtn.addEventListener('click', copyShareUrl);
 
     els.importBtn.addEventListener('click', () => els.importFile.click());
     els.importFile.addEventListener('change', async (e) => {
@@ -1027,6 +1124,7 @@
       try {
         db = await openDb();
         await loadState();
+        await applyQueryStateIfNeeded();
         render();
       } catch (err) {
         console.error(err);
