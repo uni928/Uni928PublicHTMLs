@@ -229,6 +229,64 @@
       font-size: 12px;
       padding: 8px 0 20px;
     }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 1000;
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal-card {
+      width: min(1100px, 100%);
+      max-height: 90vh;
+      overflow: auto;
+      background: #fff;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      box-shadow: 0 30px 60px rgba(15, 23, 42, 0.18);
+      padding: 20px;
+    }
+    .modal-header, .modal-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .modal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 16px 0;
+    }
+    .battle-table-wrap {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+    }
+    .battle-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 720px;
+    }
+    .battle-table th, .battle-table td {
+      border-bottom: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+      padding: 10px;
+      vertical-align: top;
+      text-align: left;
+      white-space: nowrap;
+      font-size: 14px;
+    }
+    .battle-table th:last-child, .battle-table td:last-child { border-right: none; }
+    .battle-table tr:last-child td { border-bottom: none; }
+    .battle-table small { color: var(--muted); display: block; margin-top: 4px; }
+
     @media (max-width: 740px) {
       .input-row, .input-row.four {
         grid-template-columns: 1fr;
@@ -250,6 +308,7 @@
       </div>
       <div class="toolbar">
         <button id="exportBtn" class="ghost">JSON書き出し</button>
+        <button id="battleBtn" class="ghost">対戦表を表示</button>
         <button id="copyUrlBtn" class="ghost">URLをコピー</button>
         <button id="importBtn" class="ghost">JSON読み込み</button>
         <input id="importFile" type="file" accept="application/json" class="hidden" />
@@ -344,6 +403,42 @@
       </div>
     </section>
 
+
+    <div id="battleModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <h2>対戦表</h2>
+            <div class="muted">表示したい名前とグループにチェックを入れてから閲覧してください。</div>
+          </div>
+          <button id="closeBattleBtn">閉じる</button>
+        </div>
+
+        <div class="modal-grid">
+          <div class="card" style="margin:0;">
+            <h3>名前一覧</h3>
+            <div class="small-note">初期状態では全てにチェックが入っています。</div>
+            <div id="battlePeopleList" class="check-list"></div>
+          </div>
+          <div class="card" style="margin:0;">
+            <h3>グループ一覧</h3>
+            <div class="small-note">初期状態では各人の選択中グループにチェックが入っています。</div>
+            <div id="battleGroupList" class="check-list"></div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <div class="muted">同名グループは同じ列にまとめて比較します。</div>
+          <button id="viewBattleBtn" class="primary">閲覧</button>
+        </div>
+
+        <div id="battleResult" class="card hidden" style="margin-top:16px;"></div>
+        <div id="battleFullscreenWrap" class="hidden" style="margin-top:12px; text-align:right;">
+          <button id="openBattleFullscreenBtn" class="ghost">フル画面で表示</button>
+        </div>
+      </div>
+    </div>
+
     <div class="footer-note">このHTML単体で動作します。ブラウザのIndexedDBに保存されます。</div>
   </div>
 
@@ -386,9 +481,18 @@
       entryTableWrap: document.getElementById('entryTableWrap'),
       chartSvg: document.getElementById('chartSvg'),
       exportBtn: document.getElementById('exportBtn'),
-      importBtn: document.getElementById('importBtn'),
+      battleBtn: document.getElementById('battleBtn'),
       copyUrlBtn: document.getElementById('copyUrlBtn'),
-      importFile: document.getElementById('importFile')
+      importBtn: document.getElementById('importBtn'),
+      importFile: document.getElementById('importFile'),
+      battleModal: document.getElementById('battleModal'),
+      closeBattleBtn: document.getElementById('closeBattleBtn'),
+      battlePeopleList: document.getElementById('battlePeopleList'),
+      battleGroupList: document.getElementById('battleGroupList'),
+      viewBattleBtn: document.getElementById('viewBattleBtn'),
+      battleResult: document.getElementById('battleResult'),
+      battleFullscreenWrap: document.getElementById('battleFullscreenWrap'),
+      openBattleFullscreenBtn: document.getElementById('openBattleFullscreenBtn')
     };
 
     function uid(prefix = 'id') {
@@ -519,12 +623,6 @@
         person.selectedGroupIds = Array.isArray(person.selectedGroupIds) ? person.selectedGroupIds : [];
         for (const group of person.groups) {
           group.entries = Array.isArray(group.entries) ? group.entries : [];
-          for (const entry of group.entries) {
-            entry.stake = clampNumber(entry.stake);
-            if (Object.prototype.hasOwnProperty.call(entry, 'payout')) {
-              entry.payout = clampNumber(entry.payout);
-            }
-          }
         }
       }
       if (state.currentPersonId && !state.people.some(p => p.id === state.currentPersonId)) {
@@ -693,7 +791,7 @@
               ${group.entries.map((entry, index) => {
                 const stake = clampNumber(entry.stake);
                 const payout = getEntryPayout(entry);
-                const rowRoi = getEntryRoi(entry);
+                const rate = getEntryRoi(entry);
                 const point = gs.points[index] || { rate: 0 };
                 return `
                   <tr>
@@ -701,7 +799,7 @@
                     <td><input type="date" value="${entry.date || ''}" onchange="updateEntry('${entry.id}', 'date', this.value)"></td>
                     <td class="right"><input type="number" min="0" step="1" value="${stake}" onchange="updateEntry('${entry.id}', 'stake', this.value)"></td>
                     <td class="right"><input type="number" min="0" step="1" value="${payout}" onchange="updateEntry('${entry.id}', 'payout', this.value)"></td>
-                    <td class="right ${rowRoi >= 100 ? 'positive' : 'negative'}">${pct(rowRoi)}</td>
+                    <td class="right">${pct(rate)}</td>
                     <td class="right ${point.rate >= 100 ? 'positive' : 'negative'}">${pct(point.rate)}</td>
                     <td>
                       <div class="actions">
@@ -825,10 +923,6 @@
       const payout = clampNumber(els.entryPayoutInput.value);
       if (stake <= 0) {
         alert('投資額は1以上で入力してください。');
-        return;
-      }
-      if (payout < 0) {
-        alert('払戻額は0以上で入力してください。');
         return;
       }
       await mutate(() => {
@@ -957,13 +1051,7 @@
       const entry = group?.entries.find(e => e.id === entryId);
       if (!entry) return;
       await mutate(() => {
-        if (field === 'date') {
-          entry.date = value;
-        } else if (field === 'stake') {
-          entry.stake = clampNumber(value);
-        } else if (field === 'payout') {
-          entry.payout = clampNumber(value);
-        }
+        entry[field] = field === 'date' ? value : clampNumber(value);
       });
     };
 
@@ -982,6 +1070,209 @@
       if (e.key === 'Enter') addEntry();
     });
 
+
+    function toUrlSafeBase64(bytes) {
+      let binary = '';
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+      }
+      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+    }
+
+    function fromUrlSafeBase64(param) {
+      const base64 = param.replace(/-/g, '+').replace(/_/g, '/');
+      const pad = '='.repeat((4 - (base64.length % 4)) % 4);
+      const binary = atob(base64 + pad);
+      return Uint8Array.from(binary, c => c.charCodeAt(0));
+    }
+
+    async function encodeStateForUrl(obj) {
+      const json = JSON.stringify(obj);
+      const bytes = new TextEncoder().encode(json);
+      if ('CompressionStream' in window) {
+        const cs = new CompressionStream('gzip');
+        const writer = cs.writable.getWriter();
+        await writer.write(bytes);
+        await writer.close();
+        const compressed = new Uint8Array(await new Response(cs.readable).arrayBuffer());
+        return 'gz.' + toUrlSafeBase64(compressed);
+      }
+      return 'raw.' + toUrlSafeBase64(bytes);
+    }
+
+    async function decodeStateFromUrlParam(param) {
+      const [prefix, payload] = param.includes('.') ? param.split('.', 2) : ['raw', param];
+      const bytes = fromUrlSafeBase64(payload);
+      let decodedBytes = bytes;
+      if (prefix === 'gz') {
+        if (!('DecompressionStream' in window)) throw new Error('decompression unsupported');
+        const ds = new DecompressionStream('gzip');
+        const writer = ds.writable.getWriter();
+        await writer.write(bytes);
+        await writer.close();
+        decodedBytes = new Uint8Array(await new Response(ds.readable).arrayBuffer());
+      }
+      const data = JSON.parse(new TextDecoder().decode(decodedBytes));
+      if (!data || !Array.isArray(data.people)) throw new Error('invalid data');
+      return data;
+    }
+
+    function clearDataQueryParam() {
+      const url = new URL(location.href);
+      if (!url.searchParams.has('data')) return;
+      url.searchParams.delete('data');
+      history.replaceState(null, '', url.toString());
+    }
+
+    function getBattleGroupCatalog() {
+      const map = new Map();
+      for (const person of state.people) {
+        const selected = new Set(person.selectedGroupIds || []);
+        for (const group of person.groups || []) {
+          const key = group.name || '（無名グループ）';
+          if (!map.has(key)) map.set(key, { name: key, checked: false });
+          if (selected.has(group.id)) map.get(key).checked = true;
+        }
+      }
+      return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+    }
+
+    function openBattleModal() {
+      const groups = getBattleGroupCatalog();
+      els.battlePeopleList.innerHTML = state.people.length
+        ? state.people.map(person => `
+          <label class="check-item">
+            <div><strong>${escapeHtml(person.name)}</strong></div>
+            <input type="checkbox" class="battle-person-check" value="${person.id}" checked>
+          </label>
+        `).join('')
+        : '<div class="empty">名前がありません。</div>';
+      els.battleGroupList.innerHTML = groups.length
+        ? groups.map(group => `
+          <label class="check-item">
+            <div><strong>${escapeHtml(group.name)}</strong></div>
+            <input type="checkbox" class="battle-group-check" value="${escapeHtml(group.name)}" ${group.checked ? 'checked' : ''}>
+          </label>
+        `).join('')
+        : '<div class="empty">グループがありません。</div>';
+      els.battleResult.classList.add('hidden');
+      els.battleResult.innerHTML = '';
+      els.battleFullscreenWrap.classList.add('hidden');
+      els.battleModal.classList.remove('hidden');
+    }
+
+    function closeBattleModal() {
+      els.battleModal.classList.add('hidden');
+    }
+
+    function buildBattleTableHtml(personIds, groupNames) {
+      const selectedPeople = state.people.filter(p => personIds.includes(p.id));
+      if (!selectedPeople.length) {
+        return '<h3>対戦表</h3><div class="empty">名前を1つ以上選択してください。</div>';
+      }
+      if (!groupNames.length) {
+        return '<h3>対戦表</h3><div class="empty">グループを1つ以上選択してください。</div>';
+      }
+      const head = groupNames.map(name => `<th>${escapeHtml(name)}</th>`).join('');
+      const rows = selectedPeople.map(person => {
+        const total = { totalStake: 0, totalReturn: 0, count: 0 };
+        const cells = groupNames.map(groupName => {
+          const groups = (person.groups || []).filter(g => g.name === groupName);
+          let stake = 0, payout = 0, count = 0;
+          for (const group of groups) {
+            const gs = calcGroupStats(group);
+            stake += gs.totalStake;
+            payout += gs.totalReturn;
+            count += gs.count;
+          }
+          total.totalStake += stake;
+          total.totalReturn += payout;
+          total.count += count;
+          const roi = stake > 0 ? (payout / stake) * 100 : 0;
+          const profit = payout - stake;
+          return `<td>${count ? `${pct(roi)}<small>${yen(stake)}円 → ${yen(payout)}円 / ${count}件 / 収支 ${yen(profit)}円</small>` : '—'}</td>`;
+        }).join('');
+        const totalRoi = total.totalStake > 0 ? (total.totalReturn / total.totalStake) * 100 : 0;
+        const totalProfit = total.totalReturn - total.totalStake;
+        const totalCell = `<td><strong>${total.count ? pct(totalRoi) : '—'}</strong>${total.count ? `<small>${yen(total.totalStake)}円 → ${yen(total.totalReturn)}円 / ${total.count}件 / 収支 ${yen(totalProfit)}円</small>` : ''}</td>`;
+        return `<tr><th>${escapeHtml(person.name)}</th>${cells}${totalCell}</tr>`;
+      }).join('');
+      return `
+        <h3>対戦表</h3>
+        <div class="battle-table-wrap">
+          <table class="battle-table">
+            <thead><tr><th>名前</th>${head}<th>合計</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function getBattleSelection() {
+      return {
+        personIds: Array.from(document.querySelectorAll('.battle-person-check:checked')).map(el => el.value),
+        groupNames: Array.from(document.querySelectorAll('.battle-group-check:checked')).map(el => el.value)
+      };
+    }
+
+    function renderBattleTable() {
+      const { personIds, groupNames } = getBattleSelection();
+      els.battleResult.classList.remove('hidden');
+      els.battleResult.innerHTML = buildBattleTableHtml(personIds, groupNames);
+      const valid = personIds.length > 0 && groupNames.length > 0;
+      els.battleFullscreenWrap.classList.toggle('hidden', !valid);
+    }
+
+    function openBattleFullscreen() {
+      const { personIds, groupNames } = getBattleSelection();
+      if (!personIds.length) {
+        alert('名前を1つ以上選択してください。');
+        return;
+      }
+      if (!groupNames.length) {
+        alert('グループを1つ以上選択してください。');
+        return;
+      }
+      const tableHtml = buildBattleTableHtml(personIds, groupNames);
+      const fullHtml = `<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>対戦表</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #f6f7fb; color: #222; }
+  .wrap { padding: 20px; }
+  .topbar { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+  button { border: 0; background: #1f6feb; color: #fff; border-radius: 10px; padding: 12px 18px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  h3 { margin: 0 0 14px; }
+  .battle-table-wrap { overflow: auto; background: #fff; border: 1px solid #d8deea; border-radius: 14px; }
+  .battle-table { width: 100%; border-collapse: collapse; min-width: 720px; }
+  .battle-table th, .battle-table td { border-bottom: 1px solid #e7ebf3; border-right: 1px solid #eef2f8; padding: 10px; text-align: left; vertical-align: top; }
+  .battle-table th:last-child, .battle-table td:last-child { border-right: 0; }
+  .battle-table thead th { position: sticky; top: 0; background: #eef4ff; z-index: 1; }
+  .battle-table tbody tr:nth-child(even) { background: #fafcff; }
+  small { display: block; color: #667085; margin-top: 6px; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar"><button onclick="window.close()">閉じる</button></div>
+    ${tableHtml}
+  </div>
+</body>
+</html>`;
+      const win = window.open('', '_blank');
+      if (!win) {
+        alert('新しいタブを開けませんでした。ポップアップブロックをご確認ください。');
+        return;
+      }
+      win.document.open();
+      win.document.write(fullHtml);
+      win.document.close();
+    }
+
     els.backToHomeBtn.addEventListener('click', async () => {
       await mutate(() => {
         state.currentPersonId = null;
@@ -995,108 +1286,6 @@
       });
     });
 
-    function utf8ToBase64Url(bytes) {
-      let binary = '';
-      const chunk = 0x8000;
-      for (let i = 0; i < bytes.length; i += chunk) {
-        binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-      }
-      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-    }
-
-    function base64UrlToUint8Array(base64url) {
-      const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((base64url.length + 3) % 4);
-      const binary = atob(base64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      return bytes;
-    }
-
-    async function compressStateToParam(obj) {
-      const json = JSON.stringify(obj);
-      const input = new TextEncoder().encode(json);
-      if (window.CompressionStream) {
-        const compressed = await new Response(new Blob([input]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();
-        return 'gz.' + utf8ToBase64Url(new Uint8Array(compressed));
-      }
-      return 'raw.' + utf8ToBase64Url(input);
-    }
-
-    async function expandStateFromParam(value) {
-      if (!value || typeof value !== 'string') throw new Error('missing');
-      const dot = value.indexOf('.');
-      const mode = dot >= 0 ? value.slice(0, dot) : 'raw';
-      const payload = dot >= 0 ? value.slice(dot + 1) : value;
-      const bytes = base64UrlToUint8Array(payload);
-      let decoded;
-      if (mode === 'gz') {
-        if (!window.DecompressionStream) throw new Error('decompression_not_supported');
-        const expanded = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
-        decoded = new TextDecoder().decode(expanded);
-      } else {
-        decoded = new TextDecoder().decode(bytes);
-      }
-      const data = JSON.parse(decoded);
-      if (!data || !Array.isArray(data.people)) throw new Error('invalid');
-      return data;
-    }
-
-    async function copyShareUrl() {
-      try {
-        const param = await compressStateToParam(state);
-        const url = new URL(location.href);
-        url.searchParams.set('data', param);
-        const text = url.toString();
-        if (navigator.clipboard?.writeText) {
-          await navigator.clipboard.writeText(text);
-        } else {
-          const ta = document.createElement('textarea');
-          ta.value = text;
-          document.body.appendChild(ta);
-          ta.select();
-          document.execCommand('copy');
-          ta.remove();
-        }
-        alert('共有用URLをコピーしました。');
-      } catch (err) {
-        console.error(err);
-        alert('URLのコピーに失敗しました。');
-      }
-    }
-
-    async function applyQueryStateIfNeeded() {
-      const param = new URL(location.href).searchParams.get('data');
-      if (!param) return;
-      let incoming;
-      try {
-        incoming = await expandStateFromParam(param);
-      } catch (err) {
-        console.error(err);
-        alert('URLのデータを読み込めませんでした。');
-        return;
-      }
-
-      const hasSavedData = Array.isArray(state.people) && state.people.length > 0;
-      let useQuery = true;
-      if (hasSavedData) {
-         useQuery = confirm('URLに共有データがあります。\nOK: URLのデータを優先\nキャンセル: 端末に保存済みのデータを優先');
-      }
-      if (!useQuery) {
-        const cleanUrl = new URL(location.href);
-        cleanUrl.searchParams.delete('data');
-        history.replaceState(null, '', cleanUrl.toString());
-        return;
-      }
-
-      state = incoming;
-      normalizeState();
-      await saveState();
-      
-      const cleanUrl = new URL(location.href);
-      cleanUrl.searchParams.delete('data');
-      history.replaceState(null, '', cleanUrl.toString());
-    }
-
     els.exportBtn.addEventListener('click', () => {
       const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -1107,9 +1296,52 @@
       URL.revokeObjectURL(url);
     });
 
-    els.copyUrlBtn.addEventListener('click', copyShareUrl);
+    els.battleBtn.addEventListener('click', openBattleModal);
+    els.closeBattleBtn.addEventListener('click', closeBattleModal);
+    els.viewBattleBtn.addEventListener('click', renderBattleTable);
+    els.openBattleFullscreenBtn.addEventListener('click', openBattleFullscreen);
+    els.battleModal.addEventListener('click', (e) => {
+      if (e.target === els.battleModal) closeBattleModal();
+    });
+
+    els.copyUrlBtn.addEventListener('click', async () => {
+      try {
+        const url = new URL(location.href);
+        url.searchParams.set('data', await encodeStateForUrl(state));
+        await navigator.clipboard.writeText(url.toString());
+        alert('共有用URLをコピーしました。');
+      } catch (err) {
+        console.error(err);
+        alert('URLのコピーに失敗しました。');
+      }
+    });
 
     els.importBtn.addEventListener('click', () => els.importFile.click());
+
+    async function applyQueryStateIfNeeded() {
+      const param = new URL(location.href).searchParams.get('data');
+      if (!param) return;
+      try {
+        const incoming = await decodeStateFromUrlParam(param);
+        const hasSavedData = Array.isArray(state.people) && state.people.length > 0;
+        let useQuery = true;
+        if (hasSavedData) {
+          useQuery = confirm('URLに共有データがあります。\nOK: URLのデータを優先\nキャンセル: 端末に保存済みのデータを優先');
+        }
+        if (useQuery) {
+          state = incoming;
+          normalizeState();
+          await saveState();
+          render();
+        }
+      } catch (err) {
+        console.error(err);
+        alert('共有URLの読み込みに失敗しました。');
+      } finally {
+        clearDataQueryParam();
+      }
+    }
+
     els.importFile.addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
