@@ -323,10 +323,10 @@
         <div class="input-row four">
           <input id="entryDateInput" type="date" />
           <input id="entryStakeInput" type="number" min="0" step="1" placeholder="投資額" />
-          <input id="entryRateInput" type="number" step="0.1" placeholder="回収率(%)" />
+          <input id="entryPayoutInput" type="number" min="0" step="1" placeholder="払戻額" />
           <button id="addEntryBtn" class="primary">追加</button>
         </div>
-        <div class="small-note">払戻額は「投資額 × 回収率 ÷ 100」で自動計算します。回収率の遷移グラフは累積ベースで表示します。</div>
+        <div class="small-note">投資額と払戻額から回収率を自動計算します。回収率の遷移グラフは累積ベースで表示します。</div>
       </div>
 
       <div class="card">
@@ -380,7 +380,7 @@
       groupSummary: document.getElementById('groupSummary'),
       entryDateInput: document.getElementById('entryDateInput'),
       entryStakeInput: document.getElementById('entryStakeInput'),
-      entryRateInput: document.getElementById('entryRateInput'),
+      entryPayoutInput: document.getElementById('entryPayoutInput'),
       addEntryBtn: document.getElementById('addEntryBtn'),
       entryTableWrap: document.getElementById('entryTableWrap'),
       chartSvg: document.getElementById('chartSvg'),
@@ -419,6 +419,21 @@
       return person.groups.find(g => g.id === state.currentGroupId) || null;
     }
 
+    function getEntryPayout(entry) {
+      const stake = clampNumber(entry?.stake);
+      if (entry && Object.prototype.hasOwnProperty.call(entry, 'payout')) {
+        return clampNumber(entry.payout);
+      }
+      const rate = clampNumber(entry?.rate);
+      return stake * rate / 100;
+    }
+
+    function getEntryRoi(entry) {
+      const stake = clampNumber(entry?.stake);
+      const payout = getEntryPayout(entry);
+      return stake > 0 ? (payout / stake) * 100 : 0;
+    }
+
     function calcGroupStats(group) {
       const entries = group?.entries || [];
       let totalStake = 0;
@@ -426,8 +441,7 @@
       const points = [];
       for (const e of entries) {
         const stake = clampNumber(e.stake);
-        const rate = clampNumber(e.rate);
-        const payout = stake * rate / 100;
+        const payout = getEntryPayout(e);
         totalStake += stake;
         totalReturn += payout;
         const cumulativeRate = totalStake > 0 ? (totalReturn / totalStake) * 100 : 0;
@@ -503,6 +517,12 @@
         person.selectedGroupIds = Array.isArray(person.selectedGroupIds) ? person.selectedGroupIds : [];
         for (const group of person.groups) {
           group.entries = Array.isArray(group.entries) ? group.entries : [];
+          for (const entry of group.entries) {
+            entry.stake = clampNumber(entry.stake);
+            if (Object.prototype.hasOwnProperty.call(entry, 'payout')) {
+              entry.payout = clampNumber(entry.payout);
+            }
+          }
         }
       }
       if (state.currentPersonId && !state.people.some(p => p.id === state.currentPersonId)) {
@@ -661,8 +681,8 @@
                 <th>#</th>
                 <th>日付</th>
                 <th class="right">投資額</th>
-                <th class="right">回収率</th>
                 <th class="right">払戻額</th>
+                <th class="right">回収率</th>
                 <th class="right">累積回収率</th>
                 <th>操作</th>
               </tr>
@@ -670,16 +690,16 @@
             <tbody>
               ${group.entries.map((entry, index) => {
                 const stake = clampNumber(entry.stake);
-                const rate = clampNumber(entry.rate);
-                const payout = stake * rate / 100;
+                const payout = getEntryPayout(entry);
+                const rowRoi = getEntryRoi(entry);
                 const point = gs.points[index] || { rate: 0 };
                 return `
                   <tr>
                     <td>${index + 1}</td>
                     <td><input type="date" value="${entry.date || ''}" onchange="updateEntry('${entry.id}', 'date', this.value)"></td>
                     <td class="right"><input type="number" min="0" step="1" value="${stake}" onchange="updateEntry('${entry.id}', 'stake', this.value)"></td>
-                    <td class="right"><input type="number" step="0.1" value="${rate}" onchange="updateEntry('${entry.id}', 'rate', this.value)"></td>
-                    <td class="right">${yen(payout)}円</td>
+                    <td class="right"><input type="number" min="0" step="1" value="${payout}" onchange="updateEntry('${entry.id}', 'payout', this.value)"></td>
+                    <td class="right ${rowRoi >= 100 ? 'positive' : 'negative'}">${pct(rowRoi)}</td>
                     <td class="right ${point.rate >= 100 ? 'positive' : 'negative'}">${pct(point.rate)}</td>
                     <td>
                       <div class="actions">
@@ -800,16 +820,20 @@
       if (!group) return;
       const date = els.entryDateInput.value;
       const stake = clampNumber(els.entryStakeInput.value);
-      const rate = clampNumber(els.entryRateInput.value);
+      const payout = clampNumber(els.entryPayoutInput.value);
       if (stake <= 0) {
         alert('投資額は1以上で入力してください。');
         return;
       }
+      if (payout < 0) {
+        alert('払戻額は0以上で入力してください。');
+        return;
+      }
       await mutate(() => {
-        group.entries.push({ id: uid('entry'), date, stake, rate });
+        group.entries.push({ id: uid('entry'), date, stake, payout });
         els.entryDateInput.value = '';
         els.entryStakeInput.value = '';
-        els.entryRateInput.value = '';
+        els.entryPayoutInput.value = '';
       });
     }
 
@@ -931,7 +955,13 @@
       const entry = group?.entries.find(e => e.id === entryId);
       if (!entry) return;
       await mutate(() => {
-        entry[field] = field === 'date' ? value : clampNumber(value);
+        if (field === 'date') {
+          entry.date = value;
+        } else if (field === 'stake') {
+          entry.stake = clampNumber(value);
+        } else if (field === 'payout') {
+          entry.payout = clampNumber(value);
+        }
       });
     };
 
@@ -946,7 +976,7 @@
     });
 
     els.addEntryBtn.addEventListener('click', addEntry);
-    els.entryRateInput.addEventListener('keydown', (e) => {
+    els.entryPayoutInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') addEntry();
     });
 
