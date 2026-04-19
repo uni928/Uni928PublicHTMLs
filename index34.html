@@ -1079,13 +1079,22 @@
       const hasSavedData = Array.isArray(state.people) && state.people.length > 0;
       let useQuery = true;
       if (hasSavedData) {
-        useQuery = confirm('URLに共有データがあります。\nOK: URLのデータを優先\nキャンセル: 端末に保存済みのデータを優先');
+         useQuery = confirm('URLに共有データがあります。\nOK: URLのデータを優先\nキャンセル: 端末に保存済みのデータを優先');
       }
-      if (!useQuery) return;
+      if (!useQuery) {
+        const cleanUrl = new URL(location.href);
+        cleanUrl.searchParams.delete('data');
+        history.replaceState(null, '', cleanUrl.toString());
+        return;
+      }
 
       state = incoming;
       normalizeState();
       await saveState();
+      
+      const cleanUrl = new URL(location.href);
+      cleanUrl.searchParams.delete('data');
+      history.replaceState(null, '', cleanUrl.toString());
     }
 
     els.exportBtn.addEventListener('click', () => {
