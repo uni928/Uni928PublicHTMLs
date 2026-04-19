@@ -433,7 +433,8 @@
         </div>
 
         <div id="battleResult" class="card hidden" style="margin-top:16px;"></div>
-        <div id="battleFullscreenWrap" class="hidden" style="margin-top:12px; text-align:right;">
+        <div id="battleFullscreenWrap" class="hidden" style="margin-top:12px; text-align:right; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+          <button id="saveBattlePngBtn" class="ghost">対戦表全体をPNG画像で保存</button>
           <button id="openBattleFullscreenBtn" class="ghost">フル画面で表示</button>
         </div>
       </div>
@@ -492,6 +493,7 @@
       viewBattleBtn: document.getElementById('viewBattleBtn'),
       battleResult: document.getElementById('battleResult'),
       battleFullscreenWrap: document.getElementById('battleFullscreenWrap'),
+      saveBattlePngBtn: document.getElementById('saveBattlePngBtn'),
       openBattleFullscreenBtn: document.getElementById('openBattleFullscreenBtn')
     };
 
@@ -1224,6 +1226,138 @@
       els.battleFullscreenWrap.classList.toggle('hidden', !valid);
     }
 
+
+    async function saveBattleTableAsPng() {
+      const { personIds, groupNames } = getBattleSelection();
+      if (!personIds.length) {
+        alert('名前を1つ以上選択してください。');
+        return;
+      }
+      if (!groupNames.length) {
+        alert('グループを1つ以上選択してください。');
+        return;
+      }
+
+      const selectedPeople = state.people.filter(p => personIds.includes(p.id));
+      const cellPaddingX = 14;
+      const cellPaddingY = 10;
+      const rowHeight = 68;
+      const headerHeight = 44;
+      const nameColWidth = 180;
+      const groupColWidth = 220;
+      const totalColWidth = 220;
+      const tableWidth = nameColWidth + groupNames.length * groupColWidth + totalColWidth;
+      const tableHeight = headerHeight + selectedPeople.length * rowHeight;
+      const margin = 24;
+      const canvas = document.createElement('canvas');
+      const scale = Math.max(2, Math.ceil(window.devicePixelRatio || 1));
+      canvas.width = (tableWidth + margin * 2) * scale;
+      canvas.height = (tableHeight + margin * 2) * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+
+      ctx.fillStyle = '#f6f7fb';
+      ctx.fillRect(0, 0, tableWidth + margin * 2, tableHeight + margin * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(margin, margin, tableWidth, tableHeight);
+
+      const lineColor = '#d7dce5';
+      const headerBg = '#eef4ff';
+      const altBg = '#fafcff';
+      const textColor = '#1f2937';
+      const subColor = '#6b7280';
+
+      function drawCell(x, y, w, h, bg) {
+        ctx.fillStyle = bg;
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeStyle = lineColor;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x, y, w, h);
+      }
+
+      function fitText(text, maxWidth) {
+        const s = String(text ?? '');
+        if (ctx.measureText(s).width <= maxWidth) return s;
+        let out = s;
+        while (out.length > 1 && ctx.measureText(out + '…').width > maxWidth) out = out.slice(0, -1);
+        return out + '…';
+      }
+
+      function drawText(text, x, y, maxWidth, font, color) {
+        ctx.font = font;
+        ctx.fillStyle = color;
+        ctx.textBaseline = 'top';
+        ctx.fillText(fitText(text, maxWidth), x, y);
+      }
+
+      let x = margin;
+      let y = margin;
+      const headerCols = [
+        { label: '名前', width: nameColWidth },
+        ...groupNames.map(name => ({ label: name, width: groupColWidth })),
+        { label: '合計', width: totalColWidth }
+      ];
+      for (const col of headerCols) {
+        drawCell(x, y, col.width, headerHeight, headerBg);
+        drawText(col.label, x + cellPaddingX, y + 12, col.width - cellPaddingX * 2, 'bold 15px sans-serif', textColor);
+        x += col.width;
+      }
+
+      y += headerHeight;
+      for (let row = 0; row < selectedPeople.length; row++) {
+        const person = selectedPeople[row];
+        const rowBg = row % 2 === 0 ? '#ffffff' : altBg;
+        let colX = margin;
+        drawCell(colX, y, nameColWidth, rowHeight, rowBg);
+        drawText(person.name, colX + cellPaddingX, y + 10, nameColWidth - cellPaddingX * 2, 'bold 16px sans-serif', textColor);
+        colX += nameColWidth;
+
+        let totalStake = 0, totalReturn = 0, totalCount = 0;
+        for (const groupName of groupNames) {
+          const groups = (person.groups || []).filter(g => g.name === groupName);
+          let stake = 0, payout = 0, count = 0;
+          for (const group of groups) {
+            const gs = calcGroupStats(group);
+            stake += gs.totalStake;
+            payout += gs.totalReturn;
+            count += gs.count;
+          }
+          totalStake += stake;
+          totalReturn += payout;
+          totalCount += count;
+          drawCell(colX, y, groupColWidth, rowHeight, rowBg);
+          if (count) {
+            const roi = stake > 0 ? (payout / stake) * 100 : 0;
+            const profit = payout - stake;
+            drawText(pct(roi), colX + cellPaddingX, y + 8, groupColWidth - cellPaddingX * 2, 'bold 15px sans-serif', textColor);
+            drawText(`${yen(stake)}円 → ${yen(payout)}円`, colX + cellPaddingX, y + 31, groupColWidth - cellPaddingX * 2, '12px sans-serif', subColor);
+            drawText(`${count}件 / 収支 ${profit >= 0 ? '+' : ''}${yen(profit)}円`, colX + cellPaddingX, y + 48, groupColWidth - cellPaddingX * 2, '12px sans-serif', subColor);
+          } else {
+            drawText('—', colX + cellPaddingX, y + 22, groupColWidth - cellPaddingX * 2, '15px sans-serif', subColor);
+          }
+          colX += groupColWidth;
+        }
+
+        drawCell(colX, y, totalColWidth, rowHeight, rowBg);
+        if (totalCount) {
+          const totalRoi = totalStake > 0 ? (totalReturn / totalStake) * 100 : 0;
+          const totalProfit = totalReturn - totalStake;
+          drawText(pct(totalRoi), colX + cellPaddingX, y + 8, totalColWidth - cellPaddingX * 2, 'bold 15px sans-serif', textColor);
+          drawText(`${yen(totalStake)}円 → ${yen(totalReturn)}円`, colX + cellPaddingX, y + 31, totalColWidth - cellPaddingX * 2, '12px sans-serif', subColor);
+          drawText(`${totalCount}件 / 収支 ${totalProfit >= 0 ? '+' : ''}${yen(totalProfit)}円`, colX + cellPaddingX, y + 48, totalColWidth - cellPaddingX * 2, '12px sans-serif', subColor);
+        } else {
+          drawText('—', colX + cellPaddingX, y + 22, totalColWidth - cellPaddingX * 2, '15px sans-serif', subColor);
+        }
+        y += rowHeight;
+      }
+
+      const link = document.createElement('a');
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      link.href = canvas.toDataURL('image/png');
+      link.download = `keiba_battle_table_${stamp}.png`;
+      link.click();
+    }
+
     function openBattleFullscreen() {
       const { personIds, groupNames } = getBattleSelection();
       if (!personIds.length) {
@@ -1299,6 +1433,7 @@
     els.battleBtn.addEventListener('click', openBattleModal);
     els.closeBattleBtn.addEventListener('click', closeBattleModal);
     els.viewBattleBtn.addEventListener('click', renderBattleTable);
+    els.saveBattlePngBtn.addEventListener('click', saveBattleTableAsPng);
     els.openBattleFullscreenBtn.addEventListener('click', openBattleFullscreen);
     els.battleModal.addEventListener('click', (e) => {
       if (e.target === els.battleModal) closeBattleModal();
