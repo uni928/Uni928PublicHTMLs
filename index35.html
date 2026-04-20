@@ -3,8 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>公開用オプション設定サンプル</title>
+  <title>公開用オプション設定バリエーション</title>
   <style id="component-style">
+    /* =========================================================
+       共通CSS
+       ========================================================= */
     :root {
       --bg-1: #fff8e8;
       --bg-2: #fdf0f4;
@@ -15,13 +18,11 @@
       --text-faint: #8a94a6;
       --line: rgba(149, 157, 165, 0.18);
       --primary: #111827;
-      --primary-hover: #1f2937;
       --accent: #3b82f6;
       --shadow-sm: 0 4px 12px rgba(15, 23, 42, 0.06);
       --shadow-md: 0 10px 30px rgba(15, 23, 42, 0.10);
       --radius: 18px;
       --radius-lg: 24px;
-      --section-pad: 18px;
       --inner-gap: 14px;
     }
 
@@ -60,6 +61,7 @@
     }
     button:hover { transform: translateY(-1px); }
     button:active { transform: translateY(0); }
+
     input[type="text"], select, textarea {
       width: 100%;
       border: 1px solid var(--line);
@@ -84,6 +86,15 @@
         url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>") no-repeat right 12px center / 16px;
       padding-right: 40px;
     }
+    textarea {
+      resize: vertical;
+      min-height: 240px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      white-space: pre;
+    }
+
     label {
       display: block;
       margin: 0 0 9px;
@@ -151,11 +162,20 @@
       background: linear-gradient(135deg, #ffffff 0%, #edf5ff 48%, #dfeeff 100%);
       cursor: pointer;
     }
-    .accordion-header span {
+    .accordion-header-main {
+      min-width: 0;
+      display: grid;
+      gap: 4px;
+    }
+    .accordion-header-title {
       font-size: 15px;
       font-weight: 800;
       color: #10233f;
       line-height: 1.45;
+    }
+    .accordion-header-sub {
+      color: var(--text-soft);
+      font-size: 12px;
     }
     .accordion-toggle {
       width: 32px;
@@ -178,6 +198,20 @@
     }
     .accordion.is-collapsed .accordion-content {
       display: none;
+    }
+
+    .variation-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 12px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(59,130,246,.08);
+      border: 1px solid rgba(59,130,246,.12);
+      color: #21406b;
+      font-size: 12px;
+      font-weight: 800;
     }
 
     .intro-card {
@@ -248,6 +282,28 @@
       box-shadow: var(--shadow-sm);
     }
 
+    .simple-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .inline-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .inline-list .mini-chip {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.76);
+      border: 1px solid rgba(148,163,184,.18);
+      box-shadow: var(--shadow-sm);
+      font-size: 13px;
+      color: var(--text);
+      font-weight: 600;
+    }
+
     .footer-note {
       margin-top: 18px;
       padding: 14px 16px;
@@ -283,10 +339,6 @@
       border-radius: 0;
       background: linear-gradient(180deg, rgba(250,252,255,.82), rgba(245,248,253,.92));
       box-shadow: none;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      font-size: 12px;
-      line-height: 1.6;
-      white-space: pre;
     }
     .html-output:focus {
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
@@ -299,6 +351,43 @@
       color: var(--text-soft);
       font-size: 13px;
       font-weight: 600;
+    }
+
+    /* =========================================================
+       オプション設定1 専用CSS
+       ========================================================= */
+    .option-style-1 .intro-card {
+      background: rgba(255,255,255,.72);
+    }
+
+    /* =========================================================
+       オプション設定2 専用CSS
+       ========================================================= */
+    .option-style-2 .simple-grid .field-card {
+      padding: 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,.86), rgba(247,250,255,.94));
+    }
+    .option-style-2 .footer-note {
+      background: rgba(16,185,129,.08);
+      border-color: rgba(16,185,129,.14);
+      color: #11695d;
+    }
+
+    /* =========================================================
+       オプション設定3 専用CSS
+       ========================================================= */
+    .option-style-3 .field-card {
+      background: linear-gradient(180deg, rgba(255,255,255,.88), rgba(255,248,252,.94));
+      border-color: rgba(236, 72, 153, .12);
+    }
+    .option-style-3 .inline-list .mini-chip {
+      background: linear-gradient(180deg, #ffffff, #fff3f8);
+      border-color: rgba(236,72,153,.14);
+    }
+    .option-style-3 .footer-note {
+      background: rgba(236,72,153,.07);
+      border-color: rgba(236,72,153,.12);
+      color: #8a2c5a;
     }
 
     @media (max-width: 480px) {
@@ -314,18 +403,23 @@
 <body>
   <div class="page">
     <div class="hero">
-      <h1>オプション設定 UI サンプル</h1>
-      <p>公開用の記事やデザイン紹介に使いやすいよう、内容を一般化した単体 HTML です。</p>
+      <h1>オプション設定 UI バリエーション</h1>
+      <p>公開用の記事やデザイン紹介に使いやすいよう、内容を一般化した単体 HTML です。複数パターンを並べて比較できます。</p>
     </div>
 
     <div class="accordion-wrap">
-      <div class="accordion" id="optionsAccordion">
-        <div class="accordion-header" id="optionsHeader" role="button" tabindex="0" aria-expanded="true" aria-controls="optionsContent">
-          <span>オプション設定</span>
-          <button class="accordion-toggle" id="optionsToggle" type="button" aria-label="toggle">－</button>
+      <div class="accordion option-style-1" data-accordion>
+        <div class="accordion-header" role="button" tabindex="0" aria-expanded="true">
+          <div class="accordion-header-main">
+            <div class="accordion-header-title">オプション設定1</div>
+            <div class="accordion-header-sub">現在の構成をベースにした標準版</div>
+          </div>
+          <button class="accordion-toggle" type="button" aria-label="toggle">－</button>
         </div>
 
-        <div class="accordion-content" id="optionsContent">
+        <div class="accordion-content">
+          <div class="variation-label">バリエーション 1 / 標準構成</div>
+
           <div class="intro-card">
             <strong>設定例:</strong> メッセージ作成アシスタントの表示・文体・出力形式を調整するためのサンプル画面です。
             実在サービス固有の内容は含めていません。
@@ -336,9 +430,9 @@
               <div>
                 <label>文章の長さ</label>
                 <div class="pill-group">
-                  <label><input type="radio" name="length" checked>短め</label>
-                  <label><input type="radio" name="length">標準</label>
-                  <label><input type="radio" name="length">長め</label>
+                  <label><input type="radio" name="length-1" checked>短め</label>
+                  <label><input type="radio" name="length-1">標準</label>
+                  <label><input type="radio" name="length-1">長め</label>
                 </div>
               </div>
 
@@ -370,8 +464,8 @@
               <div>
                 <label>文体</label>
                 <div class="pill-group">
-                  <label><input type="radio" name="tone" checked>ですます調</label>
-                  <label><input type="radio" name="tone">フレンドリー</label>
+                  <label><input type="radio" name="tone-1" checked>ですます調</label>
+                  <label><input type="radio" name="tone-1">フレンドリー</label>
                 </div>
               </div>
             </div>
@@ -379,8 +473,8 @@
 
           <div class="field-grid">
             <div class="field-card">
-              <label for="firstPerson">一人称</label>
-              <select id="firstPerson">
+              <label>一人称</label>
+              <select>
                 <option>指定なし</option>
                 <option selected>私</option>
                 <option>僕</option>
@@ -389,8 +483,8 @@
             </div>
 
             <div class="field-card">
-              <label for="audience">想定読者</label>
-              <select id="audience">
+              <label>想定読者</label>
+              <select>
                 <option selected>指定なし</option>
                 <option>社内向け</option>
                 <option>顧客向け</option>
@@ -399,8 +493,8 @@
             </div>
 
             <div class="field-card">
-              <label for="emoji">記号・絵文字の使用量</label>
-              <select id="emoji">
+              <label>記号・絵文字の使用量</label>
+              <select>
                 <option selected>なし</option>
                 <option>少なめ</option>
                 <option>標準</option>
@@ -409,8 +503,8 @@
             </div>
 
             <div class="field-card">
-              <label for="number">生成数</label>
-              <select id="number">
+              <label>生成数</label>
+              <select>
                 <option>3件</option>
                 <option selected>5件</option>
                 <option>10件</option>
@@ -424,29 +518,159 @@
         </div>
       </div>
 
+      <div class="accordion option-style-2" data-accordion>
+        <div class="accordion-header" role="button" tabindex="0" aria-expanded="true">
+          <div class="accordion-header-main">
+            <div class="accordion-header-title">オプション設定2</div>
+            <div class="accordion-header-sub">最初の添付内容に近い、シンプル寄りの構成</div>
+          </div>
+          <button class="accordion-toggle" type="button" aria-label="toggle">－</button>
+        </div>
+
+        <div class="accordion-content">
+          <div class="variation-label">バリエーション 2 / シンプル構成</div>
+
+          <div class="simple-grid">
+            <div class="field-card">
+              <label>文章の長さ</label>
+              <div class="pill-group">
+                <label><input type="radio" name="length-2" checked>短め</label>
+                <label><input type="radio" name="length-2">中間</label>
+                <label><input type="radio" name="length-2">長め</label>
+              </div>
+            </div>
+
+            <div class="field-card">
+              <label>出力オプション</label>
+              <div class="check-list">
+                <label><input type="checkbox">改行を入れる</label>
+                <label><input type="checkbox" checked>候補を採点する</label>
+                <label><input type="checkbox">軽量モード</label>
+              </div>
+            </div>
+
+            <div class="field-card">
+              <label>呼びかけ名</label>
+              <input type="text" placeholder="例：みなさん" />
+            </div>
+
+            <div class="field-card">
+              <label>文体</label>
+              <div class="pill-group">
+                <label><input type="radio" name="tone-2" checked>ですます調</label>
+                <label><input type="radio" name="tone-2">カジュアル</label>
+              </div>
+            </div>
+
+            <div class="field-card">
+              <label>一人称</label>
+              <select>
+                <option selected>指定なし</option>
+                <option>私</option>
+                <option>僕</option>
+                <option>自分</option>
+              </select>
+            </div>
+
+            <div class="field-card">
+              <label>生成数</label>
+              <select>
+                <option>3件</option>
+                <option selected>5件</option>
+                <option>10件</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="footer-note">
+            設定項目を絞って、ぱっと見で把握しやすい軽い画面にしています。
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion option-style-3" data-accordion>
+        <div class="accordion-header" role="button" tabindex="0" aria-expanded="true">
+          <div class="accordion-header-main">
+            <div class="accordion-header-title">オプション設定3</div>
+            <div class="accordion-header-sub">少し整理感を強めた、カード分割タイプ</div>
+          </div>
+          <button class="accordion-toggle" type="button" aria-label="toggle">－</button>
+        </div>
+
+        <div class="accordion-content">
+          <div class="variation-label">バリエーション 3 / カード分割構成</div>
+
+          <div class="field-grid">
+            <div class="field-card">
+              <label>基本トーン</label>
+              <div class="inline-list">
+                <div class="mini-chip">丁寧</div>
+                <div class="mini-chip">やわらかめ</div>
+                <div class="mini-chip">質問は控えめ</div>
+              </div>
+            </div>
+
+            <div class="field-card">
+              <label>出力の雰囲気</label>
+              <select>
+                <option selected>落ち着いた印象</option>
+                <option>標準</option>
+                <option>親しみやすめ</option>
+              </select>
+            </div>
+
+            <div class="field-card">
+              <label>対象</label>
+              <select>
+                <option selected>社内メンバー</option>
+                <option>一般利用者</option>
+                <option>取引先</option>
+              </select>
+            </div>
+
+            <div class="field-card">
+              <label>メモ</label>
+              <input type="text" placeholder="例：簡潔で読みやすく" />
+            </div>
+          </div>
+
+          <div class="check-list" style="margin-top: 16px;">
+            <label><input type="checkbox" checked>候補ごとの差を大きめにする</label>
+            <label><input type="checkbox" checked>読みやすさを優先する</label>
+            <label><input type="checkbox">補足説明を追加する</label>
+          </div>
+
+          <div class="footer-note">
+            まとまりごとに区切って見せたいときに使いやすいパターンです。
+          </div>
+        </div>
+      </div>
+
       <div class="html-panel">
         <div class="html-panel-title">このページの HTML 全体</div>
         <textarea class="html-output" id="fullHtmlOutput" readonly spellcheck="false"></textarea>
       </div>
 
-      <div class="copy-status" id="copyStatus">開いた状態がデフォルトです。ヘッダーを押すと閉じられます。</div>
+      <div class="copy-status" id="copyStatus">すべて開いた状態がデフォルトです。各ヘッダーを押すと閉じられます。</div>
     </div>
   </div>
 
   <script>
-    const accordion = document.getElementById('optionsAccordion');
-    const header = document.getElementById('optionsHeader');
-    const toggleBtn = document.getElementById('optionsToggle');
-    const copyStatus = document.getElementById('copyStatus');
+    const accordions = Array.from(document.querySelectorAll('[data-accordion]'));
     const fullHtmlOutput = document.getElementById('fullHtmlOutput');
+    const copyStatus = document.getElementById('copyStatus');
 
-    function setAccordionState(isOpen) {
+    function setAccordionState(accordion, isOpen) {
+      const header = accordion.querySelector('.accordion-header');
+      const toggleBtn = accordion.querySelector('.accordion-toggle');
       accordion.classList.toggle('is-collapsed', !isOpen);
       header.setAttribute('aria-expanded', String(isOpen));
       toggleBtn.textContent = isOpen ? '－' : '＋';
-      copyStatus.textContent = isOpen
-        ? '開いた状態がデフォルトです。ヘッダーを押すと閉じられます。'
-        : '閉じた状態です。ヘッダーを押すと再度開けます。';
+    }
+
+    function updateStatus() {
+      const openCount = accordions.filter(acc => !acc.classList.contains('is-collapsed')).length;
+      copyStatus.textContent = `全${accordions.length}件中 ${openCount}件を表示中です。各ヘッダーを押すと開閉できます。`;
     }
 
     function updateFullHtmlOutput() {
@@ -456,30 +680,38 @@
       fullHtmlOutput.scrollLeft = 0;
     }
 
-    function toggleAccordion() {
+    function toggleAccordion(accordion) {
       const isOpen = !accordion.classList.contains('is-collapsed');
-      setAccordionState(!isOpen);
+      setAccordionState(accordion, !isOpen);
+      updateStatus();
       updateFullHtmlOutput();
     }
 
-    header.addEventListener('click', (event) => {
-      if (event.target.closest('button') && event.target !== toggleBtn) return;
-      toggleAccordion();
+    accordions.forEach((accordion) => {
+      const header = accordion.querySelector('.accordion-header');
+      const toggleBtn = accordion.querySelector('.accordion-toggle');
+
+      header.addEventListener('click', (event) => {
+        if (event.target.closest('button') && event.target !== toggleBtn) return;
+        toggleAccordion(accordion);
+      });
+
+      header.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          toggleAccordion(accordion);
+        }
+      });
+
+      toggleBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        toggleAccordion(accordion);
+      });
+
+      setAccordionState(accordion, true);
     });
 
-    header.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        toggleAccordion();
-      }
-    });
-
-    toggleBtn.addEventListener('click', (event) => {
-      event.stopPropagation();
-      toggleAccordion();
-    });
-
-    setAccordionState(true);
+    updateStatus();
     updateFullHtmlOutput();
   </script>
 </body>
