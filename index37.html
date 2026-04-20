@@ -1,0 +1,623 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>あと何分タイマー</title>
+  <style>
+    :root{
+      --bg1:#f6f8fb;
+      --bg2:#e9eef7;
+      --card:#ffffff;
+      --text:#1f2937;
+      --sub:#6b7280;
+      --line:#d9e0ea;
+      --accent:#2563eb;
+      --soon:#d97706;
+      --danger:#dc2626;
+      --passed:#475569;
+      --shadow:0 12px 28px rgba(15,23,42,.08);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:"Segoe UI","Hiragino Sans","Yu Gothic UI",sans-serif;
+      color:var(--text);
+      background:linear-gradient(135deg,var(--bg1),var(--bg2));
+      min-height:100vh;
+    }
+    .wrap{
+      max-width:1180px;
+      margin:0 auto;
+      padding:24px 16px 40px;
+    }
+    h1{
+      margin:0 0 8px;
+      font-size:clamp(28px,4vw,42px);
+    }
+    .lead{
+      margin:0 0 20px;
+      color:var(--sub);
+      line-height:1.6;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: 420px 1fr;
+      gap:18px;
+    }
+    .panel{
+      background:var(--card);
+      border:1px solid rgba(255,255,255,.6);
+      border-radius:20px;
+      box-shadow:var(--shadow);
+      padding:18px;
+    }
+    .panel h2{
+      margin:0 0 14px;
+      font-size:20px;
+    }
+    .row{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-bottom:10px;
+      align-items:center;
+    }
+    .row3{
+      display:grid;
+      grid-template-columns:1fr 1fr auto;
+      gap:10px;
+      margin-bottom:10px;
+      align-items:center;
+    }
+    input[type="text"], input[type="time"], input[type="date"]{
+      width:100%;
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:12px 13px;
+      font-size:15px;
+      outline:none;
+      background:#fff;
+    }
+    input[type="text"]:focus, input[type="time"]:focus, input[type="date"]:focus{
+      border-color:#9dbaf7;
+      box-shadow:0 0 0 4px rgba(37,99,235,.10);
+    }
+    button{
+      border:none;
+      border-radius:12px;
+      padding:11px 14px;
+      font-size:14px;
+      font-weight:700;
+      cursor:pointer;
+      transition:transform .08s ease, opacity .2s ease, background .2s ease;
+    }
+    button:active{ transform:scale(.98); }
+    .primary{ background:var(--accent); color:#fff; }
+    .soft{ background:#eef4ff; color:#2450b5; }
+    .dangerBtn{ background:#fee2e2; color:#b91c1c; }
+    .ghost{ background:#f3f4f6; color:#374151; }
+    .full{ width:100%; }
+    .list-editor{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      margin-top:10px;
+    }
+    .editor-item{
+      display:grid;
+      grid-template-columns:1fr 150px 115px auto;
+      gap:10px;
+      align-items:center;
+    }
+    .editor-empty{
+      color:var(--sub);
+      font-size:14px;
+      padding:10px 2px;
+    }
+    .subnote{
+      font-size:13px;
+      color:var(--sub);
+      line-height:1.6;
+      margin-top:10px;
+    }
+    .clock{
+      display:flex;
+      gap:12px;
+      align-items:end;
+      justify-content:space-between;
+      padding:16px 18px;
+      border-radius:18px;
+      background:linear-gradient(135deg,#eff6ff,#ffffff);
+      border:1px solid #dbe7ff;
+      margin-bottom:16px;
+      flex-wrap:wrap;
+    }
+    .clock .now{
+      font-size:clamp(26px,4vw,40px);
+      font-weight:800;
+      letter-spacing:.02em;
+    }
+    .clock .date{
+      color:var(--sub);
+      font-size:14px;
+    }
+    .section-title{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:center;
+      margin:16px 0 10px;
+    }
+    .section-title h3{
+      margin:0;
+      font-size:18px;
+    }
+    .badge{
+      font-size:12px;
+      padding:6px 10px;
+      border-radius:999px;
+      background:#eef2ff;
+      color:#4338ca;
+      font-weight:700;
+    }
+    .cards{
+      display:grid;
+      gap:12px;
+    }
+    .card{
+      border:1px solid #e5e7eb;
+      background:#fff;
+      border-radius:18px;
+      padding:16px;
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap:12px;
+      align-items:center;
+    }
+    .card.next{
+      border-left:8px solid var(--accent);
+    }
+    .card.passed{
+      border-left:8px solid #94a3b8;
+      background:#fbfdff;
+    }
+    .meta{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin-bottom:6px;
+    }
+    .name{
+      font-size:18px;
+      font-weight:800;
+    }
+    .time-badge{
+      font-size:13px;
+      color:#1d4ed8;
+      background:#eff6ff;
+      padding:4px 9px;
+      border-radius:999px;
+      font-weight:700;
+    }
+    .time-badge.passed{
+      color:#475569;
+      background:#f1f5f9;
+    }
+    .status{
+      font-size:clamp(22px,3.3vw,34px);
+      font-weight:900;
+      white-space:nowrap;
+    }
+    .status.normal{ color:var(--text); }
+    .status.soon{ color:var(--soon); }
+    .status.danger{ color:var(--danger); animation:pulse 1s infinite; }
+    .desc{
+      color:var(--sub);
+      font-size:14px;
+    }
+    .empty{
+      text-align:center;
+      padding:34px 20px;
+      color:var(--sub);
+      border:2px dashed #d7deea;
+      border-radius:18px;
+      background:rgba(255,255,255,.6);
+    }
+    @keyframes pulse{
+      0%,100%{opacity:1}
+      50%{opacity:.55}
+    }
+    @media (max-width: 980px){
+      .grid{ grid-template-columns:1fr; }
+    }
+    @media (max-width: 700px){
+      .row,.row3{ grid-template-columns:1fr; }
+      .editor-item{ grid-template-columns:1fr; }
+      .card{ grid-template-columns:1fr; }
+      .status{ white-space:normal; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>あと何分モード</h1>
+    <p class="lead">
+      予定を先に複数登録しておくと、次の5件は「あと○時間○分○秒」、直前の2件は「過○時間○分○秒」で常時更新します。<br>
+      1秒ごとにリアルタイム更新され、5分未満は色が変わって焦りやすくなります。1日以上前の予定は自動削除されます。
+    </p>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>予定を登録</h2>
+
+        <div class="row">
+          <input id="titleInput" type="text" placeholder="予定名（例：会議、出発、休憩終了）">
+          <input id="dateInput" type="date">
+        </div>
+
+        <div class="row3">
+          <input id="timeInput" type="time" step="1">
+          <div class="subnote" style="margin:0; padding:0 4px;">
+            日付未入力なら当日扱いです。
+          </div>
+          <button id="addBtn" class="primary">追加</button>
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button id="sampleBtn" class="soft">サンプルを入れる</button>
+          <button id="clearBtn" class="dangerBtn">全削除</button>
+        </div>
+
+        <div class="section-title" style="margin-top:18px;">
+          <h3>登録済み予定</h3>
+          <span class="badge" id="countBadge">0件</span>
+        </div>
+        <div id="editorList" class="list-editor"></div>
+
+        <p class="subnote">
+          ※ 日付が空欄の場合は当日で保存します。<br>
+          ※ 次の5件は「あと」、直前の2件は「過」で表示します。<br>
+          ※ 現在時刻より1日以上前になった予定は、自動で削除されます。
+        </p>
+      </section>
+
+      <section class="panel">
+        <div class="clock">
+          <div>
+            <div class="date" id="dateLabel">----</div>
+            <div class="now" id="nowLabel">--:--:--</div>
+          </div>
+          <div class="badge">1秒ごとに更新中</div>
+        </div>
+
+        <div class="section-title">
+          <h3>直前の予定</h3>
+          <span class="badge">最大2件</span>
+        </div>
+        <div id="passedList" class="cards"></div>
+
+        <div class="section-title">
+          <h3>次の予定</h3>
+          <span class="badge">最大5件</span>
+        </div>
+        <div id="nextList" class="cards"></div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "schedule_countdown_items_v2";
+    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+    let items = loadItems();
+
+    const titleInput = document.getElementById("titleInput");
+    const dateInput = document.getElementById("dateInput");
+    const timeInput = document.getElementById("timeInput");
+    const addBtn = document.getElementById("addBtn");
+    const sampleBtn = document.getElementById("sampleBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const editorList = document.getElementById("editorList");
+    const countBadge = document.getElementById("countBadge");
+    const passedList = document.getElementById("passedList");
+    const nextList = document.getElementById("nextList");
+    const nowLabel = document.getElementById("nowLabel");
+    const dateLabel = document.getElementById("dateLabel");
+
+    function loadItems(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      }catch{
+        return [];
+      }
+    }
+
+    function saveItems(){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    }
+
+    function uid(){
+      return Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+
+    function pad(num){
+      return String(num).padStart(2, "0");
+    }
+
+    function todayStr(){
+      const now = new Date();
+      return `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+    }
+
+    function normalizeTime(v){
+      if(!v) return "";
+      return v.length === 5 ? v + ":00" : v;
+    }
+
+    function normalizeDate(v){
+      return v || todayStr();
+    }
+
+    function buildDateTime(dateStr, timeStr){
+      if(!timeStr) return null;
+      const d = normalizeDate(dateStr);
+      const [y, m, day] = d.split("-").map(Number);
+      const [hh, mm, ssRaw] = normalizeTime(timeStr).split(":");
+      const ss = ssRaw ?? "00";
+      return new Date(y, m - 1, day, Number(hh), Number(mm), Number(ss), 0);
+    }
+
+    function purgeOldItems(){
+      const now = new Date();
+      const before = items.length;
+      items = items.filter(item => {
+        const target = buildDateTime(item.date, item.time);
+        if(!target) return false;
+        return (now - target) < ONE_DAY_MS;
+      });
+      if(items.length !== before){
+        saveItems();
+      }
+    }
+
+    function formatClock(now){
+      const days = ["日","月","火","水","木","金","土"];
+      dateLabel.textContent = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日（${days[now.getDay()]}）`;
+      nowLabel.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    }
+
+    function formatDiff(ms, isPast){
+      const totalSec = Math.floor(Math.abs(ms) / 1000);
+      const hour = Math.floor(totalSec / 3600);
+      const min = Math.floor((totalSec % 3600) / 60);
+      const sec = totalSec % 60;
+      return `${isPast ? "過" : "あと"}${hour}時間${min}分${sec}秒`;
+    }
+
+    function getUrgencyClass(ms){
+      if(ms < 0) return "normal";
+      if(ms < 5 * 60 * 1000) return "danger";
+      if(ms < 10 * 60 * 1000) return "soon";
+      return "normal";
+    }
+
+    function sortItems(arr){
+      return [...arr].sort((a, b) => buildDateTime(a.date, a.time) - buildDateTime(b.date, b.time));
+    }
+
+    function renderEditor(){
+      countBadge.textContent = `${items.length}件`;
+      const sorted = sortItems(items);
+
+      if(!sorted.length){
+        editorList.innerHTML = `<div class="editor-empty">まだ予定がありません。左上から追加してください。</div>`;
+        return;
+      }
+
+      editorList.innerHTML = "";
+      sorted.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "editor-item";
+
+        const name = document.createElement("input");
+        name.type = "text";
+        name.value = item.title;
+        name.addEventListener("input", () => {
+          item.title = name.value;
+          saveItems();
+          update();
+        });
+
+        const date = document.createElement("input");
+        date.type = "date";
+        date.value = item.date || "";
+        date.addEventListener("input", () => {
+          item.date = date.value || "";
+          saveItems();
+          update();
+        });
+
+        const time = document.createElement("input");
+        time.type = "time";
+        time.step = "1";
+        time.value = normalizeTime(item.time);
+        time.addEventListener("input", () => {
+          item.time = normalizeTime(time.value);
+          saveItems();
+          update();
+        });
+
+        const del = document.createElement("button");
+        del.className = "ghost";
+        del.textContent = "削除";
+        del.addEventListener("click", () => {
+          items = items.filter(v => v.id !== item.id);
+          saveItems();
+          update();
+        });
+
+        row.appendChild(name);
+        row.appendChild(date);
+        row.appendChild(time);
+        row.appendChild(del);
+        editorList.appendChild(row);
+      });
+    }
+
+    function createCard(item, diffMs, isPast){
+      const card = document.createElement("div");
+      card.className = `card ${isPast ? "passed" : "next"}`;
+
+      const left = document.createElement("div");
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+
+      const name = document.createElement("div");
+      name.className = "name";
+      name.textContent = item.title || "（無題の予定）";
+
+      const time = document.createElement("div");
+      time.className = `time-badge ${isPast ? "passed" : ""}`;
+      const dateLabelShort = item.date || todayStr();
+      time.textContent = `${dateLabelShort} ${normalizeTime(item.time).slice(0,8)}`;
+
+      meta.appendChild(name);
+      meta.appendChild(time);
+
+      const desc = document.createElement("div");
+      desc.className = "desc";
+      desc.textContent = isPast ? "この予定は開始時刻を過ぎています。" : "この予定までの残り時間です。";
+
+      left.appendChild(meta);
+      left.appendChild(desc);
+
+      const right = document.createElement("div");
+      const urgency = getUrgencyClass(diffMs);
+      right.className = `status ${urgency}`;
+      right.textContent = formatDiff(diffMs, isPast);
+
+      card.appendChild(left);
+      card.appendChild(right);
+      return card;
+    }
+
+    function renderBoards(){
+      purgeOldItems();
+
+      const now = new Date();
+      formatClock(now);
+
+      const sorted = sortItems(items).map(item => {
+        const target = buildDateTime(item.date, item.time);
+        return {
+          ...item,
+          target,
+          diff: target - now
+        };
+      });
+
+      const passed = sorted.filter(v => v.diff < 0).sort((a,b) => b.target - a.target).slice(0, 2);
+      const next = sorted.filter(v => v.diff >= 0).sort((a,b) => a.target - b.target).slice(0, 5);
+
+      passedList.innerHTML = "";
+      nextList.innerHTML = "";
+
+      if(!passed.length){
+        passedList.innerHTML = `<div class="empty">まだ過ぎた予定はありません。</div>`;
+      }else{
+        passed.forEach(item => passedList.appendChild(createCard(item, item.diff, true)));
+      }
+
+      if(!next.length){
+        nextList.innerHTML = `<div class="empty">これからの予定がありません。</div>`;
+      }else{
+        next.forEach(item => nextList.appendChild(createCard(item, item.diff, false)));
+      }
+
+      countBadge.textContent = `${items.length}件`;
+    }
+
+    function update(){
+      purgeOldItems();
+      renderEditor();
+      renderBoards();
+    }
+
+    function addItem(title, date, time){
+      if(!time) return;
+      items.push({
+        id: uid(),
+        title: (title || "").trim() || "予定",
+        date: date || "",
+        time: normalizeTime(time)
+      });
+      saveItems();
+      update();
+    }
+
+    addBtn.addEventListener("click", () => {
+      addItem(titleInput.value, dateInput.value, timeInput.value);
+      titleInput.value = "";
+      dateInput.value = "";
+      titleInput.focus();
+    });
+
+    [titleInput, dateInput, timeInput].forEach(el => {
+      el.addEventListener("keydown", e => {
+        if(e.key === "Enter"){
+          addItem(titleInput.value, dateInput.value, timeInput.value);
+          titleInput.value = "";
+          dateInput.value = "";
+        }
+      });
+    });
+
+    sampleBtn.addEventListener("click", () => {
+      const now = new Date();
+      const samples = [
+        { title: "昨日の予定（自動削除確認用）", dateOffset: -2, minOffset: 0 },
+        { title: "朝会", dateOffset: 0, minOffset: -45 },
+        { title: "移動開始", dateOffset: 0, minOffset: -12 },
+        { title: "会議", dateOffset: 0, minOffset: 3 },
+        { title: "休憩終了", dateOffset: 0, minOffset: 8 },
+        { title: "外出", dateOffset: 0, minOffset: 19 },
+        { title: "締切", dateOffset: 0, minOffset: 31 },
+        { title: "明日の通話", dateOffset: 1, minOffset: 15 }
+      ];
+
+      items = samples.map((s, index) => {
+        const d = new Date(now);
+        d.setDate(d.getDate() + s.dateOffset);
+        d.setMinutes(d.getMinutes() + s.minOffset);
+        return {
+          id: uid() + "_" + index,
+          title: s.title,
+          date: `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`,
+          time: `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+        };
+      });
+
+      saveItems();
+      update();
+    });
+
+    clearBtn.addEventListener("click", () => {
+      if(confirm("登録した予定をすべて削除しますか？")){
+        items = [];
+        saveItems();
+        update();
+      }
+    });
+
+    update();
+    setInterval(() => {
+      renderBoards();
+    }, 1000);
+  </script>
+</body>
+</html>
