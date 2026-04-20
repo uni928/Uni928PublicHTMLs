@@ -339,27 +339,15 @@ URLに圧縮して共有できます。"></textarea>
   </div>
 
   <div id="viewMode" class="hidden">
-    <section class="hero view">
-      <div class="pill">閲覧モード</div>
-      <h1>共有されたMarkdown</h1>
-      <p class="sub">
-        このページはクエリパラメータ内の圧縮データを復元して表示しています。
-      </p>
-    </section>
-
-    <div class="view-wrap">
-      <article class="view-card">
-        <div class="view-content">
-          <div id="viewViewerEmpty" class="viewer-empty">
-            表示する内容がありません。
-          </div>
-          <div id="viewViewer" class="markdown" hidden></div>
-        </div>
-      </article>
+  <div style="max-width:800px;margin:40px auto;padding:0 16px;">
+    <div id="viewViewerEmpty" class="viewer-empty">
+      表示する内容がありません。
     </div>
+    <div id="viewViewer" class="markdown" hidden></div>
   </div>
+</div>
 
-  <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
   <script>
