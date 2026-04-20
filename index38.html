@@ -1,0 +1,674 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>競馬印共有</title>
+  <meta name="description" content="競馬の印・番号・理由を入力して共有URLを作るサイト" />
+  <style>
+    :root{
+      --bg:#f7f8fc;
+      --card:#ffffff;
+      --text:#1f2937;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+      --accent:#2563eb;
+      --accent2:#1d4ed8;
+      --ok:#065f46;
+      --okbg:#ecfdf5;
+      --err:#991b1b;
+      --errbg:#fef2f2;
+      --shadow:0 10px 30px rgba(15,23,42,.08);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Hiragino Sans","Noto Sans JP",sans-serif;
+      color:var(--text);
+      background:linear-gradient(180deg,#f8fafc 0%, #eef2ff 100%);
+      min-height:100vh;
+    }
+    .hidden{display:none !important}
+    .wrap{
+      width:min(1280px,calc(100% - 24px));
+      margin:24px auto 40px;
+    }
+    .hero{
+      margin-bottom:18px;
+      padding:20px 22px;
+      border-radius:24px;
+      background:rgba(255,255,255,.74);
+      backdrop-filter: blur(8px);
+      box-shadow:var(--shadow);
+      border:1px solid rgba(255,255,255,.8);
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      padding:7px 10px;
+      border-radius:999px;
+      background:#f3f4f6;
+      color:#4b5563;
+      font-size:12px;
+      font-weight:700;
+      margin-bottom:8px;
+    }
+    h1{
+      margin:0 0 8px;
+      font-size:clamp(24px,4vw,36px);
+      line-height:1.2;
+    }
+    .sub{
+      margin:0;
+      color:var(--muted);
+      line-height:1.75;
+    }
+    .layout{
+      display:grid;
+      grid-template-columns: 1.18fr .82fr;
+      gap:18px;
+      align-items:start;
+    }
+    @media (max-width: 1080px){
+      .layout{grid-template-columns:1fr}
+    }
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .card-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      padding:16px 18px;
+      border-bottom:1px solid var(--line);
+      background:#fcfcff;
+    }
+    .card-head h2{
+      margin:0;
+      font-size:18px;
+    }
+    .body{
+      padding:16px 18px 18px;
+    }
+    .race-meta{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      margin-bottom:16px;
+    }
+    @media (max-width: 640px){
+      .race-meta{grid-template-columns:1fr}
+    }
+    label{
+      display:block;
+      font-size:13px;
+      color:#374151;
+      font-weight:700;
+      margin-bottom:6px;
+    }
+    input[type="text"], textarea, select{
+      width:100%;
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:11px 12px;
+      font:inherit;
+      color:inherit;
+      background:#fff;
+      outline:none;
+    }
+    input[type="text"]:focus, textarea:focus, select:focus{
+      border-color:#93c5fd;
+      box-shadow:0 0 0 4px rgba(37,99,235,.08);
+    }
+    textarea{
+      min-height:70px;
+      resize:vertical;
+      line-height:1.65;
+    }
+    .table-wrap{
+      overflow:auto;
+      border:1px solid var(--line);
+      border-radius:16px;
+      background:#fff;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      min-width:860px;
+    }
+    th, td{
+      border-bottom:1px solid var(--line);
+      padding:10px;
+      vertical-align:top;
+    }
+    th{
+      background:#f8fafc;
+      text-align:left;
+      font-size:13px;
+      color:#374151;
+      position:sticky;
+      top:0;
+      z-index:1;
+    }
+    tr:last-child td{border-bottom:none}
+    .col-no{width:64px;text-align:center;font-weight:700}
+    .col-mark{width:140px}
+    .col-num{width:120px}
+    .col-reason{min-width:360px}
+    .small-input{
+      text-align:center;
+      font-weight:700;
+    }
+    .controls{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:14px;
+    }
+    button{
+      appearance:none;
+      border:none;
+      border-radius:12px;
+      padding:12px 16px;
+      font:inherit;
+      cursor:pointer;
+      transition:.18s ease;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+    }
+    button.primary{
+      background:var(--accent);
+      color:#fff;
+      font-weight:700;
+    }
+    button.primary:hover{background:var(--accent2)}
+    button.secondary{
+      background:#eef2ff;
+      color:#1e3a8a;
+      font-weight:700;
+    }
+    button.secondary:hover{background:#e0e7ff}
+    button.subtle{
+      background:#f3f4f6;
+      color:#374151;
+      font-weight:600;
+    }
+    button.subtle:hover{background:#e5e7eb}
+    .status{
+      margin-top:12px;
+      padding:12px 14px;
+      border-radius:12px;
+      font-size:14px;
+      line-height:1.6;
+      display:none;
+      white-space:pre-wrap;
+    }
+    .status.show{display:block}
+    .status.ok{
+      background:var(--okbg);
+      color:var(--ok);
+      border:1px solid #a7f3d0;
+    }
+    .status.err{
+      background:var(--errbg);
+      color:var(--err);
+      border:1px solid #fecaca;
+    }
+    .hint{
+      margin-top:10px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.7;
+    }
+    .preview-area{
+      min-height:400px;
+    }
+    .markdown{
+      line-height:1.9;
+      word-break:break-word;
+      overflow-wrap:anywhere;
+    }
+    .markdown h1,.markdown h2,.markdown h3{
+      line-height:1.35;
+      margin:1.35em 0 .65em;
+    }
+    .markdown h1{font-size:1.9rem;border-bottom:1px solid var(--line);padding-bottom:.35em}
+    .markdown h2{font-size:1.45rem;border-bottom:1px solid var(--line);padding-bottom:.3em}
+    .markdown h3{font-size:1.18rem}
+    .markdown p,.markdown ul,.markdown ol,.markdown blockquote,.markdown pre{
+      margin:0 0 1em;
+    }
+    .markdown ul{padding-left:1.4em}
+    .markdown code{
+      background:#f3f4f6;
+      padding:.18em .4em;
+      border-radius:6px;
+      font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+      font-size:.92em;
+    }
+    .markdown pre{
+      background:#0f172a;
+      color:#e5e7eb;
+      padding:14px 16px;
+      border-radius:12px;
+      overflow:auto;
+    }
+    .markdown pre code{background:transparent;color:inherit;padding:0}
+    .viewer-empty{
+      color:var(--muted);
+      line-height:1.8;
+      padding:8px 2px 4px;
+    }
+    .view-wrap{
+      max-width:860px;
+      margin:34px auto;
+      padding:0 16px;
+    }
+  </style>
+</head>
+<body>
+  <div id="editorMode">
+    <div class="wrap">
+      <section class="hero">
+        <div class="pill">競馬向け入力</div>
+        <h1>競馬の印を入力して共有URLを作成</h1>
+        <p class="sub">
+          1〜18の各馬番ごとに印と理由を入力できます。入力されている行だけをまとめて、
+          <strong>◎ → ○ → ▲ → ☆ → △</strong> の順で共有用表示へ反映します。
+        </p>
+      </section>
+
+      <section class="layout">
+        <article class="card">
+          <div class="card-head">
+            <h2>入力</h2>
+            <div>
+              <button class="subtle" id="sampleBtn" type="button">サンプル入力</button>
+              <button class="subtle" id="clearBtn" type="button">クリア</button>
+            </div>
+          </div>
+          <div class="body">
+            <div class="race-meta">
+              <div>
+                <label for="raceTitle">レース名</label>
+                <input type="text" id="raceTitle" placeholder="例: 東京11R NHKマイルカップ" />
+              </div>
+              <div>
+                <label for="raceDate">日付・メモ</label>
+                <input type="text" id="raceDate" placeholder="例: 2026/04/20 予想" />
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="col-no">馬番</th>
+                    <th class="col-mark">印</th>
+                    <th class="col-num">番号</th>
+                    <th class="col-reason">理由</th>
+                  </tr>
+                </thead>
+                <tbody id="rowsBody"></tbody>
+              </table>
+            </div>
+
+            <div class="controls">
+              <button class="primary" id="copyUrlBtn" type="button">URLをコピー</button>
+              <button class="secondary" id="updateUrlBtn" type="button">URLに反映</button>
+            </div>
+
+            <div id="status" class="status"></div>
+            <div class="hint">
+              標準的な印として「なし / ◎ / ○ / ▲ / ☆ / △」を用意しています。印があり、理由が入力されている行を中心に出力します。
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>リアルタイムプレビュー</h2>
+            <div class="pill">共有時の表示イメージ</div>
+          </div>
+          <div class="body preview-area">
+            <div id="editorViewerEmpty" class="viewer-empty">
+              まだ表示する内容がありません。左の表に入力すると、ここへリアルタイムで表示されます。
+            </div>
+            <div id="editorViewer" class="markdown" hidden></div>
+          </div>
+        </article>
+      </section>
+    </div>
+  </div>
+
+  <div id="viewMode" class="hidden">
+    <div class="view-wrap">
+      <div id="viewViewerEmpty" class="viewer-empty">表示する内容がありません。</div>
+      <div id="viewViewer" class="markdown" hidden></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
+  <script>
+    const MARK_OPTIONS = ["", "◎", "○", "▲", "☆", "△"];
+    const MARK_ORDER = {"◎": 0, "○": 1, "▲": 2, "☆": 3, "△": 4};
+
+    const editorMode = document.getElementById('editorMode');
+    const viewMode = document.getElementById('viewMode');
+    const rowsBody = document.getElementById('rowsBody');
+    const raceTitle = document.getElementById('raceTitle');
+    const raceDate = document.getElementById('raceDate');
+    const copyUrlBtn = document.getElementById('copyUrlBtn');
+    const updateUrlBtn = document.getElementById('updateUrlBtn');
+    const sampleBtn = document.getElementById('sampleBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const statusBox = document.getElementById('status');
+    const editorViewer = document.getElementById('editorViewer');
+    const editorViewerEmpty = document.getElementById('editorViewerEmpty');
+    const viewViewer = document.getElementById('viewViewer');
+    const viewViewerEmpty = document.getElementById('viewViewerEmpty');
+
+    function initRows(){
+      rowsBody.innerHTML = '';
+      for(let i = 1; i <= 18; i++){
+        const tr = document.createElement('tr');
+        const options = MARK_OPTIONS.map(mark => {
+          const label = mark || 'なし';
+          return `<option value="${mark}">${label}</option>`;
+        }).join('');
+
+        tr.innerHTML = `
+          <td class="col-no">${i}</td>
+          <td>
+            <select data-field="mark" data-index="${i}">
+              ${options}
+            </select>
+          </td>
+          <td>
+            <input type="text" class="small-input" data-field="number" data-index="${i}" value="${i}" inputmode="numeric" />
+          </td>
+          <td>
+            <textarea data-field="reason" data-index="${i}" placeholder="理由を入力"></textarea>
+          </td>
+        `;
+        rowsBody.appendChild(tr);
+      }
+    }
+
+    function showStatus(message, kind='ok'){
+      statusBox.textContent = message;
+      statusBox.className = 'status show ' + (kind === 'err' ? 'err' : 'ok');
+    }
+
+    function clearStatus(){
+      statusBox.textContent = '';
+      statusBox.className = 'status';
+    }
+
+    function bytesToBase64Url(bytes){
+      let binary = '';
+      const chunkSize = 0x8000;
+      for(let i=0; i<bytes.length; i+=chunkSize){
+        const chunk = bytes.subarray(i, i+chunkSize);
+        binary += String.fromCharCode.apply(null, chunk);
+      }
+      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/,'');
+    }
+
+    function base64UrlToBytes(base64url){
+      let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+      while(base64.length % 4) base64 += '=';
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for(let i=0; i<binary.length; i++){
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return bytes;
+    }
+
+    function compressTextToToken(text){
+      const utf8 = new TextEncoder().encode(text);
+      const compressed = window.pako.deflateRaw(utf8);
+      return bytesToBase64Url(compressed);
+    }
+
+    function decompressTokenToText(token){
+      const compressed = base64UrlToBytes(token);
+      const decompressed = window.pako.inflateRaw(compressed);
+      return new TextDecoder().decode(decompressed);
+    }
+
+    function buildShareUrlFromMarkdown(markdown){
+      const url = new URL(window.location.href);
+      if(!markdown){
+        url.searchParams.delete('d');
+        return url.toString();
+      }
+      url.searchParams.set('d', compressTextToToken(markdown));
+      return url.toString();
+    }
+
+    function getRows(){
+      const rows = [];
+      for(let i = 1; i <= 18; i++){
+        rows.push({
+          horseNo: i,
+          mark: document.querySelector(`[data-field="mark"][data-index="${i}"]`).value.trim(),
+          number: document.querySelector(`[data-field="number"][data-index="${i}"]`).value.trim(),
+          reason: document.querySelector(`[data-field="reason"][data-index="${i}"]`).value.trim()
+        });
+      }
+      return rows;
+    }
+
+    function escapeInline(text){
+      return String(text).replace(/\r?\n/g, '  \n');
+    }
+
+    function buildMarkdown(){
+      const title = raceTitle.value.trim();
+      const dateMemo = raceDate.value.trim();
+
+      const rows = getRows()
+        .filter(row => row.mark && row.reason)
+        .sort((a, b) => {
+          const ao = MARK_ORDER[a.mark] ?? 999;
+          const bo = MARK_ORDER[b.mark] ?? 999;
+          if(ao !== bo) return ao - bo;
+          return a.horseNo - b.horseNo;
+        });
+
+      if(!title && !dateMemo && rows.length === 0){
+        return '';
+      }
+
+      const parts = [];
+      if(title){
+        parts.push(`# ${title}`);
+      }
+      if(dateMemo){
+        parts.push(title ? `${dateMemo}` : `# ${dateMemo}`);
+      }
+
+      if(rows.length){
+        if(title || dateMemo) parts.push('');
+        const lines = rows.map(row => {
+          const numberPart = row.number || row.horseNo;
+          return `- **${row.mark} ${numberPart}**  \n${escapeInline(row.reason)}`;
+        });
+        parts.push(lines.join('\n'));
+      }
+
+      return parts.join('\n');
+    }
+
+    function getSafeHtml(markdown){
+      marked.setOptions({ gfm:true, breaks:true });
+      const rawHtml = marked.parse(markdown || '');
+      return DOMPurify.sanitize(rawHtml, { USE_PROFILES: { html:true } });
+    }
+
+    function renderTo(targetViewer, targetEmpty, markdown){
+      if(!markdown){
+        targetViewer.hidden = true;
+        targetViewer.innerHTML = '';
+        targetEmpty.hidden = false;
+        return;
+      }
+      targetViewer.innerHTML = getSafeHtml(markdown);
+      targetViewer.hidden = false;
+      targetEmpty.hidden = true;
+    }
+
+    function updateTitle(markdown){
+      if(!markdown){
+        document.title = '競馬印共有';
+        return;
+      }
+      const first = markdown.split(/\r?\n/).find(v => v.trim()) || '競馬印共有';
+      document.title = first.replace(/^#+\s*/, '').slice(0, 60) || '競馬印共有';
+    }
+
+    function renderEditorPreview(){
+      const markdown = buildMarkdown();
+      renderTo(editorViewer, editorViewerEmpty, markdown);
+      updateTitle(markdown);
+      return markdown;
+    }
+
+    function enterViewMode(markdown){
+      editorMode.classList.add('hidden');
+      viewMode.classList.remove('hidden');
+      renderTo(viewViewer, viewViewerEmpty, markdown);
+      updateTitle(markdown);
+    }
+
+    function enterEditorMode(){
+      editorMode.classList.remove('hidden');
+      viewMode.classList.add('hidden');
+      renderEditorPreview();
+    }
+
+    async function copyUrl(){
+      clearStatus();
+      try{
+        const markdown = buildMarkdown();
+        const shareUrl = buildShareUrlFromMarkdown(markdown);
+        await navigator.clipboard.writeText(shareUrl);
+        renderEditorPreview();
+        showStatus('共有URLをクリップボードに保存しました。');
+      }catch(err){
+        console.error(err);
+        showStatus('URLの生成またはコピーに失敗しました。', 'err');
+      }
+    }
+
+    function updateUrl(){
+      clearStatus();
+      try{
+        const markdown = buildMarkdown();
+        const shareUrl = buildShareUrlFromMarkdown(markdown);
+        window.history.replaceState({}, '', shareUrl);
+        renderEditorPreview();
+        showStatus('現在の内容をURLへ反映しました。');
+      }catch(err){
+        console.error(err);
+        showStatus('URLへの反映に失敗しました。', 'err');
+      }
+    }
+
+    function fillSample(){
+      raceTitle.value = '東京11R サンプル記念';
+      raceDate.value = '2026/04/20 予想';
+
+      const sample = [
+        {i: 7, mark: '◎', reason: '前走内容が最も強く、展開にも左右されにくそうです。'},
+        {i: 12, mark: '◎', reason: '距離短縮が好材料で、ここでも高い先行力を活かせそうです。'},
+        {i: 3, mark: '○', reason: '相手なりに走れるタイプで、大崩れしにくいです。'},
+        {i: 15, mark: '▲', reason: '末脚は魅力で、流れが向けば差し切りまであります。'},
+        {i: 1, mark: '☆', reason: '人気ほど差はなく、内枠を活かせれば面白い存在です。'},
+        {i: 10, mark: '△', reason: '押さえ候補としては十分で、相手には入れておきたいです。'}
+      ];
+
+      for(let i = 1; i <= 18; i++){
+        document.querySelector(`[data-field="mark"][data-index="${i}"]`).value = '';
+        document.querySelector(`[data-field="number"][data-index="${i}"]`).value = String(i);
+        document.querySelector(`[data-field="reason"][data-index="${i}"]`).value = '';
+      }
+
+      sample.forEach(row => {
+        document.querySelector(`[data-field="mark"][data-index="${row.i}"]`).value = row.mark;
+        document.querySelector(`[data-field="reason"][data-index="${row.i}"]`).value = row.reason;
+      });
+
+      renderEditorPreview();
+      clearStatus();
+    }
+
+    function clearAll(){
+      raceTitle.value = '';
+      raceDate.value = '';
+      for(let i = 1; i <= 18; i++){
+        document.querySelector(`[data-field="mark"][data-index="${i}"]`).value = '';
+        document.querySelector(`[data-field="number"][data-index="${i}"]`).value = String(i);
+        document.querySelector(`[data-field="reason"][data-index="${i}"]`).value = '';
+      }
+      const url = new URL(window.location.href);
+      url.searchParams.delete('d');
+      window.history.replaceState({}, '', url);
+      renderEditorPreview();
+      showStatus('入力内容をクリアしました。');
+    }
+
+    function loadViewIfNeeded(){
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('d');
+      if(!token){
+        enterEditorMode();
+        return;
+      }
+      try{
+        const markdown = decompressTokenToText(token);
+        enterViewMode(markdown);
+      }catch(err){
+        console.error(err);
+        enterEditorMode();
+        showStatus('URL内データの復元に失敗しました。', 'err');
+      }
+    }
+
+    initRows();
+
+    document.addEventListener('input', (e) => {
+      if(e.target.matches('input, textarea, select')){
+        clearStatus();
+        renderEditorPreview();
+      }
+    });
+    document.addEventListener('change', (e) => {
+      if(e.target.matches('select')){
+        clearStatus();
+        renderEditorPreview();
+      }
+    });
+
+    copyUrlBtn.addEventListener('click', copyUrl);
+    updateUrlBtn.addEventListener('click', updateUrl);
+    sampleBtn.addEventListener('click', fillSample);
+    clearBtn.addEventListener('click', clearAll);
+
+    loadViewIfNeeded();
+  </script>
+</body>
+</html>
