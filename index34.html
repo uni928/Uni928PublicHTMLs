@@ -285,6 +285,18 @@
     .battle-table th:last-child, .battle-table td:last-child { border-right: none; }
     .battle-table tr:last-child td { border-bottom: none; }
     .battle-table small { color: var(--muted); display: block; margin-top: 4px; }
+    .battle-profit-line { font-weight: 700; }
+    .battle-profit-line.positive { color: #15803d; }
+    .battle-profit-line.negative { color: #b91c1c; }
+    .battle-cell-positive {
+      background: linear-gradient(180deg, #f3fff7 0%, #ecfdf3 100%);
+    }
+    .battle-cell-negative {
+      background: linear-gradient(180deg, #fff5f5 0%, #fef0f0 100%);
+    }
+    .battle-cell-neutral {
+      background: #fcfdff;
+    }
 
     @media (max-width: 740px) {
       .input-row, .input-row.four {
@@ -1182,6 +1194,26 @@
       els.battleModal.classList.add('hidden');
     }
 
+    function battleProfitTone(profit) {
+      if (profit > 0) return 'positive';
+      if (profit < 0) return 'negative';
+      return 'neutral';
+    }
+
+    function battleProfitLine(profit) {
+      const tone = battleProfitTone(profit);
+      const cls = tone === 'neutral' ? 'battle-profit-line' : `battle-profit-line ${tone}`;
+      return `<small class="${cls}">収支 ${profit >= 0 ? '+' : ''}${yen(profit)}円</small>`;
+    }
+
+    function battleCellClass(profit, hasCount) {
+      if (!hasCount) return '';
+      const tone = battleProfitTone(profit);
+      if (tone === 'positive') return ' class="battle-cell-positive"';
+      if (tone === 'negative') return ' class="battle-cell-negative"';
+      return ' class="battle-cell-neutral"';
+    }
+
     function buildBattleTableHtml(personIds, groupNames) {
       const selectedPeople = state.people.filter(p => personIds.includes(p.id));
       if (!selectedPeople.length) {
@@ -1207,11 +1239,11 @@
           total.count += count;
           const roi = stake > 0 ? (payout / stake) * 100 : 0;
           const profit = payout - stake;
-          return `<td>${count ? `${pct(roi)}<small>${yen(stake)}円 → ${yen(payout)}円 / ${count}件 / 収支 ${profit >= 0 ? '+' : ''}${yen(profit)}円</small>` : '—'}</td>`;
+          return `<td${battleCellClass(profit, count)}>${count ? `${pct(roi)}<small>${yen(stake)}円 → ${yen(payout)}円 / ${count}件</small>${battleProfitLine(profit)}` : '—'}</td>`;
         }).join('');
         const totalRoi = total.totalStake > 0 ? (total.totalReturn / total.totalStake) * 100 : 0;
         const totalProfit = total.totalReturn - total.totalStake;
-        const totalCell = `<td><strong>${total.count ? pct(totalRoi) : '—'}</strong>${total.count ? `<small>${yen(total.totalStake)}円 → ${yen(total.totalReturn)}円 / ${total.count}件 / 収支 ${totalProfit >= 0 ? '+' : ''}${yen(totalProfit)}円</small>` : ''}</td>`;
+        const totalCell = `<td${battleCellClass(totalProfit, total.count)}><strong>${total.count ? pct(totalRoi) : '—'}</strong>${total.count ? `<small>${yen(total.totalStake)}円 → ${yen(total.totalReturn)}円 / ${total.count}件</small>${battleProfitLine(totalProfit)}` : ''}</td>`;
         return `<tr><th>${escapeHtml(person.name)}</th>${cells}${totalCell}</tr>`;
       }).join('');
       return `
@@ -1331,6 +1363,10 @@
       const altBg = '#fafcff';
       const textColor = '#1f2937';
       const subColor = '#6b7280';
+      const profitGreenBg = '#effcf3';
+      const profitRedBg = '#fff1f2';
+      const profitGreenText = '#15803d';
+      const profitRedText = '#b91c1c';
 
       function drawCell(x, y, w, h, bg) {
         ctx.fillStyle = bg;
@@ -1390,26 +1426,40 @@
           totalStake += stake;
           totalReturn += payout;
           totalCount += count;
-          drawCell(colX, y, groupColWidth, rowHeight, rowBg);
+          let groupBg = rowBg;
+          if (count) {
+            const profit = payout - stake;
+            if (profit > 0) groupBg = profitGreenBg;
+            else if (profit < 0) groupBg = profitRedBg;
+          }
+          drawCell(colX, y, groupColWidth, rowHeight, groupBg);
           if (count) {
             const roi = stake > 0 ? (payout / stake) * 100 : 0;
             const profit = payout - stake;
+            const profitColor = profit > 0 ? profitGreenText : (profit < 0 ? profitRedText : subColor);
             drawText(pct(roi), colX + cellPaddingX, y + 8, groupColWidth - cellPaddingX * 2, 'bold 15px sans-serif', textColor);
             drawText(`${yen(stake)}円 → ${yen(payout)}円`, colX + cellPaddingX, y + 31, groupColWidth - cellPaddingX * 2, '12px sans-serif', subColor);
-            drawText(`${count}件 / 収支 ${profit >= 0 ? '+' : ''}${yen(profit)}円`, colX + cellPaddingX, y + 48, groupColWidth - cellPaddingX * 2, '12px sans-serif', subColor);
+            drawText(`${count}件 / 収支 ${profit >= 0 ? '+' : ''}${yen(profit)}円`, colX + cellPaddingX, y + 48, groupColWidth - cellPaddingX * 2, 'bold 12px sans-serif', profitColor);
           } else {
             drawText('—', colX + cellPaddingX, y + 22, groupColWidth - cellPaddingX * 2, '15px sans-serif', subColor);
           }
           colX += groupColWidth;
         }
 
-        drawCell(colX, y, totalColWidth, rowHeight, rowBg);
+        let totalBg = rowBg;
+        if (totalCount) {
+          const totalProfit = totalReturn - totalStake;
+          if (totalProfit > 0) totalBg = profitGreenBg;
+          else if (totalProfit < 0) totalBg = profitRedBg;
+        }
+        drawCell(colX, y, totalColWidth, rowHeight, totalBg);
         if (totalCount) {
           const totalRoi = totalStake > 0 ? (totalReturn / totalStake) * 100 : 0;
           const totalProfit = totalReturn - totalStake;
+          const totalProfitColor = totalProfit > 0 ? profitGreenText : (totalProfit < 0 ? profitRedText : subColor);
           drawText(pct(totalRoi), colX + cellPaddingX, y + 8, totalColWidth - cellPaddingX * 2, 'bold 15px sans-serif', textColor);
           drawText(`${yen(totalStake)}円 → ${yen(totalReturn)}円`, colX + cellPaddingX, y + 31, totalColWidth - cellPaddingX * 2, '12px sans-serif', subColor);
-          drawText(`${totalCount}件 / 収支 ${totalProfit >= 0 ? '+' : ''}${yen(totalProfit)}円`, colX + cellPaddingX, y + 48, totalColWidth - cellPaddingX * 2, '12px sans-serif', subColor);
+          drawText(`${totalCount}件 / 収支 ${totalProfit >= 0 ? '+' : ''}${yen(totalProfit)}円`, colX + cellPaddingX, y + 48, totalColWidth - cellPaddingX * 2, 'bold 12px sans-serif', totalProfitColor);
         } else {
           drawText('—', colX + cellPaddingX, y + 22, totalColWidth - cellPaddingX * 2, '15px sans-serif', subColor);
         }
@@ -1442,7 +1492,13 @@
   .battle-table th:last-child, .battle-table td:last-child { border-right: 0; }
   .battle-table thead th { position: sticky; top: 0; background: #eef4ff; z-index: 1; }
   .battle-table tbody tr:nth-child(even) { background: #fafcff; }
+  .battle-cell-positive { background: linear-gradient(180deg, #f3fff7 0%, #ecfdf3 100%); }
+  .battle-cell-negative { background: linear-gradient(180deg, #fff5f5 0%, #fef0f0 100%); }
+  .battle-cell-neutral { background: #fcfdff; }
   small { display: block; color: #667085; margin-top: 6px; line-height: 1.5; }
+  .battle-profit-line { font-weight: 700; }
+  .battle-profit-line.positive { color: #15803d; }
+  .battle-profit-line.negative { color: #b91c1c; }
   .empty { padding: 20px; color: #6b7280; border: 1px dashed #d7dce5; border-radius: 16px; text-align: center; background: #fcfdff; }
 </style>
 </head>
