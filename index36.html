@@ -1,0 +1,588 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Markdown URL Share</title>
+  <meta name="description" content="入力文章を raw DEFLATE 圧縮してURL化し、開くとMarkdownとして見やすく表示するサイト" />
+  <style>
+    :root{
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --text:#1f2937;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+      --accent:#2563eb;
+      --accent2:#1d4ed8;
+      --ok:#065f46;
+      --okbg:#ecfdf5;
+      --shadow:0 10px 30px rgba(15,23,42,.08);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Hiragino Sans","Noto Sans JP",sans-serif;
+      color:var(--text);
+      background:linear-gradient(180deg,#f8fafc 0%, #eef2ff 100%);
+      min-height:100vh;
+    }
+    .wrap{
+      width:min(1100px,calc(100% - 24px));
+      margin:24px auto 40px;
+    }
+    .hero{
+      margin-bottom:18px;
+      padding:20px 22px;
+      border-radius:24px;
+      background:rgba(255,255,255,.72);
+      backdrop-filter: blur(8px);
+      box-shadow:var(--shadow);
+      border:1px solid rgba(255,255,255,.8);
+    }
+    .hero.view{
+      width:min(900px,calc(100% - 24px));
+      margin:24px auto 18px;
+      text-align:center;
+    }
+    h1{
+      margin:0 0 8px;
+      font-size:clamp(24px,4vw,36px);
+      line-height:1.2;
+    }
+    .sub{
+      margin:0;
+      color:var(--muted);
+      line-height:1.7;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:18px;
+    }
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .card-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      padding:16px 18px;
+      border-bottom:1px solid var(--line);
+      background:#fcfcff;
+    }
+    .card-head h2{
+      margin:0;
+      font-size:18px;
+    }
+    .body{
+      padding:16px 18px 18px;
+    }
+    textarea{
+      width:100%;
+      min-height:320px;
+      resize:vertical;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:14px 15px;
+      font:inherit;
+      line-height:1.7;
+      outline:none;
+      background:#fff;
+    }
+    textarea:focus{
+      border-color:#93c5fd;
+      box-shadow:0 0 0 4px rgba(37,99,235,.08);
+    }
+    .row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:14px;
+    }
+    button{
+      appearance:none;
+      border:none;
+      border-radius:12px;
+      padding:12px 16px;
+      font:inherit;
+      cursor:pointer;
+      transition:.18s ease;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+    }
+    button.primary{
+      background:var(--accent);
+      color:#fff;
+      font-weight:700;
+    }
+    button.primary:hover{background:var(--accent2)}
+    button.secondary{
+      background:#eef2ff;
+      color:#1e3a8a;
+      font-weight:700;
+    }
+    button.secondary:hover{background:#e0e7ff}
+    button.subtle{
+      background:#f3f4f6;
+      color:#374151;
+      font-weight:600;
+    }
+    button.subtle:hover{background:#e5e7eb}
+    .status{
+      margin-top:12px;
+      padding:12px 14px;
+      border-radius:12px;
+      font-size:14px;
+      line-height:1.6;
+      display:none;
+      white-space:pre-wrap;
+    }
+    .status.show{display:block}
+    .status.ok{
+      background:var(--okbg);
+      color:var(--ok);
+      border:1px solid #a7f3d0;
+    }
+    .status.err{
+      background:#fef2f2;
+      color:#991b1b;
+      border:1px solid #fecaca;
+    }
+    .meta{
+      margin-top:12px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.7;
+    }
+    .viewer-empty{
+      color:var(--muted);
+      line-height:1.8;
+      padding:8px 2px 4px;
+    }
+    .markdown{
+      line-height:1.9;
+      word-break:break-word;
+      overflow-wrap:anywhere;
+    }
+    .markdown h1,.markdown h2,.markdown h3,.markdown h4,.markdown h5,.markdown h6{
+      line-height:1.35;
+      margin:1.4em 0 .7em;
+    }
+    .markdown h1{font-size:2rem;border-bottom:1px solid var(--line);padding-bottom:.35em}
+    .markdown h2{font-size:1.6rem;border-bottom:1px solid var(--line);padding-bottom:.3em}
+    .markdown h3{font-size:1.28rem}
+    .markdown p, .markdown ul, .markdown ol, .markdown blockquote, .markdown pre, .markdown table{
+      margin:0 0 1em;
+    }
+    .markdown ul, .markdown ol{padding-left:1.4em}
+    .markdown blockquote{
+      border-left:4px solid #bfdbfe;
+      background:#f8fbff;
+      padding:.9em 1em;
+      color:#334155;
+      border-radius:8px;
+    }
+    .markdown code{
+      background:#f3f4f6;
+      padding:.18em .4em;
+      border-radius:6px;
+      font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+      font-size:.92em;
+    }
+    .markdown pre{
+      background:#0f172a;
+      color:#e5e7eb;
+      padding:14px 16px;
+      border-radius:12px;
+      overflow:auto;
+    }
+    .markdown pre code{
+      background:transparent;
+      color:inherit;
+      padding:0;
+    }
+    .markdown table{
+      width:100%;
+      border-collapse:collapse;
+      display:block;
+      overflow:auto;
+    }
+    .markdown th,.markdown td{
+      border:1px solid var(--line);
+      padding:10px 12px;
+      text-align:left;
+    }
+    .markdown img{
+      max-width:100%;
+      border-radius:14px;
+    }
+    .top-tools{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      padding:7px 10px;
+      border-radius:999px;
+      background:#f3f4f6;
+      color:#4b5563;
+      font-size:12px;
+      font-weight:700;
+    }
+    .footer-note{
+      margin-top:16px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.7;
+    }
+    .preview-section{
+      margin-top:18px;
+    }
+    .view-wrap{
+      width:min(900px,calc(100% - 24px));
+      margin:0 auto 40px;
+    }
+    .view-card{
+      background:rgba(255,255,255,.92);
+      border:1px solid rgba(255,255,255,.9);
+      border-radius:28px;
+      box-shadow:0 20px 50px rgba(15,23,42,.10);
+      overflow:hidden;
+    }
+    .view-content{
+      padding:28px 24px 34px;
+    }
+    @media (min-width: 768px){
+      .view-content{
+        padding:40px 42px 48px;
+      }
+    }
+    .hidden{display:none !important}
+  </style>
+</head>
+<body>
+  <div id="editorMode" class="hidden">
+    <div class="wrap">
+      <section class="hero">
+        <div class="pill">raw DEFLATE + Base64URL</div>
+        <h1>Markdown を圧縮してURL共有</h1>
+        <p class="sub">
+          左で文章を入力し、<strong>URLをコピー</strong> を押すと、入力文字を raw 圧縮して
+          URLセーフな文字列としてクエリパラメータへ入れたURLをクリップボードへ保存します。
+          下には Markdown プレビューがリアルタイムで反映されます。
+        </p>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <div class="card-head">
+            <h2>入力</h2>
+            <div class="top-tools">
+              <button class="subtle" id="sampleBtn" type="button">サンプル入力</button>
+              <button class="subtle" id="clearBtn" type="button">クリア</button>
+            </div>
+          </div>
+          <div class="body">
+            <textarea id="input" placeholder="# ここにMarkdownを入力
+
+- 箇条書き
+- **強調**
+- `code`
+
+URLに圧縮して共有できます。"></textarea>
+
+            <div class="row">
+              <button class="primary" id="copyUrlBtn" type="button">URLをコピー</button>
+              <button class="secondary" id="updateUrlBtn" type="button">URLに反映</button>
+            </div>
+
+            <div id="status" class="status"></div>
+
+            <div class="meta">
+              クエリパラメータ名は <code>d</code> です。<br>
+              URLが長くなりすぎる場合は、文章量を減らすか別の共有方法もご検討ください。
+            </div>
+          </div>
+        </article>
+
+        <article class="card preview-section">
+          <div class="card-head">
+            <h2>リアルタイムプレビュー</h2>
+            <div class="top-tools">
+              <span class="pill" id="modeLabelEditor">編集中</span>
+            </div>
+          </div>
+          <div class="body">
+            <div id="editorViewerEmpty" class="viewer-empty">
+              まだ表示する内容がありません。上の入力欄にMarkdownを書くと、ここへリアルタイム表示されます。
+            </div>
+            <div id="editorViewer" class="markdown" hidden></div>
+
+            <div class="footer-note">
+              表示には Markdown パーサーとサニタイズ処理を使っています。危険なHTML実行は避けています。
+            </div>
+          </div>
+        </article>
+      </section>
+    </div>
+  </div>
+
+  <div id="viewMode" class="hidden">
+    <section class="hero view">
+      <div class="pill">閲覧モード</div>
+      <h1>共有されたMarkdown</h1>
+      <p class="sub">
+        このページはクエリパラメータ内の圧縮データを復元して表示しています。
+      </p>
+    </section>
+
+    <div class="view-wrap">
+      <article class="view-card">
+        <div class="view-content">
+          <div id="viewViewerEmpty" class="viewer-empty">
+            表示する内容がありません。
+          </div>
+          <div id="viewViewer" class="markdown" hidden></div>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
+  <script>
+    const editorMode = document.getElementById('editorMode');
+    const viewMode = document.getElementById('viewMode');
+
+    const input = document.getElementById('input');
+    const copyUrlBtn = document.getElementById('copyUrlBtn');
+    const updateUrlBtn = document.getElementById('updateUrlBtn');
+    const sampleBtn = document.getElementById('sampleBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const statusBox = document.getElementById('status');
+
+    const editorViewer = document.getElementById('editorViewer');
+    const editorViewerEmpty = document.getElementById('editorViewerEmpty');
+    const viewViewer = document.getElementById('viewViewer');
+    const viewViewerEmpty = document.getElementById('viewViewerEmpty');
+    const modeLabelEditor = document.getElementById('modeLabelEditor');
+
+    function showStatus(message, kind = 'ok'){
+      statusBox.textContent = message;
+      statusBox.className = 'status show ' + (kind === 'err' ? 'err' : 'ok');
+    }
+
+    function clearStatus(){
+      statusBox.textContent = '';
+      statusBox.className = 'status';
+    }
+
+    function bytesToBase64Url(bytes){
+      let binary = '';
+      const chunkSize = 0x8000;
+      for(let i = 0; i < bytes.length; i += chunkSize){
+        const chunk = bytes.subarray(i, i + chunkSize);
+        binary += String.fromCharCode.apply(null, chunk);
+      }
+      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/,'');
+    }
+
+    function base64UrlToBytes(base64url){
+      let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+      while(base64.length % 4) base64 += '=';
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for(let i = 0; i < binary.length; i++){
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return bytes;
+    }
+
+    function compressTextToToken(text){
+      const encoder = new TextEncoder();
+      const utf8 = encoder.encode(text);
+      const compressed = window.pako.deflateRaw(utf8);
+      return bytesToBase64Url(compressed);
+    }
+
+    function decompressTokenToText(token){
+      const compressed = base64UrlToBytes(token);
+      const decompressed = window.pako.inflateRaw(compressed);
+      const decoder = new TextDecoder();
+      return decoder.decode(decompressed);
+    }
+
+    function buildShareUrl(text){
+      const url = new URL(window.location.href);
+      if(!text){
+        url.searchParams.delete('d');
+        return url.toString();
+      }
+      const token = compressTextToToken(text);
+      url.searchParams.set('d', token);
+      return url.toString();
+    }
+
+    function getSafeHtml(text){
+      marked.setOptions({
+        breaks: true,
+        gfm: true
+      });
+      const rawHtml = marked.parse(text || '');
+      return DOMPurify.sanitize(rawHtml, { USE_PROFILES: { html: true } });
+    }
+
+    function setDocumentTitle(text){
+      if(!text){
+        document.title = 'Markdown URL Share';
+        return;
+      }
+      const titleLine = text.split(/\r?\n/).find(line => line.trim()) || 'Markdown URL Share';
+      const cleanedTitle = titleLine.replace(/^#+\s*/, '').slice(0, 60);
+      document.title = cleanedTitle || 'Markdown URL Share';
+    }
+
+    function renderTo(targetViewer, targetEmpty, text){
+      if(!text){
+        targetViewer.hidden = true;
+        targetEmpty.hidden = false;
+        targetViewer.innerHTML = '';
+        return;
+      }
+      targetViewer.innerHTML = getSafeHtml(text);
+      targetViewer.hidden = false;
+      targetEmpty.hidden = true;
+    }
+
+    async function copyShareUrl(){
+      clearStatus();
+      const text = input.value;
+      try{
+        const shareUrl = buildShareUrl(text);
+        await navigator.clipboard.writeText(shareUrl);
+        renderEditorPreview(text);
+        const urlLength = shareUrl.length;
+        const originalBytes = new TextEncoder().encode(text).length;
+        showStatus(
+          'URLをクリップボードに保存しました。\n' +
+          'URL長: ' + urlLength + ' 文字 / 元テキスト: ' + originalBytes + ' bytes'
+        );
+      }catch(err){
+        console.error(err);
+        showStatus('URLの生成またはコピーに失敗しました。ブラウザの権限やURL長をご確認ください。', 'err');
+      }
+    }
+
+    function updateUrl(){
+      clearStatus();
+      const text = input.value;
+      try{
+        const shareUrl = buildShareUrl(text);
+        window.history.replaceState({}, '', shareUrl);
+        renderEditorPreview(text);
+        showStatus('現在のURLへ内容を反映しました。');
+      }catch(err){
+        console.error(err);
+        showStatus('URLへの反映に失敗しました。入力内容をご確認ください。', 'err');
+      }
+    }
+
+    function renderEditorPreview(text){
+      renderTo(editorViewer, editorViewerEmpty, text);
+      setDocumentTitle(text);
+      modeLabelEditor.textContent = text ? '編集中' : '入力待ち';
+    }
+
+    function renderViewMode(text){
+      renderTo(viewViewer, viewViewerEmpty, text);
+      setDocumentTitle(text);
+    }
+
+    function enterEditorMode(initialText = ''){
+      editorMode.classList.remove('hidden');
+      viewMode.classList.add('hidden');
+      input.value = initialText;
+      renderEditorPreview(initialText);
+      clearStatus();
+    }
+
+    function enterViewMode(text){
+      editorMode.classList.add('hidden');
+      viewMode.classList.remove('hidden');
+      renderViewMode(text);
+    }
+
+    function boot(){
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('d');
+
+      if(token){
+        try{
+          const text = decompressTokenToText(token);
+          enterViewMode(text);
+          return;
+        }catch(err){
+          console.error(err);
+          enterEditorMode('');
+          showStatus('URL内データの復元に失敗しました。クエリパラメータが壊れている可能性があります。', 'err');
+          return;
+        }
+      }
+
+      enterEditorMode('');
+    }
+
+    sampleBtn.addEventListener('click', () => {
+      input.value = `# 共有用メモ
+
+## 概要
+このページでは、入力文章を **raw DEFLATE** で圧縮し、URLセーフな文字列に変換して共有できます。
+
+## 使い方
+1. 上の入力欄にMarkdownを書く
+2. 「URLをコピー」を押す
+3. 生成されたURLを送る
+
+> 開いた側では、入力欄のない閲覧モードで見やすく表示されます。
+
+\`\`\`js
+console.log("hello markdown");
+\`\`\`
+`;
+      renderEditorPreview(input.value);
+      clearStatus();
+    });
+
+    clearBtn.addEventListener('click', () => {
+      input.value = '';
+      const url = new URL(window.location.href);
+      url.searchParams.delete('d');
+      window.history.replaceState({}, '', url);
+      renderEditorPreview('');
+      showStatus('入力内容とクエリパラメータをクリアしました。');
+    });
+
+    copyUrlBtn.addEventListener('click', copyShareUrl);
+    updateUrlBtn.addEventListener('click', updateUrl);
+
+    input.addEventListener('input', () => {
+      clearStatus();
+      renderEditorPreview(input.value);
+    });
+
+    boot();
+  </script>
+</body>
+</html>
