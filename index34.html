@@ -436,6 +436,7 @@
         <div id="battleFullscreenWrap" class="hidden" style="margin-top:12px; text-align:right; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
           <button id="saveBattlePngBtn" class="ghost">対戦表全体をPNG画像で保存</button>
           <button id="openBattleFullscreenBtn" class="ghost">フル画面で表示</button>
+          <button id="copyBattleFullscreenUrlBtn" class="ghost">フル画面URLを表示</button>
         </div>
       </div>
     </div>
@@ -494,7 +495,8 @@
       battleResult: document.getElementById('battleResult'),
       battleFullscreenWrap: document.getElementById('battleFullscreenWrap'),
       saveBattlePngBtn: document.getElementById('saveBattlePngBtn'),
-      openBattleFullscreenBtn: document.getElementById('openBattleFullscreenBtn')
+      openBattleFullscreenBtn: document.getElementById('openBattleFullscreenBtn'),
+      copyBattleFullscreenUrlBtn: document.getElementById('copyBattleFullscreenUrlBtn')
     };
 
     function uid(prefix = 'id') {
@@ -1168,13 +1170,13 @@
       els.battleModal.classList.add('hidden');
     }
 
-    function buildBattleTableHtml(personIds, groupNames) {
-      const selectedPeople = state.people.filter(p => personIds.includes(p.id));
+
+    function buildBattleTableHtmlFromPeople(selectedPeople, groupNames, title = '対戦表') {
       if (!selectedPeople.length) {
-        return '<h3>対戦表</h3><div class="empty">名前を1つ以上選択してください。</div>';
+        return `<h3>${escapeHtml(title)}</h3><div class="empty">名前を1つ以上選択してください。</div>`;
       }
       if (!groupNames.length) {
-        return '<h3>対戦表</h3><div class="empty">グループを1つ以上選択してください。</div>';
+        return `<h3>${escapeHtml(title)}</h3><div class="empty">グループを1つ以上選択してください。</div>`;
       }
       const head = groupNames.map(name => `<th>${escapeHtml(name)}</th>`).join('');
       const rows = selectedPeople.map(person => {
@@ -1201,7 +1203,7 @@
         return `<tr><th>${escapeHtml(person.name)}</th>${cells}${totalCell}</tr>`;
       }).join('');
       return `
-        <h3>対戦表</h3>
+        <h3>${escapeHtml(title)}</h3>
         <div class="battle-table-wrap">
           <table class="battle-table">
             <thead><tr><th>名前</th>${head}<th>合計</th></tr></thead>
@@ -1209,6 +1211,81 @@
           </table>
         </div>
       `;
+    }
+
+    function buildBattleTableHtml(personIds, groupNames) {
+      const selectedPeople = state.people.filter(p => personIds.includes(p.id));
+      return buildBattleTableHtmlFromPeople(selectedPeople, groupNames);
+    }
+
+    function createBattleViewPayload(personIds, groupNames) {
+      const selectedPeople = state.people
+        .filter(p => personIds.includes(p.id))
+        .map(person => ({
+          name: person.name,
+          groups: (person.groups || [])
+            .filter(group => groupNames.includes(group.name))
+            .map(group => ({
+              name: group.name,
+              entries: (group.entries || []).map(entry => ({
+                stake: clampNumber(entry.stake),
+                payout: getEntryPayout(entry)
+              }))
+            }))
+        }));
+      return { people: selectedPeople, groupNames };
+    }
+
+    async function copyBattleFullscreenUrl() {
+      const { personIds, groupNames } = getBattleSelection();
+      if (!personIds.length) {
+        alert('名前を1つ以上選択してください。');
+        return;
+      }
+      if (!groupNames.length) {
+        alert('グループを1つ以上選択してください。');
+        return;
+      }
+      try {
+        const payload = createBattleViewPayload(personIds, groupNames);
+        const url = new URL(location.href);
+        url.searchParams.delete('data');
+        url.searchParams.set('battle', await encodeStateForUrl(payload));
+        await navigator.clipboard.writeText(url.toString());
+        alert('フル画面用URLをコピーしました。');
+      } catch (err) {
+        console.error(err);
+        alert('フル画面用URLのコピーに失敗しました。');
+      }
+    }
+
+    function renderBattleOnlyPageIfNeeded() {
+      const param = new URL(location.href).searchParams.get('battle');
+      if (!param) return false;
+      try {
+        const decoded = decodeStateFromUrlParam(param);
+        return Promise.resolve(decoded).then((payload) => {
+          if (!payload || !Array.isArray(payload.people) || !Array.isArray(payload.groupNames)) {
+            throw new Error('invalid battle data');
+          }
+          document.body.innerHTML = `
+            <div class="app" style="max-width:none; padding:20px;">
+              <div class="card" style="margin-bottom:0;">
+                ${buildBattleTableHtmlFromPeople(payload.people, payload.groupNames, '対戦表')}
+              </div>
+            </div>
+          `;
+          return true;
+        }).catch((err) => {
+          console.error(err);
+          alert('フル画面用URLの読み込みに失敗しました。');
+          return false;
+        });
+      } catch (err) {
+        console.error(err);
+        alert('フル画面用URLの読み込みに失敗しました。');
+        return Promise.resolve(false);
+      }
     }
 
     function getBattleSelection() {
@@ -1435,6 +1512,7 @@
     els.viewBattleBtn.addEventListener('click', renderBattleTable);
     els.saveBattlePngBtn.addEventListener('click', saveBattleTableAsPng);
     els.openBattleFullscreenBtn.addEventListener('click', openBattleFullscreen);
+    els.copyBattleFullscreenUrlBtn.addEventListener('click', copyBattleFullscreenUrl);
     els.battleModal.addEventListener('click', (e) => {
       if (e.target === els.battleModal) closeBattleModal();
     });
@@ -1498,6 +1576,7 @@
 
     (async function init() {
       try {
+        if (await renderBattleOnlyPageIfNeeded()) return;
         db = await openDb();
         await loadState();
         await applyQueryStateIfNeeded();
