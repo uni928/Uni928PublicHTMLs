@@ -435,7 +435,7 @@
         <div id="battleResult" class="card hidden" style="margin-top:16px;"></div>
         <div id="battleFullscreenWrap" class="hidden" style="margin-top:12px; text-align:right;">
           <button id="openBattleFullscreenBtn" class="ghost">フル画面で表示</button>
-          <button id="copyBattleFullscreenUrlBtn" class="ghost">フル画面URLをクリップボードに保存</button>
+          <button id="copyBattleFullscreenUrlBtn" class="ghost">URLを保存</button>
           <button id="exportBattlePngBtn" class="ghost">PNG出力</button>
         </div>
       </div>
@@ -1120,6 +1120,12 @@
       return JSON.parse(new TextDecoder().decode(decodedBytes));
     }
 
+    function encodeObjectForUrlSync(obj) {
+      const json = JSON.stringify(obj);
+      const bytes = new TextEncoder().encode(json);
+      return 'raw.' + toUrlSafeBase64(bytes);
+    }
+
     function clearDataQueryParam() {
       const url = new URL(location.href);
       if (!url.searchParams.has('data')) return;
@@ -1257,6 +1263,17 @@
       return url;
     }
 
+    function buildBattleModeUrlSync(personIds, groupNames) {
+      const payload = buildBattlePayload(personIds, groupNames);
+      const url = getBattleModeUrl();
+      url.searchParams.delete('data');
+      url.searchParams.delete('battlefs');
+      url.searchParams.delete('battlePeople');
+      url.searchParams.delete('battleGroups');
+      url.searchParams.set('battleData', encodeObjectForUrlSync(payload));
+      return url.toString();
+    }
+
     function downloadDataUrl(filename, dataUrl) {
       const a = document.createElement('a');
       a.href = dataUrl;
@@ -1266,20 +1283,22 @@
       a.remove();
     }
 
-    async function writeTextToClipboard(text) {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-        return;
-      }
+    function writeTextToClipboard(text) {
       const ta = document.createElement('textarea');
       ta.value = text;
       ta.setAttribute('readonly', 'readonly');
       ta.style.position = 'fixed';
       ta.style.left = '-9999px';
       document.body.appendChild(ta);
+      ta.focus();
       ta.select();
-      const ok = document.execCommand('copy');
-      ta.remove();
+      ta.setSelectionRange(0, ta.value.length);
+      let ok = false;
+      try {
+        ok = document.execCommand('copy');
+      } finally {
+        ta.remove();
+      }
       if (!ok) throw new Error('copy failed');
     }
 
@@ -1400,18 +1419,11 @@
       els.battleFullscreenWrap.classList.toggle('hidden', !valid);
     }
 
-    async function buildBattleFullscreenUrl(personIds, groupNames) {
-      const payload = buildBattlePayload(personIds, groupNames);
-      const url = getBattleModeUrl();
-      url.searchParams.delete('data');
-      url.searchParams.delete('battlefs');
-      url.searchParams.delete('battlePeople');
-      url.searchParams.delete('battleGroups');
-      url.searchParams.set('battleData', await encodeStateForUrl(payload));
-      return url.toString();
+    function buildBattleFullscreenUrl(personIds, groupNames) {
+      return buildBattleModeUrlSync(personIds, groupNames);
     }
 
-    async function openBattleFullscreen() {
+    function openBattleFullscreen() {
       const { personIds, groupNames } = getBattleSelection();
       if (!personIds.length) {
         alert('名前を1つ以上選択してください。');
@@ -1422,14 +1434,20 @@
         return;
       }
       try {
-        window.open(await buildBattleFullscreenUrl(personIds, groupNames), '_blank');
+        const url = buildBattleFullscreenUrl(personIds, groupNames);
+        const win = window.open('', '_blank');
+        if (win) {
+          win.location.href = url;
+        } else {
+          location.href = url;
+        }
       } catch (err) {
         console.error(err);
         alert('フル画面URLの作成に失敗しました。');
       }
     }
 
-    async function copyBattleFullscreenUrl() {
+    function copyBattleFullscreenUrl() {
       const { personIds, groupNames } = getBattleSelection();
       if (!personIds.length) {
         alert('名前を1つ以上選択してください。');
@@ -1440,11 +1458,11 @@
         return;
       }
       try {
-        await writeTextToClipboard(await buildBattleQueryUrl(personIds, groupNames));
-        alert('フル画面URLをクリップボードに保存しました。');
+        writeTextToClipboard(buildBattleQueryUrl(personIds, groupNames));
+        alert('URLを保存しました。');
       } catch (err) {
         console.error(err);
-        alert('フル画面URLのクリップボード保存に失敗しました。');
+        alert('URLの保存に失敗しました。');
       }
     }
 
