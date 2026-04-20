@@ -433,10 +433,10 @@
         </div>
 
         <div id="battleResult" class="card hidden" style="margin-top:16px;"></div>
-        <div id="battleFullscreenWrap" class="hidden" style="margin-top:12px; text-align:right; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
-          <button id="saveBattlePngBtn" class="ghost">対戦表全体をPNG画像で保存</button>
+        <div id="battleFullscreenWrap" class="hidden" style="margin-top:12px; text-align:right;">
           <button id="openBattleFullscreenBtn" class="ghost">フル画面で表示</button>
-          <button id="copyBattleFullscreenUrlBtn" class="ghost">フル画面URLを表示</button>
+          <button id="copyBattleFullscreenUrlBtn" class="ghost">フル画面URLをクリップボードに保存</button>
+          <button id="exportBattlePngBtn" class="ghost">PNG出力</button>
         </div>
       </div>
     </div>
@@ -494,9 +494,9 @@
       viewBattleBtn: document.getElementById('viewBattleBtn'),
       battleResult: document.getElementById('battleResult'),
       battleFullscreenWrap: document.getElementById('battleFullscreenWrap'),
-      saveBattlePngBtn: document.getElementById('saveBattlePngBtn'),
       openBattleFullscreenBtn: document.getElementById('openBattleFullscreenBtn'),
-      copyBattleFullscreenUrlBtn: document.getElementById('copyBattleFullscreenUrlBtn')
+      copyBattleFullscreenUrlBtn: document.getElementById('copyBattleFullscreenUrlBtn'),
+      exportBattlePngBtn: document.getElementById('exportBattlePngBtn')
     };
 
     function uid(prefix = 'id') {
@@ -1117,9 +1117,7 @@
         await writer.close();
         decodedBytes = new Uint8Array(await new Response(ds.readable).arrayBuffer());
       }
-      const data = JSON.parse(new TextDecoder().decode(decodedBytes));
-      if (!data || !Array.isArray(data.people)) throw new Error('invalid data');
-      return data;
+      return JSON.parse(new TextDecoder().decode(decodedBytes));
     }
 
     function clearDataQueryParam() {
@@ -1170,40 +1168,72 @@
       els.battleModal.classList.add('hidden');
     }
 
+    function buildBattlePayload(personIds, groupNames) {
+      const selectedPeople = state.people.filter(p => personIds.includes(p.id));
+      return {
+        title: '対戦表',
+        groupNames: [...groupNames],
+        rows: selectedPeople.map(person => {
+          const total = { totalStake: 0, totalReturn: 0, count: 0 };
+          const cells = groupNames.map(groupName => {
+            const groups = (person.groups || []).filter(g => g.name === groupName);
+            let stake = 0, payout = 0, count = 0;
+            for (const group of groups) {
+              const gs = calcGroupStats(group);
+              stake += gs.totalStake;
+              payout += gs.totalReturn;
+              count += gs.count;
+            }
+            total.totalStake += stake;
+            total.totalReturn += payout;
+            total.count += count;
+            const roi = stake > 0 ? (payout / stake) * 100 : 0;
+            const profit = payout - stake;
+            return { stake, payout, count, roi, profit };
+          });
+          const totalRoi = total.totalStake > 0 ? (total.totalReturn / total.totalStake) * 100 : 0;
+          const totalProfit = total.totalReturn - total.totalStake;
+          return {
+            personName: person.name,
+            cells,
+            total: {
+              totalStake: total.totalStake,
+              totalReturn: total.totalReturn,
+              count: total.count,
+              roi: totalRoi,
+              profit: totalProfit
+            }
+          };
+        })
+      };
+    }
 
-    function buildBattleTableHtmlFromPeople(selectedPeople, groupNames, title = '対戦表') {
-      if (!selectedPeople.length) {
-        return `<h3>${escapeHtml(title)}</h3><div class="empty">名前を1つ以上選択してください。</div>`;
+    function buildBattleTableHtmlFromPayload(payload) {
+      const groupNames = Array.isArray(payload?.groupNames) ? payload.groupNames : [];
+      const rowsData = Array.isArray(payload?.rows) ? payload.rows : [];
+      if (!rowsData.length) {
+        return '<h3>対戦表</h3><div class="empty">名前を1つ以上選択してください。</div>';
       }
       if (!groupNames.length) {
-        return `<h3>${escapeHtml(title)}</h3><div class="empty">グループを1つ以上選択してください。</div>`;
+        return '<h3>対戦表</h3><div class="empty">グループを1つ以上選択してください。</div>';
       }
       const head = groupNames.map(name => `<th>${escapeHtml(name)}</th>`).join('');
-      const rows = selectedPeople.map(person => {
-        const total = { totalStake: 0, totalReturn: 0, count: 0 };
-        const cells = groupNames.map(groupName => {
-          const groups = (person.groups || []).filter(g => g.name === groupName);
-          let stake = 0, payout = 0, count = 0;
-          for (const group of groups) {
-            const gs = calcGroupStats(group);
-            stake += gs.totalStake;
-            payout += gs.totalReturn;
-            count += gs.count;
-          }
-          total.totalStake += stake;
-          total.totalReturn += payout;
-          total.count += count;
-          const roi = stake > 0 ? (payout / stake) * 100 : 0;
-          const profit = payout - stake;
+      const rows = rowsData.map(row => {
+        const cells = (row.cells || []).map(cell => {
+          const count = clampNumber(cell?.count);
+          const stake = clampNumber(cell?.stake);
+          const payout = clampNumber(cell?.payout);
+          const roi = clampNumber(cell?.roi);
+          const profit = clampNumber(cell?.profit);
           return `<td>${count ? `${pct(roi)}<small>${yen(stake)}円 → ${yen(payout)}円 / ${count}件 / 収支 ${yen(profit)}円</small>` : '—'}</td>`;
         }).join('');
-        const totalRoi = total.totalStake > 0 ? (total.totalReturn / total.totalStake) * 100 : 0;
-        const totalProfit = total.totalReturn - total.totalStake;
-        const totalCell = `<td><strong>${total.count ? pct(totalRoi) : '—'}</strong>${total.count ? `<small>${yen(total.totalStake)}円 → ${yen(total.totalReturn)}円 / ${total.count}件 / 収支 ${yen(totalProfit)}円</small>` : ''}</td>`;
-        return `<tr><th>${escapeHtml(person.name)}</th>${cells}${totalCell}</tr>`;
+        const total = row.total || {};
+        const totalCount = clampNumber(total.count);
+        const totalCell = `<td><strong>${totalCount ? pct(clampNumber(total.roi)) : '—'}</strong>${totalCount ? `<small>${yen(clampNumber(total.totalStake))}円 → ${yen(clampNumber(total.totalReturn))}円 / ${totalCount}件 / 収支 ${yen(clampNumber(total.profit))}円</small>` : ''}</td>`;
+        return `<tr><th>${escapeHtml(row.personName || '')}</th>${cells}${totalCell}</tr>`;
       }).join('');
       return `
-        <h3>${escapeHtml(title)}</h3>
+        <h3>${escapeHtml(payload?.title || '対戦表')}</h3>
         <div class="battle-table-wrap">
           <table class="battle-table">
             <thead><tr><th>名前</th>${head}<th>合計</th></tr></thead>
@@ -1214,78 +1244,145 @@
     }
 
     function buildBattleTableHtml(personIds, groupNames) {
-      const selectedPeople = state.people.filter(p => personIds.includes(p.id));
-      return buildBattleTableHtmlFromPeople(selectedPeople, groupNames);
+      return buildBattleTableHtmlFromPayload(buildBattlePayload(personIds, groupNames));
     }
 
-    function createBattleViewPayload(personIds, groupNames) {
-      const selectedPeople = state.people
-        .filter(p => personIds.includes(p.id))
-        .map(person => ({
-          name: person.name,
-          groups: (person.groups || [])
-            .filter(group => groupNames.includes(group.name))
-            .map(group => ({
-              name: group.name,
-              entries: (group.entries || []).map(entry => ({
-                stake: clampNumber(entry.stake),
-                payout: getEntryPayout(entry)
-              }))
-            }))
-        }));
-      return { people: selectedPeople, groupNames };
+    function buildBattleQueryUrl(personIds, groupNames) {
+      return buildBattleFullscreenUrl(personIds, groupNames);
     }
 
-    async function copyBattleFullscreenUrl() {
-      const { personIds, groupNames } = getBattleSelection();
-      if (!personIds.length) {
-        alert('名前を1つ以上選択してください。');
+    function getBattleModeUrl() {
+      const url = new URL(location.href);
+      url.searchParams.set('mode', 'battle-fullscreen');
+      return url;
+    }
+
+    function downloadDataUrl(filename, dataUrl) {
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+
+    async function writeTextToClipboard(text) {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
         return;
       }
-      if (!groupNames.length) {
-        alert('グループを1つ以上選択してください。');
-        return;
-      }
-      try {
-        const payload = createBattleViewPayload(personIds, groupNames);
-        const url = new URL(location.href);
-        url.searchParams.delete('data');
-        url.searchParams.set('battle', await encodeStateForUrl(payload));
-        await navigator.clipboard.writeText(url.toString());
-        alert('フル画面用URLをコピーしました。');
-      } catch (err) {
-        console.error(err);
-        alert('フル画面用URLのコピーに失敗しました。');
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', 'readonly');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      if (!ok) throw new Error('copy failed');
+    }
+
+    function makeBattlePngFilename(title) {
+      const safe = String(title || 'battle')
+        .replace(/[\\/:*?"<>|]+/g, '_')
+        .replace(/\s+/g, '_')
+        .slice(0, 80) || 'battle';
+      return safe + '.png';
+    }
+
+    function getBattlePngRenderMetrics(payload) {
+      const cols = Array.isArray(payload?.groupNames) ? payload.groupNames.length : 0;
+      const rows = Array.isArray(payload?.rows) ? payload.rows.length : 0;
+      const colWidths = [180, ...Array(cols).fill(230), 230];
+      const width = colWidths.reduce((a, b) => a + b, 0);
+      const titleHeight = 64;
+      const headerHeight = 52;
+      const rowHeight = 74;
+      const height = titleHeight + headerHeight + Math.max(rows, 1) * rowHeight + 24;
+      return { cols, rows, colWidths, width, height, titleHeight, headerHeight, rowHeight };
+    }
+
+    function drawBattleText(ctx, text, x, y, maxWidth, lineHeight) {
+      const lines = String(text || '').split('\n');
+      let yy = y;
+      for (const line of lines) {
+        ctx.fillText(line, x, yy, maxWidth);
+        yy += lineHeight;
       }
     }
 
-    function renderBattleOnlyPageIfNeeded() {
-      const param = new URL(location.href).searchParams.get('battle');
-      if (!param) return false;
-      try {
-        const decoded = decodeStateFromUrlParam(param);
-        return Promise.resolve(decoded).then((payload) => {
-          if (!payload || !Array.isArray(payload.people) || !Array.isArray(payload.groupNames)) {
-            throw new Error('invalid battle data');
-          }
-          document.body.innerHTML = `
-            <div class="app" style="max-width:none; padding:20px;">
-              <div class="card" style="margin-bottom:0;">
-                ${buildBattleTableHtmlFromPeople(payload.people, payload.groupNames, '対戦表')}
-              </div>
-            </div>
-          `;
-          return true;
-        }).catch((err) => {
-          console.error(err);
-          alert('フル画面用URLの読み込みに失敗しました。');
-          return false;
-        });
-      } catch (err) {
-        console.error(err);
-        alert('フル画面用URLの読み込みに失敗しました。');
-        return Promise.resolve(false);
+    function renderBattlePayloadToCanvas(payload) {
+      const m = getBattlePngRenderMetrics(payload);
+      const scale = Math.max(2, Math.min(window.devicePixelRatio || 1, 3));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.ceil(m.width * scale);
+      canvas.height = Math.ceil(m.height * scale);
+      canvas.style.width = m.width + 'px';
+      canvas.style.height = m.height + 'px';
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+
+      ctx.fillStyle = '#f6f7fb';
+      ctx.fillRect(0, 0, m.width, m.height);
+
+      ctx.fillStyle = '#111827';
+      ctx.font = '700 28px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif';
+      ctx.fillText(String(payload?.title || '対戦表'), 20, 40);
+
+      let x = 0;
+      let y = m.titleHeight;
+      const headers = ['名前', ...(payload.groupNames || []), '合計'];
+      for (let i = 0; i < headers.length; i++) {
+        const w = m.colWidths[i];
+        ctx.fillStyle = '#e8eefc';
+        ctx.fillRect(x, y, w, m.headerHeight);
+        ctx.strokeStyle = '#cfd8e3';
+        ctx.strokeRect(x, y, w, m.headerHeight);
+        ctx.fillStyle = '#1f2937';
+        ctx.font = '700 18px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif';
+        ctx.fillText(String(headers[i]), x + 12, y + 31, w - 24);
+        x += w;
       }
+
+      const rows = Array.isArray(payload?.rows) && payload.rows.length ? payload.rows : [{ personName: 'データなし', cells: [], total: { count: 0 } }];
+      y += m.headerHeight;
+      rows.forEach((row, rowIndex) => {
+        let xx = 0;
+        const bg = rowIndex % 2 === 0 ? '#ffffff' : '#fbfdff';
+        const total = row.total || {};
+        const totalCount = clampNumber(total.count);
+        const totalText = totalCount
+          ? `${pct(clampNumber(total.roi))}\n${yen(clampNumber(total.totalStake))}円 → ${yen(clampNumber(total.totalReturn))}円 / ${totalCount}件 / 収支 ${yen(clampNumber(total.profit))}円`
+          : '—';
+        const cellTexts = [
+          String(row.personName || ''),
+          ...((row.cells || []).map(cell => {
+            const count = clampNumber(cell?.count);
+            if (!count) return '—';
+            return `${pct(clampNumber(cell.roi))}\n${yen(clampNumber(cell.stake))}円 → ${yen(clampNumber(cell.payout))}円 / ${count}件 / 収支 ${yen(clampNumber(cell.profit))}円`;
+          })),
+          totalText
+        ];
+        for (let i = 0; i < m.colWidths.length; i++) {
+          const w = m.colWidths[i];
+          ctx.fillStyle = bg;
+          ctx.fillRect(xx, y, w, m.rowHeight);
+          ctx.strokeStyle = '#d7dce5';
+          ctx.strokeRect(xx, y, w, m.rowHeight);
+          ctx.fillStyle = '#111827';
+          ctx.font = i === 0 ? '700 17px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif' : '600 16px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif';
+          drawBattleText(ctx, cellTexts[i] || '—', xx + 12, y + 26, w - 24, 22);
+          xx += w;
+        }
+        y += m.rowHeight;
+      });
+      return canvas;
+    }
+
+    function exportBattlePayloadAsPng(payload) {
+      const canvas = renderBattlePayloadToCanvas(payload);
+      downloadDataUrl(makeBattlePngFilename(payload?.title || '対戦表'), canvas.toDataURL('image/png'));
     }
 
     function getBattleSelection() {
@@ -1303,139 +1400,18 @@
       els.battleFullscreenWrap.classList.toggle('hidden', !valid);
     }
 
-
-    async function saveBattleTableAsPng() {
-      const { personIds, groupNames } = getBattleSelection();
-      if (!personIds.length) {
-        alert('名前を1つ以上選択してください。');
-        return;
-      }
-      if (!groupNames.length) {
-        alert('グループを1つ以上選択してください。');
-        return;
-      }
-
-      const selectedPeople = state.people.filter(p => personIds.includes(p.id));
-      const cellPaddingX = 14;
-      const cellPaddingY = 10;
-      const rowHeight = 68;
-      const headerHeight = 44;
-      const nameColWidth = 180;
-      const groupColWidth = 220;
-      const totalColWidth = 220;
-      const tableWidth = nameColWidth + groupNames.length * groupColWidth + totalColWidth;
-      const tableHeight = headerHeight + selectedPeople.length * rowHeight;
-      const margin = 24;
-      const canvas = document.createElement('canvas');
-      const scale = Math.max(2, Math.ceil(window.devicePixelRatio || 1));
-      canvas.width = (tableWidth + margin * 2) * scale;
-      canvas.height = (tableHeight + margin * 2) * scale;
-      const ctx = canvas.getContext('2d');
-      ctx.scale(scale, scale);
-
-      ctx.fillStyle = '#f6f7fb';
-      ctx.fillRect(0, 0, tableWidth + margin * 2, tableHeight + margin * 2);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(margin, margin, tableWidth, tableHeight);
-
-      const lineColor = '#d7dce5';
-      const headerBg = '#eef4ff';
-      const altBg = '#fafcff';
-      const textColor = '#1f2937';
-      const subColor = '#6b7280';
-
-      function drawCell(x, y, w, h, bg) {
-        ctx.fillStyle = bg;
-        ctx.fillRect(x, y, w, h);
-        ctx.strokeStyle = lineColor;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x, y, w, h);
-      }
-
-      function fitText(text, maxWidth) {
-        const s = String(text ?? '');
-        if (ctx.measureText(s).width <= maxWidth) return s;
-        let out = s;
-        while (out.length > 1 && ctx.measureText(out + '…').width > maxWidth) out = out.slice(0, -1);
-        return out + '…';
-      }
-
-      function drawText(text, x, y, maxWidth, font, color) {
-        ctx.font = font;
-        ctx.fillStyle = color;
-        ctx.textBaseline = 'top';
-        ctx.fillText(fitText(text, maxWidth), x, y);
-      }
-
-      let x = margin;
-      let y = margin;
-      const headerCols = [
-        { label: '名前', width: nameColWidth },
-        ...groupNames.map(name => ({ label: name, width: groupColWidth })),
-        { label: '合計', width: totalColWidth }
-      ];
-      for (const col of headerCols) {
-        drawCell(x, y, col.width, headerHeight, headerBg);
-        drawText(col.label, x + cellPaddingX, y + 12, col.width - cellPaddingX * 2, 'bold 15px sans-serif', textColor);
-        x += col.width;
-      }
-
-      y += headerHeight;
-      for (let row = 0; row < selectedPeople.length; row++) {
-        const person = selectedPeople[row];
-        const rowBg = row % 2 === 0 ? '#ffffff' : altBg;
-        let colX = margin;
-        drawCell(colX, y, nameColWidth, rowHeight, rowBg);
-        drawText(person.name, colX + cellPaddingX, y + 10, nameColWidth - cellPaddingX * 2, 'bold 16px sans-serif', textColor);
-        colX += nameColWidth;
-
-        let totalStake = 0, totalReturn = 0, totalCount = 0;
-        for (const groupName of groupNames) {
-          const groups = (person.groups || []).filter(g => g.name === groupName);
-          let stake = 0, payout = 0, count = 0;
-          for (const group of groups) {
-            const gs = calcGroupStats(group);
-            stake += gs.totalStake;
-            payout += gs.totalReturn;
-            count += gs.count;
-          }
-          totalStake += stake;
-          totalReturn += payout;
-          totalCount += count;
-          drawCell(colX, y, groupColWidth, rowHeight, rowBg);
-          if (count) {
-            const roi = stake > 0 ? (payout / stake) * 100 : 0;
-            const profit = payout - stake;
-            drawText(pct(roi), colX + cellPaddingX, y + 8, groupColWidth - cellPaddingX * 2, 'bold 15px sans-serif', textColor);
-            drawText(`${yen(stake)}円 → ${yen(payout)}円`, colX + cellPaddingX, y + 31, groupColWidth - cellPaddingX * 2, '12px sans-serif', subColor);
-            drawText(`${count}件 / 収支 ${profit >= 0 ? '+' : ''}${yen(profit)}円`, colX + cellPaddingX, y + 48, groupColWidth - cellPaddingX * 2, '12px sans-serif', subColor);
-          } else {
-            drawText('—', colX + cellPaddingX, y + 22, groupColWidth - cellPaddingX * 2, '15px sans-serif', subColor);
-          }
-          colX += groupColWidth;
-        }
-
-        drawCell(colX, y, totalColWidth, rowHeight, rowBg);
-        if (totalCount) {
-          const totalRoi = totalStake > 0 ? (totalReturn / totalStake) * 100 : 0;
-          const totalProfit = totalReturn - totalStake;
-          drawText(pct(totalRoi), colX + cellPaddingX, y + 8, totalColWidth - cellPaddingX * 2, 'bold 15px sans-serif', textColor);
-          drawText(`${yen(totalStake)}円 → ${yen(totalReturn)}円`, colX + cellPaddingX, y + 31, totalColWidth - cellPaddingX * 2, '12px sans-serif', subColor);
-          drawText(`${totalCount}件 / 収支 ${totalProfit >= 0 ? '+' : ''}${yen(totalProfit)}円`, colX + cellPaddingX, y + 48, totalColWidth - cellPaddingX * 2, '12px sans-serif', subColor);
-        } else {
-          drawText('—', colX + cellPaddingX, y + 22, totalColWidth - cellPaddingX * 2, '15px sans-serif', subColor);
-        }
-        y += rowHeight;
-      }
-
-      const link = document.createElement('a');
-      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-      link.href = canvas.toDataURL('image/png');
-      link.download = `keiba_battle_table_${stamp}.png`;
-      link.click();
+    async function buildBattleFullscreenUrl(personIds, groupNames) {
+      const payload = buildBattlePayload(personIds, groupNames);
+      const url = getBattleModeUrl();
+      url.searchParams.delete('data');
+      url.searchParams.delete('battlefs');
+      url.searchParams.delete('battlePeople');
+      url.searchParams.delete('battleGroups');
+      url.searchParams.set('battleData', await encodeStateForUrl(payload));
+      return url.toString();
     }
 
-    function openBattleFullscreen() {
+    async function openBattleFullscreen() {
       const { personIds, groupNames } = getBattleSelection();
       if (!personIds.length) {
         alert('名前を1つ以上選択してください。');
@@ -1445,43 +1421,96 @@
         alert('グループを1つ以上選択してください。');
         return;
       }
-      const tableHtml = buildBattleTableHtml(personIds, groupNames);
-      const fullHtml = `<!doctype html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>対戦表</title>
-<style>
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #f6f7fb; color: #222; }
-  .wrap { padding: 20px; }
-  .topbar { display: flex; justify-content: flex-end; margin-bottom: 16px; }
-  button { border: 0; background: #1f6feb; color: #fff; border-radius: 10px; padding: 12px 18px; font-size: 14px; font-weight: 700; cursor: pointer; }
-  h3 { margin: 0 0 14px; }
-  .battle-table-wrap { overflow: auto; background: #fff; border: 1px solid #d8deea; border-radius: 14px; }
-  .battle-table { width: 100%; border-collapse: collapse; min-width: 720px; }
-  .battle-table th, .battle-table td { border-bottom: 1px solid #e7ebf3; border-right: 1px solid #eef2f8; padding: 10px; text-align: left; vertical-align: top; }
-  .battle-table th:last-child, .battle-table td:last-child { border-right: 0; }
-  .battle-table thead th { position: sticky; top: 0; background: #eef4ff; z-index: 1; }
-  .battle-table tbody tr:nth-child(even) { background: #fafcff; }
-  small { display: block; color: #667085; margin-top: 6px; line-height: 1.5; }
-</style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="topbar"><button onclick="window.close()">閉じる</button></div>
-    ${tableHtml}
-  </div>
-</body>
-</html>`;
-      const win = window.open('', '_blank');
-      if (!win) {
-        alert('新しいタブを開けませんでした。ポップアップブロックをご確認ください。');
+      try {
+        window.open(await buildBattleFullscreenUrl(personIds, groupNames), '_blank');
+      } catch (err) {
+        console.error(err);
+        alert('フル画面URLの作成に失敗しました。');
+      }
+    }
+
+    async function copyBattleFullscreenUrl() {
+      const { personIds, groupNames } = getBattleSelection();
+      if (!personIds.length) {
+        alert('名前を1つ以上選択してください。');
         return;
       }
-      win.document.open();
-      win.document.write(fullHtml);
-      win.document.close();
+      if (!groupNames.length) {
+        alert('グループを1つ以上選択してください。');
+        return;
+      }
+      try {
+        await writeTextToClipboard(await buildBattleQueryUrl(personIds, groupNames));
+        alert('フル画面URLをクリップボードに保存しました。');
+      } catch (err) {
+        console.error(err);
+        alert('フル画面URLのクリップボード保存に失敗しました。');
+      }
+    }
+
+    function exportBattlePng() {
+      const { personIds, groupNames } = getBattleSelection();
+      if (!personIds.length) {
+        alert('名前を1つ以上選択してください。');
+        return;
+      }
+      if (!groupNames.length) {
+        alert('グループを1つ以上選択してください。');
+        return;
+      }
+      try {
+        exportBattlePayloadAsPng(buildBattlePayload(personIds, groupNames));
+      } catch (err) {
+        console.error(err);
+        alert('PNG出力に失敗しました。');
+      }
+    }
+
+    async function applyBattleFullscreenModeIfNeeded() {
+      const url = new URL(location.href);
+      const mode = url.searchParams.get('mode');
+      const battleData = url.searchParams.get('battleData');
+      if (mode === 'battle-fullscreen' && battleData) {
+        try {
+          const payload = await decodeStateFromUrlParam(battleData);
+          if (!payload || !Array.isArray(payload.groupNames) || !Array.isArray(payload.rows)) throw new Error('invalid battle data');
+          document.body.innerHTML = `
+            <div class="wrap" style="padding:20px; background:#f6f7fb; min-height:100vh;">
+              ${buildBattleTableHtmlFromPayload(payload)}
+            </div>
+          `;
+          return true;
+        } catch (err) {
+          console.error(err);
+          alert('フル画面URLの読み込みに失敗しました。');
+          return false;
+        }
+      }
+      if (battleData) {
+        try {
+          const payload = await decodeStateFromUrlParam(battleData);
+          if (!payload || !Array.isArray(payload.groupNames) || !Array.isArray(payload.rows)) throw new Error('invalid battle data');
+          document.body.innerHTML = `
+            <div class="wrap" style="padding:20px; background:#f6f7fb; min-height:100vh;">
+              ${buildBattleTableHtmlFromPayload(payload)}
+            </div>
+          `;
+          return true;
+        } catch (err) {
+          console.error(err);
+          alert('フル画面URLの読み込みに失敗しました。');
+          return false;
+        }
+      }
+      if (url.searchParams.get('battlefs') !== '1') return false;
+      const personIds = (url.searchParams.get('battlePeople') || '').split(',').map(v => v.trim()).filter(Boolean);
+      const groupNames = (url.searchParams.get('battleGroups') || '').split(',').map(v => v.trim()).filter(Boolean);
+      document.body.innerHTML = `
+        <div class="wrap" style="padding:20px; background:#f6f7fb; min-height:100vh;">
+          ${buildBattleTableHtml(personIds, groupNames)}
+        </div>
+      `;
+      return true;
     }
 
     els.backToHomeBtn.addEventListener('click', async () => {
@@ -1510,9 +1539,9 @@
     els.battleBtn.addEventListener('click', openBattleModal);
     els.closeBattleBtn.addEventListener('click', closeBattleModal);
     els.viewBattleBtn.addEventListener('click', renderBattleTable);
-    els.saveBattlePngBtn.addEventListener('click', saveBattleTableAsPng);
     els.openBattleFullscreenBtn.addEventListener('click', openBattleFullscreen);
     els.copyBattleFullscreenUrlBtn.addEventListener('click', copyBattleFullscreenUrl);
+    els.exportBattlePngBtn.addEventListener('click', exportBattlePng);
     els.battleModal.addEventListener('click', (e) => {
       if (e.target === els.battleModal) closeBattleModal();
     });
@@ -1536,6 +1565,7 @@
       if (!param) return;
       try {
         const incoming = await decodeStateFromUrlParam(param);
+        if (!incoming || !Array.isArray(incoming.people)) throw new Error('invalid data');
         const hasSavedData = Array.isArray(state.people) && state.people.length > 0;
         let useQuery = true;
         if (hasSavedData) {
@@ -1576,10 +1606,10 @@
 
     (async function init() {
       try {
-        if (await renderBattleOnlyPageIfNeeded()) return;
         db = await openDb();
         await loadState();
         await applyQueryStateIfNeeded();
+        if (await applyBattleFullscreenModeIfNeeded()) return;
         render();
       } catch (err) {
         console.error(err);
