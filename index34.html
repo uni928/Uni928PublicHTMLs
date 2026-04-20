@@ -1118,14 +1118,6 @@
     async function encodeStateForUrl(obj) {
       const json = JSON.stringify(obj);
       const bytes = new TextEncoder().encode(json);
-      if ('CompressionStream' in window) {
-        const cs = new CompressionStream('gzip');
-        const writer = cs.writable.getWriter();
-        await writer.write(bytes);
-        await writer.close();
-        const compressed = new Uint8Array(await new Response(cs.readable).arrayBuffer());
-        return 'gz.' + toUrlSafeBase64(compressed);
-      }
       return 'raw.' + toUrlSafeBase64(bytes);
     }
 
@@ -1147,6 +1139,7 @@
     }
 
     function clearDataQueryParam() {
+      if (location.protocol === 'file:') return;
       const url = new URL(location.href);
       if (!url.searchParams.has('data')) return;
       url.searchParams.delete('data');
@@ -1370,6 +1363,14 @@
       const ok = document.execCommand('copy');
       document.body.removeChild(ta);
       if (!ok) throw new Error('copy failed');
+    }
+
+    async function buildEditableShareUrl() {
+      const url = new URL(location.href);
+      url.searchParams.delete('mode');
+      url.searchParams.delete('battleData');
+      url.searchParams.set('data', await encodeStateForUrl(state));
+      return url.toString();
     }
 
     async function copyBattleUrl() {
@@ -1663,9 +1664,7 @@ function goBack() {
 
     els.copyUrlBtn.addEventListener('click', async () => {
       try {
-        const url = new URL(location.href);
-        url.searchParams.set('data', await encodeStateForUrl(state));
-        await copyText(url.toString());
+        await copyText(await buildEditableShareUrl());
         alert('共有用URLをコピーしました。');
       } catch (err) {
         console.error(err);
