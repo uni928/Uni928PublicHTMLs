@@ -1285,6 +1285,7 @@
       const url = new URL(location.href);
       url.searchParams.set('mode', 'battle');
       url.searchParams.set('battleData', encoded);
+      url.searchParams.set('returnUrl', encodeURIComponent(location.href));
       return url.toString();
     }
 
@@ -1504,11 +1505,25 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="topbar"><button onclick="window.close()">閉じる</button></div>
+    <div class="topbar"><button onclick="goBack()">閉じる</button></div>
     ${tableHtml}
   </div>
+  <scraaacststaaaipt>
+function goBack() {
+  const params = new URLSearchParams(location.search);
+  const returnUrl = params.get('returnUrl');
+
+  if (returnUrl) {
+    location.href = decodeURIComponent(returnUrl);
+  } else if (history.length > 1) {
+    history.back();
+  } else {
+    window.close();
+  }
+}
+  </scraaacststaaaipt>
 </body>
-</html>`;
+</html>`.replaceAll("aaacststaaa", "");
     }
 
     function openBattleFullscreen() {
