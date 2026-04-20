@@ -60,7 +60,7 @@
     }
     button:hover { transform: translateY(-1px); }
     button:active { transform: translateY(0); }
-    input[type="text"], select {
+    input[type="text"], select, textarea {
       width: 100%;
       border: 1px solid var(--line);
       border-radius: 14px;
@@ -72,7 +72,7 @@
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
       transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
     }
-    input[type="text"]:focus, select:focus {
+    input[type="text"]:focus, select:focus, textarea:focus {
       background: #fff;
       border-color: rgba(59,130,246,.45);
       box-shadow: 0 0 0 4px rgba(59,130,246,.12), 0 8px 20px rgba(59,130,246,.08);
@@ -258,25 +258,41 @@
       font-size: 13px;
     }
 
-    .copy-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
+    .html-panel {
+      position: relative;
+      padding: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(245,249,255,.90));
+      border: 1px solid rgba(191,206,230,.55);
+      border-radius: var(--radius);
+      box-shadow: 0 10px 26px rgba(15, 23, 42, .08), inset 0 1px 0 rgba(255,255,255,.75);
+      overflow: hidden;
     }
-    .copy-btn {
-      flex: 1 1 220px;
-      min-height: 48px;
-      padding: 12px 16px;
-      border-radius: 16px;
-      background: linear-gradient(180deg, #ffffff, #eef4ff);
-      border: 1px solid rgba(96,136,201,.28);
-      color: #19365f;
+    .html-panel-title {
+      padding: 16px 18px;
+      background: linear-gradient(135deg, #ffffff 0%, #edf5ff 48%, #dfeeff 100%);
+      color: #10233f;
+      font-size: 15px;
       font-weight: 800;
-      box-shadow: var(--shadow-sm);
+      border-bottom: 1px solid rgba(148,163,184,.12);
     }
-    .copy-btn:hover {
-      box-shadow: 0 10px 24px rgba(59,130,246,.12);
+    .html-output {
+      display: block;
+      min-height: 360px;
+      resize: vertical;
+      border: none;
+      border-radius: 0;
+      background: linear-gradient(180deg, rgba(250,252,255,.82), rgba(245,248,253,.92));
+      box-shadow: none;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      white-space: pre;
     }
+    .html-output:focus {
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+      border-color: transparent;
+    }
+
     .copy-status {
       min-height: 22px;
       padding: 2px 4px;
@@ -290,8 +306,8 @@
       .hero h1 { font-size: 20px; }
       .accordion-header { padding: 16px; }
       .accordion-content { padding: 14px 16px 16px; }
-      input[type="text"], select, button { font-size: 16px; }
-      .copy-btn { flex-basis: 100%; }
+      input[type="text"], select, textarea, button { font-size: 16px; }
+      .html-output { min-height: 300px; }
     }
   </style>
 </head>
@@ -299,7 +315,7 @@
   <div class="page">
     <div class="hero">
       <h1>オプション設定 UI サンプル</h1>
-      <p>公開用の記事やデザイン紹介に使いやすいよう、無難な内容へ差し替えた単体 HTML です。</p>
+      <p>公開用の記事やデザイン紹介に使いやすいよう、内容を一般化した単体 HTML です。</p>
     </div>
 
     <div class="accordion-wrap">
@@ -403,15 +419,16 @@
           </div>
 
           <div class="footer-note">
-            この HTML は、アコーディオン構成・やわらかい配色を重視したサンプルです。
+            必要な設定を見やすく整理し、初見でも扱いやすい構成にまとめています。
           </div>
         </div>
       </div>
 
-      <div class="copy-actions">
-        <button class="copy-btn" id="copyCssBtn" type="button">CSS をコピー</button>
-        <button class="copy-btn" id="copyElementsBtn" type="button">要素をコピー</button>
+      <div class="html-panel">
+        <div class="html-panel-title">このページの HTML 全体</div>
+        <textarea class="html-output" id="fullHtmlOutput" readonly spellcheck="false"></textarea>
       </div>
+
       <div class="copy-status" id="copyStatus">開いた状態がデフォルトです。ヘッダーを押すと閉じられます。</div>
     </div>
   </div>
@@ -421,16 +438,28 @@
     const header = document.getElementById('optionsHeader');
     const toggleBtn = document.getElementById('optionsToggle');
     const copyStatus = document.getElementById('copyStatus');
+    const fullHtmlOutput = document.getElementById('fullHtmlOutput');
 
     function setAccordionState(isOpen) {
       accordion.classList.toggle('is-collapsed', !isOpen);
       header.setAttribute('aria-expanded', String(isOpen));
       toggleBtn.textContent = isOpen ? '－' : '＋';
+      copyStatus.textContent = isOpen
+        ? '開いた状態がデフォルトです。ヘッダーを押すと閉じられます。'
+        : '閉じた状態です。ヘッダーを押すと再度開けます。';
+    }
+
+    function updateFullHtmlOutput() {
+      const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+      fullHtmlOutput.value = html;
+      fullHtmlOutput.scrollTop = 0;
+      fullHtmlOutput.scrollLeft = 0;
     }
 
     function toggleAccordion() {
       const isOpen = !accordion.classList.contains('is-collapsed');
       setAccordionState(!isOpen);
+      updateFullHtmlOutput();
     }
 
     header.addEventListener('click', (event) => {
@@ -450,27 +479,8 @@
       toggleAccordion();
     });
 
-    async function copyText(text, successMessage) {
-      try {
-        await navigator.clipboard.writeText(text);
-        copyStatus.textContent = successMessage;
-      } catch (error) {
-        copyStatus.textContent = 'コピーに失敗しました。ブラウザの権限をご確認ください。';
-      }
-    }
-
-    document.getElementById('copyCssBtn').addEventListener('click', () => {
-      const cssText = document.getElementById('component-style').textContent.trim();
-      copyText(cssText, 'CSS をコピーしました。');
-    });
-
-    document.getElementById('copyElementsBtn').addEventListener('click', () => {
-      const clone = document.getElementById('optionsAccordion').cloneNode(true);
-      clone.classList.remove('is-collapsed');
-      clone.querySelector('.accordion-header').setAttribute('aria-expanded', 'true');
-      clone.querySelector('.accordion-toggle').textContent = '－';
-      copyText(clone.outerHTML, 'オプション設定の要素をコピーしました。');
-    });
+    setAccordionState(true);
+    updateFullHtmlOutput();
   </script>
 </body>
 </html>
