@@ -1,0 +1,1744 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>競馬 回収率トラッカー</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --line: #d7dce5;
+      --accent: #2563eb;
+      --accent2: #eff6ff;
+      --danger: #dc2626;
+      --ok: #059669;
+      --shadow: 0 10px 30px rgba(0,0,0,0.08);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .title {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+    .toolbar, .row, .stats, .grid {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .grid { align-items: stretch; }
+    .col-main { flex: 2 1 600px; }
+    .col-side { flex: 1 1 280px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .card h2, .card h3 {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+    .muted { color: var(--muted); }
+    button, input, select {
+      font: inherit;
+    }
+    button {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+    button:hover { transform: translateY(-1px); }
+    .primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .danger {
+      color: #fff;
+      background: var(--danger);
+      border-color: var(--danger);
+    }
+    .ghost {
+      background: var(--accent2);
+      border-color: #cfe0ff;
+      color: var(--accent);
+    }
+    input[type="text"], input[type="number"], input[type="date"] {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+    }
+    .input-row {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr auto;
+      gap: 10px;
+    }
+    .input-row.four {
+      grid-template-columns: 1fr 1fr 1fr auto;
+    }
+    .name-card, .group-card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      background: linear-gradient(180deg, #ffffff, #fbfdff);
+      display: grid;
+      gap: 10px;
+    }
+    .name-top, .group-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    .name-top strong, .group-top strong {
+      font-size: 18px;
+    }
+    .mini {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .stat-box {
+      flex: 1 1 180px;
+      min-width: 180px;
+      padding: 14px;
+      border-radius: 16px;
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+    .stat-label { font-size: 12px; color: var(--muted); }
+    .stat-value { font-size: 26px; font-weight: 800; margin-top: 6px; }
+    .positive { color: var(--ok); }
+    .negative { color: var(--danger); }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      background: #f3f4f6;
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+    .check-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .check-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px 12px;
+    }
+    .entries-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+    .entries-table th, .entries-table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      font-size: 14px;
+      vertical-align: middle;
+    }
+    .entries-table input {
+      min-width: 90px;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .right { text-align: right; }
+    .hidden { display: none !important; }
+    .back-row {
+      margin-bottom: 12px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .chart-wrap {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px;
+      background: #fff;
+      overflow: hidden;
+    }
+    svg {
+      width: 100%;
+      height: 280px;
+      display: block;
+    }
+    .small-note {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+    .empty {
+      padding: 20px;
+      color: var(--muted);
+      border: 1px dashed var(--line);
+      border-radius: 16px;
+      text-align: center;
+      background: #fcfdff;
+    }
+    .footer-note {
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      padding: 8px 0 20px;
+    }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 1000;
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal-card {
+      width: min(1100px, 100%);
+      max-height: 90vh;
+      overflow: auto;
+      background: #fff;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      box-shadow: 0 30px 60px rgba(15, 23, 42, 0.18);
+      padding: 20px;
+    }
+    .modal-header, .modal-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .modal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 16px 0;
+    }
+    .battle-table-wrap {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+    }
+    .battle-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 720px;
+    }
+    .battle-table th, .battle-table td {
+      border-bottom: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+      padding: 10px;
+      vertical-align: top;
+      text-align: left;
+      white-space: nowrap;
+      font-size: 14px;
+    }
+    .battle-table th:last-child, .battle-table td:last-child { border-right: none; }
+    .battle-table tr:last-child td { border-bottom: none; }
+    .battle-table small { color: var(--muted); display: block; margin-top: 4px; }
+    .battle-profit-line { font-weight: 700; }
+    .battle-profit-line.positive { color: #15803d; }
+    .battle-profit-line.negative { color: #b91c1c; }
+    .battle-cell-positive {
+      background: linear-gradient(180deg, #f3fff7 0%, #ecfdf3 100%);
+    }
+    .battle-cell-negative {
+      background: linear-gradient(180deg, #fff5f5 0%, #fef0f0 100%);
+    }
+    .battle-cell-neutral {
+      background: #fcfdff;
+    }
+
+    @media (max-width: 740px) {
+      .input-row, .input-row.four {
+        grid-template-columns: 1fr;
+      }
+      .entries-table {
+        display: block;
+        overflow-x: auto;
+      }
+      .title { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div>
+        <div class="title">競馬 回収率トラッカー</div>
+        <div class="sub">IndexedDB に自動保存。次回起動時も前回の続きから再開できます。</div>
+      </div>
+      <div class="toolbar">
+        <button id="exportBtn" class="ghost">JSON書き出し</button>
+        <button id="battleBtn" class="ghost">対戦表を表示</button>
+        <button id="copyUrlBtn" class="ghost">URLをコピー</button>
+        <button id="importBtn" class="ghost">JSON読み込み</button>
+        <input id="importFile" type="file" accept="application/json" class="hidden" />
+      </div>
+    </div>
+
+    <section id="homeScreen">
+      <div class="card">
+        <h2>名前の管理</h2>
+        <div class="input-row">
+          <input id="personNameInput" type="text" placeholder="追加する名前" />
+          <div></div>
+          <button id="addPersonBtn" class="primary">名前を追加</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>一覧</h2>
+        <div id="personList"></div>
+      </div>
+    </section>
+
+    <section id="personScreen" class="hidden">
+      <div class="back-row">
+        <button id="backToHomeBtn">← 一覧へ戻る</button>
+      </div>
+
+      <div class="grid">
+        <div class="col-main">
+          <div class="card">
+            <h2 id="personTitle">個人画面</h2>
+            <div class="stats" id="personSummary"></div>
+          </div>
+
+          <div class="card">
+            <h2>グループの管理</h2>
+            <div class="input-row">
+              <input id="groupNameInput" type="text" placeholder="追加するグループ名" />
+              <div></div>
+              <button id="addGroupBtn" class="primary">グループを追加</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>グループ一覧</h2>
+            <div id="groupList"></div>
+          </div>
+        </div>
+
+        <div class="col-side">
+          <div class="card">
+            <h3>選択中グループ</h3>
+            <div class="muted">複数選択できます。ここでチェックされたグループだけを合算して成績を出します。</div>
+            <div id="groupSelectionList" class="check-list"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="groupScreen" class="hidden">
+      <div class="back-row">
+        <button id="backToPersonBtn">← 個人画面へ戻る</button>
+      </div>
+
+      <div class="card">
+        <h2 id="groupTitle">グループ詳細</h2>
+        <div class="stats" id="groupSummary"></div>
+      </div>
+
+      <div class="card">
+        <h2>個別データ入力</h2>
+        <div class="input-row four">
+          <input id="entryDateInput" type="date" />
+          <input id="entryStakeInput" type="number" min="0" step="1" placeholder="投資額" />
+          <input id="entryPayoutInput" type="number" min="0" step="1" placeholder="払戻額" />
+          <button id="addEntryBtn" class="primary">追加</button>
+        </div>
+        <div class="small-note">投資額と払戻額から回収率を自動計算します。回収率の遷移グラフは累積ベースで表示します。</div>
+      </div>
+
+      <div class="card">
+        <h2>回収率の遷移</h2>
+        <div class="chart-wrap">
+          <svg id="chartSvg" viewBox="0 0 800 280" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="small-note">横軸は入力順、縦軸は累積回収率です。</div>
+      </div>
+
+      <div class="card">
+        <h2>入力一覧</h2>
+        <div id="entryTableWrap"></div>
+      </div>
+    </section>
+
+
+    <div id="battleModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <h2>対戦表</h2>
+            <div class="muted">表示したい名前とグループにチェックを入れてから閲覧してください。</div>
+          </div>
+          <button id="closeBattleBtn">閉じる</button>
+        </div>
+
+        <div class="modal-grid">
+          <div class="card" style="margin:0;">
+            <h3>名前一覧</h3>
+            <div class="small-note">初期状態では全てにチェックが入っています。</div>
+            <div id="battlePeopleList" class="check-list"></div>
+          </div>
+          <div class="card" style="margin:0;">
+            <h3>グループ一覧</h3>
+            <div class="small-note">初期状態では各人の選択中グループにチェックが入っています。</div>
+            <div id="battleGroupList" class="check-list"></div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <div class="muted">同名グループは同じ列にまとめて比較します。</div>
+          <button id="viewBattleBtn" class="primary">閲覧</button>
+        </div>
+
+        <div id="battleResult" class="card hidden" style="margin-top:16px;"></div>
+        <div id="battleFullscreenWrap" class="hidden" style="margin-top:12px; text-align:right; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+          <button id="saveBattlePngBtn" class="ghost">対戦表全体をPNG画像で保存</button>
+          <button id="openBattleFullscreenBtn" class="ghost">フル画面で表示</button>
+          <button id="copyBattleUrlBtn" class="ghost">URLを保存</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-note">このHTML単体で動作します。ブラウザのIndexedDBに保存されます。</div>
+  </div>
+
+  <script>
+    const DB_NAME = 'keiba_recovery_tracker_db';
+    const STORE_NAME = 'app_state';
+    const STATE_KEY = 'main';
+
+    const defaultState = () => ({
+      people: [],
+      currentPersonId: null,
+      currentGroupId: null,
+      seq: 1
+    });
+
+    let db;
+    let state = defaultState();
+
+    const els = {
+      homeScreen: document.getElementById('homeScreen'),
+      personScreen: document.getElementById('personScreen'),
+      groupScreen: document.getElementById('groupScreen'),
+      personNameInput: document.getElementById('personNameInput'),
+      addPersonBtn: document.getElementById('addPersonBtn'),
+      personList: document.getElementById('personList'),
+      backToHomeBtn: document.getElementById('backToHomeBtn'),
+      personTitle: document.getElementById('personTitle'),
+      personSummary: document.getElementById('personSummary'),
+      groupNameInput: document.getElementById('groupNameInput'),
+      addGroupBtn: document.getElementById('addGroupBtn'),
+      groupList: document.getElementById('groupList'),
+      groupSelectionList: document.getElementById('groupSelectionList'),
+      backToPersonBtn: document.getElementById('backToPersonBtn'),
+      groupTitle: document.getElementById('groupTitle'),
+      groupSummary: document.getElementById('groupSummary'),
+      entryDateInput: document.getElementById('entryDateInput'),
+      entryStakeInput: document.getElementById('entryStakeInput'),
+      entryPayoutInput: document.getElementById('entryPayoutInput'),
+      addEntryBtn: document.getElementById('addEntryBtn'),
+      entryTableWrap: document.getElementById('entryTableWrap'),
+      chartSvg: document.getElementById('chartSvg'),
+      exportBtn: document.getElementById('exportBtn'),
+      battleBtn: document.getElementById('battleBtn'),
+      copyUrlBtn: document.getElementById('copyUrlBtn'),
+      importBtn: document.getElementById('importBtn'),
+      importFile: document.getElementById('importFile'),
+      battleModal: document.getElementById('battleModal'),
+      closeBattleBtn: document.getElementById('closeBattleBtn'),
+      battlePeopleList: document.getElementById('battlePeopleList'),
+      battleGroupList: document.getElementById('battleGroupList'),
+      viewBattleBtn: document.getElementById('viewBattleBtn'),
+      battleResult: document.getElementById('battleResult'),
+      battleFullscreenWrap: document.getElementById('battleFullscreenWrap'),
+      saveBattlePngBtn: document.getElementById('saveBattlePngBtn'),
+      openBattleFullscreenBtn: document.getElementById('openBattleFullscreenBtn'),
+      copyBattleUrlBtn: document.getElementById('copyBattleUrlBtn')
+    };
+
+    function uid(prefix = 'id') {
+      const n = state.seq || 1;
+      state.seq = n + 1;
+      return prefix + '_' + Date.now().toString(36) + '_' + n;
+    }
+
+    function yen(value) {
+      return new Intl.NumberFormat('ja-JP').format(Math.round(Number(value || 0)));
+    }
+
+    function pct(value) {
+      if (!isFinite(value)) return '0.0%';
+      return Number(value).toFixed(1) + '%';
+    }
+
+    function clampNumber(n) {
+      const v = Number(n);
+      return isFinite(v) ? v : 0;
+    }
+
+    function getCurrentPerson() {
+      return state.people.find(p => p.id === state.currentPersonId) || null;
+    }
+
+    function getCurrentGroup() {
+      const person = getCurrentPerson();
+      if (!person) return null;
+      return person.groups.find(g => g.id === state.currentGroupId) || null;
+    }
+
+    function getEntryPayout(entry) {
+      const stake = clampNumber(entry?.stake);
+      if (entry && Object.prototype.hasOwnProperty.call(entry, 'payout')) {
+        return clampNumber(entry.payout);
+      }
+      const rate = clampNumber(entry?.rate);
+      return stake * rate / 100;
+    }
+
+    function getEntryRoi(entry) {
+      const stake = clampNumber(entry?.stake);
+      const payout = getEntryPayout(entry);
+      return stake > 0 ? (payout / stake) * 100 : 0;
+    }
+
+    function calcGroupStats(group) {
+      const entries = group?.entries || [];
+      let totalStake = 0;
+      let totalReturn = 0;
+      const points = [];
+      for (const e of entries) {
+        const stake = clampNumber(e.stake);
+        const payout = getEntryPayout(e);
+        totalStake += stake;
+        totalReturn += payout;
+        const cumulativeRate = totalStake > 0 ? (totalReturn / totalStake) * 100 : 0;
+        points.push({ label: e.date || '', rate: cumulativeRate });
+      }
+      const roi = totalStake > 0 ? (totalReturn / totalStake) * 100 : 0;
+      const profit = totalReturn - totalStake;
+      return {
+        totalStake,
+        totalReturn,
+        roi,
+        profit,
+        count: entries.length,
+        points
+      };
+    }
+
+    function calcPersonSelectedStats(person) {
+      const selectedSet = new Set(person.selectedGroupIds || []);
+      const selectedGroups = person.groups.filter(g => selectedSet.has(g.id));
+      let totalStake = 0;
+      let totalReturn = 0;
+      let count = 0;
+      for (const g of selectedGroups) {
+        const stats = calcGroupStats(g);
+        totalStake += stats.totalStake;
+        totalReturn += stats.totalReturn;
+        count += stats.count;
+      }
+      const roi = totalStake > 0 ? (totalReturn / totalStake) * 100 : 0;
+      return {
+        totalStake,
+        totalReturn,
+        roi,
+        profit: totalReturn - totalStake,
+        count,
+        selectedCount: selectedGroups.length
+      };
+    }
+
+    async function openDb() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = (ev) => {
+          const db = ev.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            db.createObjectStore(STORE_NAME);
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function loadState() {
+      const data = await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.get(STATE_KEY);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+      state = data || defaultState();
+      if (!state.people) state = defaultState();
+      normalizeState();
+    }
+
+    function normalizeState() {
+      state.seq = state.seq || 1;
+      state.people = Array.isArray(state.people) ? state.people : [];
+      for (const person of state.people) {
+        person.groups = Array.isArray(person.groups) ? person.groups : [];
+        person.selectedGroupIds = Array.isArray(person.selectedGroupIds) ? person.selectedGroupIds : [];
+        for (const group of person.groups) {
+          group.entries = Array.isArray(group.entries) ? group.entries : [];
+        }
+      }
+      if (state.currentPersonId && !state.people.some(p => p.id === state.currentPersonId)) {
+        state.currentPersonId = null;
+      }
+      const person = getCurrentPerson();
+      if (state.currentGroupId && (!person || !person.groups.some(g => g.id === state.currentGroupId))) {
+        state.currentGroupId = null;
+      }
+    }
+
+    async function saveState() {
+      normalizeState();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.put(JSON.parse(JSON.stringify(state)), STATE_KEY);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function mutate(fn) {
+      fn();
+      await saveState();
+      render();
+    }
+
+    function statBox(label, value, className = '') {
+      return `
+        <div class="stat-box">
+          <div class="stat-label">${label}</div>
+          <div class="stat-value ${className}">${value}</div>
+        </div>`;
+    }
+
+    function renderHome() {
+      const list = state.people;
+      if (!list.length) {
+        els.personList.innerHTML = '<div class="empty">まだ名前がありません。上から追加してください。</div>';
+        return;
+      }
+      els.personList.innerHTML = list.map((person, i) => {
+        const stats = calcPersonSelectedStats(person);
+        const selectedNames = person.groups.filter(g => (person.selectedGroupIds || []).includes(g.id)).map(g => g.name);
+        const roiClass = stats.roi >= 100 ? 'positive' : 'negative';
+        return `
+          <div class="name-card">
+            <div class="name-top">
+              <div>
+                <strong>${escapeHtml(person.name)}</strong>
+                <div class="mini">選択中: ${selectedNames.length ? selectedNames.map(escapeHtml).join(' / ') : 'なし'}</div>
+              </div>
+              <div class="pill">グループ ${person.groups.length}件 / 入力 ${stats.count}件</div>
+            </div>
+            <div class="row">
+              <div class="pill">投資 ${yen(stats.totalStake)}円</div>
+              <div class="pill">払戻 ${yen(stats.totalReturn)}円</div>
+              <div class="pill">収支 ${stats.profit >= 0 ? '+' : ''}${yen(stats.profit)}円</div>
+              <div class="pill ${roiClass}">回収率 ${pct(stats.roi)}</div>
+            </div>
+            <div class="actions">
+              <button class="primary" onclick="openPerson('${person.id}')">開く</button>
+              <button onclick="renamePerson('${person.id}')">名前変更</button>
+              <button onclick="movePerson('${person.id}', -1)" ${i === 0 ? 'disabled' : ''}>↑</button>
+              <button onclick="movePerson('${person.id}', 1)" ${i === list.length - 1 ? 'disabled' : ''}>↓</button>
+              <button class="danger" onclick="deletePerson('${person.id}')">削除</button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderPerson() {
+      const person = getCurrentPerson();
+      if (!person) return;
+      els.personTitle.textContent = person.name + ' さんのデータ';
+      const stats = calcPersonSelectedStats(person);
+      els.personSummary.innerHTML = [
+        statBox('選択中グループ数', String(stats.selectedCount)),
+        statBox('投資合計', yen(stats.totalStake) + '円'),
+        statBox('払戻合計', yen(stats.totalReturn) + '円'),
+        statBox('合計回収率', pct(stats.roi), stats.roi >= 100 ? 'positive' : 'negative'),
+        statBox('収支', (stats.profit >= 0 ? '+' : '') + yen(stats.profit) + '円', stats.profit >= 0 ? 'positive' : 'negative')
+      ].join('');
+
+      if (!person.groups.length) {
+        els.groupList.innerHTML = '<div class="empty">まだグループがありません。上から追加してください。</div>';
+        els.groupSelectionList.innerHTML = '<div class="empty">グループを追加するとここに表示されます。</div>';
+        return;
+      }
+
+      els.groupList.innerHTML = person.groups.map((group, i) => {
+        const gs = calcGroupStats(group);
+        const checked = (person.selectedGroupIds || []).includes(group.id);
+        return `
+          <div class="group-card">
+            <div class="group-top">
+              <div>
+                <strong>${escapeHtml(group.name)}</strong>
+                <div class="mini">入力 ${gs.count}件</div>
+              </div>
+              <div class="pill ${gs.roi >= 100 ? 'positive' : 'negative'}">回収率 ${pct(gs.roi)}</div>
+            </div>
+            <div class="row">
+              <div class="pill">投資 ${yen(gs.totalStake)}円</div>
+              <div class="pill">払戻 ${yen(gs.totalReturn)}円</div>
+              <div class="pill">収支 ${gs.profit >= 0 ? '+' : ''}${yen(gs.profit)}円</div>
+              <div class="pill">${checked ? '選択中' : '未選択'}</div>
+            </div>
+            <div class="actions">
+              <button class="primary" onclick="openGroup('${group.id}')">開く</button>
+              <button onclick="renameGroup('${group.id}')">名前変更</button>
+              <button onclick="toggleGroupSelection('${group.id}')">${checked ? '選択解除' : '選択'}</button>
+              <button onclick="moveGroup('${group.id}', -1)" ${i === 0 ? 'disabled' : ''}>↑</button>
+              <button onclick="moveGroup('${group.id}', 1)" ${i === person.groups.length - 1 ? 'disabled' : ''}>↓</button>
+              <button class="danger" onclick="deleteGroup('${group.id}')">削除</button>
+            </div>
+          </div>`;
+      }).join('');
+
+      els.groupSelectionList.innerHTML = person.groups.map(group => {
+        const checked = (person.selectedGroupIds || []).includes(group.id);
+        const gs = calcGroupStats(group);
+        return `
+          <label class="check-item">
+            <div>
+              <div><strong>${escapeHtml(group.name)}</strong></div>
+              <div class="mini">投資 ${yen(gs.totalStake)}円 / 回収率 ${pct(gs.roi)}</div>
+            </div>
+            <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleGroupSelection('${group.id}')">
+          </label>`;
+      }).join('');
+    }
+
+    function renderGroup() {
+      const person = getCurrentPerson();
+      const group = getCurrentGroup();
+      if (!person || !group) return;
+      const gs = calcGroupStats(group);
+      els.groupTitle.textContent = person.name + ' / ' + group.name;
+      els.groupSummary.innerHTML = [
+        statBox('件数', String(gs.count)),
+        statBox('投資合計', yen(gs.totalStake) + '円'),
+        statBox('払戻合計', yen(gs.totalReturn) + '円'),
+        statBox('回収率', pct(gs.roi), gs.roi >= 100 ? 'positive' : 'negative'),
+        statBox('収支', (gs.profit >= 0 ? '+' : '') + yen(gs.profit) + '円', gs.profit >= 0 ? 'positive' : 'negative')
+      ].join('');
+
+      if (!group.entries.length) {
+        els.entryTableWrap.innerHTML = '<div class="empty">まだ入力がありません。上から追加してください。</div>';
+      } else {
+        els.entryTableWrap.innerHTML = `
+          <table class="entries-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>日付</th>
+                <th class="right">投資額</th>
+                <th class="right">払戻額</th>
+                <th class="right">回収率</th>
+                <th class="right">累積回収率</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${group.entries.map((entry, index) => {
+                const stake = clampNumber(entry.stake);
+                const payout = getEntryPayout(entry);
+                const rate = getEntryRoi(entry);
+                const point = gs.points[index] || { rate: 0 };
+                return `
+                  <tr>
+                    <td>${index + 1}</td>
+                    <td><input type="date" value="${entry.date || ''}" onchange="updateEntry('${entry.id}', 'date', this.value)"></td>
+                    <td class="right"><input type="number" min="0" step="1" value="${stake}" onchange="updateEntry('${entry.id}', 'stake', this.value)"></td>
+                    <td class="right"><input type="number" min="0" step="1" value="${payout}" onchange="updateEntry('${entry.id}', 'payout', this.value)"></td>
+                    <td class="right">${pct(rate)}</td>
+                    <td class="right ${point.rate >= 100 ? 'positive' : 'negative'}">${pct(point.rate)}</td>
+                    <td>
+                      <div class="actions">
+                        <button onclick="moveEntry('${entry.id}', -1)" ${index === 0 ? 'disabled' : ''}>↑</button>
+                        <button onclick="moveEntry('${entry.id}', 1)" ${index === group.entries.length - 1 ? 'disabled' : ''}>↓</button>
+                        <button class="danger" onclick="deleteEntry('${entry.id}')">削除</button>
+                      </div>
+                    </td>
+                  </tr>`;
+              }).join('')}
+            </tbody>
+          </table>`;
+      }
+      drawChart(gs.points);
+    }
+
+    function render() {
+      const showGroup = !!getCurrentGroup();
+      const showPerson = !showGroup && !!getCurrentPerson();
+      els.homeScreen.classList.toggle('hidden', showPerson || showGroup);
+      els.personScreen.classList.toggle('hidden', !showPerson);
+      els.groupScreen.classList.toggle('hidden', !showGroup);
+
+      if (!showPerson && !showGroup) renderHome();
+      if (showPerson) renderPerson();
+      if (showGroup) renderGroup();
+    }
+
+    function drawChart(points) {
+      const svg = els.chartSvg;
+      const width = 800;
+      const height = 280;
+      const pad = { top: 20, right: 20, bottom: 34, left: 58 };
+      const plotW = width - pad.left - pad.right;
+      const plotH = height - pad.top - pad.bottom;
+      if (!points.length) {
+        svg.innerHTML = `
+          <rect x="0" y="0" width="${width}" height="${height}" fill="#fff"></rect>
+          <text x="400" y="140" text-anchor="middle" fill="#6b7280" font-size="16">データを追加するとここに遷移が表示されます</text>`;
+        return;
+      }
+      const rates = points.map(p => p.rate);
+      let min = Math.min(...rates, 100);
+      let max = Math.max(...rates, 100);
+      if (min === max) { min -= 10; max += 10; }
+      const margin = Math.max((max - min) * 0.1, 5);
+      min -= margin;
+      max += margin;
+      const x = (i) => pad.left + (points.length === 1 ? plotW / 2 : (i / (points.length - 1)) * plotW);
+      const y = (v) => pad.top + (1 - (v - min) / (max - min)) * plotH;
+      const poly = points.map((p, i) => `${x(i)},${y(p.rate)}`).join(' ');
+      const yTicks = 5;
+      const lines = [];
+      for (let i = 0; i <= yTicks; i++) {
+        const value = min + (max - min) * (i / yTicks);
+        const yy = y(value);
+        lines.push(`<line x1="${pad.left}" y1="${yy}" x2="${width - pad.right}" y2="${yy}" stroke="#e5e7eb" />`);
+        lines.push(`<text x="${pad.left - 8}" y="${yy + 4}" text-anchor="end" fill="#6b7280" font-size="11">${value.toFixed(0)}%</text>`);
+      }
+      const baseY = y(100);
+      const pointsSvg = points.map((p, i) => `
+        <g>
+          <circle cx="${x(i)}" cy="${y(p.rate)}" r="4" fill="#2563eb"></circle>
+          <title>${i + 1}件目: ${pct(p.rate)}</title>
+        </g>`).join('');
+      const xLabels = points.map((p, i) => {
+        if (points.length > 12 && i % Math.ceil(points.length / 6) !== 0 && i !== points.length - 1) return '';
+        return `<text x="${x(i)}" y="${height - 10}" text-anchor="middle" fill="#6b7280" font-size="11">${i + 1}</text>`;
+      }).join('');
+      svg.innerHTML = `
+        <rect x="0" y="0" width="${width}" height="${height}" fill="#fff"></rect>
+        ${lines.join('')}
+        <line x1="${pad.left}" y1="${baseY}" x2="${width - pad.right}" y2="${baseY}" stroke="#16a34a" stroke-dasharray="6 6" />
+        <line x1="${pad.left}" y1="${pad.top}" x2="${pad.left}" y2="${height - pad.bottom}" stroke="#9ca3af" />
+        <line x1="${pad.left}" y1="${height - pad.bottom}" x2="${width - pad.right}" y2="${height - pad.bottom}" stroke="#9ca3af" />
+        <polyline fill="none" stroke="#2563eb" stroke-width="3" points="${poly}" />
+        ${pointsSvg}
+        ${xLabels}
+        <text x="${width / 2}" y="${height - 2}" text-anchor="middle" fill="#6b7280" font-size="11">入力順</text>
+      `;
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    async function addPerson() {
+      const name = els.personNameInput.value.trim();
+      if (!name) return;
+      await mutate(() => {
+        state.people.push({
+          id: uid('person'),
+          name,
+          groups: [],
+          selectedGroupIds: []
+        });
+        els.personNameInput.value = '';
+      });
+    }
+
+    async function addGroup() {
+      const person = getCurrentPerson();
+      const name = els.groupNameInput.value.trim();
+      if (!person || !name) return;
+      await mutate(() => {
+        person.groups.push({ id: uid('group'), name, entries: [] });
+        els.groupNameInput.value = '';
+      });
+    }
+
+    async function addEntry() {
+      const group = getCurrentGroup();
+      if (!group) return;
+      const date = els.entryDateInput.value;
+      const stake = clampNumber(els.entryStakeInput.value);
+      const payout = clampNumber(els.entryPayoutInput.value);
+      if (stake <= 0) {
+        alert('投資額は1以上で入力してください。');
+        return;
+      }
+      await mutate(() => {
+        group.entries.push({ id: uid('entry'), date, stake, payout });
+        els.entryDateInput.value = '';
+        els.entryStakeInput.value = '';
+        els.entryPayoutInput.value = '';
+      });
+    }
+
+    window.openPerson = async (personId) => {
+      await mutate(() => {
+        state.currentPersonId = personId;
+        state.currentGroupId = null;
+      });
+    };
+
+    window.openGroup = async (groupId) => {
+      await mutate(() => {
+        state.currentGroupId = groupId;
+      });
+    };
+
+    window.renamePerson = async (personId) => {
+      const person = state.people.find(p => p.id === personId);
+      if (!person) return;
+      const next = prompt('新しい名前を入力してください。', person.name);
+      if (next === null) return;
+      const name = next.trim();
+      if (!name) return;
+      await mutate(() => { person.name = name; });
+    };
+
+    window.renameGroup = async (groupId) => {
+      const person = getCurrentPerson();
+      const group = person?.groups.find(g => g.id === groupId);
+      if (!group) return;
+      const next = prompt('新しいグループ名を入力してください。', group.name);
+      if (next === null) return;
+      const name = next.trim();
+      if (!name) return;
+      await mutate(() => { group.name = name; });
+    };
+
+    window.movePerson = async (personId, dir) => {
+      const idx = state.people.findIndex(p => p.id === personId);
+      const ni = idx + dir;
+      if (idx < 0 || ni < 0 || ni >= state.people.length) return;
+      await mutate(() => {
+        const [item] = state.people.splice(idx, 1);
+        state.people.splice(ni, 0, item);
+      });
+    };
+
+    window.moveGroup = async (groupId, dir) => {
+      const person = getCurrentPerson();
+      if (!person) return;
+      const idx = person.groups.findIndex(g => g.id === groupId);
+      const ni = idx + dir;
+      if (idx < 0 || ni < 0 || ni >= person.groups.length) return;
+      await mutate(() => {
+        const [item] = person.groups.splice(idx, 1);
+        person.groups.splice(ni, 0, item);
+      });
+    };
+
+    window.moveEntry = async (entryId, dir) => {
+      const group = getCurrentGroup();
+      if (!group) return;
+      const idx = group.entries.findIndex(e => e.id === entryId);
+      const ni = idx + dir;
+      if (idx < 0 || ni < 0 || ni >= group.entries.length) return;
+      await mutate(() => {
+        const [item] = group.entries.splice(idx, 1);
+        group.entries.splice(ni, 0, item);
+      });
+    };
+
+    window.deletePerson = async (personId) => {
+      const person = state.people.find(p => p.id === personId);
+      if (!person) return;
+      if (!confirm('「' + person.name + '」を削除しますか？ グループと入力もすべて消えます。')) return;
+      await mutate(() => {
+        state.people = state.people.filter(p => p.id !== personId);
+        if (state.currentPersonId === personId) {
+          state.currentPersonId = null;
+          state.currentGroupId = null;
+        }
+      });
+    };
+
+    window.deleteGroup = async (groupId) => {
+      const person = getCurrentPerson();
+      const group = person?.groups.find(g => g.id === groupId);
+      if (!person || !group) return;
+      if (!confirm('「' + group.name + '」を削除しますか？ 入力もすべて消えます。')) return;
+      await mutate(() => {
+        person.groups = person.groups.filter(g => g.id !== groupId);
+        person.selectedGroupIds = (person.selectedGroupIds || []).filter(id => id !== groupId);
+        if (state.currentGroupId === groupId) state.currentGroupId = null;
+      });
+    };
+
+    window.deleteEntry = async (entryId) => {
+      const group = getCurrentGroup();
+      if (!group) return;
+      if (!confirm('この入力を削除しますか？')) return;
+      await mutate(() => {
+        group.entries = group.entries.filter(e => e.id !== entryId);
+      });
+    };
+
+    window.toggleGroupSelection = async (groupId) => {
+      const person = getCurrentPerson();
+      if (!person) return;
+      await mutate(() => {
+        const set = new Set(person.selectedGroupIds || []);
+        if (set.has(groupId)) set.delete(groupId);
+        else set.add(groupId);
+        person.selectedGroupIds = Array.from(set);
+      });
+    };
+
+    window.updateEntry = async (entryId, field, value) => {
+      const group = getCurrentGroup();
+      const entry = group?.entries.find(e => e.id === entryId);
+      if (!entry) return;
+      await mutate(() => {
+        entry[field] = field === 'date' ? value : clampNumber(value);
+      });
+    };
+
+    els.addPersonBtn.addEventListener('click', addPerson);
+    els.personNameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') addPerson();
+    });
+
+    els.addGroupBtn.addEventListener('click', addGroup);
+    els.groupNameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') addGroup();
+    });
+
+    els.addEntryBtn.addEventListener('click', addEntry);
+    els.entryPayoutInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') addEntry();
+    });
+
+
+    function toUrlSafeBase64FromString(str) {
+      return btoa(unescape(encodeURIComponent(str)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/g, '');
+    }
+
+    function fromUrlSafeBase64ToString(param) {
+      const base64 = param.replace(/-/g, '+').replace(/_/g, '/');
+      const pad = '='.repeat((4 - (base64.length % 4)) % 4);
+      return decodeURIComponent(escape(atob(base64 + pad)));
+    }
+
+    function toUrlSafeBase64(bytes) {
+      let binary = '';
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+      }
+      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+    }
+
+    function fromUrlSafeBase64(param) {
+      const base64 = param.replace(/-/g, '+').replace(/_/g, '/');
+      const pad = '='.repeat((4 - (base64.length % 4)) % 4);
+      const binary = atob(base64 + pad);
+      return Uint8Array.from(binary, c => c.charCodeAt(0));
+    }
+
+    async function encodeStateForUrl(obj) {
+      const json = JSON.stringify(obj);
+      const bytes = new TextEncoder().encode(json);
+      if ('CompressionStream' in window) {
+        const cs = new CompressionStream('gzip');
+        const writer = cs.writable.getWriter();
+        await writer.write(bytes);
+        await writer.close();
+        const compressed = new Uint8Array(await new Response(cs.readable).arrayBuffer());
+        return 'gz.' + toUrlSafeBase64(compressed);
+      }
+      return 'raw.' + toUrlSafeBase64(bytes);
+    }
+
+    async function decodeStateFromUrlParam(param) {
+      const [prefix, payload] = param.includes('.') ? param.split('.', 2) : ['raw', param];
+      const bytes = fromUrlSafeBase64(payload);
+      let decodedBytes = bytes;
+      if (prefix === 'gz') {
+        if (!('DecompressionStream' in window)) throw new Error('decompression unsupported');
+        const ds = new DecompressionStream('gzip');
+        const writer = ds.writable.getWriter();
+        await writer.write(bytes);
+        await writer.close();
+        decodedBytes = new Uint8Array(await new Response(ds.readable).arrayBuffer());
+      }
+      const data = JSON.parse(new TextDecoder().decode(decodedBytes));
+      if (!data || !Array.isArray(data.people)) throw new Error('invalid data');
+      return data;
+    }
+
+    function clearDataQueryParam() {
+      const url = new URL(location.href);
+      if (!url.searchParams.has('data')) return;
+      url.searchParams.delete('data');
+      history.replaceState(null, '', url.toString());
+    }
+
+    function getBattleGroupCatalog() {
+      const map = new Map();
+      for (const person of state.people) {
+        const selected = new Set(person.selectedGroupIds || []);
+        for (const group of person.groups || []) {
+          const key = group.name || '（無名グループ）';
+          if (!map.has(key)) map.set(key, { name: key, checked: false });
+          if (selected.has(group.id)) map.get(key).checked = true;
+        }
+      }
+      return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+    }
+
+    function openBattleModal() {
+      const groups = getBattleGroupCatalog();
+      els.battlePeopleList.innerHTML = state.people.length
+        ? state.people.map(person => `
+          <label class="check-item">
+            <div><strong>${escapeHtml(person.name)}</strong></div>
+            <input type="checkbox" class="battle-person-check" value="${person.id}" checked>
+          </label>
+        `).join('')
+        : '<div class="empty">名前がありません。</div>';
+      els.battleGroupList.innerHTML = groups.length
+        ? groups.map(group => `
+          <label class="check-item">
+            <div><strong>${escapeHtml(group.name)}</strong></div>
+            <input type="checkbox" class="battle-group-check" value="${escapeHtml(group.name)}" ${group.checked ? 'checked' : ''}>
+          </label>
+        `).join('')
+        : '<div class="empty">グループがありません。</div>';
+      els.battleResult.classList.add('hidden');
+      els.battleResult.innerHTML = '';
+      els.battleFullscreenWrap.classList.add('hidden');
+      els.battleModal.classList.remove('hidden');
+    }
+
+    function closeBattleModal() {
+      els.battleModal.classList.add('hidden');
+    }
+
+    function battleProfitTone(profit) {
+      if (profit > 0) return 'positive';
+      if (profit < 0) return 'negative';
+      return 'neutral';
+    }
+
+    function battleProfitLine(profit) {
+      const tone = battleProfitTone(profit);
+      const cls = tone === 'neutral' ? 'battle-profit-line' : `battle-profit-line ${tone}`;
+      return `<small class="${cls}">収支 ${profit >= 0 ? '+' : ''}${yen(profit)}円</small>`;
+    }
+
+    function battleCellClass(profit, hasCount) {
+      if (!hasCount) return '';
+      const tone = battleProfitTone(profit);
+      if (tone === 'positive') return ' class="battle-cell-positive"';
+      if (tone === 'negative') return ' class="battle-cell-negative"';
+      return ' class="battle-cell-neutral"';
+    }
+
+    function buildBattleTableHtml(personIds, groupNames) {
+      const selectedPeople = state.people.filter(p => personIds.includes(p.id));
+      if (!selectedPeople.length) {
+        return '<h3>対戦表</h3><div class="empty">名前を1つ以上選択してください。</div>';
+      }
+      if (!groupNames.length) {
+        return '<h3>対戦表</h3><div class="empty">グループを1つ以上選択してください。</div>';
+      }
+      const head = groupNames.map(name => `<th>${escapeHtml(name)}</th>`).join('');
+      const rows = selectedPeople.map(person => {
+        const total = { totalStake: 0, totalReturn: 0, count: 0 };
+        const cells = groupNames.map(groupName => {
+          const groups = (person.groups || []).filter(g => g.name === groupName);
+          let stake = 0, payout = 0, count = 0;
+          for (const group of groups) {
+            const gs = calcGroupStats(group);
+            stake += gs.totalStake;
+            payout += gs.totalReturn;
+            count += gs.count;
+          }
+          total.totalStake += stake;
+          total.totalReturn += payout;
+          total.count += count;
+          const roi = stake > 0 ? (payout / stake) * 100 : 0;
+          const profit = payout - stake;
+          return `<td${battleCellClass(profit, count)}>${count ? `${pct(roi)}<small>${yen(stake)}円 → ${yen(payout)}円 / ${count}件</small>${battleProfitLine(profit)}` : '—'}</td>`;
+        }).join('');
+        const totalRoi = total.totalStake > 0 ? (total.totalReturn / total.totalStake) * 100 : 0;
+        const totalProfit = total.totalReturn - total.totalStake;
+        const totalCell = `<td${battleCellClass(totalProfit, total.count)}><strong>${total.count ? pct(totalRoi) : '—'}</strong>${total.count ? `<small>${yen(total.totalStake)}円 → ${yen(total.totalReturn)}円 / ${total.count}件</small>${battleProfitLine(totalProfit)}` : ''}</td>`;
+        return `<tr><th>${escapeHtml(person.name)}</th>${cells}${totalCell}</tr>`;
+      }).join('');
+      return `
+        <h3>対戦表</h3>
+        <div class="battle-table-wrap">
+          <table class="battle-table">
+            <thead><tr><th>名前</th>${head}<th>合計</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function getBattleSelection() {
+      return {
+        personIds: Array.from(document.querySelectorAll('.battle-person-check:checked')).map(el => el.value),
+        groupNames: Array.from(document.querySelectorAll('.battle-group-check:checked')).map(el => el.value)
+      };
+    }
+
+    function renderBattleTable() {
+      const { personIds, groupNames } = getBattleSelection();
+      els.battleResult.classList.remove('hidden');
+      els.battleResult.innerHTML = buildBattleTableHtml(personIds, groupNames);
+      const valid = personIds.length > 0 && groupNames.length > 0;
+      els.battleFullscreenWrap.classList.toggle('hidden', !valid);
+    }
+
+    function buildBattlePayload(personIds, groupNames) {
+      const personIdSet = new Set(personIds);
+      const groupNameSet = new Set(groupNames);
+      const people = state.people
+        .filter(person => personIdSet.has(person.id))
+        .map(person => ({
+          name: person.name,
+          groups: (person.groups || [])
+            .filter(group => groupNameSet.has(group.name))
+            .map(group => ({
+              name: group.name,
+              entries: (group.entries || []).map(entry => ({
+                date: entry.date || '',
+                stake: clampNumber(entry.stake),
+                payout: getEntryPayout(entry)
+              }))
+            }))
+        }));
+
+      return {
+        groupNames: [...groupNames],
+        people
+      };
+    }
+
+    function buildBattleShareUrl(personIds, groupNames) {
+      const payload = buildBattlePayload(personIds, groupNames);
+      const encoded = toUrlSafeBase64FromString(JSON.stringify(payload));
+      const url = new URL(location.href);
+      url.searchParams.set('mode', 'battle');
+      url.searchParams.set('battleData', encoded);
+      return url.toString();
+    }
+
+    function calcGroupStatsFromEntries(entries) {
+      const safeGroup = { entries: Array.isArray(entries) ? entries : [] };
+      return calcGroupStats(safeGroup);
+    }
+
+    function buildBattleTableHtmlFromPayload(payload) {
+      const selectedPeople = Array.isArray(payload?.people) ? payload.people : [];
+      const groupNames = Array.isArray(payload?.groupNames) ? payload.groupNames : [];
+      if (!selectedPeople.length) {
+        return '<h3>対戦表</h3><div class="empty">表示できる名前データがありません。</div>';
+      }
+      if (!groupNames.length) {
+        return '<h3>対戦表</h3><div class="empty">表示できるグループデータがありません。</div>';
+      }
+      const head = groupNames.map(name => `<th>${escapeHtml(name)}</th>`).join('');
+      const rows = selectedPeople.map(person => {
+        const total = { totalStake: 0, totalReturn: 0, count: 0 };
+        const cells = groupNames.map(groupName => {
+          const groups = (person.groups || []).filter(g => g.name === groupName);
+          let stake = 0, payout = 0, count = 0;
+          for (const group of groups) {
+            const gs = calcGroupStatsFromEntries(group.entries);
+            stake += gs.totalStake;
+            payout += gs.totalReturn;
+            count += gs.count;
+          }
+          total.totalStake += stake;
+          total.totalReturn += payout;
+          total.count += count;
+          const roi = stake > 0 ? (payout / stake) * 100 : 0;
+          const profit = payout - stake;
+          return `<td${battleCellClass(profit, count)}>${count ? `${pct(roi)}<small>${yen(stake)}円 → ${yen(payout)}円 / ${count}件</small>${battleProfitLine(profit)}` : '—'}</td>`;
+        }).join('');
+        const totalRoi = total.totalStake > 0 ? (total.totalReturn / total.totalStake) * 100 : 0;
+        const totalProfit = total.totalReturn - total.totalStake;
+        const totalCell = `<td${battleCellClass(totalProfit, total.count)}><strong>${total.count ? pct(totalRoi) : '—'}</strong>${total.count ? `<small>${yen(total.totalStake)}円 → ${yen(total.totalReturn)}円 / ${total.count}件</small>${battleProfitLine(totalProfit)}` : ''}</td>`;
+        return `<tr><th>${escapeHtml(person.name)}</th>${cells}${totalCell}</tr>`;
+      }).join('');
+      return `
+        <h3>対戦表</h3>
+        <div class="battle-table-wrap">
+          <table class="battle-table">
+            <thead><tr><th>名前</th>${head}<th>合計</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    async function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (!ok) throw new Error('copy failed');
+    }
+
+    async function buildEditableShareUrl() {
+      const current = String(location.href || '');
+      const base = current.split('#')[0].split('?')[0];
+      const url = new URL(base);
+      url.searchParams.set('data', await encodeStateForUrl(state));
+      return url.toString();
+    }
+
+    async function copyEditableUrl() {
+      try {
+        const shareUrl = await buildEditableShareUrl();
+        await copyText(shareUrl);
+        alert('共有用URLをコピーしました。');
+      } catch (err) {
+        console.error(err);
+        alert('URLのコピーに失敗しました。');
+      }
+    }
+
+    async function copyBattleUrl() {
+      const { personIds, groupNames } = getBattleSelection();
+      if (!personIds.length) {
+        alert('名前を1つ以上選択してください。');
+        return;
+      }
+      if (!groupNames.length) {
+        alert('グループを1つ以上選択してください。');
+        return;
+      }
+      try {
+        await copyText(buildBattleShareUrl(personIds, groupNames));
+        alert('対戦表URLをコピーしました。');
+      } catch (err) {
+        console.error(err);
+        alert('対戦表URLのコピーに失敗しました。');
+      }
+    }
+
+    async function saveBattleTableAsPng() {
+      const { personIds, groupNames } = getBattleSelection();
+      if (!personIds.length) {
+        alert('名前を1つ以上選択してください。');
+        return;
+      }
+      if (!groupNames.length) {
+        alert('グループを1つ以上選択してください。');
+        return;
+      }
+
+      const selectedPeople = state.people.filter(p => personIds.includes(p.id));
+      const cellPaddingX = 14;
+      const cellPaddingY = 10;
+      const rowHeight = 68;
+      const headerHeight = 44;
+      const nameColWidth = 180;
+      const groupColWidth = 220;
+      const totalColWidth = 220;
+      const tableWidth = nameColWidth + groupNames.length * groupColWidth + totalColWidth;
+      const tableHeight = headerHeight + selectedPeople.length * rowHeight;
+      const margin = 24;
+      const canvas = document.createElement('canvas');
+      const scale = Math.max(2, Math.ceil(window.devicePixelRatio || 1));
+      canvas.width = (tableWidth + margin * 2) * scale;
+      canvas.height = (tableHeight + margin * 2) * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+
+      ctx.fillStyle = '#f6f7fb';
+      ctx.fillRect(0, 0, tableWidth + margin * 2, tableHeight + margin * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(margin, margin, tableWidth, tableHeight);
+
+      const lineColor = '#d7dce5';
+      const headerBg = '#eef4ff';
+      const altBg = '#fafcff';
+      const textColor = '#1f2937';
+      const subColor = '#6b7280';
+      const profitGreenBg = '#effcf3';
+      const profitRedBg = '#fff1f2';
+      const profitGreenText = '#15803d';
+      const profitRedText = '#b91c1c';
+
+      function drawCell(x, y, w, h, bg) {
+        ctx.fillStyle = bg;
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeStyle = lineColor;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x, y, w, h);
+      }
+
+      function fitText(text, maxWidth) {
+        const s = String(text ?? '');
+        if (ctx.measureText(s).width <= maxWidth) return s;
+        let out = s;
+        while (out.length > 1 && ctx.measureText(out + '…').width > maxWidth) out = out.slice(0, -1);
+        return out + '…';
+      }
+
+      function drawText(text, x, y, maxWidth, font, color) {
+        ctx.font = font;
+        ctx.fillStyle = color;
+        ctx.textBaseline = 'top';
+        ctx.fillText(fitText(text, maxWidth), x, y);
+      }
+
+      let x = margin;
+      let y = margin;
+      const headerCols = [
+        { label: '名前', width: nameColWidth },
+        ...groupNames.map(name => ({ label: name, width: groupColWidth })),
+        { label: '合計', width: totalColWidth }
+      ];
+      for (const col of headerCols) {
+        drawCell(x, y, col.width, headerHeight, headerBg);
+        drawText(col.label, x + cellPaddingX, y + 12, col.width - cellPaddingX * 2, 'bold 15px sans-serif', textColor);
+        x += col.width;
+      }
+
+      y += headerHeight;
+      for (let row = 0; row < selectedPeople.length; row++) {
+        const person = selectedPeople[row];
+        const rowBg = row % 2 === 0 ? '#ffffff' : altBg;
+        let colX = margin;
+        drawCell(colX, y, nameColWidth, rowHeight, rowBg);
+        drawText(person.name, colX + cellPaddingX, y + 10, nameColWidth - cellPaddingX * 2, 'bold 16px sans-serif', textColor);
+        colX += nameColWidth;
+
+        let totalStake = 0, totalReturn = 0, totalCount = 0;
+        for (const groupName of groupNames) {
+          const groups = (person.groups || []).filter(g => g.name === groupName);
+          let stake = 0, payout = 0, count = 0;
+          for (const group of groups) {
+            const gs = calcGroupStats(group);
+            stake += gs.totalStake;
+            payout += gs.totalReturn;
+            count += gs.count;
+          }
+          totalStake += stake;
+          totalReturn += payout;
+          totalCount += count;
+          let groupBg = rowBg;
+          if (count) {
+            const profit = payout - stake;
+            if (profit > 0) groupBg = profitGreenBg;
+            else if (profit < 0) groupBg = profitRedBg;
+          }
+          drawCell(colX, y, groupColWidth, rowHeight, groupBg);
+          if (count) {
+            const roi = stake > 0 ? (payout / stake) * 100 : 0;
+            const profit = payout - stake;
+            const profitColor = profit > 0 ? profitGreenText : (profit < 0 ? profitRedText : subColor);
+            drawText(pct(roi), colX + cellPaddingX, y + 8, groupColWidth - cellPaddingX * 2, 'bold 15px sans-serif', textColor);
+            drawText(`${yen(stake)}円 → ${yen(payout)}円`, colX + cellPaddingX, y + 31, groupColWidth - cellPaddingX * 2, '12px sans-serif', subColor);
+            drawText(`${count}件 / 収支 ${profit >= 0 ? '+' : ''}${yen(profit)}円`, colX + cellPaddingX, y + 48, groupColWidth - cellPaddingX * 2, 'bold 12px sans-serif', profitColor);
+          } else {
+            drawText('—', colX + cellPaddingX, y + 22, groupColWidth - cellPaddingX * 2, '15px sans-serif', subColor);
+          }
+          colX += groupColWidth;
+        }
+
+        let totalBg = rowBg;
+        if (totalCount) {
+          const totalProfit = totalReturn - totalStake;
+          if (totalProfit > 0) totalBg = profitGreenBg;
+          else if (totalProfit < 0) totalBg = profitRedBg;
+        }
+        drawCell(colX, y, totalColWidth, rowHeight, totalBg);
+        if (totalCount) {
+          const totalRoi = totalStake > 0 ? (totalReturn / totalStake) * 100 : 0;
+          const totalProfit = totalReturn - totalStake;
+          const totalProfitColor = totalProfit > 0 ? profitGreenText : (totalProfit < 0 ? profitRedText : subColor);
+          drawText(pct(totalRoi), colX + cellPaddingX, y + 8, totalColWidth - cellPaddingX * 2, 'bold 15px sans-serif', textColor);
+          drawText(`${yen(totalStake)}円 → ${yen(totalReturn)}円`, colX + cellPaddingX, y + 31, totalColWidth - cellPaddingX * 2, '12px sans-serif', subColor);
+          drawText(`${totalCount}件 / 収支 ${totalProfit >= 0 ? '+' : ''}${yen(totalProfit)}円`, colX + cellPaddingX, y + 48, totalColWidth - cellPaddingX * 2, 'bold 12px sans-serif', totalProfitColor);
+        } else {
+          drawText('—', colX + cellPaddingX, y + 22, totalColWidth - cellPaddingX * 2, '15px sans-serif', subColor);
+        }
+        y += rowHeight;
+      }
+
+      const link = document.createElement('a');
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      link.href = canvas.toDataURL('image/png');
+      link.download = `keiba_battle_table_${stamp}.png`;
+      link.click();
+    }
+
+    function buildBattleFullscreenDocument(tableHtml) {
+      return `<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>対戦表</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #f6f7fb; color: #222; }
+  .wrap { padding: 20px; }
+  .topbar { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+  button { border: 0; background: #1f6feb; color: #fff; border-radius: 10px; padding: 12px 18px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  h3 { margin: 0 0 14px; }
+  .battle-table-wrap { overflow: auto; background: #fff; border: 1px solid #d8deea; border-radius: 14px; }
+  .battle-table { width: 100%; border-collapse: collapse; min-width: 720px; }
+  .battle-table th, .battle-table td { border-bottom: 1px solid #e7ebf3; border-right: 1px solid #eef2f8; padding: 10px; text-align: left; vertical-align: top; }
+  .battle-table th:last-child, .battle-table td:last-child { border-right: 0; }
+  .battle-table thead th { position: sticky; top: 0; background: #eef4ff; z-index: 1; }
+  .battle-table tbody tr:nth-child(even) { background: #fafcff; }
+  .battle-cell-positive { background: linear-gradient(180deg, #f3fff7 0%, #ecfdf3 100%); }
+  .battle-cell-negative { background: linear-gradient(180deg, #fff5f5 0%, #fef0f0 100%); }
+  .battle-cell-neutral { background: #fcfdff; }
+  small { display: block; color: #667085; margin-top: 6px; line-height: 1.5; }
+  .battle-profit-line { font-weight: 700; }
+  .battle-profit-line.positive { color: #15803d; }
+  .battle-profit-line.negative { color: #b91c1c; }
+  .empty { padding: 20px; color: #6b7280; border: 1px dashed #d7dce5; border-radius: 16px; text-align: center; background: #fcfdff; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar"><button onclick="goBack()">閉じる</button></div>
+    ${tableHtml}
+  </div>
+  <scraaacststaaaipt>
+function goBack() {
+  if (history.length > 1) {
+    history.back();
+  } else {
+    window.close();
+  }
+}
+  </scraaacststaaaipt>
+</body>
+</html>`.replaceAll("aaacststaaa", "");
+    }
+
+    function openBattleFullscreen() {
+      const { personIds, groupNames } = getBattleSelection();
+      if (!personIds.length) {
+        alert('名前を1つ以上選択してください。');
+        return;
+      }
+      if (!groupNames.length) {
+        alert('グループを1つ以上選択してください。');
+        return;
+      }
+      const tableHtml = buildBattleTableHtml(personIds, groupNames);
+      const fullHtml = buildBattleFullscreenDocument(tableHtml);
+      const win = window.open('', '_blank');
+      if (!win) {
+        alert('新しいタブを開けませんでした。ポップアップブロックをご確認ください。');
+        return;
+      }
+      win.document.open();
+      win.document.write(fullHtml);
+      win.document.close();
+    }
+
+    function applyBattleQueryIfNeeded() {
+      const url = new URL(location.href);
+      if (url.searchParams.get('mode') !== 'battle') return false;
+      const param = url.searchParams.get('battleData');
+      if (!param) return false;
+      try {
+        const decoded = JSON.parse(fromUrlSafeBase64ToString(param));
+        const tableHtml = buildBattleTableHtmlFromPayload(decoded);
+        document.open();
+        document.write(buildBattleFullscreenDocument(tableHtml));
+        document.close();
+        return true;
+      } catch (err) {
+        console.error(err);
+        alert('対戦表URLの読み込みに失敗しました。');
+        return false;
+      }
+    }
+
+    els.backToHomeBtn.addEventListener('click', async () => {
+      await mutate(() => {
+        state.currentPersonId = null;
+        state.currentGroupId = null;
+      });
+    });
+
+    els.backToPersonBtn.addEventListener('click', async () => {
+      await mutate(() => {
+        state.currentGroupId = null;
+      });
+    });
+
+    els.exportBtn.addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'keiba_recovery_tracker_backup.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    els.battleBtn.addEventListener('click', openBattleModal);
+    els.closeBattleBtn.addEventListener('click', closeBattleModal);
+    els.viewBattleBtn.addEventListener('click', renderBattleTable);
+    els.saveBattlePngBtn.addEventListener('click', saveBattleTableAsPng);
+    els.openBattleFullscreenBtn.addEventListener('click', openBattleFullscreen);
+    els.copyBattleUrlBtn.addEventListener('click', copyBattleUrl);
+    els.battleModal.addEventListener('click', (e) => {
+      if (e.target === els.battleModal) closeBattleModal();
+    });
+
+    els.copyUrlBtn.addEventListener('click', copyEditableUrl);
+
+    els.importBtn.addEventListener('click', () => els.importFile.click());
+
+    async function applyQueryStateIfNeeded() {
+      const param = new URL(location.href).searchParams.get('data');
+      if (!param) return;
+      try {
+        const incoming = await decodeStateFromUrlParam(param);
+        const hasSavedData = Array.isArray(state.people) && state.people.length > 0;
+        let useQuery = true;
+        if (hasSavedData) {
+          useQuery = confirm('URLに共有データがあります。\nOK: URLのデータを優先\nキャンセル: 端末に保存済みのデータを優先');
+        }
+        if (useQuery) {
+          state = incoming;
+          normalizeState();
+          await saveState();
+          render();
+        }
+      } catch (err) {
+        console.error(err);
+        alert('共有URLの読み込みに失敗しました。');
+      } finally {
+        clearDataQueryParam();
+      }
+    }
+
+    els.importFile.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (!data || !Array.isArray(data.people)) throw new Error('invalid');
+        state = data;
+        normalizeState();
+        await saveState();
+        render();
+        alert('読み込みが完了しました。');
+      } catch (err) {
+        alert('JSONの読み込みに失敗しました。');
+      } finally {
+        e.target.value = '';
+      }
+    });
+
+    (async function init() {
+      try {
+        db = await openDb();
+        await loadState();
+        await applyQueryStateIfNeeded();
+        if (applyBattleQueryIfNeeded()) return;
+        render();
+      } catch (err) {
+        console.error(err);
+        alert('IndexedDBの初期化に失敗しました。別のブラウザでお試しください。');
+      }
+    })();
+  </script>
+</body>
+</html>
