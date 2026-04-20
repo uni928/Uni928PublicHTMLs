@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>公開用オプション設定サンプル</title>
+  <style id="component-style">
+    :root {
+      --bg-1: #fff8e8;
+      --bg-2: #fdf0f4;
+      --bg-3: #fff7e8;
+      --surface: rgba(255, 255, 255, 0.9);
+      --text: #1b2430;
+      --text-soft: #5f6b7a;
+      --text-faint: #8a94a6;
+      --line: rgba(149, 157, 165, 0.18);
+      --primary: #111827;
+      --primary-hover: #1f2937;
+      --accent: #3b82f6;
+      --shadow-sm: 0 4px 12px rgba(15, 23, 42, 0.06);
+      --shadow-md: 0 10px 30px rgba(15, 23, 42, 0.10);
+      --radius: 18px;
+      --radius-lg: 24px;
+      --section-pad: 18px;
+      --inner-gap: 14px;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; }
+    html {
+      scroll-behavior: smooth;
+      background: linear-gradient(135deg, var(--bg-1), var(--bg-2) 55%, var(--bg-3));
+      background-attachment: fixed;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", "Meiryo", sans-serif;
+      line-height: 1.55;
+      padding: 24px 16px 40px;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.34), rgba(255,255,255,.10)),
+        radial-gradient(circle at 20% 10%, rgba(255,255,255,.40), transparent 24%);
+      z-index: -1;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button {
+      appearance: none;
+      border: none;
+      cursor: pointer;
+      transition: transform .08s ease, box-shadow .18s ease, background-color .18s ease, border-color .18s ease, color .18s ease, opacity .18s ease;
+    }
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    input[type="text"], select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.8);
+      color: var(--text);
+      padding: 13px 14px;
+      font-size: 14px;
+      outline: none;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+      transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+    }
+    input[type="text"]:focus, select:focus {
+      background: #fff;
+      border-color: rgba(59,130,246,.45);
+      box-shadow: 0 0 0 4px rgba(59,130,246,.12), 0 8px 20px rgba(59,130,246,.08);
+    }
+    select {
+      appearance: none;
+      background:
+        linear-gradient(180deg, #e6eaf0, #edf1f5 50%, #e6eaf0),
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>") no-repeat right 12px center / 16px;
+      padding-right: 40px;
+    }
+    label {
+      display: block;
+      margin: 0 0 9px;
+      color: var(--text-soft);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+    small { color: var(--text-soft); }
+
+    .page {
+      width: min(100%, 760px);
+      margin: 0 auto;
+    }
+    .hero {
+      margin: 0 0 22px;
+      padding: 18px 18px;
+      text-align: center;
+      background: rgba(255,255,255,.62);
+      border: 1px solid rgba(255,255,255,.72);
+      border-radius: 18px;
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow-sm);
+    }
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: .03em;
+    }
+    .hero p {
+      margin: 0;
+      color: var(--text-soft);
+      font-size: 14px;
+    }
+
+    .accordion-wrap {
+      display: grid;
+      gap: 14px;
+    }
+
+    .accordion {
+      position: relative;
+      padding: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(245,249,255,.90));
+      border: 1px solid rgba(191,206,230,.55);
+      border-radius: var(--radius);
+      box-shadow: 0 10px 26px rgba(15, 23, 42, .08), inset 0 1px 0 rgba(255,255,255,.75);
+      overflow: hidden;
+    }
+    .accordion::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.95), transparent);
+      pointer-events: none;
+    }
+    .accordion-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px;
+      background: linear-gradient(135deg, #ffffff 0%, #edf5ff 48%, #dfeeff 100%);
+      cursor: pointer;
+    }
+    .accordion-header span {
+      font-size: 15px;
+      font-weight: 800;
+      color: #10233f;
+      line-height: 1.45;
+    }
+    .accordion-toggle {
+      width: 32px;
+      height: 32px;
+      flex: 0 0 32px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, #ffffff, #dcebff);
+      border: 1px solid rgba(96,136,201,.42);
+      color: #18406e;
+      box-shadow: 0 4px 10px rgba(59,130,246,.10), inset 0 1px 0 rgba(255,255,255,.92);
+      padding: 0;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .accordion-content {
+      display: block;
+      padding: 16px 18px 18px;
+      border-top: 1px solid rgba(148,163,184,.12);
+      background: linear-gradient(180deg, rgba(250,252,255,.82), rgba(245,248,253,.92));
+    }
+    .accordion.is-collapsed .accordion-content {
+      display: none;
+    }
+
+    .intro-card {
+      margin: 0 0 18px;
+      padding: 14px 16px;
+      background: rgba(255,255,255,.72);
+      border: 1px solid rgba(255,255,255,.75);
+      border-radius: 16px;
+      color: var(--text-soft);
+      box-shadow: var(--shadow-sm);
+    }
+    .intro-card strong { color: var(--text); }
+
+    .settings-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .settings-col {
+      flex: 1 1 180px;
+      min-width: 180px;
+    }
+    .stack > * + * { margin-top: var(--inner-gap); }
+
+    .pill-group label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0 8px 8px 0;
+      padding: 8px 12px;
+      background: linear-gradient(180deg, #ffffff, #f3f6fb);
+      border: 1px solid rgba(148,163,184,.18);
+      border-radius: 999px;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: var(--shadow-sm);
+    }
+    .check-list label {
+      display: block;
+      margin: 0 0 10px;
+      padding: 12px 14px;
+      background: rgba(255,255,255,.74);
+      border: 1px solid rgba(148,163,184,.16);
+      border-radius: 14px;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: var(--shadow-sm);
+    }
+    input[type="checkbox"], input[type="radio"] {
+      accent-color: var(--accent);
+      transform: translateY(1px);
+      margin-right: 8px;
+    }
+
+    .field-grid {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .field-card {
+      padding: 14px;
+      background: rgba(255,255,255,.74);
+      border: 1px solid rgba(148,163,184,.16);
+      border-radius: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      padding: 14px 16px;
+      background: rgba(59,130,246,.08);
+      color: #21406b;
+      border: 1px solid rgba(59,130,246,.14);
+      border-radius: 14px;
+      font-size: 13px;
+    }
+
+    .copy-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .copy-btn {
+      flex: 1 1 220px;
+      min-height: 48px;
+      padding: 12px 16px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #ffffff, #eef4ff);
+      border: 1px solid rgba(96,136,201,.28);
+      color: #19365f;
+      font-weight: 800;
+      box-shadow: var(--shadow-sm);
+    }
+    .copy-btn:hover {
+      box-shadow: 0 10px 24px rgba(59,130,246,.12);
+    }
+    .copy-status {
+      min-height: 22px;
+      padding: 2px 4px;
+      color: var(--text-soft);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    @media (max-width: 480px) {
+      body { padding: 16px 12px 28px; }
+      .hero h1 { font-size: 20px; }
+      .accordion-header { padding: 16px; }
+      .accordion-content { padding: 14px 16px 16px; }
+      input[type="text"], select, button { font-size: 16px; }
+      .copy-btn { flex-basis: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="hero">
+      <h1>オプション設定 UI サンプル</h1>
+      <p>公開用の記事やデザイン紹介に使いやすいよう、無難な内容へ差し替えた単体 HTML です。</p>
+    </div>
+
+    <div class="accordion-wrap">
+      <div class="accordion" id="optionsAccordion">
+        <div class="accordion-header" id="optionsHeader" role="button" tabindex="0" aria-expanded="true" aria-controls="optionsContent">
+          <span>オプション設定</span>
+          <button class="accordion-toggle" id="optionsToggle" type="button" aria-label="toggle">－</button>
+        </div>
+
+        <div class="accordion-content" id="optionsContent">
+          <div class="intro-card">
+            <strong>設定例:</strong> メッセージ作成アシスタントの表示・文体・出力形式を調整するためのサンプル画面です。
+            実在サービス固有の内容は含めていません。
+          </div>
+
+          <div class="settings-grid">
+            <div class="settings-col stack">
+              <div>
+                <label>文章の長さ</label>
+                <div class="pill-group">
+                  <label><input type="radio" name="length" checked>短め</label>
+                  <label><input type="radio" name="length">標準</label>
+                  <label><input type="radio" name="length">長め</label>
+                </div>
+              </div>
+
+              <div>
+                <label>表示名</label>
+                <input type="text" placeholder="例：山田 太郎" />
+                <small>出力文の差し込み名として利用する想定です。</small>
+              </div>
+            </div>
+
+            <div class="settings-col stack">
+              <div>
+                <label>出力オプション</label>
+                <div class="check-list">
+                  <label><input type="checkbox" checked>候補を評価付きで表示する</label>
+                  <label><input type="checkbox">改行を自動で整える</label>
+                  <label><input type="checkbox" checked>履歴を参考にする</label>
+                  <label><input type="checkbox">軽量モードを使う</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="settings-col stack">
+              <div>
+                <label>呼びかけ名（任意）</label>
+                <input type="text" placeholder="例：チームのみなさん" />
+              </div>
+
+              <div>
+                <label>文体</label>
+                <div class="pill-group">
+                  <label><input type="radio" name="tone" checked>ですます調</label>
+                  <label><input type="radio" name="tone">フレンドリー</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="field-grid">
+            <div class="field-card">
+              <label for="firstPerson">一人称</label>
+              <select id="firstPerson">
+                <option>指定なし</option>
+                <option selected>私</option>
+                <option>僕</option>
+                <option>自分</option>
+              </select>
+            </div>
+
+            <div class="field-card">
+              <label for="audience">想定読者</label>
+              <select id="audience">
+                <option selected>指定なし</option>
+                <option>社内向け</option>
+                <option>顧客向け</option>
+                <option>SNS向け</option>
+              </select>
+            </div>
+
+            <div class="field-card">
+              <label for="emoji">記号・絵文字の使用量</label>
+              <select id="emoji">
+                <option selected>なし</option>
+                <option>少なめ</option>
+                <option>標準</option>
+                <option>やや多め</option>
+              </select>
+            </div>
+
+            <div class="field-card">
+              <label for="number">生成数</label>
+              <select id="number">
+                <option>3件</option>
+                <option selected>5件</option>
+                <option>10件</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="footer-note">
+            この HTML は、アコーディオン構成・やわらかい配色を重視したサンプルです。
+          </div>
+        </div>
+      </div>
+
+      <div class="copy-actions">
+        <button class="copy-btn" id="copyCssBtn" type="button">CSS をコピー</button>
+        <button class="copy-btn" id="copyElementsBtn" type="button">要素をコピー</button>
+      </div>
+      <div class="copy-status" id="copyStatus">開いた状態がデフォルトです。ヘッダーを押すと閉じられます。</div>
+    </div>
+  </div>
+
+  <script>
+    const accordion = document.getElementById('optionsAccordion');
+    const header = document.getElementById('optionsHeader');
+    const toggleBtn = document.getElementById('optionsToggle');
+    const copyStatus = document.getElementById('copyStatus');
+
+    function setAccordionState(isOpen) {
+      accordion.classList.toggle('is-collapsed', !isOpen);
+      header.setAttribute('aria-expanded', String(isOpen));
+      toggleBtn.textContent = isOpen ? '－' : '＋';
+    }
+
+    function toggleAccordion() {
+      const isOpen = !accordion.classList.contains('is-collapsed');
+      setAccordionState(!isOpen);
+    }
+
+    header.addEventListener('click', (event) => {
+      if (event.target.closest('button') && event.target !== toggleBtn) return;
+      toggleAccordion();
+    });
+
+    header.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        toggleAccordion();
+      }
+    });
+
+    toggleBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      toggleAccordion();
+    });
+
+    async function copyText(text, successMessage) {
+      try {
+        await navigator.clipboard.writeText(text);
+        copyStatus.textContent = successMessage;
+      } catch (error) {
+        copyStatus.textContent = 'コピーに失敗しました。ブラウザの権限をご確認ください。';
+      }
+    }
+
+    document.getElementById('copyCssBtn').addEventListener('click', () => {
+      const cssText = document.getElementById('component-style').textContent.trim();
+      copyText(cssText, 'CSS をコピーしました。');
+    });
+
+    document.getElementById('copyElementsBtn').addEventListener('click', () => {
+      const clone = document.getElementById('optionsAccordion').cloneNode(true);
+      clone.classList.remove('is-collapsed');
+      clone.querySelector('.accordion-header').setAttribute('aria-expanded', 'true');
+      clone.querySelector('.accordion-toggle').textContent = '－';
+      copyText(clone.outerHTML, 'オプション設定の要素をコピーしました。');
+    });
+  </script>
+</body>
+</html>
