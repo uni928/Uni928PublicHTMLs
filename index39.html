@@ -511,7 +511,7 @@
             </div>
 
             <div id="status" class="status"></div>
-            <div class="hint">印があり、理由が入っている行だけを出力します。クリア時の馬名欄は空欄になります。</div>
+            <div class="hint">印があり、理由が入っている行だけを出力します。入力内容は自動で保存され、次回起動時に復元されます。クリア時の馬名欄は空欄になります。</div>
           </div>
         </article>
 
@@ -541,6 +541,9 @@
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
   <script>
     const MARK_ORDER = { "◎":0, "○":1, "▲":2, "☆":3, "△":4 };
+    const DB_NAME = 'keiba_mark_share_db';
+    const STORE_NAME = 'kv';
+    const SAVE_KEY = 'editor_state_v1';
 
     const editorMode = document.getElementById('editorMode');
     const viewMode = document.getElementById('viewMode');
@@ -555,6 +558,76 @@
     const editorViewerEmpty = document.getElementById('editorViewerEmpty');
     const viewViewer = document.getElementById('viewViewer');
     const viewViewerEmpty = document.getElementById('viewViewerEmpty');
+
+    let dbPromise = null;
+    let saveTimer = null;
+
+    function openDb() {
+      if (dbPromise) return dbPromise;
+      dbPromise = new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            db.createObjectStore(STORE_NAME, { keyPath: 'key' });
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+      return dbPromise;
+    }
+
+    async function saveState() {
+      try {
+        const db = await openDb();
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        store.put({
+          key: SAVE_KEY,
+          value: {
+            raceTitle: raceTitle.value,
+            raceDate: raceDate.value,
+            rows: getRows()
+          }
+        });
+      } catch (err) {
+        console.error('saveState failed', err);
+      }
+    }
+
+    function queueSave() {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        saveState();
+      }, 120);
+    }
+
+    async function loadState() {
+      try {
+        const db = await openDb();
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        return await new Promise((resolve, reject) => {
+          const req = store.get(SAVE_KEY);
+          req.onsuccess = () => resolve(req.result ? req.result.value : null);
+          req.onerror = () => reject(req.error);
+        });
+      } catch (err) {
+        console.error('loadState failed', err);
+        return null;
+      }
+    }
+
+    async function clearSavedState() {
+      try {
+        const db = await openDb();
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).delete(SAVE_KEY);
+      } catch (err) {
+        console.error('clearSavedState failed', err);
+      }
+    }
 
     function showStatus(message, kind='ok') {
       statusBox.textContent = message;
@@ -620,6 +693,19 @@
       return rows;
     }
 
+    function applyState(state) {
+      if (!state) return;
+      raceTitle.value = state.raceTitle || '';
+      raceDate.value = state.raceDate || '';
+      const rows = Array.isArray(state.rows) ? state.rows : [];
+      for (let i = 1; i <= 18; i++) {
+        const row = rows.find(r => Number(r.horseNo) === i) || {};
+        document.querySelector(`[data-field="mark"][data-index="${i}"]`).value = row.mark || '';
+        document.querySelector(`[data-field="name"][data-index="${i}"]`).value = row.name || '';
+        document.querySelector(`[data-field="reason"][data-index="${i}"]`).value = row.reason || '';
+      }
+    }
+
     function escapeInline(text) {
       return String(text).replace(/\r?\n/g, '  \n');
     }
@@ -647,7 +733,7 @@
         if (title || dateMemo) parts.push('');
         const lines = rows.map(row => {
           const horseName = row.name ? row.name : '';
-          const head = `${row.horseNo}${horseName}${row.mark}`;
+          const head = `${row.horseNo}${row.mark}${horseName}`;
           return `- **${head}**  \n${escapeInline(row.reason)}`;
         });
         parts.push(lines.join('\n\n'));
@@ -737,7 +823,7 @@
       document.querySelector(`[data-field="reason"][data-index="${i}"]`).value = reason || '';
     }
 
-    function clearAll(show = true) {
+    async function clearAll(show = true) {
       raceTitle.value = '';
       raceDate.value = '';
       for (let i = 1; i <= 18; i++) {
@@ -749,6 +835,7 @@
       url.searchParams.delete('d');
       window.history.replaceState({}, '', url);
       renderEditorPreview();
+      await clearSavedState();
       if (show) showStatus('入力内容をクリアしました。');
     }
 
@@ -765,13 +852,19 @@
       setRow(10, '△', 'ゆめすかい', '押さえ候補としては十分で、相手には入れておきたいです。');
 
       renderEditorPreview();
+      queueSave();
       clearStatus();
     }
 
-    function loadViewIfNeeded() {
+    async function loadViewIfNeeded() {
       const token = new URLSearchParams(window.location.search).get('d');
       if (!token) {
         enterEditorMode();
+        const saved = await loadState();
+        if (saved) {
+          applyState(saved);
+          renderEditorPreview();
+        }
         return;
       }
       try {
@@ -789,6 +882,7 @@
       if (e.target.matches('input, textarea, select')) {
         clearStatus();
         renderEditorPreview();
+        queueSave();
       }
     });
 
@@ -796,13 +890,14 @@
       if (e.target.matches('select')) {
         clearStatus();
         renderEditorPreview();
+        queueSave();
       }
     });
 
     copyUrlBtn.addEventListener('click', copyUrl);
     updateUrlBtn.addEventListener('click', updateUrl);
     sampleBtn.addEventListener('click', fillSample);
-    clearBtn.addEventListener('click', () => clearAll(true));
+    clearBtn.addEventListener('click', () => { clearAll(true); });
 
     loadViewIfNeeded();
   </script>
