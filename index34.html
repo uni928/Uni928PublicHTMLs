@@ -1273,9 +1273,27 @@
     }
 
     function buildBattlePayload(personIds, groupNames) {
+      const personIdSet = new Set(personIds);
+      const groupNameSet = new Set(groupNames);
+      const people = state.people
+        .filter(person => personIdSet.has(person.id))
+        .map(person => ({
+          name: person.name,
+          groups: (person.groups || [])
+            .filter(group => groupNameSet.has(group.name))
+            .map(group => ({
+              name: group.name,
+              entries: (group.entries || []).map(entry => ({
+                date: entry.date || '',
+                stake: clampNumber(entry.stake),
+                payout: getEntryPayout(entry)
+              }))
+            }))
+        }));
+
       return {
-        personIds: [...personIds],
-        groupNames: [...groupNames]
+        groupNames: [...groupNames],
+        people
       };
     }
 
@@ -1285,8 +1303,56 @@
       const url = new URL(location.href);
       url.searchParams.set('mode', 'battle');
       url.searchParams.set('battleData', encoded);
-      url.searchParams.set('returnUrl', encodeURIComponent(location.href));
       return url.toString();
+    }
+
+    function calcGroupStatsFromEntries(entries) {
+      const safeGroup = { entries: Array.isArray(entries) ? entries : [] };
+      return calcGroupStats(safeGroup);
+    }
+
+    function buildBattleTableHtmlFromPayload(payload) {
+      const selectedPeople = Array.isArray(payload?.people) ? payload.people : [];
+      const groupNames = Array.isArray(payload?.groupNames) ? payload.groupNames : [];
+      if (!selectedPeople.length) {
+        return '<h3>対戦表</h3><div class="empty">表示できる名前データがありません。</div>';
+      }
+      if (!groupNames.length) {
+        return '<h3>対戦表</h3><div class="empty">表示できるグループデータがありません。</div>';
+      }
+      const head = groupNames.map(name => `<th>${escapeHtml(name)}</th>`).join('');
+      const rows = selectedPeople.map(person => {
+        const total = { totalStake: 0, totalReturn: 0, count: 0 };
+        const cells = groupNames.map(groupName => {
+          const groups = (person.groups || []).filter(g => g.name === groupName);
+          let stake = 0, payout = 0, count = 0;
+          for (const group of groups) {
+            const gs = calcGroupStatsFromEntries(group.entries);
+            stake += gs.totalStake;
+            payout += gs.totalReturn;
+            count += gs.count;
+          }
+          total.totalStake += stake;
+          total.totalReturn += payout;
+          total.count += count;
+          const roi = stake > 0 ? (payout / stake) * 100 : 0;
+          const profit = payout - stake;
+          return `<td${battleCellClass(profit, count)}>${count ? `${pct(roi)}<small>${yen(stake)}円 → ${yen(payout)}円 / ${count}件</small>${battleProfitLine(profit)}` : '—'}</td>`;
+        }).join('');
+        const totalRoi = total.totalStake > 0 ? (total.totalReturn / total.totalStake) * 100 : 0;
+        const totalProfit = total.totalReturn - total.totalStake;
+        const totalCell = `<td${battleCellClass(totalProfit, total.count)}><strong>${total.count ? pct(totalRoi) : '—'}</strong>${total.count ? `<small>${yen(total.totalStake)}円 → ${yen(total.totalReturn)}円 / ${total.count}件</small>${battleProfitLine(totalProfit)}` : ''}</td>`;
+        return `<tr><th>${escapeHtml(person.name)}</th>${cells}${totalCell}</tr>`;
+      }).join('');
+      return `
+        <h3>対戦表</h3>
+        <div class="battle-table-wrap">
+          <table class="battle-table">
+            <thead><tr><th>名前</th>${head}<th>合計</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
     }
 
     async function copyText(text) {
@@ -1510,12 +1576,7 @@
   </div>
   <scraaacststaaaipt>
 function goBack() {
-  const params = new URLSearchParams(location.search);
-  const returnUrl = params.get('returnUrl');
-
-  if (returnUrl) {
-    location.href = decodeURIComponent(returnUrl);
-  } else if (history.length > 1) {
+  if (history.length > 1) {
     history.back();
   } else {
     window.close();
@@ -1555,9 +1616,7 @@ function goBack() {
       if (!param) return false;
       try {
         const decoded = JSON.parse(fromUrlSafeBase64ToString(param));
-        const personIds = Array.isArray(decoded.personIds) ? decoded.personIds : [];
-        const groupNames = Array.isArray(decoded.groupNames) ? decoded.groupNames : [];
-        const tableHtml = buildBattleTableHtml(personIds, groupNames);
+        const tableHtml = buildBattleTableHtmlFromPayload(decoded);
         document.open();
         document.write(buildBattleFullscreenDocument(tableHtml));
         document.close();
