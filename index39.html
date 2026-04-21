@@ -715,7 +715,7 @@
       const dateMemo = raceDate.value.trim();
 
       const rows = getRows()
-        .filter(row => row.mark && row.reason)
+        .filter(row => row.mark)
         .sort((a, b) => {
           const ao = MARK_ORDER[a.mark] ?? 999;
           const bo = MARK_ORDER[b.mark] ?? 999;
