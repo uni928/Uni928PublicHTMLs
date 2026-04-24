@@ -1,0 +1,877 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>欲しいものリスト</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --main: #4f46e5;
+      --main-soft: #eef2ff;
+      --danger: #ef4444;
+      --ok: #16a34a;
+      --warn: #f59e0b;
+      --shadow: 0 18px 45px rgba(15, 23, 42, .08);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, #e0e7ff 0, transparent 34%),
+        radial-gradient(circle at bottom right, #dcfce7 0, transparent 28%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .app {
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(26px, 5vw, 42px);
+      letter-spacing: .02em;
+    }
+
+    .subtitle {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .panel {
+      background: rgba(255,255,255,.9);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,.8);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1.3fr .9fr .9fr auto auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .add-form {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr auto;
+      gap: 10px;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    .group-manager {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 10px;
+      margin-top: 12px;
+      align-items: center;
+    }
+
+    input, select, button, textarea {
+      font: inherit;
+    }
+
+    input[type="search"], input[type="text"], input[type="number"], select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      padding: 10px 12px;
+      outline: none;
+      transition: .15s border, .15s box-shadow;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--main);
+      box-shadow: 0 0 0 4px var(--main-soft);
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: #fff;
+      color: var(--text);
+      cursor: pointer;
+      border: 1px solid var(--line);
+      transition: .15s transform, .15s background, .15s border-color;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      border-color: #c7d2fe;
+      background: #f8fafc;
+    }
+
+    button.primary {
+      background: var(--main);
+      color: #fff;
+      border-color: var(--main);
+      font-weight: 700;
+    }
+
+    button.good {
+      color: #fff;
+      background: var(--ok);
+      border-color: var(--ok);
+    }
+
+    button.warn {
+      color: #fff;
+      background: var(--warn);
+      border-color: var(--warn);
+    }
+
+    button.danger {
+      color: #fff;
+      background: var(--danger);
+      border-color: var(--danger);
+    }
+
+    button.icon {
+      min-width: 42px;
+      padding: 10px 9px;
+      font-weight: 700;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .meta-card {
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+    }
+
+    .meta-label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .meta-value {
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .table-head,
+    .item {
+      display: grid;
+      grid-template-columns: 1.25fr .9fr 88px auto auto auto auto auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .table-head {
+      color: var(--muted);
+      font-size: 12px;
+      padding: 0 10px 8px;
+    }
+
+    .list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .item {
+      padding: 10px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+    }
+
+    .item.done {
+      opacity: .58;
+      background: #f9fafb;
+    }
+
+    .item.done .name-input {
+      text-decoration: line-through;
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 34px 10px;
+      border: 2px dashed var(--line);
+      border-radius: 16px;
+      background: #fff;
+    }
+
+
+    .bottom-add-controls {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .quick-add {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .footer-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .hidden-file {
+      display: none;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 8px;
+      line-height: 1.6;
+    }
+
+    .group-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 13px;
+    }
+
+    .chip b {
+      color: var(--main);
+    }
+
+    @media (max-width: 900px) {
+      body { padding: 14px; }
+      header { display: block; }
+      .status { margin-top: 8px; }
+      .toolbar,
+      .add-form,
+      .group-manager {
+        grid-template-columns: 1fr 1fr;
+      }
+      .toolbar input[type="search"],
+      .add-form input,
+      .group-manager input {
+        grid-column: 1 / -1;
+      }
+      .meta { grid-template-columns: repeat(2, 1fr); }
+      .table-head { display: none; }
+      .item {
+        grid-template-columns: 1fr 1fr repeat(4, 42px);
+      }
+      .item .name-input {
+        grid-column: 1 / -1;
+      }
+      .item .group-select {
+        grid-column: 1 / 2;
+      }
+  
+    .bottom-add-controls {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .quick-add {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 500px) {
+      .item {
+        grid-template-columns: 1fr 1fr repeat(3, 40px);
+      }
+      .item .name-input,
+      .item .group-select,
+      .item .qty-input {
+        grid-column: 1 / -1;
+      }
+      .footer-actions button {
+        flex: 1 1 auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>欲しいものリスト</h1>
+        <div class="subtitle">入力・個数変更・グループ変更・並び替えは自動でリアルタイム保存されます。</div>
+      </div>
+      <div id="saveStatus" class="status">読み込み中...</div>
+    </header>
+
+    <section class="panel">
+      <div class="toolbar">
+        <input id="searchInput" type="search" placeholder="検索..." />
+        <select id="groupFilter" title="グループ絞り込み"></select>
+        <select id="sortSelect" title="並び替え">
+          <option value="manual">手動順</option>
+          <option value="group">グループ順</option>
+          <option value="name">名前順</option>
+          <option value="qtyDesc">個数が多い順</option>
+          <option value="qtyAsc">個数が少ない順</option>
+        </select>
+        <button id="clearDoneBtn">完了を削除</button>
+        <button id="clearAllBtn" class="danger">全削除</button>
+      </div>
+
+      
+
+      <div class="group-manager">
+        <input id="newGroupInput" type="text" placeholder="新しいグループ名（例：日用品、ゲーム、本）" />
+        <button id="addGroupBtn">グループ追加</button>
+        <button id="renameGroupBtn">選択中を改名</button>
+      </div>
+
+      <div id="groupChips" class="group-chip-row"></div>
+
+      <div class="meta">
+        <div class="meta-card">
+          <div class="meta-label">項目数</div>
+          <div id="totalItems" class="meta-value">0</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-label">合計個数</div>
+          <div id="totalQty" class="meta-value">0</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-label">完了</div>
+          <div id="doneCount" class="meta-value">0</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-label">未入力</div>
+          <div id="blankCount" class="meta-value">0</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-label">グループ</div>
+          <div id="groupCount" class="meta-value">0</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="table-head">
+        <div>名前</div>
+        <div>グループ</div>
+        <div>個数</div>
+        <div>−</div>
+        <div>＋</div>
+        <div>上</div>
+        <div>下</div>
+        <div>操作</div>
+      </div>
+      <div id="list" class="list"></div>
+      <div id="empty" class="empty">まだリストがありません。表の下の「＋1〜＋4」ボタンで追加してください。</div>
+
+
+      <div class="bottom-add-controls">
+        <input id="newNameInput" type="text" placeholder="追加する欲しいもの名（空でも追加可）" />
+        <select id="newGroupSelect" title="追加先グループ"></select>
+      </div>
+
+      <div class="quick-add">
+        <button class="primary" data-qty="1">＋1</button>
+        <button class="primary" data-qty="2">＋2</button>
+        <button class="primary" data-qty="3">＋3</button>
+        <button class="primary" data-qty="4">＋4</button>
+      </div>
+      <div class="hint">「＋1〜＋4」は追加する商品の初期個数です。入力欄に名前がある場合は、その名前で追加します。</div>
+
+      <div class="footer-actions">
+        <button id="exportBtn" class="good">ファイルにエクスポート</button>
+        <button id="importBtn">ファイルからインポート</button>
+        <button id="copyTextBtn">テキストでコピー</button>
+        <button id="sampleBtn">サンプル追加</button>
+      </div>
+
+      <input id="fileInput" class="hidden-file" type="file" accept="application/json,.json" />
+    </section>
+  </div>
+
+  <script>
+    const DB_NAME = "wishlist_db_v2";
+    const STORE_NAME = "wishlist_store";
+    const SAVE_KEY = "wishlist_data";
+
+    let db;
+    let items = [];
+    let groups = ["未分類"];
+    let saveTimer = null;
+
+    const listEl = document.getElementById("list");
+    const emptyEl = document.getElementById("empty");
+    const saveStatus = document.getElementById("saveStatus");
+    const searchInput = document.getElementById("searchInput");
+    const sortSelect = document.getElementById("sortSelect");
+    const groupFilter = document.getElementById("groupFilter");
+    const newGroupSelect = document.getElementById("newGroupSelect");
+    const newNameInput = document.getElementById("newNameInput");
+    const fileInput = document.getElementById("fileInput");
+
+    function uid() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2);
+    }
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = e => {
+          const database = e.target.result;
+          if (!database.objectStoreNames.contains(STORE_NAME)) {
+            database.createObjectStore(STORE_NAME);
+          }
+        };
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror = e => reject(e.target.error);
+      });
+    }
+
+    function dbGet(key) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function dbSet(key, value) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.put(value, key);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function normalizeGroups(source) {
+      const arr = Array.isArray(source) ? source : ["未分類"];
+      const clean = arr.map(x => String(x || "").trim()).filter(Boolean);
+      return [...new Set(["未分類", ...clean])];
+    }
+
+    function normalizeItem(item = {}) {
+      const group = String(item.group || "未分類").trim() || "未分類";
+      return {
+        id: item.id || uid(),
+        name: String(item.name || ""),
+        qty: Math.max(1, Number(item.qty) || 1),
+        group,
+        done: Boolean(item.done),
+        createdAt: item.createdAt || new Date().toISOString()
+      };
+    }
+
+    function scheduleSave() {
+      saveStatus.textContent = "保存準備中...";
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveNow, 250);
+    }
+
+    async function saveNow() {
+      try {
+        await dbSet(SAVE_KEY, {
+          app: "wishlist",
+          version: 2,
+          updatedAt: new Date().toISOString(),
+          groups,
+          items
+        });
+        saveStatus.textContent = "保存済み " + new Date().toLocaleTimeString();
+      } catch (err) {
+        console.error(err);
+        saveStatus.textContent = "保存に失敗しました";
+      }
+    }
+
+    async function load() {
+      db = await openDB();
+      const data = await dbGet(SAVE_KEY);
+      if (data && Array.isArray(data.items)) {
+        groups = normalizeGroups(data.groups);
+        items = data.items.map(normalizeItem);
+        items.forEach(item => {
+          if (!groups.includes(item.group)) groups.push(item.group);
+        });
+      } else {
+        groups = ["未分類"];
+        items = [];
+      }
+      renderAll();
+      saveStatus.textContent = "読み込み完了";
+    }
+
+    function renderAll() {
+      renderGroupControls();
+      render();
+      renderGroupChips();
+    }
+
+    function renderGroupControls() {
+      const currentFilter = groupFilter.value || "ALL";
+      const currentNew = newGroupSelect.value || "未分類";
+
+      groupFilter.innerHTML = `<option value="ALL">すべてのグループ</option>` +
+        groups.map(g => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join("");
+
+      newGroupSelect.innerHTML = groups
+        .map(g => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`)
+        .join("");
+
+      if ([...groupFilter.options].some(o => o.value === currentFilter)) groupFilter.value = currentFilter;
+      if ([...newGroupSelect.options].some(o => o.value === currentNew)) newGroupSelect.value = currentNew;
+    }
+
+    function getVisibleItems() {
+      const q = searchInput.value.trim().toLowerCase();
+      const gf = groupFilter.value || "ALL";
+      let arr = items.filter(item => {
+        const nameOk = item.name.toLowerCase().includes(q);
+        const groupOk = gf === "ALL" || item.group === gf;
+        return nameOk && groupOk;
+      });
+
+      const mode = sortSelect.value;
+      if (mode === "group") arr = [...arr].sort((a, b) => groups.indexOf(a.group) - groups.indexOf(b.group));
+      if (mode === "name") arr = [...arr].sort((a, b) => a.name.localeCompare(b.name, "ja"));
+      if (mode === "qtyDesc") arr = [...arr].sort((a, b) => b.qty - a.qty);
+      if (mode === "qtyAsc") arr = [...arr].sort((a, b) => a.qty - b.qty);
+      return arr;
+    }
+
+    function render() {
+      const visible = getVisibleItems();
+      listEl.innerHTML = "";
+      emptyEl.style.display = items.length ? "none" : "block";
+
+      visible.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "item" + (item.done ? " done" : "");
+        row.dataset.id = item.id;
+        row.innerHTML = `
+          <input class="name-input" type="text" value="${escapeHtml(item.name)}" placeholder="欲しいものの名前" />
+          <select class="group-select">
+            ${groups.map(g => `<option value="${escapeHtml(g)}"${g === item.group ? " selected" : ""}>${escapeHtml(g)}</option>`).join("")}
+          </select>
+          <input class="qty-input" type="number" min="1" value="${item.qty}" title="個数" />
+          <button class="icon dec" title="個数を下げる">−</button>
+          <button class="icon inc" title="個数を上げる">＋</button>
+          <button class="icon up" title="上へ">↑</button>
+          <button class="icon down" title="下へ">↓</button>
+          <button class="icon done-btn" title="完了切替">${item.done ? "戻" : "済"}</button>
+          <button class="icon danger del" title="削除">×</button>
+        `;
+        listEl.appendChild(row);
+      });
+
+      updateMeta();
+    }
+
+    function renderGroupChips() {
+      const wrap = document.getElementById("groupChips");
+      wrap.innerHTML = "";
+      groups.forEach(group => {
+        const count = items.filter(item => item.group === group).length;
+        const qty = items.filter(item => item.group === group).reduce((sum, item) => sum + item.qty, 0);
+        const chip = document.createElement("span");
+        chip.className = "chip";
+        chip.innerHTML = `<b>${escapeHtml(group)}</b> ${count}件 / ${qty}個`;
+        wrap.appendChild(chip);
+      });
+    }
+
+    function updateMeta() {
+      const totalItems = items.length;
+      const totalQty = items.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+      const doneCount = items.filter(item => item.done).length;
+      const blankCount = items.filter(item => !item.name.trim()).length;
+      document.getElementById("totalItems").textContent = totalItems;
+      document.getElementById("totalQty").textContent = totalQty;
+      document.getElementById("doneCount").textContent = doneCount;
+      document.getElementById("blankCount").textContent = blankCount;
+      document.getElementById("groupCount").textContent = groups.length;
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, s => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+      }[s]));
+    }
+
+    function addItem(initialQty) {
+      items.push(normalizeItem({
+        name: newNameInput.value.trim(),
+        qty: initialQty,
+        group: newGroupSelect.value || "未分類"
+      }));
+      newNameInput.value = "";
+      renderAll();
+      scheduleSave();
+      const lastInput = listEl.querySelector(".item:last-child .name-input");
+      if (lastInput) lastInput.focus();
+    }
+
+    function moveItem(id, dir) {
+      const i = items.findIndex(item => item.id === id);
+      const ni = i + dir;
+      if (i < 0 || ni < 0 || ni >= items.length) return;
+      [items[i], items[ni]] = [items[ni], items[i]];
+      render();
+      scheduleSave();
+    }
+
+    function addGroup(name) {
+      const group = String(name || "").trim();
+      if (!group) return alert("グループ名を入力してください。");
+      if (groups.includes(group)) return alert("同じグループ名があります。");
+      groups.push(group);
+      document.getElementById("newGroupInput").value = "";
+      renderAll();
+      newGroupSelect.value = group;
+      groupFilter.value = group;
+      render();
+      scheduleSave();
+    }
+
+    function renameSelectedGroup() {
+      const oldName = newGroupSelect.value || "未分類";
+      if (oldName === "未分類") return alert("未分類は改名できません。");
+      const newName = document.getElementById("newGroupInput").value.trim();
+      if (!newName) return alert("新しいグループ名を入力してください。");
+      if (groups.includes(newName)) return alert("同じグループ名があります。");
+
+      groups = groups.map(g => g === oldName ? newName : g);
+      items.forEach(item => {
+        if (item.group === oldName) item.group = newName;
+      });
+      document.getElementById("newGroupInput").value = "";
+      renderAll();
+      newGroupSelect.value = newName;
+      scheduleSave();
+    }
+
+    listEl.addEventListener("input", e => {
+      const row = e.target.closest(".item");
+      if (!row) return;
+      const item = items.find(x => x.id === row.dataset.id);
+      if (!item) return;
+
+      if (e.target.classList.contains("name-input")) item.name = e.target.value;
+      if (e.target.classList.contains("qty-input")) item.qty = Math.max(1, Number(e.target.value) || 1);
+
+      updateMeta();
+      renderGroupChips();
+      scheduleSave();
+    });
+
+    listEl.addEventListener("change", e => {
+      const row = e.target.closest(".item");
+      if (!row) return;
+      const item = items.find(x => x.id === row.dataset.id);
+      if (!item) return;
+      if (e.target.classList.contains("group-select")) {
+        item.group = e.target.value || "未分類";
+        renderAll();
+        scheduleSave();
+      }
+    });
+
+    listEl.addEventListener("click", e => {
+      const row = e.target.closest(".item");
+      if (!row) return;
+      const id = row.dataset.id;
+      const item = items.find(x => x.id === id);
+      if (!item) return;
+
+      if (e.target.classList.contains("inc")) item.qty++;
+      if (e.target.classList.contains("dec")) item.qty = Math.max(1, item.qty - 1);
+      if (e.target.classList.contains("up")) return moveItem(id, -1);
+      if (e.target.classList.contains("down")) return moveItem(id, 1);
+      if (e.target.classList.contains("done-btn")) item.done = !item.done;
+      if (e.target.classList.contains("del")) items = items.filter(x => x.id !== id);
+
+      renderAll();
+      scheduleSave();
+    });
+
+    document.querySelectorAll("[data-qty]").forEach(btn => {
+      btn.addEventListener("click", () => addItem(Number(btn.dataset.qty)));
+    });
+
+    
+
+    if (newNameInput) {
+      newNameInput.addEventListener("keydown", e => {
+        if (e.key === "Enter") addItem(1);
+      });
+    }
+
+    searchInput.addEventListener("input", render);
+    sortSelect.addEventListener("change", render);
+    groupFilter.addEventListener("change", render);
+
+    document.getElementById("addGroupBtn").addEventListener("click", () => {
+      addGroup(document.getElementById("newGroupInput").value);
+    });
+
+    document.getElementById("renameGroupBtn").addEventListener("click", renameSelectedGroup);
+
+    document.getElementById("clearDoneBtn").addEventListener("click", () => {
+      items = items.filter(item => !item.done);
+      renderAll();
+      scheduleSave();
+    });
+
+    document.getElementById("clearAllBtn").addEventListener("click", () => {
+      if (!confirm("リストをすべて削除しますか？")) return;
+      items = [];
+      renderAll();
+      scheduleSave();
+    });
+
+    document.getElementById("sampleBtn").addEventListener("click", () => {
+      ["日用品", "ゲーム", "本"].forEach(g => {
+        if (!groups.includes(g)) groups.push(g);
+      });
+      items.push(
+        normalizeItem({ name: "新しいイヤホン", qty: 1, group: "日用品" }),
+        normalizeItem({ name: "カードスリーブ", qty: 3, group: "ゲーム" }),
+        normalizeItem({ name: "読みたい本", qty: 2, group: "本" })
+      );
+      renderAll();
+      scheduleSave();
+    });
+
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      const data = {
+        app: "wishlist",
+        version: 2,
+        exportedAt: new Date().toISOString(),
+        groups,
+        items
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "wishlist-export.json";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    document.getElementById("importBtn").addEventListener("click", () => {
+      fileInput.value = "";
+      fileInput.click();
+    });
+
+    fileInput.addEventListener("change", async () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        if (!parsed || !Array.isArray(parsed.items)) {
+          alert("items配列が見つかりません。");
+          return;
+        }
+        if (!confirm("現在のリストを置き換えてインポートしますか？")) return;
+        groups = normalizeGroups(parsed.groups);
+        items = parsed.items.map(normalizeItem);
+        items.forEach(item => {
+          if (!groups.includes(item.group)) groups.push(item.group);
+        });
+        renderAll();
+        scheduleSave();
+      } catch (err) {
+        console.error(err);
+        alert("JSONファイルの読み込みに失敗しました。");
+      }
+    });
+
+    document.getElementById("copyTextBtn").addEventListener("click", async () => {
+      const grouped = groups.map(group => {
+        const lines = items
+          .filter(item => item.group === group)
+          .map((item, i) => {
+            const mark = item.done ? "✓" : "□";
+            return `  ${i + 1}. ${mark} ${item.name || "未入力"} × ${item.qty}`;
+          });
+        return lines.length ? `[${group}]\n${lines.join("\n")}` : "";
+      }).filter(Boolean).join("\n\n");
+      await navigator.clipboard.writeText(grouped || "欲しいものリストは空です。");
+      saveStatus.textContent = "テキストをコピーしました";
+    });
+
+    window.addEventListener("beforeunload", () => {
+      if (saveTimer) saveNow();
+    });
+
+    load().catch(err => {
+      console.error(err);
+      saveStatus.textContent = "読み込みに失敗しました";
+    });
+  </script>
+</body>
+</html>
