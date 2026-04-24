@@ -118,6 +118,12 @@
       box-shadow: 0 0 0 4px var(--main-soft);
     }
 
+    .name-input,
+    .qty-input,
+    .group-select {
+      cursor: pointer;
+    }
+
     button {
       border: 0;
       border-radius: 12px;
@@ -457,6 +463,12 @@
     let db;
     let items = [];
     let groups = ["未分類"];
+    let settings = {
+      search: "",
+      groupFilter: "ALL",
+      sort: "manual",
+      addGroup: "未分類"
+    };
     let saveTimer = null;
 
     const listEl = document.getElementById("list");
@@ -525,6 +537,34 @@
       };
     }
 
+    function normalizeSettings(source = {}) {
+      return {
+        search: String(source.search || ""),
+        groupFilter: String(source.groupFilter || "ALL"),
+        sort: String(source.sort || "manual"),
+        addGroup: String(source.addGroup || "未分類")
+      };
+    }
+
+    function collectSettings() {
+      return {
+        search: searchInput.value || "",
+        groupFilter: groupFilter.value || "ALL",
+        sort: sortSelect.value || "manual",
+        addGroup: newGroupSelect.value || "未分類"
+      };
+    }
+
+    function applySettings() {
+      searchInput.value = settings.search || "";
+      sortSelect.value = settings.sort || "manual";
+    }
+
+    function saveSettingsSoon() {
+      settings = collectSettings();
+      scheduleSave();
+    }
+
     function scheduleSave() {
       saveStatus.textContent = "保存準備中...";
       clearTimeout(saveTimer);
@@ -538,6 +578,7 @@
           version: 2,
           updatedAt: new Date().toISOString(),
           groups,
+          settings: collectSettings(),
           items
         });
         saveStatus.textContent = "保存済み " + new Date().toLocaleTimeString();
@@ -552,6 +593,7 @@
       const data = await dbGet(SAVE_KEY);
       if (data && Array.isArray(data.items)) {
         groups = normalizeGroups(data.groups);
+        settings = normalizeSettings(data.settings);
         items = data.items.map(normalizeItem);
         items.forEach(item => {
           if (!groups.includes(item.group)) groups.push(item.group);
@@ -560,6 +602,7 @@
         groups = ["未分類"];
         items = [];
       }
+      applySettings();
       renderAll();
       saveStatus.textContent = "読み込み完了";
     }
@@ -571,8 +614,8 @@
     }
 
     function renderGroupControls() {
-      const currentFilter = groupFilter.value || "ALL";
-      const currentNew = newGroupSelect.value || "未分類";
+      const currentFilter = groupFilter.value || settings.groupFilter || "ALL";
+      const currentNew = newGroupSelect.value || settings.addGroup || "未分類";
 
       groupFilter.innerHTML = `<option value="ALL">すべてのグループ</option>` +
         groups.map(g => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join("");
@@ -582,7 +625,9 @@
         .join("");
 
       if ([...groupFilter.options].some(o => o.value === currentFilter)) groupFilter.value = currentFilter;
+      else groupFilter.value = "ALL";
       if ([...newGroupSelect.options].some(o => o.value === currentNew)) newGroupSelect.value = currentNew;
+      else newGroupSelect.value = "未分類";
     }
 
     function getVisibleItems() {
@@ -668,6 +713,7 @@
         group: newGroupSelect.value || "未分類"
       }));
       newNameInput.value = "";
+      settings = collectSettings();
       renderAll();
       scheduleSave();
       const lastInput = listEl.querySelector(".item:last-child .name-input");
@@ -692,6 +738,7 @@
       renderAll();
       newGroupSelect.value = group;
       groupFilter.value = group;
+      settings = collectSettings();
       render();
       scheduleSave();
     }
@@ -712,6 +759,18 @@
       newGroupSelect.value = newName;
       scheduleSave();
     }
+
+    listEl.addEventListener("focusin", e => {
+      if (e.target.classList.contains("name-input") || e.target.classList.contains("qty-input")) {
+        setTimeout(() => e.target.select(), 0);
+      }
+    });
+
+    listEl.addEventListener("pointerdown", e => {
+      if (e.target.classList.contains("name-input") || e.target.classList.contains("qty-input")) {
+        e.target.focus();
+      }
+    });
 
     listEl.addEventListener("input", e => {
       const row = e.target.closest(".item");
@@ -734,6 +793,7 @@
       if (!item) return;
       if (e.target.classList.contains("group-select")) {
         item.group = e.target.value || "未分類";
+        applySettings();
         renderAll();
         scheduleSave();
       }
@@ -764,14 +824,26 @@
     
 
     if (newNameInput) {
-      newNameInput.addEventListener("keydown", e => {
+      newNameInput.addEventListener("focus", () => newNameInput.select());
+    newNameInput.addEventListener("pointerdown", () => newNameInput.focus());
+    newNameInput.addEventListener("keydown", e => {
         if (e.key === "Enter") addItem(1);
       });
     }
 
-    searchInput.addEventListener("input", render);
-    sortSelect.addEventListener("change", render);
-    groupFilter.addEventListener("change", render);
+    searchInput.addEventListener("input", () => {
+      render();
+      saveSettingsSoon();
+    });
+    sortSelect.addEventListener("change", () => {
+      render();
+      saveSettingsSoon();
+    });
+    groupFilter.addEventListener("change", () => {
+      render();
+      saveSettingsSoon();
+    });
+    newGroupSelect.addEventListener("change", saveSettingsSoon);
 
     document.getElementById("addGroupBtn").addEventListener("click", () => {
       addGroup(document.getElementById("newGroupInput").value);
@@ -811,6 +883,7 @@
         version: 2,
         exportedAt: new Date().toISOString(),
         groups,
+        settings: collectSettings(),
         items
       };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -838,6 +911,7 @@
         }
         if (!confirm("現在のリストを置き換えてインポートしますか？")) return;
         groups = normalizeGroups(parsed.groups);
+        settings = normalizeSettings(parsed.settings);
         items = parsed.items.map(normalizeItem);
         items.forEach(item => {
           if (!groups.includes(item.group)) groups.push(item.group);
