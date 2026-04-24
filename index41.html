@@ -802,16 +802,43 @@
     listEl.addEventListener("click", e => {
       const row = e.target.closest(".item");
       if (!row) return;
+
+      // 名前・分類・個数の入力欄を押しただけでは再描画しない。
+      // ここで再描画すると、スマホやPCでフォーカスがすぐ外れる原因になります。
+      if (
+        e.target.classList.contains("name-input") ||
+        e.target.classList.contains("qty-input") ||
+        e.target.classList.contains("group-select")
+      ) {
+        return;
+      }
+
       const id = row.dataset.id;
       const item = items.find(x => x.id === id);
       if (!item) return;
 
-      if (e.target.classList.contains("inc")) item.qty++;
-      if (e.target.classList.contains("dec")) item.qty = Math.max(1, item.qty - 1);
+      let changed = false;
+
+      if (e.target.classList.contains("inc")) {
+        item.qty++;
+        changed = true;
+      }
+      if (e.target.classList.contains("dec")) {
+        item.qty = Math.max(1, item.qty - 1);
+        changed = true;
+      }
       if (e.target.classList.contains("up")) return moveItem(id, -1);
       if (e.target.classList.contains("down")) return moveItem(id, 1);
-      if (e.target.classList.contains("done-btn")) item.done = !item.done;
-      if (e.target.classList.contains("del")) items = items.filter(x => x.id !== id);
+      if (e.target.classList.contains("done-btn")) {
+        item.done = !item.done;
+        changed = true;
+      }
+      if (e.target.classList.contains("del")) {
+        items = items.filter(x => x.id !== id);
+        changed = true;
+      }
+
+      if (!changed) return;
 
       renderAll();
       scheduleSave();
@@ -825,7 +852,6 @@
 
     if (newNameInput) {
       newNameInput.addEventListener("focus", () => newNameInput.select());
-    newNameInput.addEventListener("pointerdown", () => newNameInput.focus());
     newNameInput.addEventListener("keydown", e => {
         if (e.key === "Enter") addItem(1);
       });
