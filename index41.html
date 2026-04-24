@@ -965,7 +965,7 @@
 
       const text = grouped || "欲しいものリストは空です。";
       const newTab = window.open();
-      newTab.document.write("<pre style='font-family:monospace;white-space:pre-wrap;padding:16px'>" + 
+      newTab.document.write("<pre style='font-family:monospace;white-space:pre-wrap;word-break:break-word;font-size:18px;line-height:1.6;padding:20px'>" + 
         text.replace(/</g, "&lt;").replace(/>/g, "&gt;") + 
         "</pre>");
       newTab.document.close();
