@@ -447,6 +447,7 @@
       <div class="footer-actions">
         <button id="exportBtn" class="good">ファイルにエクスポート</button>
         <button id="importBtn">ファイルからインポート</button>
+        <button id="openTextBtn">プレーンテキストを別タブで表示</button>
         <button id="copyTextBtn">テキストでコピー</button>
         <button id="sampleBtn">サンプル追加</button>
       </div>
@@ -948,6 +949,26 @@
         console.error(err);
         alert("JSONファイルの読み込みに失敗しました。");
       }
+    });
+
+    
+    document.getElementById("openTextBtn").addEventListener("click", () => {
+      const grouped = groups.map(group => {
+        const lines = items
+          .filter(item => item.group === group)
+          .map((item, i) => {
+            const mark = item.done ? "✓" : "□";
+            return `  ${i + 1}. ${mark} ${item.name || "未入力"} × ${item.qty}`;
+          });
+        return lines.length ? `[${group}]\n${lines.join("\n")}` : "";
+      }).filter(Boolean).join("\n\n");
+
+      const text = grouped || "欲しいものリストは空です。";
+      const newTab = window.open();
+      newTab.document.write("<pre style='font-family:monospace;white-space:pre-wrap;padding:16px'>" + 
+        text.replace(/</g, "&lt;").replace(/>/g, "&gt;") + 
+        "</pre>");
+      newTab.document.close();
     });
 
     document.getElementById("copyTextBtn").addEventListener("click", async () => {
