@@ -1,0 +1,3637 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ボタン見本市（クリックで最小HTMLコピー）</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", Meiryo, sans-serif;
+      color: #243447;
+      background:
+        radial-gradient(circle at top left, #eef6ff 0%, #f8fbff 35%, #f3f7fb 100%);
+    }
+
+    .page {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .hero {
+      margin-bottom: 24px;
+      padding: 24px;
+      border: 1px solid rgba(189, 210, 224, 0.9);
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(8px);
+      box-shadow: rgba(57, 95, 128, 0.10) 0px 16px 36px 0px;
+    }
+
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: 30px;
+      line-height: 1.2;
+    }
+
+    .hero p {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.7;
+      color: #476179;
+    }
+
+    .info {
+      margin-top: 14px;
+      padding: 12px 14px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #4c647b;
+      background: #f7fbff;
+      border: 1px solid #d8e7f2;
+      border-radius: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      padding: 18px;
+      border: 1px solid rgba(189, 210, 224, 0.9);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.86);
+      box-shadow: rgba(57, 95, 128, 0.08) 0px 12px 28px 0px;
+    }
+
+    .card h2 {
+      margin: 0 0 8px;
+      font-size: 18px;
+      line-height: 1.3;
+    }
+
+    .card p {
+      margin: 0 0 14px;
+      font-size: 13px;
+      color: #5c748a;
+      line-height: 1.6;
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn {
+      border: 1px solid rgb(189, 210, 224);
+      color: rgb(36, 52, 71);
+      font-weight: 700;
+      text-align: center;
+      cursor: pointer;
+      transition: transform .15s ease, filter .15s ease, box-shadow .15s ease;
+      font-family: Arial, system-ui, sans-serif;
+      line-height: 1;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.02);
+    }
+
+    .btn:active {
+      transform: translateY(0) scale(0.98);
+      filter: brightness(0.98);
+    }
+
+    .btn:focus,
+    .btn:focus-visible {
+      outline: none;
+    }
+
+    .btn-sm {
+      padding: 9px 13px;
+      min-height: 36px;
+      font-size: 12px;
+      border-radius: 10px;
+    }
+
+    .btn-md {
+      padding: 11px 16px;
+      min-height: 43px;
+      font-size: 13.3333px;
+      border-radius: 12px;
+    }
+
+    .btn-lg {
+      padding: 15px 22px;
+      min-height: 52px;
+      font-size: 15px;
+      border-radius: 14px;
+    }
+
+    .pill {
+      border-radius: 999px;
+    }
+
+    .square {
+      border-radius: 8px;
+    }
+
+    .soft {
+      border-radius: 16px;
+    }
+
+    .shadow-light {
+      box-shadow: rgba(57, 95, 128, 0.08) 0px 6px 18px 0px;
+    }
+
+    .shadow-strong {
+      box-shadow: rgba(57, 95, 128, 0.16) 0px 12px 28px 0px;
+    }
+
+    .no-shadow {
+      box-shadow: none;
+    }
+
+    .tone-main {
+      background: linear-gradient(135deg, rgb(255,255,255) 0%, rgb(237,244,255) 100%);
+    }
+
+    .tone-sub {
+      background: linear-gradient(135deg, rgb(255,255,255) 0%, rgb(232,247,245) 55%, rgb(216,238,247) 100%);
+    }
+
+    .tone-soft {
+      background: linear-gradient(135deg, rgb(255,255,255) 0%, rgb(238,248,251) 100%);
+    }
+
+    .tone-warm {
+      background: linear-gradient(135deg, rgb(255,255,255) 0%, rgb(255,247,232) 55%, rgb(255,238,214) 100%);
+    }
+
+    .tone-pink {
+      background: linear-gradient(135deg, rgb(255,255,255) 0%, rgb(255,238,246) 55%, rgb(250,233,255) 100%);
+    }
+
+    .tone-purple {
+      background: linear-gradient(135deg, rgb(255,255,255) 0%, rgb(244,240,255) 55%, rgb(232,240,255) 100%);
+    }
+
+    .tone-gray {
+      background: linear-gradient(135deg, rgb(255,255,255) 0%, rgb(242,246,249) 100%);
+    }
+
+    .outline-main {
+      background: rgba(255,255,255,0.72);
+      border: 1px solid #9ec4e5;
+      box-shadow: none;
+    }
+
+    .outline-success {
+      background: rgba(255,255,255,0.72);
+      border: 1px solid #9bcdbd;
+      box-shadow: none;
+    }
+
+    .outline-danger {
+      background: rgba(255,255,255,0.72);
+      border: 1px solid #e1b3b3;
+      box-shadow: none;
+    }
+
+    .solid-main {
+      color: white;
+      border-color: #5d97d6;
+      background: linear-gradient(135deg, #79ace5 0%, #5e8fd3 100%);
+      box-shadow: rgba(70, 115, 170, 0.22) 0px 10px 24px 0px;
+    }
+
+    .solid-success {
+      color: white;
+      border-color: #5cab94;
+      background: linear-gradient(135deg, #76c6af 0%, #5ca992 100%);
+      box-shadow: rgba(71, 136, 118, 0.22) 0px 10px 24px 0px;
+    }
+
+    .solid-danger {
+      color: white;
+      border-color: #d58484;
+      background: linear-gradient(135deg, #e9a0a0 0%, #d27a7a 100%);
+      box-shadow: rgba(163, 86, 86, 0.22) 0px 10px 24px 0px;
+    }
+
+    .solid-dark {
+      color: white;
+      border-color: #3d556d;
+      background: linear-gradient(135deg, #536d87 0%, #394e63 100%);
+      box-shadow: rgba(32, 48, 65, 0.25) 0px 10px 24px 0px;
+    }
+
+    .glass {
+      background: linear-gradient(135deg, rgba(255,255,255,0.90) 0%, rgba(231,241,250,0.65) 100%);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(189, 210, 224, 0.75);
+      box-shadow: rgba(57, 95, 128, 0.10) 0px 8px 20px 0px;
+    }
+
+    .flat {
+      box-shadow: none;
+    }
+
+    .wide {
+      min-width: 160px;
+    }
+
+    .full {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .copy-area {
+      margin-top: 24px;
+      padding: 18px;
+      border: 1px solid rgba(189, 210, 224, 0.9);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.88);
+      box-shadow: rgba(57, 95, 128, 0.08) 0px 12px 28px 0px;
+    }
+
+    .copy-area h2 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+
+    .copy-area p {
+      margin: 0 0 12px;
+      font-size: 13px;
+      color: #5c748a;
+      line-height: 1.6;
+    }
+
+    pre {
+      margin: 0;
+      padding: 14px;
+      overflow: auto;
+      border-radius: 14px;
+      background: #f7fafc;
+      border: 1px solid #dbe7ef;
+      font-size: 13px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 1000;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: rgba(36, 52, 71, 0.95);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: rgba(0,0,0,0.18) 0px 10px 30px;
+      transform: translateY(16px);
+      opacity: 0;
+      pointer-events: none;
+      transition: .2s ease;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .copied {
+      outline: 3px solid rgba(113, 177, 255, 0.28);
+      outline-offset: 3px;
+    }
+
+    .quick-copy-panel {
+      display: none;
+    }
+
+    @media (min-width: 900px) {
+      .quick-copy-panel {
+        position: fixed;
+        right: 18px;
+        bottom: 18px;
+        z-index: 900;
+        display: block;
+        width: 270px;
+        font-size: 13px;
+        color: #243447;
+      }
+
+      .quick-copy-panel__toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        width: 100%;
+        min-height: 42px;
+        padding: 10px 13px;
+        border: 1px solid rgba(189, 210, 224, 0.95);
+        border-radius: 999px;
+        color: #243447;
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow: rgba(36, 52, 71, 0.16) 0px 10px 24px;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 700;
+      }
+
+      .quick-copy-panel__toggle::after {
+        content: "開く";
+        font-size: 11px;
+        color: #5c748a;
+      }
+
+      .quick-copy-panel.is-open .quick-copy-panel__toggle {
+        border-radius: 16px 16px 0 0;
+      }
+
+      .quick-copy-panel.is-open .quick-copy-panel__toggle::after {
+        content: "閉じる";
+      }
+
+      .quick-copy-panel__body {
+        display: none;
+        padding: 10px;
+        border: 1px solid rgba(189, 210, 224, 0.95);
+        border-top: 0;
+        border-radius: 0 0 16px 16px;
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: rgba(36, 52, 71, 0.14) 0px 12px 26px;
+      }
+
+      .quick-copy-panel.is-open .quick-copy-panel__body {
+        display: grid;
+        gap: 8px;
+      }
+
+      .quick-copy-panel__button {
+        width: 100%;
+        min-height: 38px;
+        padding: 9px 11px;
+        border: 1px solid #c9dbe8;
+        border-radius: 12px;
+        color: #29475f;
+        background: linear-gradient(135deg,#ffffff 0%,#f2f9ff 58%,#e5f1fb 100%);
+        box-shadow: rgba(96, 138, 168, 0.12) 0px 7px 15px;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 700;
+        text-align: left;
+      }
+
+      .quick-copy-panel__button:hover {
+        transform: translateY(-1px);
+        filter: brightness(1.02);
+      }
+
+      .quick-copy-panel__button:active {
+        transform: translateY(0) scale(0.98);
+        filter: brightness(0.98);
+      }
+    }
+
+
+    @media (max-width: 680px) {
+      body {
+        padding: 16px;
+      }
+
+      .hero {
+        padding: 18px;
+      }
+    }
+/* ===== 追加CSS：1ボタン1css版 ===== */
+
+.btn-u01{
+  color:#fff;
+  border-color:#648bc7;
+  background:linear-gradient(135deg,#9cc4ff 0%,#6d95d8 55%,#587fc4 100%);
+  box-shadow:0 12px 26px rgba(84,121,185,.28);
+}
+.btn-u02{
+  color:#1f3f56;
+  border-color:#b8dbe8;
+  background:linear-gradient(135deg,#ffffff 0%,#e7fbff 48%,#cfeff6 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 8px 18px rgba(85,141,160,.16);
+}
+.btn-u03{
+  color:#fff;
+  border-color:#4a9d8b;
+  background:linear-gradient(135deg,#7be0bf 0%,#51bb9b 52%,#38917a 100%);
+  box-shadow:0 12px 26px rgba(55,138,115,.24);
+}
+.btn-u04{
+  color:#7a3c2d;
+  border-color:#e6c2a5;
+  background:linear-gradient(135deg,#fffaf1 0%,#ffe4c6 50%,#ffd0aa 100%);
+  box-shadow:0 10px 22px rgba(193,137,96,.18);
+}
+
+.btn-u05{
+  color:#fff;
+  border-color:#d88484;
+  background:linear-gradient(135deg,#ffb0b0 0%,#ea8686 52%,#d06c6c 100%);
+  box-shadow:0 12px 24px rgba(179,92,92,.24);
+}
+.btn-u06{
+  color:#7b295e;
+  border-color:#ebc4dd;
+  background:linear-gradient(135deg,#fff8fc 0%,#ffdff1 55%,#f7c7e8 100%);
+  box-shadow:0 9px 18px rgba(190,110,159,.18);
+}
+.btn-u07{
+  color:#fff;
+  border-color:#7a6cd1;
+  background:linear-gradient(135deg,#b6a7ff 0%,#8e7ee8 52%,#7261ca 100%);
+  box-shadow:0 12px 24px rgba(105,92,182,.24);
+}
+.btn-u08{
+  color:#3d425e;
+  border-color:#ccd2e8;
+  background:linear-gradient(135deg,#ffffff 0%,#eef1ff 60%,#dde5ff 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 8px 18px rgba(116,128,186,.14);
+}
+
+.btn-u09{
+  color:#fff;
+  border-color:#4b6f97;
+  background:linear-gradient(180deg,#6f95bf 0%,#4f7399 100%);
+  box-shadow:0 14px 24px rgba(54,82,113,.24);
+  letter-spacing:.03em;
+}
+.btn-u10{
+  color:#244458;
+  border:1px dashed #9fc1d8;
+  background:linear-gradient(135deg,#fbfeff 0%,#edf8ff 100%);
+  box-shadow:none;
+}
+.btn-u11{
+  color:#fff;
+  border-color:#a36c36;
+  background:linear-gradient(135deg,#f0c27b 0%,#d89d4a 50%,#b97b2b 100%);
+  box-shadow:0 12px 22px rgba(165,112,47,.24);
+}
+.btn-u12{
+  color:#604737;
+  border-color:#ddcabd;
+  background:linear-gradient(135deg,#fffdfb 0%,#f8ede5 55%,#eedfd4 100%);
+  box-shadow:0 8px 16px rgba(135,102,78,.14);
+}
+
+.btn-u13{
+  color:#fff;
+  border-color:#3e5e4d;
+  background:linear-gradient(135deg,#5f8970 0%,#486b58 55%,#375142 100%);
+  box-shadow:0 12px 22px rgba(52,78,64,.24);
+}
+.btn-u14{
+  color:#2b4b3e;
+  border-color:#b5d7ca;
+  background:linear-gradient(135deg,#f9fffc 0%,#e4f8ef 58%,#d5f0e4 100%);
+  box-shadow:0 8px 18px rgba(79,145,118,.15);
+}
+.btn-u15{
+  color:#fff;
+  border-color:#7d8794;
+  background:linear-gradient(135deg,#a2acb8 0%,#7e8793 58%,#666e79 100%);
+  box-shadow:0 10px 20px rgba(79,87,96,.22);
+}
+.btn-u16{
+  color:#5b5575;
+  border-color:#d8d0f0;
+  background:linear-gradient(135deg,#fff 0%,#f3edff 52%,#e5dbff 100%);
+  box-shadow:0 8px 16px rgba(126,103,182,.14);
+}
+
+.btn-u17{
+  color:#fff;
+  border-color:#3385a3;
+  background:linear-gradient(135deg,#48c2e8 0%,#2da3ca 50%,#247e9c 100%);
+  box-shadow:0 12px 22px rgba(40,127,156,.24);
+}
+.btn-u18{
+  color:#225165;
+  border-color:#a9d2e0;
+  background:linear-gradient(135deg,#ffffff 0%,#def7ff 55%,#c9eefa 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 8px 18px rgba(68,145,170,.14);
+}
+.btn-u19{
+  color:#fff;
+  border-color:#b16f38;
+  background:linear-gradient(135deg,#ffc56d 0%,#f2a849 55%,#d8852b 100%);
+  box-shadow:0 12px 24px rgba(188,122,47,.25);
+}
+.btn-u20{
+  color:#6c4a1d;
+  border-color:#ebd4a0;
+  background:linear-gradient(135deg,#fffdf3 0%,#fff2be 55%,#ffe7a0 100%);
+  box-shadow:0 9px 18px rgba(181,146,66,.16);
+}
+
+.btn-u21{
+  color:#fff;
+  border-color:#2f2f39;
+  background:linear-gradient(135deg,#50505f 0%,#373743 58%,#262630 100%);
+  box-shadow:0 14px 24px rgba(31,31,40,.28);
+}
+.btn-u22{
+  color:#3c3f4a;
+  border-color:#d8dde5;
+  background:linear-gradient(135deg,#fff 0%,#f4f6f9 60%,#e8edf2 100%);
+  box-shadow:0 8px 16px rgba(98,108,120,.12);
+}
+.btn-u23{
+  color:#fff;
+  border-color:#6e4f9c;
+  background:linear-gradient(135deg,#b68cff 0%,#916bd5 55%,#6d4fa6 100%);
+  box-shadow:0 12px 24px rgba(111,82,163,.24);
+}
+.btn-u24{
+  color:#5b355d;
+  border-color:#e2c0e2;
+  background:linear-gradient(135deg,#fffaff 0%,#f7ddfb 55%,#efc9f5 100%);
+  box-shadow:0 8px 16px rgba(169,110,171,.15);
+}
+
+.btn-u25{
+  color:#fff;
+  border-color:#2d7a67;
+  background:linear-gradient(135deg,#3fd7ab 0%,#24b189 52%,#188268 100%);
+  box-shadow:0 12px 22px rgba(30,125,100,.24);
+}
+.btn-u26{
+  color:#245a4a;
+  border-color:#aedde0;
+  background:linear-gradient(135deg,#fbfffe 0%,#ddfaf1 58%,#c7f3e5 100%);
+  box-shadow:0 8px 18px rgba(57,145,118,.14);
+}
+.btn-u27{
+  color:#fff;
+  border-color:#9b4f5f;
+  background:linear-gradient(135deg,#ee889d 0%,#d86480 55%,#b94d69 100%);
+  box-shadow:0 12px 22px rgba(154,72,97,.24);
+}
+.btn-u28{
+  color:#6b3a44;
+  border-color:#ebc0ca;
+  background:linear-gradient(135deg,#fffafb 0%,#ffdbe2 58%,#f8c6d2 100%);
+  box-shadow:0 8px 16px rgba(174,102,122,.15);
+}
+
+.btn-u29{
+  color:#fff;
+  border-color:#7b6747;
+  background:linear-gradient(135deg,#bba07a 0%,#9a7f5f 55%,#7a6248 100%);
+  box-shadow:0 12px 22px rgba(110,87,63,.24);
+}
+.btn-u30{
+  color:#5d4935;
+  border-color:#ddcfbf;
+  background:linear-gradient(135deg,#fffdfb 0%,#f3e8dd 58%,#e7d7c6 100%);
+  box-shadow:0 8px 16px rgba(140,111,81,.14);
+}
+.btn-u31{
+  color:#fff;
+  border-color:#46709d;
+  background:linear-gradient(135deg,#8bb7ea 0%,#5f8fc8 55%,#426f9c 100%);
+  box-shadow:0 12px 22px rgba(71,108,152,.24);
+}
+.btn-u32{
+  color:#24415f;
+  border-color:#b4cde4;
+  background:linear-gradient(135deg,#ffffff 0%,#e6f0fb 58%,#d5e5f8 100%);
+  box-shadow:0 8px 16px rgba(90,127,173,.14);
+}
+
+.btn-u33{
+  color:#fff;
+  border-color:#7d7fd6;
+  background:linear-gradient(135deg,#b0b4ff 0%,#8b90ee 55%,#6a6fca 100%);
+  box-shadow:0 12px 24px rgba(103,106,186,.24);
+}
+.btn-u34{
+  color:#4d4f79;
+  border-color:#d2d3f3;
+  background:linear-gradient(135deg,#fff 0%,#efefff 60%,#e0e2ff 100%);
+  box-shadow:0 8px 16px rgba(113,116,180,.14);
+}
+.btn-u35{
+  color:#fff;
+  border-color:#4e8f84;
+  background:linear-gradient(135deg,#89d6c9 0%,#58b1a3 55%,#3f8b7f 100%);
+  box-shadow:0 12px 22px rgba(67,137,125,.24);
+}
+.btn-u36{
+  color:#2f5d57;
+  border-color:#bbddd7;
+  background:linear-gradient(135deg,#fbfffe 0%,#e2f6f2 60%,#d4efea 100%);
+  box-shadow:0 8px 16px rgba(88,145,135,.14);
+}
+/* ===== 追加CSS：拡充分 1ボタン1css ===== */
+
+.btn-u37{
+  color:#fff;
+  border-color:#3867a8;
+  background:linear-gradient(135deg,#6ea8ff 0%,#4f84dc 52%,#3565ac 100%);
+  box-shadow:0 12px 24px rgba(53,101,172,.26);
+}
+.btn-u38{
+  color:#234b68;
+  border-color:#b9d8ea;
+  background:linear-gradient(135deg,#ffffff 0%,#e9f8ff 55%,#d3edf8 100%);
+  box-shadow:0 8px 18px rgba(88,143,170,.15);
+}
+.btn-u39{
+  color:#fff;
+  border-color:#2f8d7a;
+  background:linear-gradient(135deg,#53d8bc 0%,#31b797 52%,#1f8f76 100%);
+  box-shadow:0 12px 24px rgba(35,128,106,.24);
+}
+.btn-u40{
+  color:#6f4c1f;
+  border-color:#e7cf98;
+  background:linear-gradient(135deg,#fffdf5 0%,#fff2c9 52%,#ffe5a0 100%);
+  box-shadow:0 8px 18px rgba(185,150,72,.16);
+}
+
+.btn-u41{
+  color:#fff;
+  border-color:#b85f74;
+  background:linear-gradient(135deg,#f39aaf 0%,#db6e89 55%,#b8526c 100%);
+  box-shadow:0 12px 22px rgba(173,86,111,.24);
+}
+.btn-u42{
+  color:#6d3353;
+  border-color:#e8bfd1;
+  background:linear-gradient(135deg,#fffafe 0%,#fbe2ee 55%,#f3cddd 100%);
+  box-shadow:0 8px 16px rgba(174,106,140,.15);
+}
+.btn-u43{
+  color:#fff;
+  border-color:#6f66d2;
+  background:linear-gradient(135deg,#a89eff 0%,#8579e6 55%,#655bc4 100%);
+  box-shadow:0 12px 24px rgba(96,88,181,.24);
+}
+.btn-u44{
+  color:#454b75;
+  border-color:#d1d6f0;
+  background:linear-gradient(135deg,#ffffff 0%,#eef1ff 55%,#dfe5ff 100%);
+  box-shadow:0 8px 16px rgba(110,119,181,.14);
+}
+
+.btn-u45{
+  color:#fff;
+  border-color:#8d6b2f;
+  background:linear-gradient(135deg,#f0cf7d 0%,#d6aa45 55%,#a97a23 100%);
+  box-shadow:0 12px 24px rgba(155,115,42,.25);
+}
+.btn-u46{
+  color:#634a22;
+  border-color:#e8d4ab;
+  background:linear-gradient(135deg,#fffdf7 0%,#fff1d0 55%,#ffe6b2 100%);
+  box-shadow:0 8px 16px rgba(172,135,67,.15);
+}
+.btn-u47{
+  color:#fff;
+  border-color:#406b54;
+  background:linear-gradient(135deg,#6aa985 0%,#4f8668 55%,#355c47 100%);
+  box-shadow:0 12px 22px rgba(58,94,74,.24);
+}
+.btn-u48{
+  color:#2d5748;
+  border-color:#bdd9cd;
+  background:linear-gradient(135deg,#fbfffd 0%,#e7f6ef 55%,#d6ecdf 100%);
+  box-shadow:0 8px 16px rgba(88,137,114,.14);
+}
+
+.btn-u49{
+  color:#fff;
+  border-color:#7b5252;
+  background:linear-gradient(135deg,#b88a8a 0%,#956969 55%,#754d4d 100%);
+  box-shadow:0 12px 22px rgba(115,77,77,.24);
+}
+.btn-u50{
+  color:#624141;
+  border-color:#dfc6c6;
+  background:linear-gradient(135deg,#fffdfd 0%,#f7eaea 55%,#edd9d9 100%);
+  box-shadow:0 8px 16px rgba(146,104,104,.14);
+}
+.btn-u51{
+  color:#fff;
+  border-color:#397d96;
+  background:linear-gradient(135deg,#62c6e8 0%,#3aa6cb 55%,#277c97 100%);
+  box-shadow:0 12px 22px rgba(45,125,153,.24);
+}
+.btn-u52{
+  color:#214f60;
+  border-color:#b5d7e3;
+  background:linear-gradient(135deg,#ffffff 0%,#e7f8ff 55%,#d2eef8 100%);
+  box-shadow:0 8px 16px rgba(78,142,166,.14);
+}
+
+.btn-u53{
+  color:#fff;
+  border-color:#5a5a66;
+  background:linear-gradient(135deg,#81818f 0%,#666673 55%,#4b4b55 100%);
+  box-shadow:0 12px 22px rgba(72,72,82,.24);
+}
+.btn-u54{
+  color:#464651;
+  border-color:#d8d8df;
+  background:linear-gradient(135deg,#ffffff 0%,#f3f3f6 55%,#e8e8ee 100%);
+  box-shadow:0 8px 16px rgba(110,110,124,.12);
+}
+.btn-u55{
+  color:#fff;
+  border-color:#a24a8f;
+  background:linear-gradient(135deg,#df7fd0 0%,#bf5dab 55%,#973f84 100%);
+  box-shadow:0 12px 22px rgba(146,66,128,.24);
+}
+.btn-u56{
+  color:#6a3561;
+  border-color:#e6c3df;
+  background:linear-gradient(135deg,#fffaff 0%,#f8e1f5 55%,#efcbea 100%);
+  box-shadow:0 8px 16px rgba(171,104,157,.15);
+}
+
+.btn-u57{
+  color:#fff;
+  border-color:#4d88a2;
+  background:linear-gradient(135deg,#8ccbe0 0%,#65aeca 55%,#447f98 100%);
+  box-shadow:0 12px 22px rgba(70,128,153,.22);
+}
+.btn-u58{
+  color:#2a5565;
+  border-color:#c0dce6;
+  background:linear-gradient(135deg,#fcfeff 0%,#edf8fb 55%,#ddeff5 100%);
+  box-shadow:0 8px 16px rgba(89,141,160,.13);
+}
+.btn-u59{
+  color:#fff;
+  border-color:#9f6d3d;
+  background:linear-gradient(135deg,#e7b57a 0%,#cb8d4d 55%,#a56b31 100%);
+  box-shadow:0 12px 22px rgba(156,105,53,.23);
+}
+.btn-u60{
+  color:#664522;
+  border-color:#e5cfba;
+  background:linear-gradient(135deg,#fffdfa 0%,#f7ebdf 55%,#eddcc8 100%);
+  box-shadow:0 8px 16px rgba(145,111,77,.14);
+}
+
+.btn-u61{
+  color:#fff;
+  border-color:#5c7e39;
+  background:linear-gradient(135deg,#9fcb66 0%,#7faa48 55%,#5f8133 100%);
+  box-shadow:0 12px 22px rgba(95,129,51,.23);
+}
+.btn-u62{
+  color:#435a27;
+  border-color:#d3e1b6;
+  background:linear-gradient(135deg,#fdfff9 0%,#f0f8df 55%,#e2efc8 100%);
+  box-shadow:0 8px 16px rgba(121,145,72,.14);
+}
+.btn-u63{
+  color:#fff;
+  border-color:#7d4f8d;
+  background:linear-gradient(135deg,#c08fdd 0%,#9d6bbb 55%,#7b4f97 100%);
+  box-shadow:0 12px 22px rgba(121,79,151,.23);
+}
+.btn-u64{
+  color:#5b3f66;
+  border-color:#dbc9e5;
+  background:linear-gradient(135deg,#fffaff 0%,#f2e7f8 55%,#e8d8f0 100%);
+  box-shadow:0 8px 16px rgba(144,110,164,.14);
+}
+
+.btn-u65{
+  color:#fff;
+  border-color:#8c4444;
+  background:linear-gradient(135deg,#d87e7e 0%,#bb5959 55%,#933f3f 100%);
+  box-shadow:0 12px 22px rgba(140,68,68,.24);
+}
+.btn-u66{
+  color:#6a3b3b;
+  border-color:#e3c2c2;
+  background:linear-gradient(135deg,#fffafa 0%,#f8e4e4 55%,#efd1d1 100%);
+  box-shadow:0 8px 16px rgba(160,105,105,.14);
+}
+.btn-u67{
+  color:#fff;
+  border-color:#2c6d89;
+  background:linear-gradient(135deg,#4fb2d7 0%,#348db1 55%,#235f77 100%);
+  box-shadow:0 12px 22px rgba(38,104,129,.24);
+}
+.btn-u68{
+  color:#1f485a;
+  border-color:#b2d2df;
+  background:linear-gradient(135deg,#ffffff 0%,#e5f5fb 55%,#d0ebf5 100%);
+  box-shadow:0 8px 16px rgba(73,132,154,.14);
+}
+
+.btn-u69{
+  color:#fff;
+  border-color:#74592d;
+  background:linear-gradient(135deg,#d1af68 0%,#b38d45 55%,#8a692e 100%);
+  box-shadow:0 12px 22px rgba(123,93,46,.23);
+}
+.btn-u70{
+  color:#5f4a26;
+  border-color:#e2d2b4;
+  background:linear-gradient(135deg,#fffef9 0%,#f8efd9 55%,#efe1bf 100%);
+  box-shadow:0 8px 16px rgba(150,126,82,.14);
+}
+.btn-u71{
+  color:#fff;
+  border-color:#4d7f72;
+  background:linear-gradient(135deg,#7bc8b4 0%,#56a894 55%,#3d7e6d 100%);
+  box-shadow:0 12px 22px rgba(64,123,107,.23);
+}
+.btn-u72{
+  color:#2e5a51;
+  border-color:#b9ddd4;
+  background:linear-gradient(135deg,#fbfffe 0%,#e3f5f0 55%,#d3ece6 100%);
+  box-shadow:0 8px 16px rgba(86,143,129,.14);
+}
+/* ===== 追加CSS：基本操作ボタン系・うっすらグラデ版 ===== */
+
+.btn-b01{
+  color:#2a455d;
+  border-color:#bfd8e7;
+  background:linear-gradient(135deg,#ffffff 0%,#f2f9ff 58%,#e5f1fb 100%);
+  box-shadow:0 8px 18px rgba(96,138,168,.14);
+}
+.btn-b02{
+  color:#29475f;
+  border-color:#c5dbea;
+  background:linear-gradient(135deg,#ffffff 0%,#eef8ff 48%,#e4f1fb 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.96),0 8px 16px rgba(92,136,166,.12);
+}
+.btn-b03{
+  color:#315067;
+  border-color:#c9ddea;
+  background:linear-gradient(135deg,#ffffff 0%,#f4faff 60%,#e7f2fa 100%);
+  box-shadow:0 8px 16px rgba(105,141,165,.12);
+}
+.btn-b04{
+  color:#38556b;
+  border-color:#cedfea;
+  background:linear-gradient(135deg,#ffffff 0%,#f7fbff 62%,#eaf2f8 100%);
+  box-shadow:0 7px 15px rgba(112,142,161,.11);
+}
+
+.btn-b05{
+  color:#2b4e56;
+  border-color:#c1dfdf;
+  background:linear-gradient(135deg,#ffffff 0%,#f0fcfb 56%,#e0f2f1 100%);
+  box-shadow:0 8px 16px rgba(93,150,145,.12);
+}
+.btn-b06{
+  color:#33515f;
+  border-color:#c9dfe9;
+  background:linear-gradient(135deg,#ffffff 0%,#f4fbff 55%,#e7f3f8 100%);
+  box-shadow:0 8px 16px rgba(101,142,162,.12);
+}
+.btn-b07{
+  color:#3d5660;
+  border-color:#d0dfe5;
+  background:linear-gradient(135deg,#ffffff 0%,#f7fafc 58%,#ecf2f5 100%);
+  box-shadow:0 8px 16px rgba(115,136,146,.11);
+}
+.btn-b08{
+  color:#355261;
+  border-color:#c7dce8;
+  background:linear-gradient(135deg,#ffffff 0%,#f3f9fd 54%,#e5eff7 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.94),0 8px 16px rgba(101,138,159,.12);
+}
+
+.btn-b09{
+  color:#2f4760;
+  border-color:#bfd6e5;
+  background:linear-gradient(135deg,#ffffff 0%,#edf6ff 52%,#dfebf8 100%);
+  box-shadow:0 8px 16px rgba(90,129,158,.13);
+}
+.btn-b10{
+  color:#35505c;
+  border-color:#c6dbde;
+  background:linear-gradient(135deg,#ffffff 0%,#f2fbfb 58%,#e4f0ef 100%);
+  box-shadow:0 8px 16px rgba(106,145,144,.11);
+}
+.btn-b11{
+  color:#405463;
+  border-color:#d2dee6;
+  background:linear-gradient(135deg,#ffffff 0%,#f7fafc 55%,#eaf1f5 100%);
+  box-shadow:0 7px 15px rgba(118,136,149,.10);
+}
+.btn-b12{
+  color:#314d63;
+  border-color:#c4d9e6;
+  background:linear-gradient(135deg,#ffffff 0%,#f1f8fd 57%,#e3edf6 100%);
+  box-shadow:0 8px 16px rgba(97,134,156,.11);
+}
+
+.btn-b13{
+  color:#3d4f66;
+  border-color:#d4dced;
+  background:linear-gradient(135deg,#ffffff 0%,#f5f6ff 58%,#e8ecfb 100%);
+  box-shadow:0 8px 16px rgba(118,127,170,.11);
+}
+.btn-b14{
+  color:#3f5260;
+  border-color:#d2dde4;
+  background:linear-gradient(135deg,#ffffff 0%,#f7fafb 55%,#edf2f4 100%);
+  box-shadow:0 7px 15px rgba(124,136,144,.10);
+}
+.btn-b15{
+  color:#35535d;
+  border-color:#c9dce0;
+  background:linear-gradient(135deg,#ffffff 0%,#f2faf9 56%,#e4f0ee 100%);
+  box-shadow:0 8px 16px rgba(104,142,141,.10);
+}
+.btn-b16{
+  color:#334d67;
+  border-color:#c5d9ea;
+  background:linear-gradient(135deg,#ffffff 0%,#f1f7ff 52%,#e3edf9 100%);
+  box-shadow:0 8px 16px rgba(97,129,171,.11);
+}
+
+.btn-b17{
+  color:#365162;
+  border-color:#cadde6;
+  background:linear-gradient(135deg,#ffffff 0%,#f5fafe 58%,#e8f0f6 100%);
+  box-shadow:0 7px 15px rgba(109,138,152,.10);
+}
+.btn-b18{
+  color:#3c4f57;
+  border-color:#d4dde1;
+  background:linear-gradient(135deg,#ffffff 0%,#f8fafb 56%,#edf1f2 100%);
+  box-shadow:0 7px 15px rgba(126,136,139,.10);
+}
+.btn-b19{
+  color:#355562;
+  border-color:#cadce7;
+  background:linear-gradient(135deg,#ffffff 0%,#f3fbff 56%,#e5f0f6 100%);
+  box-shadow:0 8px 16px rgba(101,141,157,.11);
+}
+.btn-b20{
+  color:#315261;
+  border-color:#c7dde8;
+  background:linear-gradient(135deg,#ffffff 0%,#f2faff 58%,#e3f0f8 100%);
+  box-shadow:0 8px 16px rgba(97,140,164,.11);
+}
+
+.btn-b21{
+  color:#38535d;
+  border-color:#cfdee2;
+  background:linear-gradient(135deg,#ffffff 0%,#f5fbfb 55%,#e8f0f0 100%);
+  box-shadow:0 7px 15px rgba(114,140,139,.10);
+}
+.btn-b22{
+  color:#3a5063;
+  border-color:#cfdae7;
+  background:linear-gradient(135deg,#ffffff 0%,#f5f9fe 58%,#e8eef7 100%);
+  box-shadow:0 7px 15px rgba(112,132,155,.10);
+}
+.btn-b23{
+  color:#42505d;
+  border-color:#d7dde4;
+  background:linear-gradient(135deg,#ffffff 0%,#f8fafb 57%,#eef1f4 100%);
+  box-shadow:0 7px 14px rgba(126,134,143,.09);
+}
+.btn-b24{
+  color:#34515f;
+  border-color:#cadce5;
+  background:linear-gradient(135deg,#ffffff 0%,#f3fafc 58%,#e5eff3 100%);
+  box-shadow:0 7px 15px rgba(101,137,149,.10);
+}
+/* ===== 基本操作ボタン（濃さミックス版 追加） ===== */
+
+/* --- やや濃い青 --- */
+.btn-b25{
+  color:#ffffff;
+  border-color:#6c9fd3;
+  background:linear-gradient(135deg,#9ec2f0 0%,#7fa6d9 55%,#6b93c7 100%);
+  box-shadow:0 10px 20px rgba(85,120,165,.22);
+}
+.btn-b26{
+  color:#1f3d56;
+  border-color:#a9cbe2;
+  background:linear-gradient(135deg,#ffffff 0%,#dbeeff 60%,#c7e0f5 100%);
+  box-shadow:0 8px 16px rgba(80,120,150,.16);
+}
+
+/* --- やや濃いグリーン --- */
+.btn-b27{
+  color:#ffffff;
+  border-color:#63a894;
+  background:linear-gradient(135deg,#8fd3c1 0%,#6bb8a4 55%,#539b88 100%);
+  box-shadow:0 10px 20px rgba(70,140,120,.22);
+}
+.btn-b28{
+  color:#244d44;
+  border-color:#b6dcd4;
+  background:linear-gradient(135deg,#ffffff 0%,#dcf5f0 55%,#c8e9e2 100%);
+  box-shadow:0 8px 16px rgba(90,140,130,.14);
+}
+
+/* --- やや濃いグレー --- */
+.btn-b29{
+  color:#ffffff;
+  border-color:#7d8a96;
+  background:linear-gradient(135deg,#a0acb6 0%,#86939f 55%,#6f7c88 100%);
+  box-shadow:0 10px 18px rgba(90,100,110,.22);
+}
+.btn-b30{
+  color:#3f4a54;
+  border-color:#cfd8de;
+  background:linear-gradient(135deg,#ffffff 0%,#edf2f5 60%,#e2e8ec 100%);
+  box-shadow:0 8px 16px rgba(120,130,140,.14);
+}
+
+/* --- やや濃いパープル --- */
+.btn-b31{
+  color:#ffffff;
+  border-color:#8a7fd6;
+  background:linear-gradient(135deg,#b9b2ff 0%,#9c92e8 55%,#8076d0 100%);
+  box-shadow:0 10px 20px rgba(120,110,180,.22);
+}
+.btn-b32{
+  color:#4a4470;
+  border-color:#d6d2f0;
+  background:linear-gradient(135deg,#ffffff 0%,#efecff 55%,#e1dcfa 100%);
+  box-shadow:0 8px 16px rgba(130,120,170,.14);
+}
+
+/* --- やや濃い暖色 --- */
+.btn-b33{
+  color:#ffffff;
+  border-color:#d19a6c;
+  background:linear-gradient(135deg,#f6c89a 0%,#e3a974 55%,#cc8f57 100%);
+  box-shadow:0 10px 20px rgba(170,120,80,.22);
+}
+.btn-b34{
+  color:#6b4b2d;
+  border-color:#ead3bb;
+  background:linear-gradient(135deg,#ffffff 0%,#fff1e0 55%,#f6e0c7 100%);
+  box-shadow:0 8px 16px rgba(160,120,90,.14);
+}
+
+/* --- 中間トーン（ほんのり強調） --- */
+.btn-b35{
+  color:#2f4f63;
+  border-color:#bcd4e3;
+  background:linear-gradient(135deg,#ffffff 0%,#e6f4ff 50%,#d4e9f7 100%);
+  box-shadow:0 9px 18px rgba(90,130,160,.16);
+}
+.btn-b36{
+  color:#2c5a57;
+  border-color:#bfe0db;
+  background:linear-gradient(135deg,#ffffff 0%,#e4f7f4 50%,#d1ece8 100%);
+  box-shadow:0 9px 18px rgba(90,140,135,.16);
+}
+/* ===== 変化球ボタン系（遊び・グラデーション強め） ===== */
+
+.btn-x01{
+  color:#2b3b2f;
+  border:1px solid rgba(34,197,94,.18);
+  background:linear-gradient(135deg,
+    #ffffff 0%,
+    #fef9c3 25%,
+    #dcfce7 50%,
+    #fef9c3 75%,
+    #ffffff 100%
+  );
+  box-shadow:0 8px 18px rgba(120,160,100,.18);
+}
+
+.btn-x02{
+  color:#2a3a50;
+  border:1px solid rgba(96,165,250,.25);
+  background:linear-gradient(135deg,
+    #ffffff 0%,
+    #dbeafe 30%,
+    #e0f2fe 60%,
+    #ffffff 100%
+  );
+  box-shadow:0 10px 20px rgba(90,140,200,.18);
+}
+
+.btn-x03{
+  color:#4b2c4d;
+  border:1px solid rgba(192,132,252,.28);
+  background:linear-gradient(135deg,
+    #ffffff 0%,
+    #f5d0fe 40%,
+    #ede9fe 80%,
+    #ffffff 100%
+  );
+  box-shadow:0 10px 20px rgba(150,110,180,.18);
+}
+
+.btn-x04{
+  color:#5a3a2a;
+  border:1px solid rgba(251,146,60,.28);
+  background:linear-gradient(135deg,
+    #ffffff 0%,
+    #ffedd5 35%,
+    #fde68a 70%,
+    #ffffff 100%
+  );
+  box-shadow:0 10px 20px rgba(180,120,60,.18);
+}
+
+/* --- ストライプ風 --- */
+.btn-x05{
+  color:#2c3e50;
+  border:1px solid rgba(100,116,139,.2);
+  background:repeating-linear-gradient(
+    135deg,
+    #ffffff,
+    #ffffff 10px,
+    #f1f5f9 10px,
+    #f1f5f9 20px
+  );
+  box-shadow:0 8px 16px rgba(120,140,160,.15);
+}
+
+/* --- 強め多色グラデ --- */
+.btn-x06{
+  color:#ffffff;
+  border:1px solid rgba(0,0,0,.1);
+  background:linear-gradient(135deg,
+    #60a5fa 0%,
+    #34d399 30%,
+    #fbbf24 60%,
+    #f472b6 100%
+  );
+  box-shadow:0 12px 24px rgba(100,120,180,.25);
+}
+
+/* --- 逆グラデ --- */
+.btn-x07{
+  color:#2c3a40;
+  border:1px solid rgba(148,163,184,.25);
+  background:linear-gradient(135deg,
+    #e2e8f0 0%,
+    #f8fafc 50%,
+    #e2e8f0 100%
+  );
+  box-shadow:inset 0 2px 4px rgba(255,255,255,.7),
+             0 8px 16px rgba(120,140,160,.12);
+}
+
+/* --- ネオン寄り --- */
+.btn-x08{
+  color:#fff;
+  border:1px solid rgba(99,102,241,.4);
+  background:linear-gradient(135deg,
+    #6366f1 0%,
+    #8b5cf6 50%,
+    #ec4899 100%
+  );
+  box-shadow:0 0 12px rgba(139,92,246,.5),
+             0 10px 20px rgba(100,80,180,.25);
+}
+
+/* --- 水色ふわ系 --- */
+.btn-x09{
+  color:#1e3a5f;
+  border:1px solid rgba(56,189,248,.25);
+  background:linear-gradient(135deg,
+    #ffffff 0%,
+    #e0f7ff 50%,
+    #cffafe 100%
+  );
+  box-shadow:0 10px 18px rgba(100,160,190,.15);
+}
+
+/* --- 金属風 --- */
+.btn-x10{
+  color:#3b3b3b;
+  border:1px solid #cbd5e1;
+  background:linear-gradient(135deg,
+    #f8fafc 0%,
+    #e2e8f0 50%,
+    #cbd5f5 100%
+  );
+  box-shadow:inset 0 2px 4px rgba(255,255,255,.6),
+             0 8px 14px rgba(100,110,130,.2);
+}
+
+/* ===== 変化球ボタン系 追加その2 ===== */
+
+.btn-x11{
+  color:#2f3c31;
+  border:1px solid rgba(132,204,22,.22);
+  background:linear-gradient(135deg,
+    #ffffff 0%,
+    #f7fee7 24%,
+    #dcfce7 52%,
+    #ecfccb 78%,
+    #ffffff 100%
+  );
+  box-shadow:0 9px 18px rgba(132,170,80,.18);
+}
+
+.btn-x12{
+  color:#234457;
+  border:1px solid rgba(59,130,246,.22);
+  background:linear-gradient(135deg,
+    #ffffff 0%,
+    #eff6ff 18%,
+    #dbeafe 48%,
+    #e0f2fe 78%,
+    #ffffff 100%
+  );
+  box-shadow:0 10px 18px rgba(88,132,180,.17);
+}
+
+.btn-x13{
+  color:#4a3058;
+  border:1px solid rgba(168,85,247,.24);
+  background:linear-gradient(135deg,
+    #ffffff 0%,
+    #faf5ff 22%,
+    #f5d0fe 52%,
+    #ede9fe 82%,
+    #ffffff 100%
+  );
+  box-shadow:0 10px 18px rgba(145,104,175,.17);
+}
+
+.btn-x14{
+  color:#5b4029;
+  border:1px solid rgba(245,158,11,.25);
+  background:linear-gradient(135deg,
+    #ffffff 0%,
+    #fff7ed 18%,
+    #ffedd5 48%,
+    #fde68a 82%,
+    #ffffff 100%
+  );
+  box-shadow:0 10px 18px rgba(176,126,70,.17);
+}
+
+.btn-x15{
+  color:#30423f;
+  border:1px solid rgba(20,184,166,.22);
+  background:linear-gradient(135deg,
+    #ffffff 0%,
+    #f0fdfa 26%,
+    #ccfbf1 56%,
+    #e6fffb 100%
+  );
+  box-shadow:0 9px 18px rgba(78,150,140,.16);
+}
+
+/* --- 斜め2色しっかり系 --- */
+.btn-x16{
+  color:#ffffff;
+  border:1px solid rgba(0,0,0,.08);
+  background:linear-gradient(135deg,
+    #38bdf8 0%,
+    #22c55e 100%
+  );
+  box-shadow:0 12px 24px rgba(60,140,140,.24);
+}
+
+.btn-x17{
+  color:#ffffff;
+  border:1px solid rgba(0,0,0,.08);
+  background:linear-gradient(135deg,
+    #818cf8 0%,
+    #ec4899 100%
+  );
+  box-shadow:0 12px 24px rgba(126,92,176,.26);
+}
+
+.btn-x18{
+  color:#ffffff;
+  border:1px solid rgba(0,0,0,.08);
+  background:linear-gradient(135deg,
+    #f59e0b 0%,
+    #ef4444 100%
+  );
+  box-shadow:0 12px 24px rgba(190,108,66,.25);
+}
+
+/* --- ミント・ソーダ風 --- */
+.btn-x19{
+  color:#1f4b48;
+  border:1px solid rgba(45,212,191,.24);
+  background:linear-gradient(135deg,
+    #ffffff 0%,
+    #ecfeff 25%,
+    #ccfbf1 58%,
+    #d1fae5 100%
+  );
+  box-shadow:0 10px 18px rgba(90,155,145,.16);
+}
+
+.btn-x20{
+  color:#23465f;
+  border:1px solid rgba(56,189,248,.24);
+  background:linear-gradient(135deg,
+    #ffffff 0%,
+    #f0f9ff 20%,
+    #cffafe 58%,
+    #dbeafe 100%
+  );
+  box-shadow:0 10px 18px rgba(91,146,176,.16);
+}
+
+/* --- ローズ・ピーチ風 --- */
+.btn-x21{
+  color:#5b3340;
+  border:1px solid rgba(244,114,182,.24);
+  background:linear-gradient(135deg,
+    #ffffff 0%,
+    #fff1f2 18%,
+    #fce7f3 56%,
+    #ffe4e6 100%
+  );
+  box-shadow:0 10px 18px rgba(176,108,132,.16);
+}
+
+.btn-x22{
+  color:#644128;
+  border:1px solid rgba(251,146,60,.24);
+  background:linear-gradient(135deg,
+    #ffffff 0%,
+    #fff7ed 18%,
+    #ffedd5 56%,
+    #fef3c7 100%
+  );
+  box-shadow:0 10px 18px rgba(182,128,83,.16);
+}
+
+/* --- ふんわりメタル/ガラス寄り --- */
+.btn-x23{
+  color:#3d4652;
+  border:1px solid rgba(148,163,184,.24);
+  background:linear-gradient(135deg,
+    rgba(255,255,255,.95) 0%,
+    rgba(241,245,249,.95) 48%,
+    rgba(226,232,240,.95) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 8px 16px rgba(110,120,140,.15);
+}
+
+.btn-x24{
+  color:#2f4657;
+  border:1px solid rgba(148,163,184,.22);
+  background:linear-gradient(135deg,
+    rgba(255,255,255,.92) 0%,
+    rgba(224,242,254,.85) 52%,
+    rgba(255,255,255,.92) 100%
+  );
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.85),
+    0 8px 18px rgba(90,130,160,.14);
+}
+
+/* --- パターン感のあるもの --- */
+.btn-x25{
+  color:#344250;
+  border:1px solid rgba(148,163,184,.22);
+  background:
+    repeating-linear-gradient(
+      135deg,
+      #ffffff 0px,
+      #ffffff 10px,
+      #eef2f7 10px,
+      #eef2f7 20px
+    );
+  box-shadow:0 8px 16px rgba(120,132,150,.14);
+}
+
+.btn-x26{
+  color:#355364;
+  border:1px solid rgba(96,165,250,.2);
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,.9) 0%, rgba(255,255,255,0) 30%),
+    linear-gradient(135deg,#eff6ff 0%,#dbeafe 52%,#e0f2fe 100%);
+  box-shadow:0 9px 18px rgba(92,132,168,.16);
+}
+
+.btn-x27{
+  color:#4d3355;
+  border:1px solid rgba(217,70,239,.22);
+  background:
+    radial-gradient(circle at 25% 25%, rgba(255,255,255,.88) 0%, rgba(255,255,255,0) 28%),
+    linear-gradient(135deg,#faf5ff 0%,#f5d0fe 56%,#ede9fe 100%);
+  box-shadow:0 9px 18px rgba(154,108,176,.16);
+}
+
+.btn-x28{
+  color:#60462d;
+  border:1px solid rgba(245,158,11,.22);
+  background:
+    radial-gradient(circle at 25% 20%, rgba(255,255,255,.9) 0%, rgba(255,255,255,0) 25%),
+    linear-gradient(135deg,#fff7ed 0%,#ffedd5 55%,#fde68a 100%);
+  box-shadow:0 9px 18px rgba(176,128,74,.16);
+}
+
+/* --- しっとり暗色寄りの変化球 --- */
+.btn-x29{
+  color:#ffffff;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(135deg,
+    #475569 0%,
+    #334155 55%,
+    #1e293b 100%
+  );
+  box-shadow:0 12px 24px rgba(40,52,72,.28);
+}
+
+.btn-x30{
+  color:#ffffff;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(135deg,
+    #0f766e 0%,
+    #0f766e 28%,
+    #155e75 100%
+  );
+  box-shadow:0 12px 24px rgba(24,94,110,.28);
+}
+
+/* ===== 背景＋SVGアイコン合成系 ===== */
+
+/* ▼ 下向き */
+.btn-x61{
+  color:#334155;
+  border:1px solid #cbd5e1;
+  background:
+    linear-gradient(180deg,
+      #e3e8ef 0%,
+      #eef2f6 30%,
+      #f4f7fa 50%,
+      #eef2f6 70%,
+      #e3e8ef 100%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>")
+    no-repeat right 12px center / 16px;
+}
+
+/* ▼ 上向き */
+.btn-x62{
+  color:#334155;
+  border:1px solid #cbd5e1;
+  background:
+    linear-gradient(180deg,
+      #e3e8ef 0%,
+      #eef2f6 30%,
+      #f4f7fa 50%,
+      #eef2f6 70%,
+      #e3e8ef 100%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'><polyline points='18 15 12 9 6 15'/></svg>")
+    no-repeat right 12px center / 16px;
+}
+
+/* ▶ 右矢印 */
+.btn-x63{
+  color:#1e3a5f;
+  border:1px solid #cbd5e1;
+  background:
+    linear-gradient(180deg,
+      #e0f2fe 0%,
+      #f0f9ff 50%,
+      #e0f2fe 100%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2'><polyline points='9 6 15 12 9 18'/></svg>")
+    no-repeat right 12px center / 16px;
+}
+
+/* ◀ 左矢印 */
+.btn-x64{
+  color:#1e3a5f;
+  border:1px solid #cbd5e1;
+  background:
+    linear-gradient(180deg,
+      #e0f2fe 0%,
+      #f0f9ff 50%,
+      #e0f2fe 100%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2'><polyline points='15 6 9 12 15 18'/></svg>")
+    no-repeat right 12px center / 16px;
+}
+
+/* ✔ チェック */
+.btn-x65{
+  color:#1f4d3d;
+  border:1px solid #bbf7d0;
+  background:
+    linear-gradient(180deg,
+      #dcfce7 0%,
+      #f0fdf4 50%,
+      #dcfce7 100%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2316a34a' stroke-width='2'><polyline points='20 6 9 17 4 12'/></svg>")
+    no-repeat right 12px center / 16px;
+}
+
+/* ✕ バツ */
+.btn-x66{
+  color:#5a2c2c;
+  border:1px solid #fecaca;
+  background:
+    linear-gradient(180deg,
+      #fee2e2 0%,
+      #fef2f2 50%,
+      #fee2e2 100%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23dc2626' stroke-width='2'><line x1='18' y1='6' x2='6' y2='18'/><line x1='6' y1='6' x2='18' y2='18'/></svg>")
+    no-repeat right 12px center / 16px;
+}
+
+/* ℹ 情報 */
+.btn-x67{
+  color:#1e3a5f;
+  border:1px solid #bfdbfe;
+  background:
+    linear-gradient(180deg,
+      #dbeafe 0%,
+      #eff6ff 50%,
+      #dbeafe 100%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' stroke='%233b82f6' stroke-width='2'><circle cx='12' cy='12' r='10'/><line x1='12' y1='16' x2='12' y2='12'/><line x1='12' y1='8' x2='12' y2='8'/></svg>")
+    no-repeat right 12px center / 16px;
+}
+
+/* ⚙ 設定 */
+.btn-x68{
+  color:#374151;
+  border:1px solid #d1d5db;
+  background:
+    linear-gradient(180deg,
+      #f3f4f6 0%,
+      #fafafa 50%,
+      #e5e7eb 100%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' stroke='%236b7280' stroke-width='2'><circle cx='12' cy='12' r='3'/><path d='M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1-2 3.5-1.2-.5a1.7 1.7 0 0 0-1.7.3l-.1.1a1.7 1.7 0 0 0-.5 1.7l.1.1H9.6l.1-.1a1.7 1.7 0 0 0-.5-1.7l-.1-.1a1.7 1.7 0 0 0-1.7-.3l-1.2.5-2-3.5.1-.1a1.7 1.7 0 0 0 .3-1.8l-.1-.1a1.7 1.7 0 0 0-1.6-.9H3V9h.1a1.7 1.7 0 0 0 1.6-.9l.1-.1a1.7 1.7 0 0 0-.3-1.8l-.1-.1 2-3.5 1.2.5a1.7 1.7 0 0 0 1.7-.3l.1-.1A1.7 1.7 0 0 0 9.6 1.1L9.5 1h4.9l-.1.1a1.7 1.7 0 0 0 .5 1.7l.1.1a1.7 1.7 0 0 0 1.7.3l1.2-.5 2 3.5-.1.1a1.7 1.7 0 0 0-.3 1.8l.1.1a1.7 1.7 0 0 0 1.6.9H21v6h-.1a1.7 1.7 0 0 0-1.6.9z'/></svg>")
+    no-repeat right 12px center / 16px;
+}
+
+/* ===== 背景＋SVGアイコン合成系 追加その2 ===== */
+
+/* ＋ プラス */
+.btn-x69{
+  color:#2f4858;
+  border:1px solid #c7d8e2;
+  background:
+    linear-gradient(180deg,
+      #e8f3f8 0%,
+      #f3f9fc 32%,
+      #ffffff 50%,
+      #f3f9fc 68%,
+      #e8f3f8 100%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%235b7a8d' stroke-width='2' stroke-linecap='round'><line x1='12' y1='5' x2='12' y2='19'/><line x1='5' y1='12' x2='19' y2='12'/></svg>")
+    no-repeat right 12px center / 16px;
+  box-shadow:0 8px 16px rgba(102,138,158,.14);
+}
+
+/* － マイナス */
+.btn-x70{
+  color:#46515b;
+  border:1px solid #d1d9e0;
+  background:
+    linear-gradient(180deg,
+      #edf1f4 0%,
+      #f7f9fb 35%,
+      #ffffff 50%,
+      #f7f9fb 65%,
+      #edf1f4 100%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round'><line x1='5' y1='12' x2='19' y2='12'/></svg>")
+    no-repeat right 12px center / 16px;
+  box-shadow:0 8px 15px rgba(118,132,145,.13);
+}
+
+/* ↻ リロード */
+.btn-x71{
+  color:#2a4c5c;
+  border:1px solid #c6dae5;
+  background:
+    linear-gradient(180deg,
+      #e5f4fb 0%,
+      #f2f9fd 30%,
+      #ffffff 50%,
+      #f2f9fd 70%,
+      #e5f4fb 100%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%234b7d95' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='23 4 23 10 17 10'/><polyline points='1 20 1 14 7 14'/><path d='M3.5 9a9 9 0 0 1 14.13-3.36L23 10'/><path d='M20.5 15a9 9 0 0 1-14.13 3.36L1 14'/></svg>")
+    no-repeat right 11px center / 16px;
+  box-shadow:0 9px 17px rgba(92,139,164,.15);
+}
+
+/* 🔍 検索 */
+.btn-x72{
+  color:#364652;
+  border:1px solid #d2dbe2;
+  background:
+    linear-gradient(180deg,
+      #edf2f6 0%,
+      #f7fafc 32%,
+      #ffffff 50%,
+      #f7fafc 68%,
+      #edf2f6 100%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2364758b' stroke-width='2' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>")
+    no-repeat right 12px center / 16px;
+  box-shadow:0 8px 15px rgba(116,132,146,.13);
+}
+
+/* ✎ 編集 */
+.btn-x73{
+  color:#5a4327;
+  border:1px solid #e5d3b8;
+  background:
+    linear-gradient(180deg,
+      #fdf3e7 0%,
+      #fff9f2 34%,
+      #ffffff 50%,
+      #fff9f2 66%,
+      #fdf3e7 100%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%239a6a2f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 20h9'/><path d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z'/></svg>")
+    no-repeat right 12px center / 16px;
+  box-shadow:0 9px 17px rgba(170,128,76,.15);
+}
+
+/* ⤓ ダウンロード */
+.btn-x74{
+  color:#244458;
+  border:1px solid #c9dce7;
+  background:
+    linear-gradient(180deg,
+      #e6f5fb 0%,
+      #f3fafd 33%,
+      #ffffff 50%,
+      #f3fafd 67%,
+      #e6f5fb 100%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2342809a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 3v12'/><path d='M7 10l5 5 5-5'/><path d='M5 21h14'/></svg>")
+    no-repeat right 12px center / 16px;
+  box-shadow:0 9px 17px rgba(88,138,164,.15);
+}
+
+/* ⤒ アップロード */
+.btn-x75{
+  color:#255046;
+  border:1px solid #c7dfd7;
+  background:
+    linear-gradient(180deg,
+      #e8f8f3 0%,
+      #f3fbf8 33%,
+      #ffffff 50%,
+      #f3fbf8 67%,
+      #e8f8f3 100%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%233b8b73' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 21V9'/><path d='M17 14l-5-5-5 5'/><path d='M5 3h14'/></svg>")
+    no-repeat right 12px center / 16px;
+  box-shadow:0 9px 17px rgba(88,148,129,.15);
+}
+
+/* ★ お気に入り */
+.btn-x76{
+  color:#5a3d24;
+  border:1px solid #ead5a7;
+  background:
+    linear-gradient(180deg,
+      #fff6db 0%,
+      #fff9ea 30%,
+      #ffffff 50%,
+      #fff9ea 70%,
+      #fff6db 100%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23c28a2c' stroke-width='2' stroke-linejoin='round'><polygon points='12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2'/></svg>")
+    no-repeat right 12px center / 16px;
+  box-shadow:0 9px 17px rgba(180,140,72,.16);
+}
+
+/* ♡ ハート */
+.btn-x77{
+  color:#5b3242;
+  border:1px solid #efc6d4;
+  background:
+    linear-gradient(180deg,
+      #fff1f5 0%,
+      #fff7f9 32%,
+      #ffffff 50%,
+      #fff7f9 68%,
+      #fff1f5 100%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23c0587d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z'/></svg>")
+    no-repeat right 12px center / 16px;
+  box-shadow:0 9px 17px rgba(176,102,136,.15);
+}
+
+/* 鍵 */
+.btn-x78{
+  color:#3f4754;
+  border:1px solid #d7dbe2;
+  background:
+    linear-gradient(180deg,
+      #f0f2f5 0%,
+      #fafbfc 34%,
+      #ffffff 50%,
+      #fafbfc 66%,
+      #f0f2f5 100%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='4' y='11' width='16' height='10' rx='2'/><path d='M8 11V8a4 4 0 1 1 8 0v3'/></svg>")
+    no-repeat right 12px center / 16px;
+  box-shadow:0 8px 15px rgba(120,130,145,.13);
+}
+
+/* ゴミ箱 */
+.btn-x79{
+  color:#5d2f2f;
+  border:1px solid #f0c3c3;
+  background:
+    linear-gradient(180deg,
+      #fef1f1 0%,
+      #fff8f8 34%,
+      #ffffff 50%,
+      #fff8f8 66%,
+      #fef1f1 100%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23c85a5a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='3 6 5 6 21 6'/><path d='M19 6l-1 14H6L5 6'/><path d='M10 11v6'/><path d='M14 11v6'/><path d='M9 6V4h6v2'/></svg>")
+    no-repeat right 12px center / 16px;
+  box-shadow:0 9px 16px rgba(186,110,110,.15);
+}
+
+/* フォルダ */
+.btn-x80{
+  color:#5b4728;
+  border:1px solid #ead7b6;
+  background:
+    linear-gradient(180deg,
+      #fdf4e4 0%,
+      #fff9f1 30%,
+      #ffffff 50%,
+      #fff9f1 70%,
+      #fdf4e4 100%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23b68639' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 7h5l2 2h11v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z'/></svg>")
+    no-repeat right 12px center / 16px;
+  box-shadow:0 9px 16px rgba(176,136,76,.15);
+}
+
+/* ベル */
+.btn-x81{
+  color:#23485a;
+  border:1px solid #c8dfe8;
+  background:
+    linear-gradient(180deg,
+      #e8f6fb 0%,
+      #f4fbfd 34%,
+      #ffffff 50%,
+      #f4fbfd 66%,
+      #e8f6fb 100%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2342879f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M18 8a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8'/><path d='M13.73 21a2 2 0 0 1-3.46 0'/></svg>")
+    no-repeat right 12px center / 16px;
+  box-shadow:0 9px 16px rgba(92,142,164,.15);
+}
+
+/* チャット */
+.btn-x82{
+  color:#244d44;
+  border:1px solid #c7dfd7;
+  background:
+    linear-gradient(180deg,
+      #eaf8f3 0%,
+      #f5fbf8 34%,
+      #ffffff 50%,
+      #f5fbf8 66%,
+      #eaf8f3 100%
+    ),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%233d8c73' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'/></svg>")
+    no-repeat right 12px center / 16px;
+  box-shadow:0 9px 16px rgba(92,146,130,.15);
+}
+
+
+/* ===== 追加CSS：濃い系ボタン拡張 ===== */
+.btn-d01{color:#fff;border-color:#294463;background:linear-gradient(135deg,#476d98 0%,#2f4b6c 58%,#1f3349 100%);box-shadow:0 12px 24px rgba(25,43,63,.28);}
+.btn-d02{color:#fff;border-color:#22555a;background:linear-gradient(135deg,#2f7b83 0%,#235c62 55%,#173d42 100%);box-shadow:0 12px 24px rgba(25,76,82,.28);}
+.btn-d03{color:#fff;border-color:#6a3e1d;background:linear-gradient(135deg,#9c6236 0%,#744323 55%,#4e2b15 100%);box-shadow:0 12px 24px rgba(89,53,28,.28);}
+.btn-d04{color:#fff;border-color:#5f2e39;background:linear-gradient(135deg,#9a5366 0%,#6f3948 55%,#4a2430 100%);box-shadow:0 12px 24px rgba(82,40,53,.28);}
+.btn-d05{color:#fff;border-color:#324d2f;background:linear-gradient(135deg,#4d7747 0%,#365635 55%,#243824 100%);box-shadow:0 12px 24px rgba(42,65,42,.28);}
+.btn-d06{color:#fff;border-color:#4b365a;background:linear-gradient(135deg,#6f5691 0%,#513d69 55%,#372845 100%);box-shadow:0 12px 24px rgba(64,47,81,.28);}
+.btn-d07{color:#fff;border-color:#3f3f49;background:linear-gradient(135deg,#61616e 0%,#474752 55%,#2f2f37 100%);box-shadow:0 12px 24px rgba(39,39,46,.28);}
+.btn-d08{color:#fff;border-color:#6a2a2a;background:linear-gradient(135deg,#a74a4a 0%,#7a3434 55%,#522222 100%);box-shadow:0 12px 24px rgba(83,34,34,.28);}
+.btn-d09{color:#fff;border-color:#19506f;background:linear-gradient(135deg,#2f85b2 0%,#215f82 55%,#173f56 100%);box-shadow:0 12px 24px rgba(27,72,97,.28);}
+.btn-d10{color:#fff;border-color:#7a5d1d;background:linear-gradient(135deg,#b0882d 0%,#80621e 55%,#584313 100%);box-shadow:0 12px 24px rgba(92,71,22,.28);}
+.btn-d11{color:#fff;border-color:#37545f;background:linear-gradient(135deg,#587a88 0%,#3f5963 55%,#2a3a41 100%);box-shadow:0 12px 24px rgba(44,61,68,.28);}
+.btn-d12{color:#fff;border-color:#563322;background:linear-gradient(135deg,#8c5a3b 0%,#69422c 55%,#452b1d 100%);box-shadow:0 12px 24px rgba(71,45,30,.28);}
+.btn-d13{color:#fff;border-color:#223e58;background:linear-gradient(135deg,#365d82 0%,#274562 55%,#1a2d40 100%);box-shadow:0 12px 24px rgba(29,50,70,.28);}
+.btn-d14{color:#fff;border-color:#224b46;background:linear-gradient(135deg,#317068 0%,#24514b 55%,#173632 100%);box-shadow:0 12px 24px rgba(28,62,57,.28);}
+.btn-d15{color:#fff;border-color:#663f54;background:linear-gradient(135deg,#9f607d 0%,#75475b 55%,#4e2f3d 100%);box-shadow:0 12px 24px rgba(80,48,63,.28);}
+.btn-d16{color:#fff;border-color:#4d4f6b;background:linear-gradient(135deg,#72779f 0%,#545772 55%,#37384a 100%);box-shadow:0 12px 24px rgba(55,56,74,.28);}
+.btn-d17{color:#fff;border-color:#5a421e;background:linear-gradient(135deg,#8d6a33 0%,#694e24 55%,#463417 100%);box-shadow:0 12px 24px rgba(73,54,25,.28);}
+.btn-d18{color:#fff;border-color:#4a5f27;background:linear-gradient(135deg,#6f8d39 0%,#53682a 55%,#37461c 100%);box-shadow:0 12px 24px rgba(55,70,28,.28);}
+.btn-d19{color:#fff;border-color:#5a2f68;background:linear-gradient(135deg,#87479a 0%,#633570 55%,#412248 100%);box-shadow:0 12px 24px rgba(66,36,73,.28);}
+.btn-d20{color:#fff;border-color:#5b3d24;background:linear-gradient(135deg,#8f6440 0%,#6a482d 55%,#45301d 100%);box-shadow:0 12px 24px rgba(70,48,30,.28);}
+.btn-d21{color:#fff;border-color:#1f3757;background:linear-gradient(135deg,#2f5587 0%,#233e63 55%,#162842 100%);box-shadow:0 12px 24px rgba(24,42,68,.28);}
+.btn-d22{color:#fff;border-color:#1e4d4f;background:linear-gradient(135deg,#2e797b 0%,#21595a 55%,#173b3c 100%);box-shadow:0 12px 24px rgba(26,64,65,.28);}
+.btn-d23{color:#fff;border-color:#6b321f;background:linear-gradient(135deg,#a25231 0%,#773b23 55%,#502716 100%);box-shadow:0 12px 24px rgba(85,42,26,.28);}
+.btn-d24{color:#fff;border-color:#5c2234;background:linear-gradient(135deg,#943d58 0%,#6d2d40 55%,#491d2a 100%);box-shadow:0 12px 24px rgba(77,31,45,.28);}
+.btn-d25{color:#fff;border-color:#27492b;background:linear-gradient(135deg,#3e7144 0%,#2d5331 55%,#1d3620 100%);box-shadow:0 12px 24px rgba(34,61,37,.28);}
+.btn-d26{color:#fff;border-color:#46305f;background:linear-gradient(135deg,#6d4b94 0%,#4e366a 55%,#332345 100%);box-shadow:0 12px 24px rgba(53,37,71,.28);}
+.btn-d27{color:#fff;border-color:#34343b;background:linear-gradient(135deg,#575760 0%,#3f3f46 55%,#28282d 100%);box-shadow:0 12px 24px rgba(37,37,42,.28);}
+.btn-d28{color:#fff;border-color:#6b2323;background:linear-gradient(135deg,#ad3e3e 0%,#7e2e2e 55%,#541e1e 100%);box-shadow:0 12px 24px rgba(87,31,31,.28);}
+.btn-d29{color:#fff;border-color:#1e4a69;background:linear-gradient(135deg,#2e7fa8 0%,#215b7a 55%,#153c50 100%);box-shadow:0 12px 24px rgba(24,68,91,.28);}
+.btn-d30{color:#fff;border-color:#6d5217;background:linear-gradient(135deg,#a67d28 0%,#7a5c1b 55%,#523e12 100%);box-shadow:0 12px 24px rgba(86,65,19,.28);}
+.btn-d31{color:#fff;border-color:#2d4757;background:linear-gradient(135deg,#476b80 0%,#33505f 55%,#21343f 100%);box-shadow:0 12px 24px rgba(35,55,68,.28);}
+.btn-d32{color:#fff;border-color:#5f3520;background:linear-gradient(135deg,#95593a 0%,#6f4129 55%,#492a1b 100%);box-shadow:0 12px 24px rgba(76,44,29,.28);}
+.btn-d33{color:#fff;border-color:#20364a;background:linear-gradient(135deg,#334f6e 0%,#253a51 55%,#182535 100%);box-shadow:0 12px 24px rgba(26,39,55,.28);}
+.btn-d34{color:#fff;border-color:#1f433d;background:linear-gradient(135deg,#2d6359 0%,#204840 55%,#143029 100%);box-shadow:0 12px 24px rgba(24,54,48,.28);}
+.btn-d35{color:#fff;border-color:#5e3143;background:linear-gradient(135deg,#8e4b65 0%,#683749 55%,#442330 100%);box-shadow:0 12px 24px rgba(72,37,49,.28);}
+.btn-d36{color:#fff;border-color:#434861;background:linear-gradient(135deg,#666d96 0%,#4a506d 55%,#303448 100%);box-shadow:0 12px 24px rgba(49,53,73,.28);}
+.btn-d37{color:#fff;border-color:#5d431d;background:linear-gradient(135deg,#92672f 0%,#6d4d21 55%,#483316 100%);box-shadow:0 12px 24px rgba(76,53,24,.28);}
+.btn-d38{color:#fff;border-color:#435621;background:linear-gradient(135deg,#698734 0%,#4d6425 55%,#334218 100%);box-shadow:0 12px 24px rgba(51,66,24,.28);}
+.btn-d39{color:#fff;border-color:#4e2a60;background:linear-gradient(135deg,#7b4295 0%,#592f6c 55%,#3a1f47 100%);box-shadow:0 12px 24px rgba(60,32,73,.28);}
+.btn-d40{color:#fff;border-color:#553820;background:linear-gradient(135deg,#85583a 0%,#624129 55%,#402a1b 100%);box-shadow:0 12px 24px rgba(64,43,28,.28);}
+
+/* ===== 追加CSS：やや薄い濃色ボタン ===== */
+
+.btn-e01{color:#fff;border-color:#5f7fa8;background:linear-gradient(135deg,#7fa6d8 0%,#628bbf 55%,#4b6f9e 100%);box-shadow:0 10px 20px rgba(60,90,130,.22);}
+.btn-e02{color:#fff;border-color:#4f8a8f;background:linear-gradient(135deg,#6fb8bd 0%,#519ca1 55%,#3c787d 100%);box-shadow:0 10px 20px rgba(60,120,125,.22);}
+.btn-e03{color:#fff;border-color:#9a6a3c;background:linear-gradient(135deg,#c59362 0%,#a57648 55%,#7e5833 100%);box-shadow:0 10px 20px rgba(130,90,50,.22);}
+.btn-e04{color:#fff;border-color:#9a5a6d;background:linear-gradient(135deg,#c87b95 0%,#a55e77 55%,#7c4559 100%);box-shadow:0 10px 20px rgba(130,70,90,.22);}
+.btn-e05{color:#fff;border-color:#4d7a50;background:linear-gradient(135deg,#6ea774 0%,#538a59 55%,#3c6740 100%);box-shadow:0 10px 20px rgba(70,110,70,.22);}
+.btn-e06{color:#fff;border-color:#6a5a9c;background:linear-gradient(135deg,#8f82c8 0%,#6f63a8 55%,#524a7d 100%);box-shadow:0 10px 20px rgba(90,80,130,.22);}
+.btn-e07{color:#fff;border-color:#6a6a75;background:linear-gradient(135deg,#8d8d99 0%,#6f6f7a 55%,#55555f 100%);box-shadow:0 10px 20px rgba(80,80,90,.22);}
+.btn-e08{color:#fff;border-color:#a45e5e;background:linear-gradient(135deg,#d07a7a 0%,#ae5f5f 55%,#864747 100%);box-shadow:0 10px 20px rgba(130,70,70,.22);}
+.btn-e09{color:#fff;border-color:#4c7fa8;background:linear-gradient(135deg,#6faed8 0%,#528fc1 55%,#3e6f99 100%);box-shadow:0 10px 20px rgba(70,110,150,.22);}
+.btn-e10{color:#fff;border-color:#a4893c;background:linear-gradient(135deg,#d1b35a 0%,#ae9442 55%,#846f30 100%);box-shadow:0 10px 20px rgba(130,110,50,.22);}
+
+/* 後半 */
+.btn-e11{color:#fff;border-color:#5c7f9c;background:linear-gradient(135deg,#7da5c0 0%,#5e859f 55%,#476678 100%);box-shadow:0 10px 20px rgba(80,110,130,.22);}
+.btn-e12{color:#fff;border-color:#8a6a4f;background:linear-gradient(135deg,#b89070 0%,#967257 55%,#70523f 100%);box-shadow:0 10px 20px rgba(110,85,65,.22);}
+.btn-e13{color:#fff;border-color:#5a7a94;background:linear-gradient(135deg,#7fa3c0 0%,#62849f 55%,#496274 100%);box-shadow:0 10px 20px rgba(80,110,130,.22);}
+.btn-e14{color:#fff;border-color:#5f8a83;background:linear-gradient(135deg,#7fb7ad 0%,#5f978e 55%,#45716a 100%);box-shadow:0 10px 20px rgba(70,110,100,.22);}
+.btn-e15{color:#fff;border-color:#9c5f7d;background:linear-gradient(135deg,#c87fa4 0%,#a36183 55%,#7a4762 100%);box-shadow:0 10px 20px rgba(130,80,100,.22);}
+.btn-e16{color:#fff;border-color:#7a7da4;background:linear-gradient(135deg,#9a9fd0 0%,#777cb0 55%,#595e86 100%);box-shadow:0 10px 20px rgba(90,90,130,.22);}
+.btn-e17{color:#fff;border-color:#9c7a3c;background:linear-gradient(135deg,#caa55a 0%,#a38242 55%,#7a6130 100%);box-shadow:0 10px 20px rgba(130,100,50,.22);}
+.btn-e18{color:#fff;border-color:#6d8a4a;background:linear-gradient(135deg,#94b65f 0%,#749a47 55%,#566f34 100%);box-shadow:0 10px 20px rgba(90,120,60,.22);}
+.btn-e19{color:#fff;border-color:#7a5f9c;background:linear-gradient(135deg,#a287c8 0%,#7f63a6 55%,#5f497d 100%);box-shadow:0 10px 20px rgba(100,80,130,.22);}
+.btn-e20{color:#fff;border-color:#8a6f4f;background:linear-gradient(135deg,#b8956f 0%,#967557 55%,#70573f 100%);box-shadow:0 10px 20px rgba(110,85,65,.22);}
+
+/* ===== 追加CSS：濃いグラデーション特化 ===== */
+
+.btn-g01{color:#fff;border:none;background:linear-gradient(135deg,#1e3c72 0%,#2a5298 100%);box-shadow:0 14px 28px rgba(30,60,114,.35);}
+.btn-g02{color:#fff;border:none;background:linear-gradient(135deg,#134e5e 0%,#71b280 100%);box-shadow:0 14px 28px rgba(19,78,94,.35);}
+.btn-g03{color:#fff;border:none;background:linear-gradient(135deg,#ff416c 0%,#ff4b2b 100%);box-shadow:0 14px 28px rgba(255,65,108,.35);}
+.btn-g04{color:#fff;border:none;background:linear-gradient(135deg,#6a11cb 0%,#2575fc 100%);box-shadow:0 14px 28px rgba(106,17,203,.35);}
+.btn-g05{color:#fff;border:none;background:linear-gradient(135deg,#f7971e 0%,#ffd200 100%);box-shadow:0 14px 28px rgba(247,151,30,.35);}
+.btn-g06{color:#fff;border:none;background:linear-gradient(135deg,#11998e 0%,#38ef7d 100%);box-shadow:0 14px 28px rgba(17,153,142,.35);}
+.btn-g07{color:#fff;border:none;background:linear-gradient(135deg,#ee0979 0%,#ff6a00 100%);box-shadow:0 14px 28px rgba(238,9,121,.35);}
+.btn-g08{color:#fff;border:none;background:linear-gradient(135deg,#4568dc 0%,#b06ab3 100%);box-shadow:0 14px 28px rgba(69,104,220,.35);}
+.btn-g09{color:#fff;border:none;background:linear-gradient(135deg,#0f2027 0%,#203a43 50%,#2c5364 100%);box-shadow:0 14px 28px rgba(15,32,39,.35);}
+.btn-g10{color:#fff;border:none;background:linear-gradient(135deg,#232526 0%,#414345 100%);box-shadow:0 14px 28px rgba(35,37,38,.35);}
+
+/* 強め多色 */
+.btn-g11{color:#fff;border:none;background:linear-gradient(135deg,#fc466b 0%,#3f5efb 100%);box-shadow:0 14px 28px rgba(252,70,107,.35);}
+.btn-g12{color:#fff;border:none;background:linear-gradient(135deg,#00c6ff 0%,#0072ff 100%);box-shadow:0 14px 28px rgba(0,198,255,.35);}
+.btn-g13{color:#fff;border:none;background:linear-gradient(135deg,#f953c6 0%,#b91d73 100%);box-shadow:0 14px 28px rgba(249,83,198,.35);}
+.btn-g14{color:#fff;border:none;background:linear-gradient(135deg,#c94b4b 0%,#4b134f 100%);box-shadow:0 14px 28px rgba(201,75,75,.35);}
+.btn-g15{color:#fff;border:none;background:linear-gradient(135deg,#30cfd0 0%,#330867 100%);box-shadow:0 14px 28px rgba(48,207,208,.35);}
+.btn-g16{color:#fff;border:none;background:linear-gradient(135deg,#667db6 0%,#0082c8 50%,#0082c8 75%,#667db6 100%);box-shadow:0 14px 28px rgba(102,125,182,.35);}
+.btn-g17{color:#fff;border:none;background:linear-gradient(135deg,#1d4350 0%,#a43931 100%);box-shadow:0 14px 28px rgba(29,67,80,.35);}
+.btn-g18{color:#fff;border:none;background:linear-gradient(135deg,#8360c3 0%,#2ebf91 100%);box-shadow:0 14px 28px rgba(131,96,195,.35);}
+.btn-g19{color:#fff;border:none;background:linear-gradient(135deg,#ff512f 0%,#dd2476 100%);box-shadow:0 14px 28px rgba(255,81,47,.35);}
+.btn-g20{color:#fff;border:none;background:linear-gradient(135deg,#24c6dc 0%,#514a9d 100%);box-shadow:0 14px 28px rgba(36,198,220,.35);}
+
+/* ダーク×ネオン寄り */
+.btn-g21{color:#fff;border:none;background:linear-gradient(135deg,#000000 0%,#434343 100%);box-shadow:0 14px 28px rgba(0,0,0,.45);}
+.btn-g22{color:#fff;border:none;background:linear-gradient(135deg,#141e30 0%,#243b55 100%);box-shadow:0 14px 28px rgba(20,30,48,.45);}
+.btn-g23{color:#fff;border:none;background:linear-gradient(135deg,#000428 0%,#004e92 100%);box-shadow:0 14px 28px rgba(0,4,40,.45);}
+.btn-g24{color:#fff;border:none;background:linear-gradient(135deg,#200122 0%,#6f0000 100%);box-shadow:0 14px 28px rgba(32,1,34,.45);}
+.btn-g25{color:#fff;border:none;background:linear-gradient(135deg,#232526 0%,#1c1c1c 100%);box-shadow:0 14px 28px rgba(0,0,0,.45);}
+.btn-g26{color:#fff;border:none;background:linear-gradient(135deg,#3a1c71 0%,#d76d77 50%,#ffaf7b 100%);box-shadow:0 14px 28px rgba(58,28,113,.45);}
+.btn-g27{color:#fff;border:none;background:linear-gradient(135deg,#42275a 0%,#734b6d 100%);box-shadow:0 14px 28px rgba(66,39,90,.45);}
+.btn-g28{color:#fff;border:none;background:linear-gradient(135deg,#bdc3c7 0%,#2c3e50 100%);box-shadow:0 14px 28px rgba(44,62,80,.45);}
+.btn-g29{color:#fff;border:none;background:linear-gradient(135deg,#ff9966 0%,#ff5e62 100%);box-shadow:0 14px 28px rgba(255,153,102,.45);}
+.btn-g30{color:#fff;border:none;background:linear-gradient(135deg,#00b09b 0%,#96c93d 100%);box-shadow:0 14px 28px rgba(0,176,155,.45);}
+
+/* ===== 追加CSS：遊び心版オマージュの濃い版 ===== */
+
+.btn-y01{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(135deg,
+    #355c2d 0%,
+    #2d4b28 28%,
+    #6b5d1d 62%,
+    #2f3b1f 100%
+  );
+  box-shadow:0 12px 24px rgba(56,70,28,.28);
+}
+
+.btn-y02{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(135deg,
+    #1f3f63 0%,
+    #234d74 34%,
+    #1c6980 68%,
+    #18384f 100%
+  );
+  box-shadow:0 12px 24px rgba(29,68,95,.28);
+}
+
+.btn-y03{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(135deg,
+    #5a2b61 0%,
+    #7a356e 34%,
+    #3f2757 68%,
+    #2c1b3d 100%
+  );
+  box-shadow:0 12px 24px rgba(83,44,92,.28);
+}
+
+.btn-y04{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(135deg,
+    #6d421f 0%,
+    #8a5a22 34%,
+    #5d3c16 68%,
+    #3d2810 100%
+  );
+  box-shadow:0 12px 24px rgba(96,63,25,.28);
+}
+
+/* ストライプ風の濃色版 */
+.btn-y05{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.08);
+  background:repeating-linear-gradient(
+    135deg,
+    #2f3640,
+    #2f3640 10px,
+    #3b4450 10px,
+    #3b4450 20px
+  );
+  box-shadow:0 10px 20px rgba(42,49,58,.26);
+}
+
+/* 多色グラデの濃色版 */
+.btn-y06{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(135deg,
+    #2d5f9a 0%,
+    #1e7f63 34%,
+    #9a6a1f 68%,
+    #8a2f63 100%
+  );
+  box-shadow:0 12px 24px rgba(56,69,110,.30);
+}
+
+.btn-y07{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(135deg,
+    #4a5563 0%,
+    #2f3742 50%,
+    #566272 100%
+  );
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),
+             0 10px 18px rgba(37,45,54,.28);
+}
+
+.btn-y08{
+  color:#fff;
+  border:1px solid rgba(148,163,255,.22);
+  background:linear-gradient(135deg,
+    #4137a1 0%,
+    #6a3ea1 52%,
+    #8d2d69 100%
+  );
+  box-shadow:0 0 12px rgba(106,62,161,.35),
+             0 10px 20px rgba(62,47,110,.28);
+}
+
+.btn-y09{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(135deg,
+    #204966 0%,
+    #1d5b80 50%,
+    #16384d 100%
+  );
+  box-shadow:0 10px 18px rgba(28,74,104,.26);
+}
+
+.btn-y10{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(135deg,
+    #5a5f69 0%,
+    #434851 50%,
+    #2f3339 100%
+  );
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),
+             0 10px 18px rgba(48,52,58,.28);
+}
+
+/* 追加オマージュ版 */
+.btn-y11{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(135deg,
+    #425b1d 0%,
+    #557225 32%,
+    #334615 100%
+  );
+  box-shadow:0 10px 18px rgba(67,92,31,.26);
+}
+
+.btn-y12{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(135deg,
+    #1e4460 0%,
+    #2e6b8f 36%,
+    #173248 100%
+  );
+  box-shadow:0 10px 18px rgba(30,68,96,.26);
+}
+
+.btn-y13{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(135deg,
+    #56306a 0%,
+    #7b3f8a 36%,
+    #311c40 100%
+  );
+  box-shadow:0 10px 18px rgba(79,48,101,.26);
+}
+
+.btn-y14{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(135deg,
+    #6e4b1c 0%,
+    #9a6a22 36%,
+    #452d11 100%
+  );
+  box-shadow:0 10px 18px rgba(103,70,27,.26);
+}
+
+.btn-y15{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(135deg,
+    #1f5a55 0%,
+    #2b7b73 36%,
+    #143834 100%
+  );
+  box-shadow:0 10px 18px rgba(31,90,85,.26);
+}
+
+/* 斜め2色強めの濃色版 */
+.btn-y16{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(135deg,#1e6e8a 0%,#1e7b43 100%);
+  box-shadow:0 12px 24px rgba(33,98,92,.28);
+}
+
+.btn-y17{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(135deg,#4b3f96 0%,#8a2f67 100%);
+  box-shadow:0 12px 24px rgba(79,54,109,.30);
+}
+
+.btn-y18{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(135deg,#9a6219 0%,#8a2f2f 100%);
+  box-shadow:0 12px 24px rgba(116,60,34,.30);
+}
+
+.btn-y19{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(135deg,
+    #1c5854 0%,
+    #21706a 52%,
+    #1a483d 100%
+  );
+  box-shadow:0 10px 18px rgba(30,91,82,.26);
+}
+
+.btn-y20{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(135deg,
+    #1f4562 0%,
+    #2b6d8e 52%,
+    #203c5a 100%
+  );
+  box-shadow:0 10px 18px rgba(35,73,103,.26);
+}
+
+/* ===== 追加CSS：輝く系ボタン ===== */
+
+/* ベース：グロー強め */
+.btn-h01{
+  color:#fff;
+  border:none;
+  background:linear-gradient(135deg,#3a7bd5,#00d2ff);
+  box-shadow:0 0 10px rgba(0,210,255,.6),
+             0 0 20px rgba(0,210,255,.4),
+             0 10px 20px rgba(0,0,0,.3);
+}
+
+.btn-h02{
+  color:#fff;
+  border:none;
+  background:linear-gradient(135deg,#ff416c,#ff4b2b);
+  box-shadow:0 0 10px rgba(255,65,108,.6),
+             0 0 20px rgba(255,75,43,.4),
+             0 10px 20px rgba(0,0,0,.3);
+}
+
+.btn-h03{
+  color:#fff;
+  border:none;
+  background:linear-gradient(135deg,#00c9ff,#92fe9d);
+  box-shadow:0 0 10px rgba(0,201,255,.6),
+             0 0 20px rgba(146,254,157,.4);
+}
+
+.btn-h04{
+  color:#fff;
+  border:none;
+  background:linear-gradient(135deg,#f7971e,#ffd200);
+  box-shadow:0 0 10px rgba(255,210,0,.6),
+             0 0 20px rgba(247,151,30,.4);
+}
+
+/* ネオン寄り */
+.btn-h05{
+  color:#fff;
+  background:#111;
+  border:1px solid #00f0ff;
+  box-shadow:0 0 8px #00f0ff,0 0 16px #00f0ff;
+}
+
+.btn-h06{
+  color:#fff;
+  background:#111;
+  border:1px solid #ff00cc;
+  box-shadow:0 0 8px #ff00cc,0 0 16px #ff00cc;
+}
+
+.btn-h07{
+  color:#fff;
+  background:#111;
+  border:1px solid #39ff14;
+  box-shadow:0 0 8px #39ff14,0 0 16px #39ff14;
+}
+
+.btn-h08{
+  color:#fff;
+  background:#111;
+  border:1px solid #ffcc00;
+  box-shadow:0 0 8px #ffcc00,0 0 16px #ffcc00;
+}
+
+/* 強い多色グロー */
+.btn-h09{
+  color:#fff;
+  border:none;
+  background:linear-gradient(135deg,#fc466b,#3f5efb);
+  box-shadow:0 0 12px rgba(252,70,107,.6),
+             0 0 24px rgba(63,94,251,.5);
+}
+
+.btn-h10{
+  color:#fff;
+  border:none;
+  background:linear-gradient(135deg,#30cfd0,#330867);
+  box-shadow:0 0 12px rgba(48,207,208,.6),
+             0 0 24px rgba(51,8,103,.5);
+}
+
+/* ===== 追加CSS：遊び心オマージュ・薄め版 ===== */
+
+.btn-y01-l{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.12);
+  background:linear-gradient(135deg,
+    #4a7a3f 0%,
+    #3f6a35 28%,
+    #8a7a2a 62%,
+    #3f4f2a 100%
+  );
+  box-shadow:0 10px 20px rgba(80,95,40,.22);
+}
+
+.btn-y02-l{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.12);
+  background:linear-gradient(135deg,
+    #2b5f8a 0%,
+    #2f6f9a 34%,
+    #2a8fa5 68%,
+    #224f6a 100%
+  );
+  box-shadow:0 10px 20px rgba(50,95,130,.22);
+}
+
+.btn-y03-l{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.12);
+  background:linear-gradient(135deg,
+    #6d3a76 0%,
+    #8f4a82 34%,
+    #55356e 68%,
+    #3b244f 100%
+  );
+  box-shadow:0 10px 20px rgba(95,60,105,.22);
+}
+
+.btn-y04-l{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.12);
+  background:linear-gradient(135deg,
+    #8a5a2a 0%,
+    #a87230 34%,
+    #7a5322 68%,
+    #523716 100%
+  );
+  box-shadow:0 10px 20px rgba(110,75,35,.22);
+}
+
+.btn-y05-l{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.12);
+  background:repeating-linear-gradient(
+    135deg,
+    #3f4650,
+    #3f4650 10px,
+    #4a5360 10px,
+    #4a5360 20px
+  );
+  box-shadow:0 8px 16px rgba(70,80,90,.20);
+}
+
+.btn-y06-l{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.12);
+  background:linear-gradient(135deg,
+    #3c7fc2 0%,
+    #2fa07a 34%,
+    #c18a2f 68%,
+    #a54a7f 100%
+  );
+  box-shadow:0 10px 20px rgba(80,90,140,.24);
+}
+
+.btn-y07-l{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.12);
+  background:linear-gradient(135deg,
+    #5c6675 0%,
+    #444c58 50%,
+    #6b7686 100%
+  );
+  box-shadow:0 8px 16px rgba(80,90,105,.20);
+}
+
+.btn-y08-l{
+  color:#fff;
+  border:1px solid rgba(160,170,255,.28);
+  background:linear-gradient(135deg,
+    #5149c4 0%,
+    #7a57c2 52%,
+    #a33d7f 100%
+  );
+  box-shadow:0 0 10px rgba(120,90,200,.28),
+             0 8px 18px rgba(70,60,120,.20);
+}
+
+.btn-y09-l{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.12);
+  background:linear-gradient(135deg,
+    #2a6b8f 0%,
+    #2c7da5 50%,
+    #204f6a 100%
+  );
+  box-shadow:0 8px 16px rgba(50,95,130,.20);
+}
+
+.btn-y10-l{
+  color:#fff;
+  border:1px solid rgba(255,255,255,.12);
+  background:linear-gradient(135deg,
+    #6a707a 0%,
+    #515760 50%,
+    #3f444c 100%
+  );
+  box-shadow:0 8px 16px rgba(70,75,85,.20);
+}
+
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <h1>ボタン見本市</h1>
+      <p>
+        各ボタンを押すと、そのボタン単体で再利用しやすい最小限のHTMLをコピーします。
+      </p>
+      <p>
+        画面下の「直近でコピーしたHTML」欄で適切な「css」または「要素」のみをコピーできます。
+      </p>
+      <div class="info">
+        コピーされる内容は、通常時の見た目を再現するための
+        <strong>&lt;button style="..."&gt;文字&lt;/button&gt;</strong>
+        です。CSSクラスや外部スタイルには依存しません。
+      </div>
+    </section>
+
+    <div class="grid">
+
+      <section class="card">
+        <h2>基本操作ボタン</h2>
+        <p>保存・読込・確認など、日常的によく使う操作向けです。</p>
+        <div class="btn-row">
+          <button class="btn btn-md tone-main shadow-light">保存する</button>
+          <button class="btn btn-md tone-sub shadow-light">読み込む</button>
+          <button class="btn btn-md tone-soft shadow-light">確認する</button>
+          <button class="btn btn-md tone-gray shadow-light">閉じる</button>
+        </div>
+      </section>
+
+<section class="card">
+  <h2>基本操作ボタン・標準セット</h2>
+  <p>保存・読込・確認など、最も基本になる操作をうっすら青系で揃えたセットです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b01">保存する</button>
+    <button class="btn btn-md btn-b02">読み込む</button>
+    <button class="btn btn-md btn-b03">確認する</button>
+    <button class="btn btn-md btn-b04">閉じる</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>編集画面の基本操作</h2>
+  <p>編集中の画面で並べやすい、落ち着いた標準アクションです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b05">変更を保存</button>
+    <button class="btn btn-md btn-b06">再読み込み</button>
+    <button class="btn btn-md btn-b07">入力を戻す</button>
+    <button class="btn btn-md btn-b08">内容を反映</button>
+  </div>
+</section>
+
+
+
+      <section class="card">
+        <h2>主要アクション</h2>
+        <p>申し込み・送信・確定など、目立たせたい操作向けです。</p>
+        <div class="btn-row">
+          <button class="btn btn-md solid-main">送信する</button>
+          <button class="btn btn-md solid-success">登録する</button>
+          <button class="btn btn-md solid-dark">今すぐ始める</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>やさしい印象のボタン</h2>
+        <p>案内・補助・プレビューなど、圧を出しすぎたくない場面向けです。</p>
+        <div class="btn-row">
+          <button class="btn btn-md tone-sub soft shadow-light">プレビュー</button>
+          <button class="btn btn-md tone-soft soft shadow-light">内容を見る</button>
+          <button class="btn btn-md tone-purple soft shadow-light">おすすめを見る</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>警告・危険操作</h2>
+        <p>削除・解除・停止など、注意喚起したい操作向けです。</p>
+        <div class="btn-row">
+          <button class="btn btn-md solid-danger">削除する</button>
+          <button class="btn btn-md outline-danger soft">登録を解除</button>
+          <button class="btn btn-md tone-warm soft shadow-light">処理を中止</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>成功・完了系</h2>
+        <p>完了・承認・反映など、ポジティブな状態変化向けです。</p>
+        <div class="btn-row">
+          <button class="btn btn-md solid-success">承認する</button>
+          <button class="btn btn-md outline-success pill">反映する</button>
+          <button class="btn btn-md tone-sub pill shadow-light">完了しました</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>枠線だけの軽量ボタン</h2>
+        <p>サブ操作や補助リンクに近い役割のボタン向けです。</p>
+        <div class="btn-row">
+          <button class="btn btn-md outline-main">詳細を見る</button>
+          <button class="btn btn-md outline-success">候補を追加</button>
+          <button class="btn btn-md outline-danger">元に戻す</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>ガラス風ボタン</h2>
+        <p>少し未来感のある、半透明表現のボタンです。</p>
+        <div class="btn-row">
+          <button class="btn btn-md glass soft">ダッシュボードへ</button>
+          <button class="btn btn-md glass pill">通知を確認</button>
+          <button class="btn btn-md glass square">設定を開く</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>ピル型ボタン</h2>
+        <p>タグ風・選択肢風・柔らかいUIによく合う形です。</p>
+        <div class="btn-row">
+          <button class="btn btn-sm tone-main pill shadow-light">人気順</button>
+          <button class="btn btn-sm tone-sub pill shadow-light">新着順</button>
+          <button class="btn btn-sm tone-pink pill shadow-light">おすすめ</button>
+          <button class="btn btn-sm tone-purple pill shadow-light">あとで見る</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>大きめボタン</h2>
+        <p>スマホ画面やLPのCTAとして使いやすいサイズです。</p>
+        <div class="btn-row">
+          <button class="btn btn-lg solid-main wide">無料で試してみる</button>
+          <button class="btn btn-lg tone-sub wide shadow-strong">資料を請求する</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>小型ボタン</h2>
+        <p>表やカード内の細かな操作に向いています。</p>
+        <div class="btn-row">
+          <button class="btn btn-sm tone-gray flat">編集</button>
+          <button class="btn btn-sm tone-soft flat">複製</button>
+          <button class="btn btn-sm tone-warm flat">保留</button>
+          <button class="btn btn-sm tone-sub flat">更新</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>濃色系ボタン</h2>
+        <p>管理画面や重厚感のあるUIで使いやすい印象です。</p>
+        <div class="btn-row">
+          <button class="btn btn-md solid-dark soft">管理画面へ</button>
+          <button class="btn btn-md solid-dark pill">権限を変更</button>
+          <button class="btn btn-md solid-dark square">ログを確認</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>1カラム幅ボタン</h2>
+        <p>フォームの送信欄や、スマホ用の横幅いっぱいボタン向けです。</p>
+        <div class="btn-row" style="width:100%;">
+          <button class="btn btn-lg solid-main full">この内容で申し込む</button>
+          <button class="btn btn-lg outline-main full">入力内容を確認する</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>暖色系ボタン</h2>
+        <p>親しみや温かみを出したいページに合わせやすいです。</p>
+        <div class="btn-row">
+          <button class="btn btn-md tone-warm shadow-light">予約する</button>
+          <button class="btn btn-md tone-pink shadow-light">お気に入りに追加</button>
+          <button class="btn btn-md tone-warm pill shadow-light">相談してみる</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>角を抑えたボタン</h2>
+        <p>ややシャープで整った印象にしたいときの形です。</p>
+        <div class="btn-row">
+          <button class="btn btn-md tone-main square shadow-light">ダウンロード</button>
+          <button class="btn btn-md tone-sub square shadow-light">アップロード</button>
+          <button class="btn btn-md tone-gray square shadow-light">同期する</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>影を強めたボタン</h2>
+        <p>浮いて見えるため、押せる印象を強調したい場面に向きます。</p>
+        <div class="btn-row">
+          <button class="btn btn-md tone-main soft shadow-strong">新規作成</button>
+          <button class="btn btn-md tone-purple soft shadow-strong">続きを見る</button>
+          <button class="btn btn-md tone-sub soft shadow-strong">おすすめを開く</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>フラットボタン</h2>
+        <p>ミニマルで軽いUIに合わせやすい、影なしの表現です。</p>
+        <div class="btn-row">
+          <button class="btn btn-md tone-gray flat">キャンセル</button>
+          <button class="btn btn-md tone-soft flat">スキップ</button>
+          <button class="btn btn-md tone-main flat">次へ進む</button>
+        </div>
+      </section>
+
+<section class="card">
+  <h2>定番アクション</h2>
+  <p>最初に置きやすい、汎用性の高い基本ボタン群です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u01">保存する</button>
+    <button class="btn btn-md btn-u02">プレビュー</button>
+    <button class="btn btn-md btn-u03">公開する</button>
+    <button class="btn btn-md btn-u04">下書き保存</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>注意・変更系</h2>
+  <p>削除や差し戻しなど、注意を促したい操作向けです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u05">削除する</button>
+    <button class="btn btn-md btn-u06">修正する</button>
+    <button class="btn btn-md btn-u07">差し戻す</button>
+    <button class="btn btn-md btn-u08">内容を確認</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>資料・配布</h2>
+  <p>作成、配布、出力など、資料まわりの見本です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u09">資料を作成</button>
+    <button class="btn btn-md btn-u10">PDFを書き出す</button>
+    <button class="btn btn-md btn-u11">ダウンロード</button>
+    <button class="btn btn-md btn-u12">印刷する</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>管理画面向け</h2>
+  <p>少し重厚で落ち着いた印象の管理系ボタンです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u13">権限を変更</button>
+    <button class="btn btn-md btn-u14">ユーザー一覧</button>
+    <button class="btn btn-md btn-u15">ログを確認</button>
+    <button class="btn btn-md btn-u16">詳細設定</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>通知・進行</h2>
+  <p>確認、案内、進行用として置きやすいセットです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u17">通知を確認</button>
+    <button class="btn btn-md btn-u18">メッセージを見る</button>
+    <button class="btn btn-md btn-u19">次へ進む</button>
+    <button class="btn btn-md btn-u20">あとで見る</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>モダン濃色</h2>
+  <p>暗色基調の画面にも合わせやすい見た目です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u21">今すぐ始める</button>
+    <button class="btn btn-md btn-u22">機能を見る</button>
+    <button class="btn btn-md btn-u23">おすすめプラン</button>
+    <button class="btn btn-md btn-u24">比較してみる</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>予約・相談導線</h2>
+  <p>やわらかさと押しやすさを両立した案内向けボタンです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u25">予約する</button>
+    <button class="btn btn-md btn-u26">空き状況を見る</button>
+    <button class="btn btn-md btn-u27">相談してみる</button>
+    <button class="btn btn-md btn-u28">お気に入りに追加</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>落ち着いた業務系</h2>
+  <p>社内ツールや業務サイトに置きやすい穏やかな配色です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u29">承認依頼を送る</button>
+    <button class="btn btn-md btn-u30">履歴を見る</button>
+    <button class="btn btn-md btn-u31">アップロード</button>
+    <button class="btn btn-md btn-u32">ファイルを選択</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>やわらかい補助操作</h2>
+  <p>主張しすぎず、補助導線として使いやすいボタンです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u33">テンプレートを使う</button>
+    <button class="btn btn-md btn-u34">条件を絞り込む</button>
+    <button class="btn btn-md btn-u35">同期する</button>
+    <button class="btn btn-md btn-u36">再読み込み</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>申込・導入導線</h2>
+  <p>サービス開始や資料請求の流れで使いやすい追加セットです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u37">無料で試す</button>
+    <button class="btn btn-md btn-u38">詳しく見る</button>
+    <button class="btn btn-md btn-u39">導入相談する</button>
+    <button class="btn btn-md btn-u40">料金を確認</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>やわらかい訴求</h2>
+  <p>親しみやすさや軽やかさを出したい場面向けです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u41">お気に入り登録</button>
+    <button class="btn btn-md btn-u42">あとで読む</button>
+    <button class="btn btn-md btn-u43">おすすめを見る</button>
+    <button class="btn btn-md btn-u44">候補を比べる</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>金色・格上げ系</h2>
+  <p>プレミアム感や特別感を少し出したいときに使えます。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u45">特典を受け取る</button>
+    <button class="btn btn-md btn-u46">プランを見る</button>
+    <button class="btn btn-md btn-u47">優先案内を受ける</button>
+    <button class="btn btn-md btn-u48">内容を確認する</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>落ち着いた事務系</h2>
+  <p>派手すぎず、業務画面に馴染みやすい見た目です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u49">申請を作成</button>
+    <button class="btn btn-md btn-u50">申請内容を見る</button>
+    <button class="btn btn-md btn-u51">提出する</button>
+    <button class="btn btn-md btn-u52">差分を確認</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>グレー・紫系モダン</h2>
+  <p>管理画面でも使いやすい、少し今風な印象のセットです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u53">ワークスペースへ</button>
+    <button class="btn btn-md btn-u54">設定一覧</button>
+    <button class="btn btn-md btn-u55">テンプレート作成</button>
+    <button class="btn btn-md btn-u56">テンプレート確認</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>情報閲覧・確認</h2>
+  <p>レポートやお知らせ、データ確認系に置きやすい内容です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u57">レポートを見る</button>
+    <button class="btn btn-md btn-u58">集計結果を確認</button>
+    <button class="btn btn-md btn-u59">CSVを出力</button>
+    <button class="btn btn-md btn-u60">履歴を開く</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>一覧・整理操作</h2>
+  <p>整理、仕分け、一覧確認などの補助導線向けです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u61">カテゴリを追加</button>
+    <button class="btn btn-md btn-u62">条件を絞る</button>
+    <button class="btn btn-md btn-u63">タグを付ける</button>
+    <button class="btn btn-md btn-u64">分類を確認</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>警告寄りの補助操作</h2>
+  <p>削除ほど強くないが、少し注意を促したいときに使えます。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u65">無効にする</button>
+    <button class="btn btn-md btn-u66">元に戻す</button>
+    <button class="btn btn-md btn-u67">再送する</button>
+    <button class="btn btn-md btn-u68">再確認する</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>上品な補助導線</h2>
+  <p>案内や確認のボタンを上品に見せたいときの追加案です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-u69">案内を見る</button>
+    <button class="btn btn-md btn-u70">手順を確認</button>
+    <button class="btn btn-md btn-u71">同期を開始</button>
+    <button class="btn btn-md btn-u72">完了を確認</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>基本操作（少し強め）</h2>
+  <p>通常より少しだけ強調したい基本操作に向いています。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b25">保存する</button>
+    <button class="btn btn-md btn-b26">読み込む</button>
+    <button class="btn btn-md btn-b35">確認する</button>
+    <button class="btn btn-md btn-b30">閉じる</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>編集・更新（濃淡ミックス）</h2>
+  <p>主要操作と補助操作の差を自然に出した構成です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b27">変更を保存</button>
+    <button class="btn btn-md btn-b28">内容を更新</button>
+    <button class="btn btn-md btn-b36">再読み込み</button>
+    <button class="btn btn-md btn-b07">元に戻す</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>確認フロー（段階表現）</h2>
+  <p>濃さで「重要度の段階」を表現したいときに便利です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b25">内容を確定</button>
+    <button class="btn btn-md btn-b32">確認する</button>
+    <button class="btn btn-md btn-b12">見直す</button>
+    <button class="btn btn-md btn-b18">戻る</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>一覧操作（自然な強弱）</h2>
+  <p>一覧系UIで、主操作だけ少し強く見せる構成です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b29">選択して進む</button>
+    <button class="btn btn-md btn-b30">表示更新</button>
+    <button class="btn btn-md btn-b11">詳細を見る</button>
+    <button class="btn btn-md btn-b23">戻る</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>軽い強調（暖色混ぜ）</h2>
+  <p>少しだけ注意を引きたい操作に暖色を混ぜた例です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b33">変更を保存</button>
+    <button class="btn btn-md btn-b34">内容を確認</button>
+    <button class="btn btn-md btn-b05">補助確認</button>
+    <button class="btn btn-md btn-b07">キャンセル</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>落ち着き＋操作性</h2>
+  <p>全体は淡いが、主ボタンだけ少し強くした実務向け構成です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-b27">設定を保存</button>
+    <button class="btn btn-md btn-b36">再取得</button>
+    <button class="btn btn-md btn-b14">設定確認</button>
+    <button class="btn btn-md btn-b18">終了</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>変化球グラデーション</h2>
+  <p>通常UIではあまり使わないが、アクセントや遊びに使えるボタンです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-x01">保存する</button>
+    <button class="btn btn-md btn-x02">読み込む</button>
+    <button class="btn btn-md btn-x03">確認する</button>
+    <button class="btn btn-md btn-x04">閉じる</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>パターン系</h2>
+  <p>ストライプなど、少し変わった質感のボタンです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-x05">一覧を見る</button>
+    <button class="btn btn-md btn-x07">元に戻す</button>
+    <button class="btn btn-md btn-x10">詳細を見る</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>カラフル・ネオン系</h2>
+  <p>LPや遊び要素で使うと映える強めデザインです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-x06">今すぐ始める</button>
+    <button class="btn btn-md btn-x08">おすすめを見る</button>
+    <button class="btn btn-md btn-x09">情報を確認</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>変化球グラデーション その2</h2>
+  <p>淡色ベースの中に少し遊びを入れた、見本市向けの変化球セットです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-x11">保存する</button>
+    <button class="btn btn-md btn-x12">読み込む</button>
+    <button class="btn btn-md btn-x13">確認する</button>
+    <button class="btn btn-md btn-x14">閉じる</button>
+    <button class="btn btn-md btn-x15">更新する</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>2色グラデの強めボタン</h2>
+  <p>少し目立たせたいが、ネオンほどは強くしたくない時に使いやすいです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-x16">保存して進む</button>
+    <button class="btn btn-md btn-x17">おすすめを見る</button>
+    <button class="btn btn-md btn-x18">注意して進む</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>ミント・ソーダ系</h2>
+  <p>涼しさや軽さを出したい時に相性の良い配色です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-x19">同期する</button>
+    <button class="btn btn-md btn-x20">情報を確認</button>
+    <button class="btn btn-md btn-x24">プレビュー</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>ローズ・ピーチ系</h2>
+  <p>柔らかく華やかな印象を足したい時の変化球です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-x21">お気に入り登録</button>
+    <button class="btn btn-md btn-x22">あとで見る</button>
+    <button class="btn btn-md btn-x28">内容を確認</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>メタル・ガラス寄り</h2>
+  <p>少し未来感や質感を出したい時に使えるボタンです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-x23">設定を開く</button>
+    <button class="btn btn-md btn-x24">ダッシュボードへ</button>
+    <button class="btn btn-md btn-x25">一覧を見る</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>ハイライト入りグラデ</h2>
+  <p>左上に光が当たっているような見え方を入れた変化球です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-x26">ファイルを開く</button>
+    <button class="btn btn-md btn-x27">候補を比較</button>
+    <button class="btn btn-md btn-x28">手順を確認</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>暗色変化球</h2>
+  <p>最後の遊び枠として置きやすい、落ち着いた濃色の変化球です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-x29">管理画面へ</button>
+    <button class="btn btn-md btn-x30">処理を開始</button>
+    <button class="btn btn-md btn-x17">今すぐ試す</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>色遊びミックス</h2>
+  <p>見本市の最後に置くと、バリエーションの広さが伝わりやすいセットです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-x11">仮保存</button>
+    <button class="btn btn-md btn-x20">再読み込み</button>
+    <button class="btn btn-md btn-x21">候補に追加</button>
+    <button class="btn btn-md btn-x23">詳細を見る</button>
+    <button class="btn btn-md btn-x29">閉じる</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>アイコン合成ボタン（基本）</h2>
+  <p>矢印や操作系アイコンを合成した実用的な変化球です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-x61">開く</button>
+    <button class="btn btn-md btn-x62">閉じる</button>
+    <button class="btn btn-md btn-x63">次へ</button>
+    <button class="btn btn-md btn-x64">戻る</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>ステータス系</h2>
+  <p>チェック・エラー・情報など状態表現に向いています。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-x65">完了</button>
+    <button class="btn btn-md btn-x66">削除</button>
+    <button class="btn btn-md btn-x67">詳細</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>ユーティリティ系</h2>
+  <p>設定や機能系のUIに自然に組み込めるボタンです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-x68">設定</button>
+    <button class="btn btn-md btn-x63">進む</button>
+    <button class="btn btn-md btn-x61">展開</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>アイコン合成ボタン その2</h2>
+  <p>加減算や再読込など、操作系アイコンを右側に乗せたバリエーションです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-x69">追加する</button>
+    <button class="btn btn-md btn-x70">減らす</button>
+    <button class="btn btn-md btn-x71">再読み込み</button>
+    <button class="btn btn-md btn-x72">検索する</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>実務向けアイコン合成</h2>
+  <p>編集、入出力、お気に入りなど、用途がイメージしやすいセットです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-x73">編集する</button>
+    <button class="btn btn-md btn-x74">ダウンロード</button>
+    <button class="btn btn-md btn-x75">アップロード</button>
+    <button class="btn btn-md btn-x76">お気に入り</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>管理操作っぽいセット</h2>
+  <p>鍵、削除、フォルダなど、管理画面や一覧画面で使いやすい変化球です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-x78">権限を確認</button>
+    <button class="btn btn-md btn-x79">削除する</button>
+    <button class="btn btn-md btn-x80">フォルダを開く</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>UIパーツ風ミックス</h2>
+  <p>ドロップダウン風、検索風、通知風など、UI部品っぽさを出しやすい組み合わせです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-x61">選択する</button>
+    <button class="btn btn-md btn-x72">候補を探す</button>
+    <button class="btn btn-md btn-x81">新着を確認</button>
+    <button class="btn btn-md btn-x68">設定を開く</button>
+  </div>
+</section>
+
+
+<section class="card">
+  <h2>追加・濃い系ボタン集 A</h2>
+  <p>重厚感のある濃色ボタンをまとめて追加したセットです。管理画面や強めの導線に使いやすいです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-d01">濃色保存</button>
+    <button class="btn btn-md btn-d02">濃色同期</button>
+    <button class="btn btn-md btn-d03">濃色書き出し</button>
+    <button class="btn btn-md btn-d04">濃色お気に入り</button>
+    <button class="btn btn-md btn-d05">濃色承認</button>
+    <button class="btn btn-md btn-d06">濃色詳細</button>
+    <button class="btn btn-md btn-d07">濃色一覧</button>
+    <button class="btn btn-md btn-d08">濃色削除</button>
+    <button class="btn btn-md btn-d09">濃色通知</button>
+    <button class="btn btn-md btn-d10">濃色特典</button>
+    <button class="btn btn-md btn-d11">濃色設定</button>
+    <button class="btn btn-md btn-d12">濃色印刷</button>
+    <button class="btn btn-md btn-d13">濃色送信</button>
+    <button class="btn btn-md btn-d14">濃色予約</button>
+    <button class="btn btn-md btn-d15">濃色比較</button>
+    <button class="btn btn-md btn-d16">濃色テンプレ</button>
+    <button class="btn btn-md btn-d17">濃色確認</button>
+    <button class="btn btn-md btn-d18">濃色分類</button>
+    <button class="btn btn-md btn-d19">濃色プラン</button>
+    <button class="btn btn-md btn-d20">濃色履歴</button>
+  </div>
+</section>
+
+
+<section class="card">
+  <h2>追加・濃い系ボタン集 B</h2>
+  <p>さらに濃色バリエーションを増やしたセットです。見本数を増やしたいときにそのまま使えます。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-d21">濃色開始</button>
+    <button class="btn btn-md btn-d22">濃色更新</button>
+    <button class="btn btn-md btn-d23">濃色申請</button>
+    <button class="btn btn-md btn-d24">濃色候補</button>
+    <button class="btn btn-md btn-d25">濃色公開</button>
+    <button class="btn btn-md btn-d26">濃色案内</button>
+    <button class="btn btn-md btn-d27">濃色閉じる</button>
+    <button class="btn btn-md btn-d28">濃色無効化</button>
+    <button class="btn btn-md btn-d29">濃色検索</button>
+    <button class="btn btn-md btn-d30">濃色優先</button>
+    <button class="btn btn-md btn-d31">濃色管理</button>
+    <button class="btn btn-md btn-d32">濃色編集</button>
+    <button class="btn btn-md btn-d33">濃色ダッシュ</button>
+    <button class="btn btn-md btn-d34">濃色連携</button>
+    <button class="btn btn-md btn-d35">濃色おすすめ</button>
+    <button class="btn btn-md btn-d36">濃色ワーク</button>
+    <button class="btn btn-md btn-d37">濃色手順</button>
+    <button class="btn btn-md btn-d38">濃色タグ</button>
+    <button class="btn btn-md btn-d39">濃色比較表</button>
+    <button class="btn btn-md btn-d40">濃色ログ</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>やや薄い濃色ボタン集 </h2>
+  <p>濃色より少し柔らかいトーン。主張しすぎず目立たせたい場合に最適です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-e01">保存</button>
+    <button class="btn btn-md btn-e02">同期</button>
+    <button class="btn btn-md btn-e03">書き出し</button>
+    <button class="btn btn-md btn-e04">お気に入り</button>
+    <button class="btn btn-md btn-e05">承認</button>
+    <button class="btn btn-md btn-e06">詳細</button>
+    <button class="btn btn-md btn-e07">一覧</button>
+    <button class="btn btn-md btn-e08">削除</button>
+    <button class="btn btn-md btn-e09">通知</button>
+    <button class="btn btn-md btn-e10">特典</button>
+    <button class="btn btn-md btn-e11">開始</button>
+    <button class="btn btn-md btn-e12">更新</button>
+    <button class="btn btn-md btn-e13">申請</button>
+    <button class="btn btn-md btn-e14">連携</button>
+    <button class="btn btn-md btn-e15">おすすめ</button>
+    <button class="btn btn-md btn-e16">ワーク</button>
+    <button class="btn btn-md btn-e17">手順</button>
+    <button class="btn btn-md btn-e18">タグ</button>
+    <button class="btn btn-md btn-e19">比較</button>
+    <button class="btn btn-md btn-e20">ログ</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>濃いグラデーションボタン A</h2>
+  <p>強いコントラストで目立たせたいCTA向けです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-g01">保存</button>
+    <button class="btn btn-md btn-g02">同期</button>
+    <button class="btn btn-md btn-g03">削除</button>
+    <button class="btn btn-md btn-g04">開始</button>
+    <button class="btn btn-md btn-g05">特典</button>
+    <button class="btn btn-md btn-g06">承認</button>
+    <button class="btn btn-md btn-g07">警告</button>
+    <button class="btn btn-md btn-g08">比較</button>
+    <button class="btn btn-md btn-g09">管理</button>
+    <button class="btn btn-md btn-g10">ログ</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>濃いグラデーションボタン B</h2>
+  <p>LPや目立たせたいUI向けの派手なグラデーションです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-g11">おすすめ</button>
+    <button class="btn btn-md btn-g12">ダウンロード</button>
+    <button class="btn btn-md btn-g13">お気に入り</button>
+    <button class="btn btn-md btn-g14">警告</button>
+    <button class="btn btn-md btn-g15">同期</button>
+    <button class="btn btn-md btn-g16">分析</button>
+    <button class="btn btn-md btn-g17">更新</button>
+    <button class="btn btn-md btn-g18">共有</button>
+    <button class="btn btn-md btn-g19">削除</button>
+    <button class="btn btn-md btn-g20">確認</button>
+    <button class="btn btn-md btn-g21">ダーク</button>
+    <button class="btn btn-md btn-g22">設定</button>
+    <button class="btn btn-md btn-g23">通信</button>
+    <button class="btn btn-md btn-g24">危険</button>
+    <button class="btn btn-md btn-g25">閉じる</button>
+    <button class="btn btn-md btn-g26">開始</button>
+    <button class="btn btn-md btn-g27">比較</button>
+    <button class="btn btn-md btn-g28">一覧</button>
+    <button class="btn btn-md btn-g29">申込</button>
+    <button class="btn btn-md btn-g30">完了</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>遊び心オマージュ・濃色版 A</h2>
+  <p>既存の変化球ボタンの雰囲気を残しつつ、より深い色味と重厚感に寄せた濃色版です。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-y01">保存する</button>
+    <button class="btn btn-md btn-y02">読み込む</button>
+    <button class="btn btn-md btn-y03">確認する</button>
+    <button class="btn btn-md btn-y04">閉じる</button>
+    <button class="btn btn-md btn-y05">一覧を見る</button>
+    <button class="btn btn-md btn-y06">今すぐ始める</button>
+    <button class="btn btn-md btn-y07">元に戻す</button>
+    <button class="btn btn-md btn-y08">おすすめを見る</button>
+    <button class="btn btn-md btn-y09">情報を確認</button>
+    <button class="btn btn-md btn-y10">詳細を見る</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>遊び心オマージュ・濃色版 B</h2>
+  <p>ミント、ローズ、ガラス風、多色グラデなど既存の遊び心系を濃く再構成した追加セットです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-y11">更新する</button>
+    <button class="btn btn-md btn-y12">ファイルを開く</button>
+    <button class="btn btn-md btn-y13">候補を比較</button>
+    <button class="btn btn-md btn-y14">手順を確認</button>
+    <button class="btn btn-md btn-y15">同期する</button>
+    <button class="btn btn-md btn-y16">保存して進む</button>
+    <button class="btn btn-md btn-y17">おすすめ比較</button>
+    <button class="btn btn-md btn-y18">注意して進む</button>
+    <button class="btn btn-md btn-y19">プレビュー</button>
+    <button class="btn btn-md btn-y20">ダッシュボードへ</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>輝くボタン（グロー系）</h2>
+  <p>発光・光沢・ネオン感を強めたインパクト重視のボタンです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-h01">保存</button>
+    <button class="btn btn-md btn-h02">削除</button>
+    <button class="btn btn-md btn-h03">開始</button>
+    <button class="btn btn-md btn-h04">特典</button>
+    <button class="btn btn-md btn-h05">ネオン青</button>
+    <button class="btn btn-md btn-h06">ネオン紫</button>
+    <button class="btn btn-md btn-h07">ネオン緑</button>
+    <button class="btn btn-md btn-h08">ネオン黄</button>
+    <button class="btn btn-md btn-h09">派手1</button>
+    <button class="btn btn-md btn-h10">派手2</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>遊び心オマージュ・やや薄色版 A</h2>
+  <p>濃色版の雰囲気を維持しつつ、少しだけ軽さと視認性を上げたバリエーションです。</p>
+  <div class="btn-row">
+    <button class="btn btn-md btn-y01-l">保存する</button>
+    <button class="btn btn-md btn-y02-l">読み込む</button>
+    <button class="btn btn-md btn-y03-l">確認する</button>
+    <button class="btn btn-md btn-y04-l">閉じる</button>
+    <button class="btn btn-md btn-y05-l">一覧を見る</button>
+    <button class="btn btn-md btn-y06-l">今すぐ始める</button>
+    <button class="btn btn-md btn-y07-l">元に戻す</button>
+    <button class="btn btn-md btn-y08-l">おすすめを見る</button>
+    <button class="btn btn-md btn-y09-l">情報を確認</button>
+    <button class="btn btn-md btn-y10-l">詳細を見る</button>
+  </div>
+</section>
+
+    </div>
+
+    <section class="copy-area">
+      <h2>直近でコピーしたHTML</h2>
+      <p>クリックしたボタンの最小限HTMLがここにも表示されます。</p>
+      <pre id="copiedHtml">&lt;button style="...">保存する&lt;/button&gt;</pre>
+    </section>
+  </div>
+
+  <div class="toast" id="toast">コピーしました</div>
+
+  <div class="quick-copy-panel" id="quickCopyPanel" data-copy-tool="1" aria-label="コピー補助パネル">
+    <button type="button" class="quick-copy-panel__toggle" id="quickCopyPanelToggle" data-copy-tool="1" aria-expanded="false">コピー補助</button>
+    <div class="quick-copy-panel__body" aria-hidden="true">
+      <button type="button" class="quick-copy-panel__button" id="panelScrollCopyAreaBtn" data-copy-tool="1">コピー欄にスクロール</button>
+      <button type="button" class="quick-copy-panel__button" id="panelScrollSelectedBtn" data-copy-tool="1">直前に選択したボタンの位置にスクロール</button>
+      <button type="button" class="quick-copy-panel__button" id="panelCopyCssBtn" data-copy-tool="1">直前に選択したボタンの css をコピー</button>
+      <button type="button" class="quick-copy-panel__button" id="panelCopyElementBtn" data-copy-tool="1">直前に選択したボタンの 要素 をコピー</button>
+      <button type="button" class="quick-copy-panel__button" id="panelCopyLazyBtn" data-copy-tool="1">直前に選択したボタンの ズボラ版要素 をコピー</button>
+    </div>
+  </div>
+
+
+  <script>
+const toastEl = document.getElementById("toast");
+
+let currentCopiedData = {
+  cssText: "",
+  elementHtml: "",
+  lazyElementHtml: "",
+  fullHtml: ""
+};
+
+let lastSelectedButton = null;
+
+function showToast(message) {
+  toastEl.textContent = message;
+  toastEl.classList.add("show");
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(() => {
+    toastEl.classList.remove("show");
+  }, 1400);
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
+  }
+}
+
+function ensureCopyAreaUI() {
+  const copyArea = document.querySelector(".copy-area");
+  if (!copyArea) return null;
+
+  copyArea.innerHTML = `
+    <h2>直近でコピーしたHTML</h2>
+    <p>見本ボタンを押すと、通常・ホバー・クリック時の挙動を含むHTML一式をここに表示します。下の3ボタンで必要な部分だけコピーできます。</p>
+
+    <div style="margin-bottom:12px;">
+      <label for="classNameInput" style="display:block;margin-bottom:6px;font-size:13px;font-weight:700;color:#476179;">
+        生成するクラス名
+      </label>
+      <input
+        id="classNameInput"
+        type="text"
+        value="copied-sample-button"
+        placeholder="copied-sample-button"
+        data-copy-tool="1"
+        style="width:100%;max-width:360px;padding:10px 12px;border:1px solid #c9dbe8;border-radius:10px;background:#fff;color:#243447;font-size:13px;"
+      />
+      <p style="margin:8px 0 0;font-size:12px;color:#5c748a;line-height:1.6;">
+        css をコピー・要素をコピーに使うクラス名を自由に変更できます。未入力時は <strong>copied-sample-button</strong> を使います。
+      </p>
+    </div>
+
+    <div class="btn-row" style="margin-bottom:12px;">
+      <button type="button" id="copyCssBtn" class="btn btn-sm tone-soft shadow-light" data-copy-tool="1">css をコピー</button>
+      <button type="button" id="copyElementBtn" class="btn btn-sm tone-main shadow-light" data-copy-tool="1">要素をコピー</button>
+      <button type="button" id="copyLazyBtn" class="btn btn-sm tone-gray shadow-light" data-copy-tool="1">ズボラ版要素をコピー</button>
+    </div>
+
+    <pre id="copiedHtml">&lt;html&gt;
+&lt;style&gt;
+...
+&lt;/style&gt;
+&lt;body&gt;
+...
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+  `;
+
+  const copyCssBtn = document.getElementById("copyCssBtn");
+  const copyElementBtn = document.getElementById("copyElementBtn");
+  const copyLazyBtn = document.getElementById("copyLazyBtn");
+
+  copyCssBtn.addEventListener("click", async () => {
+    if (!currentCopiedData.cssText) {
+      showToast("先に見本ボタンを押してください");
+      return;
+    }
+    const ok = await copyText(currentCopiedData.cssText);
+    showToast(ok ? "CSSをコピーしました" : "コピーに失敗しました");
+  });
+
+  copyElementBtn.addEventListener("click", async () => {
+    if (!currentCopiedData.elementHtml) {
+      showToast("先に見本ボタンを押してください");
+      return;
+    }
+    const ok = await copyText(currentCopiedData.elementHtml);
+    showToast(ok ? "要素をコピーしました" : "コピーに失敗しました");
+  });
+
+  copyLazyBtn.addEventListener("click", async () => {
+    if (!currentCopiedData.lazyElementHtml) {
+      showToast("先に見本ボタンを押してください");
+      return;
+    }
+    const ok = await copyText(currentCopiedData.lazyElementHtml);
+    showToast(ok ? "ズボラ版要素をコピーしました" : "コピーに失敗しました");
+  });
+
+  return copyArea;
+}
+
+function toKebabCase(name) {
+  return name.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+}
+
+function buildInlineStyle(styleMap) {
+  return Object.entries(styleMap)
+    .filter(([_, value]) => value !== "" && value !== null && value !== undefined)
+    .map(([key, value]) => `${key}:${value}`)
+    .join(";");
+}
+
+function pickStateStyle(button) {
+  const cs = getComputedStyle(button);
+
+  const styleMap = {
+    "display": "inline-block",
+    "padding": cs.padding,
+    "min-height": cs.minHeight,
+    "min-width": cs.minWidth,
+    "width": button.classList.contains("full") ? "100%" : (cs.width !== "auto" ? cs.width : ""),
+    "border": cs.border,
+    "border-radius": cs.borderRadius,
+    "background": cs.background,
+    "color": cs.color,
+    "font-size": cs.fontSize,
+    "font-weight": cs.fontWeight,
+    "font-family": cs.fontFamily,
+    "line-height": cs.lineHeight,
+    "text-align": cs.textAlign,
+    "box-shadow": cs.boxShadow,
+    "backdrop-filter": cs.backdropFilter !== "none" ? cs.backdropFilter : "",
+    "-webkit-backdrop-filter": cs.backdropFilter !== "none" ? cs.backdropFilter : "",
+    "cursor": "pointer",
+    "white-space": cs.whiteSpace,
+    "user-select": "none",
+    "vertical-align": "middle",
+    "box-sizing": "border-box",
+    "transition": "transform .15s ease, filter .15s ease, box-shadow .15s ease",
+    "transform": cs.transform !== "none" ? cs.transform : "",
+    "filter": cs.filter !== "none" ? cs.filter : ""
+  };
+
+  return Object.fromEntries(
+    Object.entries(styleMap).filter(([key, value]) => {
+      if (!value) return false;
+      if (key === "box-shadow") return true;
+      return value !== "normal" && value !== "none";
+    })
+  );
+}
+
+function captureButtonStates(button) {
+  const baseStyle = pickStateStyle(button);
+
+  const hoverStyle = {
+    ...baseStyle,
+    transform: "translateY(-1px)",
+    filter: "brightness(1.02)"
+  };
+
+  const activeStyle = {
+    ...baseStyle,
+    transform: "translateY(0) scale(0.98)",
+    filter: "brightness(0.98)"
+  };
+
+  return {
+    baseStyle,
+    hoverStyle,
+    activeStyle
+  };
+}
+
+function buildCssRule(selector, styleMap) {
+  const lines = Object.entries(styleMap)
+    .map(([key, value]) => `  ${toKebabCase(key)}:${value};`);
+
+  return [
+    `${selector}{`,
+    ...lines,
+    `}`
+  ].join("\n");
+}
+
+function getRequestedClassName() {
+  const input = document.getElementById("classNameInput");
+  const raw = input ? input.value.trim() : "";
+  const sanitized = raw
+    .replace(/[^a-zA-Z0-9_-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^[-_]+|[-_]+$/g, "");
+
+  if (input && raw !== sanitized) {
+    input.value = sanitized || "copied-sample-button";
+  }
+
+  return sanitized || "copied-sample-button";
+}
+
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function escapeHtmlAttr(text) {
+  return escapeHtml(text);
+}
+
+function buildLazyButtonHtml(button) {
+  const { baseStyle, hoverStyle, activeStyle } = captureButtonStates(button);
+
+  const baseText = buildInlineStyle(baseStyle);
+  const hoverText = buildInlineStyle(hoverStyle);
+  const activeText = buildInlineStyle(activeStyle);
+  const labelText = escapeHtml(button.textContent.trim());
+
+  const baseAttr = escapeHtmlAttr(baseText);
+  const hoverJs = escapeHtmlAttr(JSON.stringify(hoverText));
+  const activeJs = escapeHtmlAttr(JSON.stringify(activeText));
+  const baseJs = escapeHtmlAttr(JSON.stringify(baseText));
+
+  return `<button style="${baseAttr}" onmouseover="this.style.cssText=${hoverJs}" onmouseout="this.style.cssText=${baseJs}" onmousedown="this.style.cssText=${activeJs}" onmouseup="this.style.cssText=${hoverJs}" onmouseleave="this.style.cssText=${baseJs}">${labelText}</button>`;
+}
+
+function buildCssButtonParts(button) {
+  const className = getRequestedClassName();
+  const { baseStyle, hoverStyle, activeStyle } = captureButtonStates(button);
+
+  const cssText = [
+    buildCssRule(`.${className}`, baseStyle),
+    buildCssRule(`.${className}:hover`, hoverStyle),
+    buildCssRule(`.${className}:active`, activeStyle),
+    `.${className}:focus,`,
+    `.${className}:focus-visible{`,
+    `  outline:none;`,
+    `}`
+  ].join("\n\n");
+
+  const elementHtml = `<button class="${className}">${button.textContent.trim()}</button>`;
+
+  return {
+    cssText,
+    elementHtml
+  };
+}
+
+function buildFullHtml(button) {
+  const { cssText, elementHtml } = buildCssButtonParts(button);
+
+  const fullHtml = [
+    `<html>`,
+    `<style>`,
+    cssText,
+    `</style>`,
+    `<body>`,
+    elementHtml,
+    `</body>`,
+    `</html>`
+  ].join("\n");
+
+  return {
+    cssText,
+    elementHtml,
+    fullHtml
+  };
+}
+
+function updateCopyAreaPreview(fullHtml) {
+  const copiedHtmlEl = document.getElementById("copiedHtml");
+  if (!copiedHtmlEl) return;
+  copiedHtmlEl.textContent = fullHtml;
+}
+
+function refreshGeneratedContent(button, shouldCopy = false) {
+  if (!button) return;
+
+  const lazyElementHtml = buildLazyButtonHtml(button);
+  const { cssText, elementHtml, fullHtml } = buildFullHtml(button);
+
+  currentCopiedData = {
+    cssText,
+    elementHtml,
+    lazyElementHtml,
+    fullHtml
+  };
+
+  updateCopyAreaPreview(fullHtml);
+
+  if (shouldCopy) {
+    copyText(lazyElementHtml).then((ok) => {
+      showToast(ok ? "ズボラ版要素をコピーしました" : "コピーに失敗しました");
+    });
+  }
+}
+
+
+
+function scrollToCopyArea() {
+  const copyArea = document.querySelector(".copy-area");
+  if (!copyArea) return;
+  copyArea.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function scrollToLastSelectedButton() {
+  if (!lastSelectedButton) {
+    showToast("先に見本ボタンを押してください");
+    return;
+  }
+  lastSelectedButton.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+}
+
+async function copyCurrentPart(partName, successMessage) {
+  if (!lastSelectedButton || !currentCopiedData[partName]) {
+    showToast("先に見本ボタンを押してください");
+    return;
+  }
+  const ok = await copyText(currentCopiedData[partName]);
+  showToast(ok ? successMessage : "コピーに失敗しました");
+}
+
+function bindQuickCopyPanel() {
+  const panel = document.getElementById("quickCopyPanel");
+  const toggle = document.getElementById("quickCopyPanelToggle");
+  if (!panel || !toggle) return;
+
+  const body = panel.querySelector(".quick-copy-panel__body");
+
+  toggle.addEventListener("click", () => {
+    const isOpen = panel.classList.toggle("is-open");
+    toggle.setAttribute("aria-expanded", String(isOpen));
+    if (body) body.setAttribute("aria-hidden", String(!isOpen));
+  });
+
+  document.getElementById("panelScrollCopyAreaBtn")?.addEventListener("click", scrollToCopyArea);
+  document.getElementById("panelScrollSelectedBtn")?.addEventListener("click", scrollToLastSelectedButton);
+  document.getElementById("panelCopyCssBtn")?.addEventListener("click", () => copyCurrentPart("cssText", "CSSをコピーしました"));
+  document.getElementById("panelCopyElementBtn")?.addEventListener("click", () => copyCurrentPart("elementHtml", "要素をコピーしました"));
+  document.getElementById("panelCopyLazyBtn")?.addEventListener("click", () => copyCurrentPart("lazyElementHtml", "ズボラ版要素をコピーしました"));
+}
+
+function bindClassNameInput() {
+  const input = document.getElementById("classNameInput");
+  if (!input) return;
+
+  input.addEventListener("input", () => {
+    if (!lastSelectedButton) return;
+    refreshGeneratedContent(lastSelectedButton, false);
+  });
+
+  input.addEventListener("change", () => {
+    if (!lastSelectedButton) return;
+    refreshGeneratedContent(lastSelectedButton, false);
+  });
+}
+
+function bindSampleButtons() {
+  const sampleButtons = document.querySelectorAll(".btn:not([data-copy-tool='1'])");
+
+  sampleButtons.forEach((button) => {
+    button.addEventListener("click", async () => {
+      document.querySelectorAll(".copied").forEach(el => el.classList.remove("copied"));
+      button.classList.add("copied");
+      lastSelectedButton = button;
+
+      refreshGeneratedContent(button, true);
+    });
+  });
+}
+
+ensureCopyAreaUI();
+bindClassNameInput();
+bindQuickCopyPanel();
+bindSampleButtons();
+  </script>
+</body>
+</html>
