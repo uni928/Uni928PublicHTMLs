@@ -451,7 +451,73 @@ ${siteContent}`;
 サイトの編集内容
 ${editContent}
 
-ChatGPTのCode Interpreter 機能を使って、このhtmlを作成下さい`;
+ChatGPTのCode Interpreter 機能を使って、このhtmlを修正下さい`;
+    }
+
+    function buildCreatePromptForGemini() {
+      const siteName = document.getElementById("siteName").value.trim() || "未定";
+      const siteContent = document.getElementById("siteContent").value.trim() || "サイトの内容は未入力です。必要に応じて、初心者向けに使いやすいサイト案を補完して下さい。";
+      const checkedPrompts = Array.from(document.querySelectorAll("#featureChecks input[type='checkbox']:checked"))
+        .map(input => "・" + input.dataset.prompt);
+
+      const featureText = checkedPrompts.length
+        ? checkedPrompts.join("\n")
+        : "・チェックボックスで指定された追加条件はありません。必要最低限の機能で作成して下さい。";
+
+      return `${siteName}というサイト名のWebサイトを作成して下さい。
+
+以下の条件を満たす、完全なHTMLファイルを1つだけ出力して下さい。
+
+【最重要ルール】
+・説明文、補足、前置き、後書きは出力しないで下さい。
+・Markdownのコードブロックは使わないで下さい。
+・\`\`\`html や \`\`\` は絶対に付けないで下さい。
+・出力は <!DOCTYPE html> から始まる完全なHTMLコードのみにして下さい。
+・<html> から </html> まで省略せずに出力して下さい。
+・CSSとJavaScriptはすべて1つのHTMLファイル内に含めて下さい。
+・外部ライブラリは使わず、ブラウザだけで動くHTMLにして下さい。
+・ユーザーがそのまま .html ファイルとして保存して開ける形にして下さい。
+
+【反映する機能条件】
+${featureText}
+
+【サイトの内容】
+${siteContent}`;
+    }
+
+    function buildEditPromptForGemini() {
+      const editContent = document.getElementById("editContent").value.trim() || "編集内容は未入力です。現在のHTMLを確認し、初心者にも分かりやすく改善して下さい。";
+
+      return `作成済みのHTMLサイトを修正して下さい。
+
+以下の条件を満たす、修正後の完全なHTMLファイルを1つだけ出力して下さい。
+
+【最重要ルール】
+・説明文、補足、前置き、後書きは出力しないで下さい。
+・Markdownのコードブロックは使わないで下さい。
+・\`\`\`html や \`\`\` は絶対に付けないで下さい。
+・出力は <!DOCTYPE html> から始まる完全なHTMLコードのみにして下さい。
+・<html> から </html> まで省略せずに出力して下さい。
+・CSSとJavaScriptはすべて1つのHTMLファイル内に含めて下さい。
+・外部ライブラリは使わず、ブラウザだけで動くHTMLにして下さい。
+・ユーザーがそのまま .html ファイルとして保存して開ける形にして下さい。
+
+【修正内容】
+${editContent}`;
+    }
+
+    async function handleGeminiCreate(event) {
+      event.preventDefault();
+      const prompt = buildCreatePromptForGemini();
+      await copyText(prompt);
+      window.open("https://gemini.google.com/", "_blank", "noopener");
+    }
+
+    async function handleGeminiEdit(event) {
+      event.preventDefault();
+      const prompt = buildEditPromptForGemini();
+      await copyText(prompt);
+      window.open("https://gemini.google.com/", "_blank", "noopener");
     }
 
     async function copyText(text) {
@@ -476,7 +542,7 @@ ChatGPTのCode Interpreter 機能を使って、このhtmlを作成下さい`;
         <p>下のどちらかを開き、コピーした質問文を貼り付けて送信して下さい。</p>
         <div class="ai-buttons">
           <a href="https://chatgpt.com/" target="_blank" rel="noopener">ChatGPTで作る</a>
-          <a class="gemini" href="https://gemini.google.com/" target="_blank" rel="noopener">Geminiで作る</a>
+          <a class="gemini" href="#" onclick="handleGeminiCreate(event)">Geminiで作る</a>
         </div>
         <h3>次に取るべき流れ</h3>
         <ol class="flow">
@@ -495,6 +561,10 @@ ChatGPTのCode Interpreter 機能を使って、このhtmlを作成下さい`;
       const prompt = buildEditPrompt();
       await copyText(prompt);
       showModal("編集用の質問文をコピーしました", `
+        <p>ChatGPT側のタブに戻る場合は、このままコピー済みの質問文を貼り付けて下さい。Geminiを使う場合は、下のボタンを押すとGemini用の質問文にコピーし直して開きます。</p>
+        <div class="ai-buttons">
+          <a class="gemini" href="#" onclick="handleGeminiEdit(event)">Geminiで修正する</a>
+        </div>
         <h3>次に取るべき流れ</h3>
         <ol class="flow">
           <li>AI側のタブに戻ります。</li>
