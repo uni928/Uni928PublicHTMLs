@@ -1,0 +1,551 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AIサイト作成プロンプトメーカー</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --border: #dbe3ef;
+      --shadow: 0 12px 30px rgba(15, 23, 42, 0.10);
+      --danger: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.16), transparent 34%),
+        linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+      min-height: 100vh;
+    }
+
+    .page {
+      width: min(980px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 40px 0;
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: clamp(28px, 5vw, 44px);
+      letter-spacing: 0.02em;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(219, 227, 239, 0.9);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: clamp(20px, 4vw, 34px);
+      backdrop-filter: blur(10px);
+    }
+
+    .home-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 20px;
+    }
+
+    .big-button {
+      min-height: 170px;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: #fff;
+      cursor: pointer;
+      padding: 24px;
+      text-align: left;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+
+    .big-button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 28px rgba(37, 99, 235, 0.13);
+      border-color: rgba(37, 99, 235, 0.45);
+    }
+
+    .big-button strong {
+      display: block;
+      font-size: 26px;
+      margin-bottom: 10px;
+    }
+
+    .big-button span {
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin: 18px 0 8px;
+    }
+
+    input[type="text"],
+    textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 16px;
+      font-size: 16px;
+      line-height: 1.7;
+      background: #fff;
+      outline: none;
+    }
+
+    input[type="text"]:focus,
+    textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    }
+
+    textarea {
+      min-height: 220px;
+      resize: vertical;
+    }
+
+    .checks {
+      display: grid;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .check {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 13px 14px;
+      background: #fbfdff;
+    }
+
+    .check input {
+      margin-top: 5px;
+      transform: scale(1.15);
+    }
+
+    .check b {
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .check small {
+      display: block;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    button.primary,
+    button.secondary {
+      border: 0;
+      border-radius: 999px;
+      padding: 13px 22px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button.primary {
+      color: #fff;
+      background: var(--primary);
+    }
+
+    button.primary:hover {
+      background: var(--primary-dark);
+    }
+
+    button.secondary {
+      color: var(--text);
+      background: #e8eef8;
+    }
+
+    .note {
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(15, 23, 42, 0.52);
+      z-index: 100;
+    }
+
+    .modal-backdrop.show {
+      display: flex;
+    }
+
+    .modal {
+      width: min(720px, 100%);
+      max-height: 90vh;
+      overflow: auto;
+      background: #fff;
+      border-radius: 24px;
+      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.25);
+      padding: 24px;
+      position: relative;
+    }
+
+    .close {
+      position: absolute;
+      right: 16px;
+      top: 14px;
+      width: 36px;
+      height: 36px;
+      border: 0;
+      border-radius: 50%;
+      cursor: pointer;
+      background: #f1f5f9;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .modal h2 {
+      margin: 0 42px 12px 0;
+    }
+
+    .flow {
+      padding-left: 20px;
+      line-height: 1.9;
+    }
+
+    .ai-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 18px 0;
+    }
+
+    .ai-buttons a {
+      text-decoration: none;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-weight: 700;
+      color: white;
+      background: var(--primary);
+    }
+
+    .ai-buttons a.gemini {
+      background: #6d28d9;
+    }
+
+    .preview {
+      white-space: pre-wrap;
+      background: #0f172a;
+      color: #e5e7eb;
+      border-radius: 16px;
+      padding: 16px;
+      line-height: 1.7;
+      font-size: 14px;
+      max-height: 260px;
+      overflow: auto;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 720px) {
+      .home-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .big-button {
+        min-height: 140px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>AIサイト作成プロンプトメーカー</h1>
+      <p>初心者でも、ChatGPTやGeminiに貼り付けるだけでサイト作成・編集を進められる補助ツールです。</p>
+    </section>
+
+    <section id="homeScreen" class="card">
+      <h2>何をしますか？</h2>
+      <div class="home-actions">
+        <button class="big-button" type="button" onclick="openModeTab('create')">
+          <strong>作成</strong>
+          <span>サイト名・内容・必要機能を入力して、AIに新規HTML作成を依頼するプロンプトを作ります。</span>
+        </button>
+        <button class="big-button" type="button" onclick="openModeTab('edit')">
+          <strong>編集</strong>
+          <span>作成済みサイトに追加したい修正内容を入力して、AIに編集を依頼するプロンプトを作ります。</span>
+        </button>
+      </div>
+      <p class="note">ボタンを押すと、選んだモードの画面が新しいタブで開きます。</p>
+    </section>
+
+    <section id="createScreen" class="card hidden">
+      <h2>サイト作成モード</h2>
+
+      <label for="siteName">サイト名</label>
+      <input id="siteName" type="text" placeholder="例：家計簿アプリ、献立提案ツール、写真採点サイト" />
+
+      <label for="siteContent">サイトの内容</label>
+      <textarea id="siteContent" placeholder="どんなサイトにしたいか、画面構成、使いたい機能、雰囲気などを書いて下さい。"></textarea>
+
+      <label>追加したい機能</label>
+      <div class="checks" id="featureChecks">
+        <label class="check">
+          <input type="checkbox" data-prompt="保存はリアルタイムで保存し、次回起動時にその状態から開始できるようにして下さい。この保存にはIndexedDBを使用して下さい。" />
+          <span>
+            <b>保存はリアルタイムで保存し、次回起動時にその状態から開始</b>
+            <small>プロンプトには「IndexedDBに保存する」旨を同時に付与します。</small>
+          </span>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" data-prompt="エクスポート・インポート機能を付けて下さい。データはテキストファイルまたはJSONファイルとして保存・読み込みできるようにして下さい。" />
+          <span>
+            <b>エクスポート・インポート機能を付ける</b>
+            <small>作成したデータのバックアップや別端末移行に使えるようにします。</small>
+          </span>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" data-prompt="スマホでも使いやすいレスポンシブデザインにして下さい。" />
+          <span>
+            <b>スマホ対応にする</b>
+            <small>画面幅が狭くても使いやすい配置にします。</small>
+          </span>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" data-prompt="入力内容の確認ダイアログや削除前の確認など、初心者が誤操作しにくい安全設計にして下さい。" />
+          <span>
+            <b>誤操作防止を入れる</b>
+            <small>削除確認や注意表示などを追加します。</small>
+          </span>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" data-prompt="HTML、CSS、JavaScriptを1つのHTMLファイル内にまとめ、外部ライブラリなしで動作するようにして下さい。" />
+          <span>
+            <b>HTML単体で動くようにする</b>
+            <small>保存してブラウザで開くだけで使える形式にします。</small>
+          </span>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" data-prompt="UIは初心者にも分かりやすく、ボタン名・説明文・入力欄の案内を丁寧にして下さい。" />
+          <span>
+            <b>初心者向けの説明を多めにする</b>
+            <small>使い方が分かりやすい画面にします。</small>
+          </span>
+        </label>
+      </div>
+
+      <div class="button-row">
+        <button class="primary" type="button" onclick="copyCreatePrompt()">質問文をコピー</button>
+        <button class="secondary" type="button" onclick="clearCreateForm()">入力内容をクリア</button>
+      </div>
+    </section>
+
+    <section id="editScreen" class="card hidden">
+      <h2>サイト編集モード</h2>
+
+      <label for="editContent">サイトの編集内容</label>
+      <textarea id="editContent" placeholder="例：保存機能を追加したい、ボタンの色を変更したい、スマホで見やすくしたい、エラーを直したい など"></textarea>
+
+      <div class="button-row">
+        <button class="primary" type="button" onclick="copyEditPrompt()">質問文をコピー</button>
+        <button class="secondary" type="button" onclick="clearEditForm()">入力内容をクリア</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="modalBackdrop" class="modal-backdrop" onclick="closeModalByBackdrop(event)">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="close" type="button" onclick="closeModal()" aria-label="閉じる">×</button>
+      <h2 id="modalTitle">コピーしました</h2>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <script>
+    function getModeFromUrl() {
+      return new URLSearchParams(location.search).get("mode");
+    }
+
+    function initScreen() {
+      const mode = getModeFromUrl();
+      document.getElementById("homeScreen").classList.toggle("hidden", mode === "create" || mode === "edit");
+      document.getElementById("createScreen").classList.toggle("hidden", mode !== "create");
+      document.getElementById("editScreen").classList.toggle("hidden", mode !== "edit");
+
+      if (mode === "create") document.title = "サイト作成モード - AIサイト作成プロンプトメーカー";
+      if (mode === "edit") document.title = "サイト編集モード - AIサイト作成プロンプトメーカー";
+    }
+
+    function openModeTab(mode) {
+      const baseUrl = location.href.split("?")[0].split("#")[0];
+      window.open(baseUrl + "?mode=" + encodeURIComponent(mode), "_blank", "noopener");
+    }
+
+    function buildCreatePrompt() {
+      const siteName = document.getElementById("siteName").value.trim() || "未定";
+      const siteContent = document.getElementById("siteContent").value.trim() || "サイトの内容は未入力です。必要に応じて、初心者向けに使いやすいサイト案を補完して下さい。";
+      const checkedPrompts = Array.from(document.querySelectorAll("#featureChecks input[type='checkbox']:checked"))
+        .map(input => "・" + input.dataset.prompt);
+
+      const featureText = checkedPrompts.length
+        ? checkedPrompts.join("\n")
+        : "・チェックボックスで指定された追加条件はありません。必要最低限の機能で作成して下さい。";
+
+      return `${siteName}というサイト名のサイトを作成して下さい。
+ChatGPTのCode Interpreter 機能を使って、このhtmlを作成下さい
+
+以下のチェックボックス条件を反映して下さい。
+${featureText}
+
+サイトの内容
+${siteContent}`;
+    }
+
+    function buildEditPrompt() {
+      const editContent = document.getElementById("editContent").value.trim() || "編集内容は未入力です。現在のHTMLを確認し、初心者にも分かりやすく改善して下さい。";
+
+      return `作成頂いたサイトの編集作業をお願いします。
+
+サイトの編集内容
+${editContent}
+
+ChatGPTのCode Interpreter 機能を使って、このhtmlを作成下さい`;
+    }
+
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (error) {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        const ok = document.execCommand("copy");
+        textarea.remove();
+        return ok;
+      }
+    }
+
+    async function copyCreatePrompt() {
+      const prompt = buildCreatePrompt();
+      await copyText(prompt);
+      showModal("質問文をコピーしました", `
+        <p>下のどちらかを開き、コピーした質問文を貼り付けて送信して下さい。</p>
+        <div class="ai-buttons">
+          <a href="https://chatgpt.com/" target="_blank" rel="noopener">ChatGPTで作る</a>
+          <a class="gemini" href="https://gemini.google.com/" target="_blank" rel="noopener">Geminiで作る</a>
+        </div>
+        <h3>次に取るべき流れ</h3>
+        <ol class="flow">
+          <li>ChatGPTまたはGeminiのタブに移動します。</li>
+          <li>コピーした質問文を貼り付けて質問します。</li>
+          <li>AIがHTMLを作成したら、このタブを閉じます。</li>
+          <li>最初の画面から編集モードを開きます。</li>
+          <li>編集モードで追加の質問文を作ります。</li>
+        </ol>
+        <h3>コピーされた質問文</h3>
+        <div class="preview">${escapeHtml(prompt)}</div>
+      `);
+    }
+
+    async function copyEditPrompt() {
+      const prompt = buildEditPrompt();
+      await copyText(prompt);
+      showModal("編集用の質問文をコピーしました", `
+        <h3>次に取るべき流れ</h3>
+        <ol class="flow">
+          <li>AI側のタブに戻ります。</li>
+          <li>コピーした質問文を貼り付けて質問します。</li>
+          <li>AIの回答を見ながら、必要に応じて追加修正を依頼します。</li>
+        </ol>
+        <h3>コピーされた質問文</h3>
+        <div class="preview">${escapeHtml(prompt)}</div>
+      `);
+    }
+
+    function clearCreateForm() {
+      if (!confirm("作成モードの入力内容をクリアしますか？")) return;
+      document.getElementById("siteName").value = "";
+      document.getElementById("siteContent").value = "";
+      document.querySelectorAll("#featureChecks input[type='checkbox']").forEach(input => input.checked = false);
+    }
+
+    function clearEditForm() {
+      if (!confirm("編集内容をクリアしますか？")) return;
+      document.getElementById("editContent").value = "";
+    }
+
+    function showModal(title, html) {
+      document.getElementById("modalTitle").textContent = title;
+      document.getElementById("modalBody").innerHTML = html;
+      document.getElementById("modalBackdrop").classList.add("show");
+    }
+
+    function closeModal() {
+      document.getElementById("modalBackdrop").classList.remove("show");
+    }
+
+    function closeModalByBackdrop(event) {
+      if (event.target.id === "modalBackdrop") closeModal();
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") closeModal();
+    });
+
+    initScreen();
+  </script>
+</body>
+</html>
