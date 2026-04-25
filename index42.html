@@ -423,6 +423,28 @@
       window.open(baseUrl + "?mode=" + encodeURIComponent(mode), "_blank", "noopener");
     }
 
+    function rememberAiService(service) {
+      try {
+        localStorage.setItem("aiPromptMaker_lastAiService", service);
+      } catch (error) {
+        console.warn("AIサービスの記憶に失敗しました。", error);
+      }
+    }
+
+    function getRememberedAiService() {
+      try {
+        return localStorage.getItem("aiPromptMaker_lastAiService") || "";
+      } catch (error) {
+        return "";
+      }
+    }
+
+    function getAiServiceName(service) {
+      if (service === "chatgpt") return "ChatGPT";
+      if (service === "gemini") return "Gemini";
+      return "AI";
+    }
+
     function buildCreatePrompt() {
       const siteName = document.getElementById("siteName").value.trim() || "未定";
       const siteContent = document.getElementById("siteContent").value.trim() || "サイトの内容は未入力です。必要に応じて、初心者向けに使いやすいサイト案を補完して下さい。";
@@ -451,7 +473,8 @@ ${siteContent}`;
 サイトの編集内容
 ${editContent}
 
-ChatGPTのCode Interpreter 機能を使って、このhtmlを修正下さい`;
+ChatGPTのCode Interpreter 機能を使って、このhtmlを修正下さい。
+前回の続きではなく新しいチャットで質問している場合は、添付したHTMLファイルを元に修正して下さい。`;
     }
 
     function buildCreatePromptForGemini() {
@@ -503,11 +526,26 @@ ${siteContent}`;
 ・ユーザーがそのまま .html ファイルとして保存して開ける形にして下さい。
 
 【修正内容】
-${editContent}`;
+${editContent}
+
+前回の続きではなく新しいチャットで質問している場合は、添付したHTMLファイルを元に修正して下さい。`;
+    }
+
+    function handleChatGptCreate(event) {
+      event.preventDefault();
+      rememberAiService("chatgpt");
+      window.open("https://chatgpt.com/", "_blank", "noopener");
+    }
+
+    function handleChatGptEdit(event) {
+      event.preventDefault();
+      rememberAiService("chatgpt");
+      window.open("https://chatgpt.com/", "_blank", "noopener");
     }
 
     async function handleGeminiCreate(event) {
       event.preventDefault();
+      rememberAiService("gemini");
       const prompt = buildCreatePromptForGemini();
       await copyText(prompt);
       window.open("https://gemini.google.com/", "_blank", "noopener");
@@ -515,6 +553,7 @@ ${editContent}`;
 
     async function handleGeminiEdit(event) {
       event.preventDefault();
+      rememberAiService("gemini");
       const prompt = buildEditPromptForGemini();
       await copyText(prompt);
       window.open("https://gemini.google.com/", "_blank", "noopener");
@@ -541,7 +580,7 @@ ${editContent}`;
       showModal("質問文をコピーしました", `
         <p>下のどちらかを開き、コピーした質問文を貼り付けて送信して下さい。</p>
         <div class="ai-buttons">
-          <a href="https://chatgpt.com/" target="_blank" rel="noopener">ChatGPTで作る</a>
+          <a href="#" onclick="handleChatGptCreate(event)">ChatGPTで作る</a>
           <a class="gemini" href="#" onclick="handleGeminiCreate(event)">Geminiで作る</a>
         </div>
         <h3>次に取るべき流れ</h3>
@@ -560,15 +599,26 @@ ${editContent}`;
     async function copyEditPrompt() {
       const prompt = buildEditPrompt();
       await copyText(prompt);
+
+      const service = getRememberedAiService();
+      const serviceName = getAiServiceName(service);
+      const serviceGuide = service
+        ? `<p>前回は <b>${serviceName}</b> を開いています。前回作成した回答の続きとして修正する場合は、${serviceName}側のタブに戻って、この質問文を貼り付けて下さい。</p>`
+        : `<p>前回開いたAIサービスはまだ記憶されていません。前回作成した回答の続きとして修正する場合は、そのAI側のタブに戻って、この質問文を貼り付けて下さい。</p>`;
+
       showModal("編集用の質問文をコピーしました", `
-        <p>ChatGPT側のタブに戻る場合は、このままコピー済みの質問文を貼り付けて下さい。Geminiを使う場合は、下のボタンを押すとGemini用の質問文にコピーし直して開きます。</p>
+        ${serviceGuide}
+        <p>新しいチャットで質問する場合は、AIが元のHTMLを見られないため、修正してほしいHTMLファイルを添付してから、この質問文を貼り付けることをおすすめします。</p>
+        <p>Geminiを使う場合は、下のボタンを押すとGemini用の質問文にコピーし直して開きます。</p>
         <div class="ai-buttons">
+          <a href="#" onclick="handleChatGptEdit(event)">ChatGPTで修正する</a>
           <a class="gemini" href="#" onclick="handleGeminiEdit(event)">Geminiで修正する</a>
         </div>
         <h3>次に取るべき流れ</h3>
         <ol class="flow">
-          <li>AI側のタブに戻ります。</li>
+          <li>前回の続きで修正する場合は、前回HTMLを作成したAI側のタブに戻ります。</li>
           <li>コピーした質問文を貼り付けて質問します。</li>
+          <li>新しいチャットで質問する場合は、先に修正してほしいHTMLファイルを添付します。</li>
           <li>AIの回答を見ながら、必要に応じて追加修正を依頼します。</li>
         </ol>
         <h3>コピーされた質問文</h3>
