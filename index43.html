@@ -9,14 +9,23 @@
       box-sizing: border-box;
     }
 
-    body {
-      margin: 0;
-      padding: 24px;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", Meiryo, sans-serif;
-      color: #243447;
-      background:
-        radial-gradient(circle at top left, #eef6ff 0%, #f8fbff 35%, #f3f7fb 100%);
-    }
+body {
+  margin: 0;
+  padding: 24px;
+
+  /* ▼ここを変更 */
+  font-family:
+    -apple-system,           /* iOS / Mac（最優先で綺麗） */
+    "Segoe UI",              /* Windows（モダン） */
+    "Hiragino Sans",         /* Mac 日本語 */
+    "Noto Sans JP",          /* Android 日本語 */
+    "Yu Gothic UI",          /* Windows 日本語（見た目良い） */
+    Meiryo,                  /* Windows fallback */
+    system-ui,
+    sans-serif;
+
+  color: #243447;
+}
 
     .page {
       max-width: 1280px;
@@ -2652,49 +2661,7 @@
 .btn-ui71{color:#ffffff;border-color:#3f4350;text-shadow:0 1px 1px rgba(0,0,0,.18);background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2'><path d='M4 6h16M4 12h16M4 18h16'/></svg>") no-repeat left 15px center / 16px,linear-gradient(135deg,#666c78 0%,#4a505a 55%,#303640 100%);}
 .btn-ui72{color:#ffffff;border-color:#4c3968;text-shadow:0 1px 1px rgba(0,0,0,.18);background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2'><path d='M12 5v14M5 12h14'/></svg>") no-repeat left 15px center / 16px,linear-gradient(135deg,#735a9a 0%,#554172 55%,#392b4d 100%);}
 
-  
-
-/* ===== add: stronger hover behavior without diagonal shine ===== */
-.btn::after{
-  content:none !important;
-  display:none !important;
-}
-.btn{
-  transition:
-    transform .22s var(--btn-ease),
-    box-shadow .22s var(--btn-ease),
-    filter .18s ease,
-    border-color .18s ease,
-    background-position .28s var(--btn-ease) !important;
-}
-.btn:hover,
-.btn:focus-visible{
-  transform:none !important;
-  filter:brightness(1.06) saturate(1.12) !important;
-  background-position:100% 0;
-  box-shadow:
-    0 16px 32px rgba(36,52,71,.20),
-    0 0 0 3px rgba(82,146,219,.10),
-    inset 0 1px 0 rgba(255,255,255,.55) !important;
-}
-.btn:active{
-  transform:none !important;
-  filter:brightness(.97) saturate(.98) !important;
-  box-shadow:
-    0 5px 12px rgba(36,52,71,.13),
-    inset 0 3px 7px rgba(0,0,0,.12) !important;
-}
-.btn[class*="btn-ui"]:hover,
-.btn[class*="btn-ui"]:focus-visible{
-  background-position:left 15px center,100% 0 !important;
-}
-.btn[class*="btn-ui"]:active{
-  background-position:left 15px center,100% 0 !important;
-}
-@media (prefers-reduced-motion: reduce){
-  .btn{transition:none !important;}
-}
-</style>
+  </style>
 </head>
 <body>
   <div class="page">
@@ -2707,7 +2674,7 @@
         画面下の「直近でコピーしたHTML」欄で適切な「css」または「要素」のみをコピーできます。
       </p>
       <p>
-      <a href="index40.html" class="isLookPC">旧バージョンはこちら</a>
+      <a href="index40.html">旧バージョンはこちら</a>
       </p>
       <div class="info">
         コピーされる内容は、通常時の見た目を再現するための
@@ -3820,83 +3787,59 @@ function buildInlineStyle(styleMap) {
     .join(";");
 }
 
-function normalizeCssValue(value) {
-  return value && value !== "normal" && value !== "none" && value !== "auto" ? value : "";
-}
-
-function getSafeText(button) {
-  return button.textContent.trim().replace(/\s+/g, " ");
-}
-
 function pickStateStyle(button) {
   const cs = getComputedStyle(button);
-  const isFull = button.classList.contains("full");
 
   const styleMap = {
-    "box-sizing": "border-box",
-    "position": "relative",
-    "isolation": "isolate",
-    "overflow": "hidden",
-    "display": "inline-flex",
-    "align-items": "center",
-    "justify-content": "center",
-    "gap": cs.gap,
+    "display": "inline-block",
     "padding": cs.padding,
     "min-height": cs.minHeight,
     "min-width": cs.minWidth,
-    "width": isFull ? "100%" : "",
+    "width": button.classList.contains("full") ? "100%" : (cs.width !== "auto" ? cs.width : ""),
     "border": cs.border,
     "border-radius": cs.borderRadius,
     "background": cs.background,
-    "background-size": cs.backgroundSize,
-    "background-position": cs.backgroundPosition,
-    "background-repeat": cs.backgroundRepeat,
     "color": cs.color,
     "font-size": cs.fontSize,
     "font-weight": cs.fontWeight,
     "font-family": cs.fontFamily,
     "line-height": cs.lineHeight,
-    "letter-spacing": cs.letterSpacing,
     "text-align": cs.textAlign,
-    "text-decoration": "none",
-    "text-shadow": normalizeCssValue(cs.textShadow),
     "box-shadow": cs.boxShadow,
-    "backdrop-filter": normalizeCssValue(cs.backdropFilter),
-    "-webkit-backdrop-filter": normalizeCssValue(cs.backdropFilter),
+    "backdrop-filter": cs.backdropFilter !== "none" ? cs.backdropFilter : "",
+    "-webkit-backdrop-filter": cs.backdropFilter !== "none" ? cs.backdropFilter : "",
     "cursor": "pointer",
     "white-space": cs.whiteSpace,
     "user-select": "none",
     "vertical-align": "middle",
-    "-webkit-tap-highlight-color": "transparent",
-    "transition": "transform .22s cubic-bezier(.2,.8,.2,1), box-shadow .22s cubic-bezier(.2,.8,.2,1), filter .18s ease, border-color .18s ease, background-position .28s cubic-bezier(.2,.8,.2,1)",
-    "transform": "none",
-    "filter": normalizeCssValue(cs.filter)
+    "box-sizing": "border-box",
+    "transition": "transform .15s ease, filter .15s ease, box-shadow .15s ease",
+    "transform": cs.transform !== "none" ? cs.transform : "",
+    "filter": cs.filter !== "none" ? cs.filter : ""
   };
 
   return Object.fromEntries(
-    Object.entries(styleMap).filter(([_, value]) => value !== "" && value !== null && value !== undefined)
+    Object.entries(styleMap).filter(([key, value]) => {
+      if (!value) return false;
+      if (key === "box-shadow") return true;
+      return value !== "normal" && value !== "none";
+    })
   );
 }
 
 function captureButtonStates(button) {
   const baseStyle = pickStateStyle(button);
-  const isUiButton = Array.from(button.classList).some((name) => name.startsWith("btn-ui"));
-  const hoverBackgroundPosition = isUiButton ? "left 15px center,100% 0" : "100% 0";
 
   const hoverStyle = {
     ...baseStyle,
-    transform: "none",
-    filter: "brightness(1.06) saturate(1.12)",
-    "background-position": hoverBackgroundPosition,
-    "box-shadow": "0 16px 32px rgba(36,52,71,.20), 0 0 0 3px rgba(82,146,219,.10), inset 0 1px 0 rgba(255,255,255,.55)"
+    transform: "translateY(-1px)",
+    filter: "brightness(1.02)"
   };
 
   const activeStyle = {
     ...baseStyle,
-    transform: "none",
-    filter: "brightness(.97) saturate(.98)",
-    "background-position": hoverBackgroundPosition,
-    "box-shadow": "0 5px 12px rgba(36,52,71,.13), inset 0 3px 7px rgba(0,0,0,.12)"
+    transform: "translateY(0) scale(0.98)",
+    filter: "brightness(0.98)"
   };
 
   return {
@@ -3950,7 +3893,7 @@ function buildLazyButtonHtml(button) {
   const baseText = buildInlineStyle(baseStyle);
   const hoverText = buildInlineStyle(hoverStyle);
   const activeText = buildInlineStyle(activeStyle);
-  const labelText = escapeHtml(getSafeText(button));
+  const labelText = escapeHtml(button.textContent.trim());
 
   const baseAttr = escapeHtmlAttr(baseText);
   const hoverJs = escapeHtmlAttr(JSON.stringify(hoverText));
@@ -3974,7 +3917,7 @@ function buildCssButtonParts(button) {
     `}`
   ].join("\n\n");
 
-  const elementHtml = `<button class="${className}">${escapeHtml(getSafeText(button))}</button>`;
+  const elementHtml = `<button class="${className}">${button.textContent.trim()}</button>`;
 
   return {
     cssText,
