@@ -3795,6 +3795,9 @@ function pickStateStyle(button) {
   const cs = getComputedStyle(button);
 
   const styleMap = {
+    "position": cs.position === "static" ? "relative" : cs.position,
+    "isolation": cs.isolation,
+    "overflow": cs.overflow,
     "display": cs.display,
     "align-items": cs.alignItems,
     "justify-content": cs.justifyContent,
@@ -3840,6 +3843,7 @@ function pickStateStyle(button) {
 
 function captureButtonStates(button) {
   const baseStyle = pickStateStyle(button);
+const beforeStyle = pickPseudoStyle(button, "::before");
 
   const hoverStyle = {
     ...baseStyle,
@@ -3855,9 +3859,36 @@ function captureButtonStates(button) {
 
   return {
     baseStyle,
+    beforeStyle,
     hoverStyle,
     activeStyle
   };
+}
+
+function pickPseudoStyle(element, pseudo) {
+  const cs = getComputedStyle(element, pseudo);
+
+  if (!cs || cs.content === "none") return {};
+
+  const styleMap = {
+    "content": cs.content,
+    "position": cs.position,
+    "inset": cs.inset,
+    "z-index": cs.zIndex,
+    "border-radius": cs.borderRadius,
+    "background": cs.background,
+    "background-size": cs.backgroundSize,
+    "background-position": cs.backgroundPosition,
+    "background-repeat": cs.backgroundRepeat,
+    "opacity": cs.opacity,
+    "pointer-events": cs.pointerEvents
+  };
+
+  return Object.fromEntries(
+    Object.entries(styleMap).filter(([_, value]) => {
+      return value && value !== "normal" && value !== "none" && value !== "auto";
+    })
+  );
 }
 
 function buildCssRule(selector, styleMap) {
@@ -3932,12 +3963,13 @@ return `<button type="button" style="${baseAttr}" onmouseover="this.setAttribute
 
 function buildCssButtonParts(button) {
   const className = getRequestedClassName();
-  const { baseStyle, hoverStyle, activeStyle } = captureButtonStates(button);
+const { baseStyle, hoverStyle, activeStyle, beforeStyle } = captureButtonStates(button);
   const cleanedHoverStyle = removeDuplicateStyleEntries(baseStyle, hoverStyle);
   const cleanedActiveStyle = removeDuplicateStyleEntries(baseStyle, activeStyle);
 
   const cssText = [
     buildCssRule(`.${className}`, baseStyle),
+    buildCssRule(`.${className}::before`, beforeStyle),
     buildCssRule(`.${className}:hover`, cleanedHoverStyle),
     buildCssRule(`.${className}:active`, cleanedActiveStyle),
     `.${className}:focus,
