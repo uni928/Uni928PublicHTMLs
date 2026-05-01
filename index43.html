@@ -3925,10 +3925,10 @@ function buildCssButtonParts(button) {
     buildCssRule(`.${className}`, baseStyle),
     buildCssRule(`.${className}:hover`, cleanedHoverStyle),
     buildCssRule(`.${className}:active`, cleanedActiveStyle),
-    `.${className}:focus,`,
-    `.${className}:focus-visible{`,
-    `  outline:none;`,
-    `}`
+    `.${className}:focus,
+.${className}:focus-visible{
+  outline:none;
+}`
   ].join("\n\n");
 
   const elementHtml = `<button class="${className}">${button.textContent.trim()}</button>`;
