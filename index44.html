@@ -1,0 +1,227 @@
+
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>netkeiba 印付き見解共有ツール</title>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--ink:#1f2937;--muted:#6b7280;--line:#e5e7eb;--main:#2563eb;--main2:#1d4ed8;--danger:#dc2626;--soft:#eff6ff;}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;line-height:1.65}.wrap{max-width:980px;margin:0 auto;padding:18px}h1{font-size:24px;margin:10px 0 6px}h2{font-size:18px;margin:0 0 12px}.lead{color:var(--muted);margin:0 0 16px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 10px 24px rgba(0,0,0,.04);padding:16px;margin:14px 0}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.grow{flex:1}textarea,input{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit;background:#fff}textarea{min-height:220px;resize:vertical}.opinionText{min-height:140px}.btn{border:0;border-radius:999px;padding:10px 16px;font-weight:700;cursor:pointer;background:var(--main);color:#fff}.btn:hover{background:var(--main2)}.btn.secondary{background:#111827}.btn.ghost{background:#e5e7eb;color:#111827}.btn.danger{background:var(--danger)}.btn:disabled{opacity:.45;cursor:not-allowed}.small{font-size:13px;color:var(--muted)}.hidden{display:none!important}.status{white-space:pre-wrap;border-radius:12px;padding:10px;background:#f9fafb;border:1px solid var(--line);font-size:14px;color:#374151}.horseList{display:grid;gap:10px}.horse{display:grid;grid-template-columns:54px 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:10px;background:#fff}.mark{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:50%;background:var(--soft);font-size:20px;font-weight:900;color:#1d4ed8}.horseName{font-weight:800}.meta{font-size:13px;color:var(--muted)}.pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 8px;margin:2px;background:#fff}.nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.previewTitle{border-left:5px solid var(--main);padding-left:10px;margin:0 0 10px}.opinionBlock{border-top:1px solid var(--line);padding:14px 0}.opinionBlock:first-of-type{border-top:0}.opinion{white-space:pre-wrap;background:#f9fafb;border-radius:12px;padding:12px}.copyBox{display:flex;gap:8px}.copyBox input{font-size:13px}.notice{background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12;border-radius:12px;padding:10px;font-size:14px}.footer{font-size:12px;color:var(--muted);text-align:center;margin:24px 0}@media(max-width:640px){.horse{grid-template-columns:46px 1fr}.horse .metaRight{grid-column:2}.copyBox{display:block}.copyBox .btn{margin-top:8px;width:100%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>netkeiba 印付き見解共有ツール</h1>
+  <p class="lead">出馬表画面で印を入れた後に全選択→コピーした本文を貼り付けると、印が強い順に見解入力できます。</p>
+
+  <section id="shareView" class="hidden"></section>
+
+  <section id="editView">
+    <div class="card">
+      <h2>1. netkeibaのコピー内容を貼り付け</h2>
+      <textarea id="sourceText" placeholder="ここにnetkeiba出馬表画面の全選択コピー内容を貼り付けてください"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="parseBtn">見解を入力する</button>
+        <button class="btn ghost" id="sampleBtn">サンプルを少しだけ入れる</button>
+        <button class="btn ghost" id="clearBtn">クリア</button>
+      </div>
+      <p class="small">対応印: ◎ / ○ / ◯ / ▲ / △ / ☆ / 注 / × / --。URLには印付き馬・レース名・見解など最小限だけ保存します。</p>
+    </div>
+
+    <div id="parseResult" class="card hidden">
+      <h2>2. 解析結果</h2>
+      <div id="raceInfo" class="status"></div>
+      <div id="markedList" class="horseList" style="margin-top:12px"></div>
+    </div>
+
+    <div id="opinionPanel" class="card hidden">
+      <h2>3. 印順に見解入力</h2>
+      <div id="currentHorse" class="status"></div>
+      <textarea id="opinionInput" class="opinionText" placeholder="この馬の見解を入力してください"></textarea>
+      <div class="nav">
+        <button class="btn ghost" id="prevBtn">前へ</button>
+        <button class="btn" id="saveNextBtn">保存して次へ</button>
+        <button class="btn secondary" id="finishBtn">入力完了</button>
+      </div>
+      <p class="small" id="progressText"></p>
+    </div>
+
+    <div id="sharePanel" class="card hidden">
+      <h2>4. 共有URL</h2>
+      <div class="notice">このHTMLをWeb上に置いた状態でURLをコピーすると、アクセスした人が同じ見解を閲覧できます。ローカルファイルのURLは自分のPC内でしか開けません。</div>
+      <div id="preview" style="margin-top:14px"></div>
+      <div class="copyBox" style="margin-top:12px">
+        <input id="shareUrl" readonly>
+        <button class="btn" id="copyUrlBtn">URLをコピー</button>
+      </div>
+      <p class="small" id="urlSize"></p>
+    </div>
+  </section>
+
+  <div class="footer">このツールは貼り付けた内容をブラウザ内で処理します。サーバー送信は行いません。</div>
+</div>
+<script>
+const MARK_ORDER = ["◎","○","◯","▲","△","☆","注","×","--",""];
+const STRONG_MARKS = ["◎","○","◯","▲","△","☆","注","×"];
+let state = { race:{}, horses:[], marked:[], index:0 };
+const $ = id => document.getElementById(id);
+
+function normalizeText(t){
+  return (t||"").replace(/\r/g,"\n").replace(/[\u00a0\u2009\u202f]/g," ").replace(/[ 　]+/g," ").replace(/\n{3,}/g,"\n\n").trim();
+}
+function cleanLine(s){ return (s||"").replace(/^[\s　]+|[\s　]+$/g,""); }
+function isHorseNo(s){ return /^\d{1,2}$/.test(cleanLine(s)); }
+function isMark(s){ return /^(◎|○|◯|▲|△|☆|注|×|--|－|-)$/.test(cleanLine(s)); }
+function normalizeMark(s){ s=cleanLine(s); if(s==="－"||s==="-")return "--"; return s; }
+function markRank(m){ let i=MARK_ORDER.indexOf(m); return i>=0?i:99; }
+function looksLikeName(s){
+  s=cleanLine(s);
+  if(!s || s.length>26) return false;
+  if(/[0-9]{1,2}:\d{2}|出馬表|予想|オッズ|データ|結果|メニュー|トップ|ログイン|AI|netkeiba|©|All Rights/i.test(s)) return false;
+  if(/^[\d.]+$/.test(s)) return false;
+  return /[ァ-ヶー一-龠A-Za-z]/.test(s);
+}
+function parseRace(lines){
+  const race = { date:"", place:"", raceNo:"", title:"", condition:"" };
+  for(let i=0;i<lines.length;i++){
+    const l=lines[i];
+    if(!race.date && /^\d{1,2}\/\d{1,2}\(.+\)$/.test(l)) race.date=l;
+    if(!race.place && ["札幌","函館","福島","新潟","東京","中山","中京","京都","阪神","小倉","門別","盛岡","水沢","浦和","船橋","大井","川崎","金沢","笠松","名古屋","園田","姫路","高知","佐賀"].includes(l)) race.place=l;
+    if(/^\d{1,2}R$/.test(l)) race.raceNo=l;
+    if(!race.title && /\(.+\)|特別|賞|ステークス|カップ|記念|条件|未勝利|新馬|オープン|B\d|C\d|A\d/.test(l) && !/メニュー/.test(l)) race.title=l;
+    if(!race.condition && /\d{1,2}:\d{2}.*(芝|ダ|障)\d{3,4}m/.test(l)) race.condition=l;
+  }
+  return race;
+}
+function parseHorses(text){
+  const lines = normalizeText(text).split("\n").map(cleanLine).filter(Boolean);
+  const race = parseRace(lines);
+  const horses=[];
+  for(let i=0;i<lines.length;i++){
+    if(!isHorseNo(lines[i])) continue;
+    const no = parseInt(lines[i],10);
+    let j=i+1;
+    let mark="";
+    if(j<lines.length && isMark(lines[j])) { mark=normalizeMark(lines[j]); j++; }
+    else continue;
+    let name="";
+    while(j<lines.length && j<i+7){
+      if(looksLikeName(lines[j])) { name=lines[j]; break; }
+      j++;
+    }
+    if(!name) continue;
+    const detail=[];
+    for(let k=j+1;k<Math.min(lines.length,j+8);k++){
+      if(isHorseNo(lines[k])) break;
+      detail.push(lines[k]);
+    }
+    horses.push({no, mark, name, detail: detail.join(" ").slice(0,120), opinion:""});
+  }
+  const uniq=[]; const seen=new Set();
+  for(const h of horses){ if(!seen.has(h.no+":"+h.name)){seen.add(h.no+":"+h.name); uniq.push(h);} }
+  return {race, horses:uniq.sort((a,b)=>a.no-b.no)};
+}
+function renderParsed(){
+  const r=state.race;
+  $("raceInfo").textContent = [r.date, r.place, r.raceNo, r.title, r.condition].filter(Boolean).join(" / ") || "レース情報を自動取得できませんでした。";
+  const box=$("markedList"); box.innerHTML="";
+  const list=state.marked.length?state.marked:state.horses.filter(h=>h.mark&&h.mark!=="--");
+  if(!list.length){ box.innerHTML='<div class="status">印付き馬を検出できませんでした。コピー内容の馬番・印・馬名が含まれているか確認してください。</div>'; return; }
+  list.forEach(h=>{
+    const div=document.createElement("div"); div.className="horse";
+    div.innerHTML=`<div class="mark">${escapeHtml(h.mark)}</div><div><div class="horseName">${h.no}. ${escapeHtml(h.name)}</div><div class="meta">${escapeHtml(h.detail||"")}</div></div><div class="meta metaRight">${markRank(h.mark)+1}番手</div>`;
+    box.appendChild(div);
+  });
+}
+function startOpinion(){
+  state.marked = state.horses.filter(h=>STRONG_MARKS.includes(h.mark)).sort((a,b)=>markRank(a.mark)-markRank(b.mark)||a.no-b.no);
+  if(!state.marked.length) state.marked = state.horses.filter(h=>h.mark&&h.mark!=="--").sort((a,b)=>markRank(a.mark)-markRank(b.mark)||a.no-b.no);
+  state.index=0;
+  renderParsed();
+  $("parseResult").classList.remove("hidden");
+  if(state.marked.length){ $("opinionPanel").classList.remove("hidden"); showOpinion(); }
+}
+function showOpinion(){
+  const h=state.marked[state.index];
+  $("currentHorse").textContent = `${state.index+1}/${state.marked.length}　${h.mark} ${h.no}. ${h.name}\n${h.detail||""}`;
+  $("opinionInput").value = h.opinion || "";
+  $("progressText").textContent = "強い印順: " + state.marked.map(x=>`${x.mark}${x.no}.${x.name}`).join(" → ");
+  $("prevBtn").disabled = state.index===0;
+  $("saveNextBtn").textContent = state.index===state.marked.length-1 ? "保存" : "保存して次へ";
+}
+function saveCurrent(){ if(state.marked[state.index]) state.marked[state.index].opinion=$("opinionInput").value.trim(); }
+async function buildShare(){
+  saveCurrent();
+  const payload={v:1,r:state.race,h:state.marked.map(h=>({n:h.no,m:h.mark,name:h.name,d:h.detail,o:h.opinion||""}))};
+  const json=JSON.stringify(payload);
+  const packed=await compressToUrlSafe(json);
+  const url=location.origin && location.protocol.startsWith("http") ? `${location.origin}${location.pathname}?d=${packed}` : `${location.href.split("?")[0]}?d=${packed}`;
+  $("shareUrl").value=url;
+  $("urlSize").textContent=`圧縮前 ${json.length} 文字 / URL全体 ${url.length} 文字`;
+  $("sharePanel").classList.remove("hidden");
+  renderPreview(payload,$("preview"));
+}
+function renderPreview(data,root){
+  const r=data.r||{};
+  root.innerHTML=`<h2 class="previewTitle">${escapeHtml([r.date,r.place,r.raceNo,r.title].filter(Boolean).join(" / ")||"共有見解")}</h2><div class="small">${escapeHtml(r.condition||"")}</div>`;
+  (data.h||[]).forEach(h=>{
+    const div=document.createElement("div"); div.className="opinionBlock";
+    div.innerHTML=`<div class="horse"><div class="mark">${escapeHtml(h.m)}</div><div><div class="horseName">${h.n}. ${escapeHtml(h.name)}</div><div class="meta">${escapeHtml(h.d||"")}</div></div></div><div class="opinion">${escapeHtml(h.o||"（見解未入力）")}</div>`;
+    root.appendChild(div);
+  });
+}
+async function compressToUrlSafe(str){
+  if("CompressionStream" in window){
+    const cs=new CompressionStream("gzip");
+    const w=cs.writable.getWriter();
+    w.write(new TextEncoder().encode(str)); w.close();
+    const buf=await new Response(cs.readable).arrayBuffer();
+    return b64url(new Uint8Array(buf));
+  }
+  return "raw."+b64url(new TextEncoder().encode(str));
+}
+async function decompressFromUrlSafe(s){
+  let raw=false; if(s.startsWith("raw.")){raw=true;s=s.slice(4)}
+  const bytes=fromB64url(s);
+  if(raw || !("DecompressionStream" in window)) return new TextDecoder().decode(bytes);
+  const ds=new DecompressionStream("gzip");
+  const w=ds.writable.getWriter(); w.write(bytes); w.close();
+  const buf=await new Response(ds.readable).arrayBuffer();
+  return new TextDecoder().decode(buf);
+}
+function b64url(bytes){
+  let bin=""; for(let i=0;i<bytes.length;i++) bin+=String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"");
+}
+function fromB64url(s){
+  s=s.replace(/-/g,"+").replace(/_/g,"/"); while(s.length%4) s+="=";
+  const bin=atob(s); const out=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) out[i]=bin.charCodeAt(i); return out;
+}
+function escapeHtml(s){ return String(s??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c])); }
+
+$("parseBtn").onclick=()=>{ const parsed=parseHorses($("sourceText").value); state={...state,...parsed}; startOpinion(); };
+$("prevBtn").onclick=()=>{ saveCurrent(); if(state.index>0){state.index--;showOpinion();} };
+$("saveNextBtn").onclick=()=>{ saveCurrent(); if(state.index<state.marked.length-1){state.index++;showOpinion();} else buildShare(); };
+$("finishBtn").onclick=buildShare;
+$("copyUrlBtn").onclick=async()=>{ await navigator.clipboard.writeText($("shareUrl").value); $("copyUrlBtn").textContent="コピーしました"; setTimeout(()=>$("copyUrlBtn").textContent="URLをコピー",1400); };
+$("clearBtn").onclick=()=>{ $("sourceText").value=""; location.href=location.href.split("?")[0]; };
+$("sampleBtn").onclick=()=>{$("sourceText").value=`11R\n皐月特別(B1)\n18:10 ダ1500m (右) 11頭 曇 重\n4\n◎\nピースオーシャン\n牝4 ピースオーシャンのデータベース田知弘久 55.0\n8.8\n3人気\n7\n◯\nホウオウヴィーナス\n牝6 ホウオウヴィーナスのデータベース栗原大河 55.0\n14.4\n7人気\n10\n▲\nダンナイ\n牡4 ダンナイのデータベース浅野登生 54.0\n33.7\n10人気`;};
+(async function init(){
+  const d=new URLSearchParams(location.search).get("d");
+  if(d){
+    try{
+      const data=JSON.parse(await decompressFromUrlSafe(d));
+      $("editView").classList.add("hidden");
+      const sv=$("shareView"); sv.classList.remove("hidden"); sv.className="card";
+      renderPreview(data,sv);
+    }catch(e){
+      $("shareView").classList.remove("hidden"); $("shareView").className="card";
+      $("shareView").innerHTML='<h2>共有データを読み込めませんでした</h2><p class="small">URLが途中で切れている可能性があります。</p>';
+    }
+  }
+})();
+</script>
+</body>
+</html>
