@@ -3945,20 +3945,56 @@ function escapeJsStringForAttr(text) {
   return escapeHtmlAttr(JSON.stringify(String(text)));
 }
 
+function pickBeforeGlossStyle(button) {
+  const cs = getComputedStyle(button, "::before");
+  if (!cs || cs.content === "none") return {};
+
+  return {
+    "position": "absolute",
+    "inset": cs.inset,
+    "z-index": "0",
+    "border-radius": cs.borderRadius,
+    "background": cs.background,
+    "background-size": cs.backgroundSize,
+    "background-position": cs.backgroundPosition,
+    "background-repeat": cs.backgroundRepeat,
+    "opacity": cs.opacity,
+    "pointer-events": "none"
+  };
+}
+function escapeJsStringForAttr(text) {
+  return escapeHtmlAttr(JSON.stringify(String(text)));
+}
+
 function buildLazyButtonHtml(button) {
   const { baseStyle, hoverStyle, activeStyle } = captureButtonStates(button);
+const beforeStyle = pickBeforeGlossStyle(button);
+
+  baseStyle.position = baseStyle.position || "relative";
+  baseStyle.overflow = baseStyle.overflow || "hidden";
+  baseStyle.isolation = baseStyle.isolation || "isolate";
+
+  const textStyle = {
+    "position": "relative",
+    "z-index": "1",
+    "display": "inline-block"
+  };
 
   const baseText = buildInlineStyle(baseStyle);
   const hoverText = buildInlineStyle(hoverStyle);
   const activeText = buildInlineStyle(activeStyle);
+  const beforeText = buildInlineStyle(beforeStyle);
+  const labelTextStyle = buildInlineStyle(textStyle);
   const labelText = escapeHtml(button.textContent.trim());
 
   const baseAttr = escapeHtmlAttr(baseText);
   const hoverJs = escapeJsStringForAttr(hoverText);
   const activeJs = escapeJsStringForAttr(activeText);
   const baseJs = escapeJsStringForAttr(baseText);
+  const beforeAttr = escapeHtmlAttr(beforeText);
+  const labelAttr = escapeHtmlAttr(labelTextStyle);
 
-return `<button type="button" style="${baseAttr}" onmouseover="this.setAttribute('style', ${hoverJs})" onmouseout="this.setAttribute('style', ${baseJs})" onmousedown="this.setAttribute('style', ${activeJs})" onmouseup="this.setAttribute('style', ${hoverJs})" onmouseleave="this.setAttribute('style', ${baseJs})">${labelText}</button>`;;
+return `<button type="button" style="${baseAttr}" onmouseover="this.setAttribute('style', ${hoverJs})" onmouseout="this.setAttribute('style', ${baseJs})" onmousedown="this.setAttribute('style', ${activeJs})" onmouseup="this.setAttribute('style', ${hoverJs})" onmouseleave="this.setAttribute('style', ${baseJs})"><span aria-hidden="true" style="${beforeAttr}"></span><span style="${labelAttr}">${labelText}</span></button>`;
 }
 
 function buildCssButtonParts(button) {
