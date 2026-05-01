@@ -3860,6 +3860,18 @@ function buildCssRule(selector, styleMap) {
   ].join("\n");
 }
 
+function removeDuplicateStyleEntries(baseStyle, stateStyle) {
+  return Object.fromEntries(
+    Object.entries(stateStyle).filter(([key, value]) => {
+      if (value === undefined || value === null) return false;
+      if (typeof value !== "string") value = String(value);
+      if (value === "NaN") return false;
+      return !(key in baseStyle) || baseStyle[key] !== value;
+    })
+  );
+}
+
+
 function getRequestedClassName() {
   const input = document.getElementById("classNameInput");
   const raw = input ? input.value.trim() : "";
@@ -3906,11 +3918,13 @@ function buildLazyButtonHtml(button) {
 function buildCssButtonParts(button) {
   const className = getRequestedClassName();
   const { baseStyle, hoverStyle, activeStyle } = captureButtonStates(button);
+  const cleanedHoverStyle = removeDuplicateStyleEntries(baseStyle, hoverStyle);
+  const cleanedActiveStyle = removeDuplicateStyleEntries(baseStyle, activeStyle);
 
   const cssText = [
     buildCssRule(`.${className}`, baseStyle),
-    buildCssRule(`.${className}:hover`, hoverStyle),
-    buildCssRule(`.${className}:active`, activeStyle),
+    buildCssRule(`.${className}:hover`, cleanedHoverStyle),
+    buildCssRule(`.${className}:active`, cleanedActiveStyle),
     `.${className}:focus,`,
     `.${className}:focus-visible{`,
     `  outline:none;`,
