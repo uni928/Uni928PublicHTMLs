@@ -3947,7 +3947,22 @@ function escapeJsStringForAttr(text) {
 
 function pickBeforeGlossStyle(button) {
   const cs = getComputedStyle(button, "::before");
-  if (!cs || cs.content === "none") return {};
+  if (!cs) return null;
+
+  // content:"" は疑似要素として有効なので除外しない
+  if (cs.content === "none") return null;
+
+  // 背景・枠・影が全部ない場合だけ除外
+  const hasVisiblePaint =
+    cs.backgroundImage !== "none" ||
+    cs.backgroundColor !== "rgba(0, 0, 0, 0)" ||
+    cs.borderTopStyle !== "none" ||
+    cs.boxShadow !== "none";
+
+  const isInvisible =
+    cs.opacity === "0" || !hasVisiblePaint;
+
+  if (isInvisible) return null;
 
   return {
     "position": "absolute",
@@ -3968,7 +3983,11 @@ function escapeJsStringForAttr(text) {
 
 function buildLazyButtonHtml(button) {
   const { baseStyle, hoverStyle, activeStyle } = captureButtonStates(button);
-const beforeStyle = pickBeforeGlossStyle(button);
+  // まず元の::beforeが存在するかチェック
+  const originalBefore = pickBeforeGlossStyle(button);
+
+  // 存在しないならズボラでも作らない
+  const beforeStyle = originalBefore;
 
   baseStyle.position = baseStyle.position || "relative";
   baseStyle.overflow = baseStyle.overflow || "hidden";
@@ -3983,7 +4002,7 @@ const beforeStyle = pickBeforeGlossStyle(button);
   const baseText = buildInlineStyle(baseStyle);
   const hoverText = buildInlineStyle(hoverStyle);
   const activeText = buildInlineStyle(activeStyle);
-  const beforeText = buildInlineStyle(beforeStyle);
+  const beforeText = beforeStyle ? buildInlineStyle(beforeStyle) : "";
   const labelTextStyle = buildInlineStyle(textStyle);
   const labelText = escapeHtml(button.textContent.trim());
 
@@ -3991,10 +4010,14 @@ const beforeStyle = pickBeforeGlossStyle(button);
   const hoverJs = escapeJsStringForAttr(hoverText);
   const activeJs = escapeJsStringForAttr(activeText);
   const baseJs = escapeJsStringForAttr(baseText);
-  const beforeAttr = escapeHtmlAttr(beforeText);
+  const beforeAttr = beforeText ? escapeHtmlAttr(beforeText) : "";
   const labelAttr = escapeHtmlAttr(labelTextStyle);
 
-return `<button type="button" style="${baseAttr}" onmouseover="this.setAttribute('style', ${hoverJs})" onmouseout="this.setAttribute('style', ${baseJs})" onmousedown="this.setAttribute('style', ${activeJs})" onmouseup="this.setAttribute('style', ${hoverJs})" onmouseleave="this.setAttribute('style', ${baseJs})"><span aria-hidden="true" style="${beforeAttr}"></span><span style="${labelAttr}">${labelText}</span></button>`;
+  const glossSpan = beforeAttr
+    ? `<span aria-hidden="true" style="${beforeAttr}"></span>`
+    : "";
+
+  return `<button type="button" style="${baseAttr}" onmouseover="this.setAttribute('style', ${hoverJs})" onmouseout="this.setAttribute('style', ${baseJs})" onmousedown="this.setAttribute('style', ${activeJs})" onmouseup="this.setAttribute('style', ${hoverJs})" onmouseleave="this.setAttribute('style', ${baseJs})">${glossSpan}<span style="${labelAttr}">${labelText}</span></button>`;
 }
 
 function buildCssButtonParts(button) {
