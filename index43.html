@@ -3688,12 +3688,16 @@ function showToast(message) {
 
 async function copyText(text) {
   try {
-    await navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(String(text).trim());
     return true;
   } catch (e) {
     const ta = document.createElement("textarea");
-    ta.value = text;
+    ta.value = String(text).trim();
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
     document.body.appendChild(ta);
+ta.focus();
     ta.select();
     const ok = document.execCommand("copy");
     ta.remove();
@@ -3791,7 +3795,10 @@ function pickStateStyle(button) {
   const cs = getComputedStyle(button);
 
   const styleMap = {
-    "display": "inline-block",
+    "display": cs.display,
+    "align-items": cs.alignItems,
+    "justify-content": cs.justifyContent,
+    "gap": cs.gap,
     "padding": cs.padding,
     "min-height": cs.minHeight,
     "min-width": cs.minWidth,
@@ -3803,8 +3810,10 @@ function pickStateStyle(button) {
     "font-size": cs.fontSize,
     "font-weight": cs.fontWeight,
     "font-family": cs.fontFamily,
+    "letter-spacing": cs.letterSpacing,
     "line-height": cs.lineHeight,
     "text-align": cs.textAlign,
+    "text-shadow": cs.textShadow !== "none" ? cs.textShadow : "",
     "box-shadow": cs.boxShadow,
     "backdrop-filter": cs.backdropFilter !== "none" ? cs.backdropFilter : "",
     "-webkit-backdrop-filter": cs.backdropFilter !== "none" ? cs.backdropFilter : "",
@@ -3813,6 +3822,8 @@ function pickStateStyle(button) {
     "user-select": "none",
     "vertical-align": "middle",
     "box-sizing": "border-box",
+    "text-decoration": cs.textDecorationLine !== "none" ? cs.textDecoration : "none",
+    "-webkit-tap-highlight-color": "transparent",
     "transition": "transform .15s ease, filter .15s ease, box-shadow .15s ease",
     "transform": cs.transform !== "none" ? cs.transform : "",
     "filter": cs.filter !== "none" ? cs.filter : ""
@@ -3899,6 +3910,10 @@ function escapeHtmlAttr(text) {
   return escapeHtml(text);
 }
 
+function escapeJsStringForAttr(text) {
+  return escapeHtmlAttr(JSON.stringify(String(text)));
+}
+
 function buildLazyButtonHtml(button) {
   const { baseStyle, hoverStyle, activeStyle } = captureButtonStates(button);
 
@@ -3908,11 +3923,11 @@ function buildLazyButtonHtml(button) {
   const labelText = escapeHtml(button.textContent.trim());
 
   const baseAttr = escapeHtmlAttr(baseText);
-  const hoverJs = escapeHtmlAttr(JSON.stringify(hoverText));
-  const activeJs = escapeHtmlAttr(JSON.stringify(activeText));
-  const baseJs = escapeHtmlAttr(JSON.stringify(baseText));
+  const hoverJs = escapeJsStringForAttr(hoverText);
+  const activeJs = escapeJsStringForAttr(activeText);
+  const baseJs = escapeJsStringForAttr(baseText);
 
-  return `<button style="${baseAttr}" onmouseover="this.style.cssText=${hoverJs}" onmouseout="this.style.cssText=${baseJs}" onmousedown="this.style.cssText=${activeJs}" onmouseup="this.style.cssText=${hoverJs}" onmouseleave="this.style.cssText=${baseJs}">${labelText}</button>`;
+return `<button type="button" style="${baseAttr}" onmouseover="this.setAttribute('style', ${hoverJs})" onmouseout="this.setAttribute('style', ${baseJs})" onmousedown="this.setAttribute('style', ${activeJs})" onmouseup="this.setAttribute('style', ${hoverJs})" onmouseleave="this.setAttribute('style', ${baseJs})">${labelText}</button>`;;
 }
 
 function buildCssButtonParts(button) {
