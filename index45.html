@@ -5443,36 +5443,3 @@ bindSampleButtons();
   </script>
 </body>
 </html>
-
-<style>
-/* --- 強制修正 --- */
-
-/* ボタンサイズ統一 */
-.btn{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  padding:10px 16px;
-  font-size:14px;
-  line-height:1;
-}
-
-/* アイコンサイズ固定 */
-.btn svg{
-  width:16px !important;
-  height:16px !important;
-  transition:none !important;
-}
-
-/* ホバー時の変形完全無効化 */
-.btn:hover svg{
-  transform:none !important;
-  scale:1 !important;
-}
-
-/* ボタン自体の変形も止める */
-.btn:hover{
-  transform:none !important;
-}
-</style>
