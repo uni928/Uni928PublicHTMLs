@@ -3858,6 +3858,21 @@ body {
   background-size:16px 16px, 100% 100%, 100% 100%, 100% 100% !important;
 }
 
+/* ===== 修正追加：アイコン合成系を添付版テカリに統一 ===== */
+/* SVGを前面に出し、テカリは添付ファイルの質感を維持します。 */
+.btn-ui01,.btn-ui02,.btn-ui03,.btn-ui04,.btn-ui05,.btn-ui06,.btn-ui07,.btn-ui08,.btn-ui09,.btn-ui10,.btn-ui11,.btn-ui12,.btn-ui13,.btn-ui14,.btn-ui15,.btn-ui16,.btn-ui17,.btn-ui18,.btn-ui19,.btn-ui20,.btn-ui21,.btn-ui22,.btn-ui23,.btn-ui24,.btn-ui25,.btn-ui26,.btn-ui27,.btn-ui28,.btn-ui29,.btn-ui30,.btn-ui31,.btn-ui32,.btn-ui33,.btn-ui34,.btn-ui35,.btn-ui36,.btn-ui37,.btn-ui38,.btn-ui39,.btn-ui40,.btn-x61,.btn-x62,.btn-x63,.btn-x64,.btn-x65,.btn-x66,.btn-x67,.btn-x68,.btn-x69,.btn-x70,.btn-x72,.btn-x73,.btn-x74,.btn-x75,.btn-x76,.btn-x77,.btn-x78,.btn-x79,.btn-x80,.btn-x82{
+  background-repeat:no-repeat, no-repeat, no-repeat, no-repeat !important;
+  background-size:16px 16px, auto auto, auto auto, 140% 140% !important;
+  background-position:right 12px center, 0 0, 0 0, 0 0 !important;
+  background-blend-mode:normal, overlay, overlay, normal !important;
+}
+
+/* ===== アイコン重なり防止 修正 ===== */
+.btn-x61,.btn-x62,.btn-x63,.btn-x64,.btn-x65,.btn-x66,.btn-x67,.btn-x68,.btn-x69,.btn-x70,.btn-x72,.btn-x73,.btn-x74,.btn-x75,.btn-x76,.btn-x77,.btn-x78,.btn-x79,.btn-x80,.btn-x82{
+  padding-right:38px !important;
+
+}
+
 </style>
 </head>
 <body>
@@ -5428,3 +5443,36 @@ bindSampleButtons();
   </script>
 </body>
 </html>
+
+<style>
+/* --- 強制修正 --- */
+
+/* ボタンサイズ統一 */
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:10px 16px;
+  font-size:14px;
+  line-height:1;
+}
+
+/* アイコンサイズ固定 */
+.btn svg{
+  width:16px !important;
+  height:16px !important;
+  transition:none !important;
+}
+
+/* ホバー時の変形完全無効化 */
+.btn:hover svg{
+  transform:none !important;
+  scale:1 !important;
+}
+
+/* ボタン自体の変形も止める */
+.btn:hover{
+  transform:none !important;
+}
+</style>
