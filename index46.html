@@ -1,0 +1,286 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>スマホ範囲コピー簡略化ツール</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f4f4f5;
+      color: #111;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      padding: calc(10px + env(safe-area-inset-top)) 10px 10px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      z-index: 2;
+    }
+
+    .button-area {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    button {
+      min-height: 50px;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 800;
+      color: #fff;
+      touch-action: manipulation;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.16);
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    button:active {
+      transform: translateY(1px);
+      opacity: 0.86;
+    }
+
+    .btn-before { background: #2563eb; }
+    .btn-after { background: #7c3aed; }
+    .btn-break { background: #f97316; }
+    .btn-copy { background: #16a34a; }
+
+    textarea {
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+      border: none;
+      padding: 14px;
+      font-size: 16px;
+      line-height: 1.65;
+      resize: none;
+      outline: none;
+      background: #fff;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(18px + env(safe-area-inset-bottom));
+      transform: translateX(-50%);
+      max-width: 90%;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.82);
+      color: #fff;
+      font-size: 13px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease;
+      white-space: nowrap;
+      z-index: 10;
+    }
+
+    .toast.show {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="button-area">
+    <button type="button" class="btn-before" onclick="deleteBeforeCursor()">前を削除</button>
+    <button type="button" class="btn-after" onclick="deleteAfterCursor()">後ろを削除</button>
+    <button type="button" class="btn-break" onclick="normalizeLineBreaks()">連続空行整理</button>
+    <button type="button" class="btn-copy" id="copyBtn">コピー</button>
+  </div>
+</header>
+
+<textarea id="editor" placeholder="ここに貼り付け"></textarea>
+<div id="toast" class="toast"></div>
+
+<script>
+const editor = document.getElementById('editor');
+const copyBtn = document.getElementById('copyBtn');
+const toast = document.getElementById('toast');
+
+let pressTimer = null;
+let startX = 0;
+let startY = 0;
+let longPressDone = false;
+let pointerDown = false;
+
+function showToast(message) {
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 1400);
+}
+
+function deleteBeforeCursor() {
+  const pos = editor.selectionStart || 0;
+  editor.value = editor.value.slice(pos);
+  editor.focus();
+  editor.setSelectionRange(0, 0);
+  showToast('前を削除しました');
+}
+
+function deleteAfterCursor() {
+  const pos = editor.selectionEnd || editor.value.length;
+  editor.value = editor.value.slice(0, pos);
+  editor.focus();
+  editor.setSelectionRange(editor.value.length, editor.value.length);
+  showToast('後ろを削除しました');
+}
+
+function normalizeLineBreaks() {
+  const pos = editor.selectionStart || 0;
+  editor.value = editor.value
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/\n{3,}/g, '\n\n');
+
+  const newPos = Math.min(pos, editor.value.length);
+  editor.focus();
+  editor.setSelectionRange(newPos, newPos);
+  showToast('連続空行を整理しました');
+}
+
+async function copyText() {
+  const text = editor.value;
+
+  if (!text) {
+    alert('コピーする内容がありません。');
+    return;
+  }
+
+  // フォーカスなしでも入力欄全文をコピー対象にする
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('コピーしました');
+    return;
+  } catch (e) {}
+
+  // Clipboard APIが拒否された場合の予備コピー
+  try {
+    editor.focus();
+    editor.setSelectionRange(0, editor.value.length);
+    const ok = document.execCommand('copy');
+    if (ok) {
+      showToast('コピーしました');
+      return;
+    }
+  } catch (e) {}
+
+  // 最終手段：手動コピー用
+  window.prompt('自動コピーできませんでした。下の文字を長押ししてコピーしてください。', text);
+}
+
+function downloadText() {
+  const text = editor.value;
+
+  if (!text) {
+    alert('ダウンロードする内容がありません。');
+    return;
+  }
+
+  if (!confirm('ダウンロードしますか？')) return;
+
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mi = String(now.getMinutes()).padStart(2, '0');
+
+  a.href = url;
+  a.download = `copy_text_${yyyy}${mm}${dd}_${hh}${mi}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+
+  showToast('ダウンロードしました');
+}
+
+function clearPressTimer() {
+  if (pressTimer) {
+    clearTimeout(pressTimer);
+    pressTimer = null;
+  }
+}
+
+copyBtn.addEventListener('pointerdown', (e) => {
+  pointerDown = true;
+  longPressDone = false;
+  startX = e.clientX;
+  startY = e.clientY;
+
+  clearPressTimer();
+  pressTimer = setTimeout(() => {
+    if (!pointerDown) return;
+    longPressDone = true;
+    downloadText();
+  }, 700);
+});
+
+copyBtn.addEventListener('pointerup', (e) => {
+  if (!pointerDown) return;
+
+  pointerDown = false;
+  clearPressTimer();
+
+  // 長押し済みならコピーしない
+  if (longPressDone) {
+    longPressDone = false;
+    return;
+  }
+
+  // 短押しはここで確実にコピーする
+  copyText();
+});
+
+copyBtn.addEventListener('pointercancel', () => {
+  pointerDown = false;
+  clearPressTimer();
+});
+
+copyBtn.addEventListener('pointerleave', () => {
+  pointerDown = false;
+  clearPressTimer();
+});
+
+copyBtn.addEventListener('pointermove', (e) => {
+  const dx = Math.abs(e.clientX - startX);
+  const dy = Math.abs(e.clientY - startY);
+  if (dx > 12 || dy > 12) {
+    clearPressTimer();
+  }
+});
+
+copyBtn.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+});
+</script>
+
+</body>
+  </html>
