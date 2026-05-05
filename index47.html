@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>文字数カウンター Studio｜Bright Edition</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root {
+    --bg: #fff7ed;
+    --bg-2: #ecfeff;
+    --panel: rgba(255, 255, 255, 0.86);
+    --panel-solid: #ffffff;
+    --panel-border: rgba(251, 146, 60, 0.26);
+    --text-main: #1f2937;
+    --text-sub: #64748b;
+    --muted: #94a3b8;
+    --accent: #fb923c;
+    --accent-strong: #f97316;
+    --accent-soft: #ffedd5;
+    --sky: #38bdf8;
+    --sky-soft: #e0f2fe;
+    --green: #22c55e;
+    --pink: #fb7185;
+    --purple: #a78bfa;
+    --radius-lg: 18px;
+    --radius-xl: 26px;
+    --shadow: 0 22px 60px rgba(251, 146, 60, 0.18), 0 10px 30px rgba(14, 165, 233, 0.12);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--text-main);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+    background:
+      radial-gradient(circle at 8% 8%, rgba(251, 146, 60, 0.34), transparent 30%),
+      radial-gradient(circle at 92% 12%, rgba(56, 189, 248, 0.36), transparent 30%),
+      radial-gradient(circle at 50% 100%, rgba(167, 139, 250, 0.20), transparent 32%),
+      linear-gradient(135deg, var(--bg), var(--bg-2));
+    display: flex;
+    justify-content: center;
+    padding: 34px 16px;
+  }
+
+  button, textarea { font: inherit; }
+
+  .app-shell {
+    width: 100%;
+    max-width: 1120px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.82);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(18px);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .app-shell::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(90deg, rgba(255,255,255,0.66), transparent 38%),
+      radial-gradient(circle at 0 0, rgba(251, 146, 60, 0.14), transparent 42%),
+      radial-gradient(circle at 100% 0, rgba(56, 189, 248, 0.14), transparent 42%);
+    pointer-events: none;
+  }
+
+  .app-inner {
+    position: relative;
+    z-index: 1;
+    padding: 24px;
+  }
+
+  header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .title-block { display: flex; align-items: center; gap: 13px; }
+
+  .logo-orb {
+    width: 48px;
+    height: 48px;
+    border-radius: 18px;
+    background:
+      radial-gradient(circle at 30% 25%, #fff7ed 0 12%, transparent 13%),
+      linear-gradient(135deg, #fb923c, #38bdf8 58%, #a78bfa);
+    box-shadow: 0 12px 26px rgba(251, 146, 60, 0.25);
+    position: relative;
+    flex: 0 0 auto;
+  }
+
+  .logo-orb::after {
+    content: "字";
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: white;
+    font-weight: 800;
+    font-size: 1.25rem;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.16);
+  }
+
+  h1 { margin: 0; display: flex; flex-direction: column; gap: 2px; }
+  h1 .main { font-size: clamp(1.35rem, 2.3vw, 2rem); letter-spacing: 0.03em; }
+  h1 .sub { color: var(--text-sub); font-size: 0.88rem; font-weight: 500; }
+
+  .header-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+
+  .button {
+    border: 0;
+    border-radius: 999px;
+    padding: 9px 14px;
+    cursor: pointer;
+    color: #ffffff;
+    background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+    box-shadow: 0 10px 22px rgba(249, 115, 22, 0.22);
+    font-weight: 700;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+  }
+
+  .button:hover { transform: translateY(-1px); box-shadow: 0 14px 28px rgba(249, 115, 22, 0.28); }
+  .button:active { transform: translateY(0); opacity: 0.88; }
+
+  .button.secondary {
+    color: #0369a1;
+    background: linear-gradient(135deg, #e0f2fe, #ffffff);
+    border: 1px solid rgba(56, 189, 248, 0.36);
+    box-shadow: none;
+  }
+
+  .button.ghost {
+    color: #475569;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(148, 163, 184, 0.32);
+    box-shadow: none;
+  }
+
+  .layout { display: grid; grid-template-columns: minmax(0, 1.22fr) minmax(330px, 0.78fr); gap: 18px; }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.07);
+    overflow: hidden;
+  }
+
+  .panel-head {
+    padding: 15px 16px 12px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+    background: linear-gradient(135deg, rgba(255, 247, 237, 0.86), rgba(224, 242, 254, 0.74));
+  }
+
+  .section-title { font-weight: 800; letter-spacing: 0.06em; font-size: 0.94rem; }
+  .section-subtitle { color: var(--text-sub); font-size: 0.76rem; }
+
+  .editor-body { padding: 14px; }
+
+  .status-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .status-card {
+    border-radius: 14px;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.74);
+    border: 1px solid rgba(226, 232, 240, 0.88);
+    color: var(--text-sub);
+    font-size: 0.74rem;
+  }
+
+  .status-card strong { display: block; color: var(--text-main); font-size: 0.88rem; margin-top: 2px; }
+
+  .textarea-wrap {
+    border-radius: 20px;
+    background: #ffffff;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.8), 0 12px 24px rgba(15, 23, 42, 0.05);
+    padding: 14px;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 330px;
+    resize: vertical;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--text-main);
+    font-size: 0.96rem;
+    line-height: 1.72;
+  }
+
+  textarea::placeholder { color: #a8b3c3; }
+
+  .helper-row { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-top: 10px; color: var(--text-sub); font-size: 0.76rem; flex-wrap: wrap; }
+  .chip-group { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { border-radius: 999px; padding: 5px 10px; background: #fff7ed; border: 1px solid rgba(251, 146, 60, 0.28); color: #9a3412; font-weight: 700; font-size: 0.72rem; }
+  .chip.sky { background: #e0f2fe; border-color: rgba(56,189,248,0.28); color: #0369a1; }
+
+  .metrics-grid { padding: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+
+  .metric-card {
+    background: var(--panel-solid);
+    border: 1px solid rgba(226, 232, 240, 0.92);
+    border-radius: 16px;
+    padding: 12px;
+    min-height: 106px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .metric-card::before {
+    content: "";
+    position: absolute;
+    width: 92px;
+    height: 92px;
+    border-radius: 999px;
+    right: -38px;
+    top: -42px;
+    background: var(--accent-soft);
+  }
+
+  .metric-card.sky::before { background: var(--sky-soft); }
+  .metric-card.green::before { background: #dcfce7; }
+  .metric-card.pink::before { background: #ffe4e6; }
+  .metric-card.purple::before { background: #ede9fe; }
+
+  .metric-label { position: relative; z-index: 1; display: flex; justify-content: space-between; gap: 8px; color: var(--text-sub); font-size: 0.7rem; letter-spacing: 0.03em; font-weight: 700; }
+  .metric-value { position: relative; z-index: 1; margin-top: 8px; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-variant-numeric: tabular-nums; font-size: 1.42rem; font-weight: 900; }
+  .metric-unit { font-size: 0.72rem; color: var(--text-sub); font-weight: 700; }
+  .metric-note { position: relative; z-index: 1; margin-top: 5px; color: var(--muted); font-size: 0.68rem; line-height: 1.45; }
+
+  .wide-card { grid-column: span 2; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; min-height: auto; }
+  .progress-wrap { width: 140px; height: 10px; border-radius: 999px; background: #f1f5f9; overflow: hidden; border: 1px solid #e2e8f0; }
+  .progress-bar { height: 100%; width: 0%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), var(--sky)); transition: width 0.2s ease; }
+
+  footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    color: var(--text-sub);
+    font-size: 0.74rem;
+    padding: 14px 2px 0;
+  }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%) translateY(20px);
+    opacity: 0;
+    pointer-events: none;
+    background: rgba(15, 23, 42, 0.92);
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 999px;
+    box-shadow: 0 18px 36px rgba(15,23,42,0.22);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 10;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 900px) {
+    header { grid-template-columns: 1fr; }
+    .header-actions { justify-content: flex-start; }
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 640px) {
+    body { padding: 14px 10px; }
+    .app-inner { padding: 16px; }
+    .title-block { align-items: flex-start; }
+    .logo-orb { width: 42px; height: 42px; border-radius: 15px; }
+    .status-row, .metrics-grid { grid-template-columns: 1fr; }
+    .wide-card { grid-column: span 1; grid-template-columns: 1fr; }
+    textarea { min-height: 280px; }
+  }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <div class="app-inner">
+    <header>
+      <div class="title-block">
+        <div class="logo-orb" aria-hidden="true"></div>
+        <h1>
+          <span class="main">文字数カウンター Studio</span>
+          <span class="sub">明るいデザインで、文章量・行数・バイト数をリアルタイム確認</span>
+        </h1>
+      </div>
+      <div class="header-actions" aria-label="操作ボタン">
+        <button class="button secondary" type="button" id="copy-text">本文コピー</button>
+        <button class="button secondary" type="button" id="download-text">本文をTXT保存</button>
+        <button class="button ghost" type="button" id="clear-text">クリア</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <section class="panel" aria-label="テキスト入力エリア">
+        <div class="panel-head">
+          <div>
+            <div class="section-title">TEXT AREA</div>
+            <div class="section-subtitle">貼り付け・下書き・推敲用の入力欄です。</div>
+          </div>
+        </div>
+        <div class="editor-body">
+          <div class="status-row">
+            <div class="status-card">カーソル位置<strong id="cursor-pos">1 行 / 1 桁</strong></div>
+            <div class="status-card">自動更新<strong>ON</strong></div>
+            <div class="status-card">保存方式<strong>ブラウザ内のみ</strong></div>
+          </div>
+          <div class="textarea-wrap">
+            <textarea id="input-text" spellcheck="false" placeholder="ここに文章を入力してください。\nブログ、作文、SNS投稿、チャットの下書きなどに使えます。\n入力すると右側の統計情報がすぐに更新されます。"></textarea>
+          </div>
+          <div class="helper-row">
+            <div>絵文字・4バイト文字・改行・空白の有無もまとめて確認できます。</div>
+            <div class="chip-group">
+              <span class="chip">日本語向け</span>
+              <span class="chip sky">リアルタイム集計</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" aria-label="文字数・バイト数の統計">
+        <div class="panel-head">
+          <div>
+            <div class="section-title">LIVE STATS</div>
+            <div class="section-subtitle">よく使う指標を見やすく整理しました。</div>
+          </div>
+        </div>
+        <div class="metrics-grid">
+          <article class="metric-card">
+            <div class="metric-label"><span>総文字数</span><span>全体</span></div>
+            <div class="metric-value"><span id="count-total">0</span><span class="metric-unit">文字</span></div>
+            <div class="metric-note">絵文字や記号も含み、サロゲートペアは1文字として扱います。</div>
+          </article>
+
+          <article class="metric-card sky">
+            <div class="metric-label"><span>改行を除く</span><span>本文量</span></div>
+            <div class="metric-value"><span id="count-no-newline">0</span><span class="metric-unit">文字</span></div>
+            <div class="metric-note">改行コードを除いた文章の長さです。</div>
+          </article>
+
+          <article class="metric-card green">
+            <div class="metric-label"><span>改行・空白を除く</span><span>密度</span></div>
+            <div class="metric-value"><span id="count-no-space">0</span><span class="metric-unit">文字</span></div>
+            <div class="metric-note">半角/全角スペースも除いて数えます。</div>
+          </article>
+
+          <article class="metric-card purple">
+            <div class="metric-label"><span>行数</span><span>空行含む</span></div>
+            <div class="metric-value"><span id="count-lines">0</span><span class="metric-unit">行</span></div>
+            <div class="metric-note">文章構成や改行量のチェックに便利です。</div>
+          </article>
+
+          <article class="metric-card pink">
+            <div class="metric-label"><span>絵文字の数</span><span>簡易判定</span></div>
+            <div class="metric-value"><span id="count-emoji">0</span><span class="metric-unit">個</span></div>
+            <div class="metric-note">主な絵文字ブロックを対象にカウントします。</div>
+          </article>
+
+          <article class="metric-card">
+            <div class="metric-label"><span>4バイト文字数</span><span>UTF-8</span></div>
+            <div class="metric-value"><span id="count-4byte">0</span><span class="metric-unit">文字</span></div>
+            <div class="metric-note">絵文字などUTF-8で4バイトになる文字を数えます。</div>
+          </article>
+
+          <article class="metric-card sky">
+            <div class="metric-label"><span>UTF-8</span><span>byte</span></div>
+            <div class="metric-value"><span id="bytes-utf8">0</span><span class="metric-unit">byte</span></div>
+            <div class="metric-note">WebフォームやAPI制限の目安になります。</div>
+          </article>
+
+          <article class="metric-card green">
+            <div class="metric-label"><span>UTF-16</span><span>byte</span></div>
+            <div class="metric-value"><span id="bytes-utf16">0</span><span class="metric-unit">byte</span></div>
+            <div class="metric-note">Windows系の内部表現の目安です。</div>
+          </article>
+
+          <article class="metric-card wide-card">
+            <div>
+              <div class="metric-label"><span>Shift_JIS / EUC-JP / JIS 目安</span><span>legacy</span></div>
+              <div class="metric-value"><span><span id="bytes-sjis">0</span> / <span id="bytes-euc">0</span></span><span class="metric-unit">byte</span></div>
+              <div class="metric-note">ASCII・半角カナを1byte、それ以外を2byteとして簡易計算します。</div>
+            </div>
+            <div class="progress-wrap" aria-hidden="true"><div class="progress-bar" id="density-bar"></div></div>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <footer>
+      <span>入力内容は外部送信されず、ブラウザ内で処理されます。</span>
+      <span>カウントは一般的な基準に合わせた簡易版です。</span>
+    </footer>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite">コピーしました</div>
+
+<script>
+(function () {
+  const input = document.getElementById("input-text");
+  const cursorPosLabel = document.getElementById("cursor-pos");
+  const toast = document.getElementById("toast");
+
+  const elTotal = document.getElementById("count-total");
+  const elNoNewline = document.getElementById("count-no-newline");
+  const elNoSpace = document.getElementById("count-no-space");
+  const elLines = document.getElementById("count-lines");
+  const elEmoji = document.getElementById("count-emoji");
+  const el4byte = document.getElementById("count-4byte");
+  const elUtf8 = document.getElementById("bytes-utf8");
+  const elUtf16 = document.getElementById("bytes-utf16");
+  const elSjis = document.getElementById("bytes-sjis");
+  const elEuc = document.getElementById("bytes-euc");
+  const densityBar = document.getElementById("density-bar");
+
+  function formatNumber(n) { return n.toLocaleString("ja-JP"); }
+
+  function showToast(message) {
+    toast.textContent = message;
+    toast.classList.add("show");
+    window.clearTimeout(showToast.timer);
+    showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 1500);
+  }
+
+  function getUtf8Bytes(str) {
+    if (window.TextEncoder) return new TextEncoder().encode(str).length;
+    let bytes = 0;
+    for (const ch of str) {
+      const cp = ch.codePointAt(0);
+      if (cp <= 0x7F) bytes += 1;
+      else if (cp <= 0x7FF) bytes += 2;
+      else if (cp <= 0xFFFF) bytes += 3;
+      else bytes += 4;
+    }
+    return bytes;
+  }
+
+  function getUtf16Bytes(str) {
+    let bytes = 0;
+    for (const ch of str) bytes += ch.codePointAt(0) > 0xFFFF ? 4 : 2;
+    return bytes;
+  }
+
+  function getJapaneseLegacyBytes(str) {
+    let bytes = 0;
+    for (const ch of str) {
+      const cp = ch.codePointAt(0);
+      bytes += cp <= 0x7F || (cp >= 0xFF61 && cp <= 0xFF9F) ? 1 : 2;
+    }
+    return bytes;
+  }
+
+  function countEmoji(str) {
+    const reg = /[\u{1F300}-\u{1FAFF}\u{1F1E6}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu;
+    const matches = str.match(reg);
+    return matches ? matches.length : 0;
+  }
+
+  function countUtf8FourByte(str) {
+    let count = 0;
+    for (const ch of Array.from(str)) {
+      if (getUtf8Bytes(ch) === 4) count++;
+    }
+    return count;
+  }
+
+  function updateCursorPosition() {
+    const text = input.value;
+    const pos = input.selectionStart || 0;
+    const upToCursor = text.slice(0, pos);
+    const lines = upToCursor.split(/\r\n|\r|\n/);
+    const lineNumber = lines.length;
+    const colNumber = Array.from(lines[lines.length - 1]).length + 1;
+    cursorPosLabel.textContent = lineNumber + " 行 / " + colNumber + " 桁";
+  }
+
+  function updateStats() {
+    const text = input.value;
+    const totalChars = Array.from(text).length;
+    const noNewlineText = text.replace(/\r\n|\r|\n/g, "");
+    const charsNoNewline = Array.from(noNewlineText).length;
+    const noSpaceText = noNewlineText.replace(/[\s\u3000]/g, "");
+    const charsNoSpace = Array.from(noSpaceText).length;
+    const lines = text.length ? text.split(/\r\n|\r|\n/).length : 0;
+    const emojiCount = countEmoji(text);
+    const fourByteCount = countUtf8FourByte(text);
+    const utf8Bytes = getUtf8Bytes(text);
+    const utf16Bytes = getUtf16Bytes(text);
+    const sjisBytes = getJapaneseLegacyBytes(text);
+    const eucBytes = getJapaneseLegacyBytes(text);
+
+    elTotal.textContent = formatNumber(totalChars);
+    elNoNewline.textContent = formatNumber(charsNoNewline);
+    elNoSpace.textContent = formatNumber(charsNoSpace);
+    elLines.textContent = formatNumber(lines);
+    elEmoji.textContent = formatNumber(emojiCount);
+    el4byte.textContent = formatNumber(fourByteCount);
+    elUtf8.textContent = formatNumber(utf8Bytes);
+    elUtf16.textContent = formatNumber(utf16Bytes);
+    elSjis.textContent = formatNumber(sjisBytes);
+    elEuc.textContent = formatNumber(eucBytes);
+
+    const density = totalChars ? Math.min(100, Math.round((charsNoSpace / totalChars) * 100)) : 0;
+    densityBar.style.width = density + "%";
+    updateCursorPosition();
+  }
+
+  document.getElementById("copy-text").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(input.value);
+      showToast("本文をコピーしました");
+    } catch (error) {
+      input.select();
+      document.execCommand("copy");
+      showToast("本文をコピーしました");
+    }
+  });
+
+  document.getElementById("download-text").addEventListener("click", () => {
+    const blob = new Blob([input.value], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "文字数カウンター_本文.txt";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast("TXT保存を開始しました");
+  });
+
+  document.getElementById("clear-text").addEventListener("click", () => {
+    if (!input.value || confirm("入力内容をクリアしますか？")) {
+      input.value = "";
+      input.focus();
+      updateStats();
+      showToast("クリアしました");
+    }
+  });
+
+  input.addEventListener("input", updateStats);
+  input.addEventListener("click", updateCursorPosition);
+  input.addEventListener("keyup", updateCursorPosition);
+  input.addEventListener("select", updateCursorPosition);
+  updateStats();
+})();
+</script>
+</body>
+</html>
