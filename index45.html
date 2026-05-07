@@ -4966,6 +4966,7 @@ background:
       <button type="button" class="quick-copy-panel__button" id="panelScrollSelectedBtn" data-copy-tool="1">直前に選択したボタンの位置にスクロール</button>
       <button type="button" class="quick-copy-panel__button" id="panelCopyCssBtn" data-copy-tool="1">直前に選択したボタンの css をコピー</button>
       <button type="button" class="quick-copy-panel__button" id="panelCopyElementBtn" data-copy-tool="1">直前に選択したボタンの 要素 をコピー</button>
+      <button type="button" class="quick-copy-panel__button" id="panelCopyJsBtn" data-copy-tool="1">直前に選択したボタンの JavaScript をコピー</button>
       <button type="button" class="quick-copy-panel__button" id="panelCopyLazyBtn" data-copy-tool="1">直前に選択したボタンの ズボラ版要素 をコピー</button>
     </div>
   </div>
@@ -4978,6 +4979,7 @@ let currentCopiedData = {
   cssText: "",
   elementHtml: "",
   lazyElementHtml: "",
+  javascriptText: "",
   fullHtml: ""
 };
 
@@ -5017,7 +5019,7 @@ function ensureCopyAreaUI() {
 
   copyArea.innerHTML = `
     <h2>直近でコピーしたHTML</h2>
-    <p>見本ボタンを押すと、通常・ホバー・クリック時の挙動を含むHTML一式をここに表示します。下の3ボタンで必要な部分だけコピーできます。</p>
+    <p>見本ボタンを押すと、通常・ホバー・クリック時の挙動を含むHTML一式をここに表示します。下の4ボタンで必要な部分だけコピーできます。</p>
 
     <div style="margin-bottom:12px;">
       <label for="classNameInput" style="display:block;margin-bottom:6px;font-size:13px;font-weight:700;color:#476179;">
@@ -5039,6 +5041,7 @@ function ensureCopyAreaUI() {
     <div class="btn-row" style="margin-bottom:12px;">
       <button type="button" id="copyCssBtn" class="btn btn-sm tone-soft shadow-light" data-copy-tool="1">css をコピー</button>
       <button type="button" id="copyElementBtn" class="btn btn-sm tone-main shadow-light" data-copy-tool="1">要素をコピー</button>
+      <button type="button" id="copyJsBtn" class="btn btn-sm tone-sub shadow-light" data-copy-tool="1">javascript をコピー</button>
       <button type="button" id="copyLazyBtn" class="btn btn-sm tone-gray shadow-light" data-copy-tool="1">ズボラ版要素をコピー</button>
     </div>
 
@@ -5048,12 +5051,16 @@ function ensureCopyAreaUI() {
 &lt;/style&gt;
 &lt;body&gt;
 ...
+&lt;script&gt;
+...
+&lt;/script&gt;
 &lt;/body&gt;
 &lt;/html&gt;</pre>
   `;
 
   const copyCssBtn = document.getElementById("copyCssBtn");
   const copyElementBtn = document.getElementById("copyElementBtn");
+  const copyJsBtn = document.getElementById("copyJsBtn");
   const copyLazyBtn = document.getElementById("copyLazyBtn");
 
   copyCssBtn.addEventListener("click", async () => {
@@ -5072,6 +5079,15 @@ function ensureCopyAreaUI() {
     }
     const ok = await copyText(currentCopiedData.elementHtml);
     showToast(ok ? "要素をコピーしました" : "コピーに失敗しました");
+  });
+
+  copyJsBtn.addEventListener("click", async () => {
+    if (!currentCopiedData.javascriptText) {
+      showToast("先に見本ボタンを押してください");
+      return;
+    }
+    const ok = await copyText(currentCopiedData.javascriptText);
+    showToast(ok ? "JavaScriptをコピーしました" : "コピーに失敗しました");
   });
 
   copyLazyBtn.addEventListener("click", async () => {
@@ -5407,8 +5423,21 @@ function buildCssButtonParts(button) {
   return { cssText, elementHtml };
 }
 
+function buildJavascriptText() {
+  const className = getRequestedClassName();
+  return [
+    `document.addEventListener("DOMContentLoaded", () => {`,
+    `  document.querySelectorAll(".${className}").forEach((button) => {`,
+    `    button.addEventListener("click", () => {`,
+    `    });`,
+    `  });`,
+    `});`
+  ].join("\n");
+}
+
 function buildFullHtml(button) {
   const { cssText, elementHtml } = buildCssButtonParts(button);
+  const javascriptText = buildJavascriptText();
 
   const fullHtml = [
     `<html>`,
@@ -5417,6 +5446,9 @@ function buildFullHtml(button) {
     `</style>`,
     `<body>`,
     elementHtml,
+    `<script>`,
+    javascriptText,
+    `<\/script>`,
     `</body>`,
     `</html>`
   ].join("\n");
@@ -5424,6 +5456,7 @@ function buildFullHtml(button) {
   return {
     cssText,
     elementHtml,
+    javascriptText,
     fullHtml
   };
 }
@@ -5438,12 +5471,13 @@ function refreshGeneratedContent(button, shouldCopy = false) {
   if (!button) return;
 
   const lazyElementHtml = buildLazyButtonHtml(button);
-  const { cssText, elementHtml, fullHtml } = buildFullHtml(button);
+  const { cssText, elementHtml, javascriptText, fullHtml } = buildFullHtml(button);
 
   currentCopiedData = {
     cssText,
     elementHtml,
     lazyElementHtml,
+    javascriptText,
     fullHtml
   };
 
@@ -5498,6 +5532,7 @@ function bindQuickCopyPanel() {
   document.getElementById("panelScrollSelectedBtn")?.addEventListener("click", scrollToLastSelectedButton);
   document.getElementById("panelCopyCssBtn")?.addEventListener("click", () => copyCurrentPart("cssText", "CSSをコピーしました"));
   document.getElementById("panelCopyElementBtn")?.addEventListener("click", () => copyCurrentPart("elementHtml", "要素をコピーしました"));
+  document.getElementById("panelCopyJsBtn")?.addEventListener("click", () => copyCurrentPart("javascriptText", "JavaScriptをコピーしました"));
   document.getElementById("panelCopyLazyBtn")?.addEventListener("click", () => copyCurrentPart("lazyElementHtml", "ズボラ版要素をコピーしました"));
 }
 
