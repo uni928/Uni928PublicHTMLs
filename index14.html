@@ -634,7 +634,7 @@ const btnCopyUrl = $("btnCopyUrl");
       const dayN = clampNonNeg(parseFloat(perDay.value));
       const daysInMonth = 30;
 
-      meta1.textContent = `input=${trimNum(inT)} / output=${trimNum(outT)} / 為替=${trimNum(fxJ)} /day=${trimNum(dayN)}`;
+      meta1.textContent = `input=${trimNum(inT)} / output=${trimNum(outT)} / 為替=${trimNum(fxJ)}`;
       meta2.textContent = `1か月=30日（day=${trimNum(dayN)}）`;
 
       // Build per-request table rows
