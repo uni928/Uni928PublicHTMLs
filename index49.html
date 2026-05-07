@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CSS セレクタ統合抽出ツール</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #d1d5db;
+      --main: #2563eb;
+      --main-dark: #1d4ed8;
+      --danger: #dc2626;
+      --code-bg: #111827;
+      --code-text: #e5e7eb;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    header {
+      padding: 24px 16px 12px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+    }
+
+    header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 16px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    input[type="file"], input[type="text"], textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font: inherit;
+      background: #fff;
+    }
+
+    input[type="text"] {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    textarea {
+      min-height: 160px;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 13px;
+    }
+
+    .help {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 6px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--main);
+      color: white;
+    }
+
+    button:hover { background: var(--main-dark); }
+    button.secondary { background: #374151; }
+    button.secondary:hover { background: #1f2937; }
+
+    .status {
+      font-size: 13px;
+      color: var(--muted);
+      white-space: pre-wrap;
+    }
+
+    .error { color: var(--danger); }
+
+    pre {
+      margin: 0;
+      background: var(--code-bg);
+      color: var(--code-text);
+      padding: 16px;
+      border-radius: 12px;
+      overflow: auto;
+      min-height: 260px;
+      font-size: 13px;
+      line-height: 1.55;
+      white-space: pre;
+    }
+
+    .small-title {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>CSS セレクタ統合抽出ツール</h1>
+    <p>HTML と複数 CSS を読み込み、指定した class / id の最終的なCSSを1つにまとめて出力します。</p>
+  </header>
+
+  <main>
+    <section class="card grid">
+      <div>
+        <label for="htmlFile">HTML ファイル</label>
+        <input id="htmlFile" type="file" accept=".html,.htm,text/html" />
+        <div class="help">HTML 内の &lt;style&gt; と &lt;link rel="stylesheet"&gt; の順序も見ます。</div>
+      </div>
+
+      <div>
+        <label for="cssFiles">CSS ファイル（複数可）</label>
+        <input id="cssFiles" type="file" accept=".css,text/css" multiple />
+        <div class="help">HTML の link 順に名前が一致するCSSを配置し、未参照CSSは選択順で末尾に追加します。</div>
+      </div>
+
+      <div>
+        <label for="selectorInput">調べたい id / class / セレクタ</label>
+        <input id="selectorInput" type="text" placeholder="例: .btn-72 / #main / button.primary" />
+        <div class="help">基本は .btn-72 のように入力してください。複数セレクタはカンマ区切りで入力できます。</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="small-title">設定</h2>
+      <div class="grid">
+        <label><input id="includeInherited" type="checkbox" /> 継承プロパティも可能な範囲で含める</label>
+        <label><input id="includeComments" type="checkbox" checked /> 出力に元セレクタのコメントを含める</label>
+        <label><input id="strictTarget" type="checkbox" checked /> 対象要素に実際にマッチするルールだけ使う</label>
+      </div>
+      <div class="help">
+        ※ 疑似クラス（:hover等）は通常状態ではマッチしないため、厳密モードでは除外されます。厳密モードOFFでは、対象文字列を含むルールも候補にします。
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="actions">
+        <button id="runBtn">抽出する</button>
+        <button id="copyBtn" class="secondary">結果をコピー</button>
+        <button id="downloadBtn" class="secondary">CSSで保存</button>
+        <span id="status" class="status"></span>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2 class="small-title">出力（コメントあり）</h2>
+        <pre id="outputWithComments">ここに結果が表示されます。</pre>
+      </div>
+      <div class="card">
+        <h2 class="small-title">出力（コメントなし）</h2>
+        <pre id="outputNoComments">ここに結果が表示されます。</pre>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const htmlInput = document.getElementById('htmlFile');
+    const cssInput = document.getElementById('cssFiles');
+    const selectorInput = document.getElementById('selectorInput');
+    const runBtn = document.getElementById('runBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const outputWithComments = document.getElementById('outputWithComments');
+    const outputNoComments = document.getElementById('outputNoComments');
+    const statusEl = document.getElementById('status');
+    const includeInheritedEl = document.getElementById('includeInherited');
+    const includeCommentsEl = document.getElementById('includeComments');
+    const strictTargetEl = document.getElementById('strictTarget');
+
+    const INHERITED_PROPERTIES = new Set([
+      'border-collapse', 'border-spacing', 'caption-side', 'color', 'cursor', 'direction',
+      'empty-cells', 'font', 'font-family', 'font-size', 'font-style', 'font-variant',
+      'font-weight', 'font-size-adjust', 'font-stretch', 'font-feature-settings',
+      'letter-spacing', 'line-height', 'list-style', 'list-style-image', 'list-style-position',
+      'list-style-type', 'orphans', 'quotes', 'tab-size', 'text-align', 'text-align-last',
+      'text-decoration-color', 'text-indent', 'text-justify', 'text-shadow', 'text-transform',
+      'visibility', 'white-space', 'widows', 'word-break', 'word-spacing', 'word-wrap'
+    ]);
+
+    function setStatus(message, isError = false) {
+      statusEl.textContent = message;
+      statusEl.className = isError ? 'status error' : 'status';
+    }
+
+    function readFileAsText(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsText(file);
+      });
+    }
+
+    function normalizePath(path) {
+      return String(path || '')
+        .split('?')[0]
+        .split('#')[0]
+        .replace(/\\/g, '/')
+        .split('/')
+        .pop()
+        .trim();
+    }
+
+    function stripCssComments(css) {
+      return css.replace(/\/\*[\s\S]*?\*\//g, '');
+    }
+
+    function getHtmlCssOrder(htmlText, cssMap) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlText, 'text/html');
+      const ordered = [];
+      const usedCssNames = new Set();
+
+      [...doc.querySelectorAll('style, link[rel~="stylesheet"]')].forEach((node, index) => {
+        if (node.tagName.toLowerCase() === 'style') {
+          ordered.push({
+            type: 'style',
+            name: `HTML内 <style> #${index + 1}`,
+            css: node.textContent || ''
+          });
+          return;
+        }
+
+        const href = node.getAttribute('href') || '';
+        const baseName = normalizePath(href);
+        if (cssMap.has(baseName)) {
+          usedCssNames.add(baseName);
+          ordered.push({
+            type: 'css',
+            name: baseName,
+            css: cssMap.get(baseName)
+          });
+        } else if (href) {
+          ordered.push({
+            type: 'missing',
+            name: baseName || href,
+            css: ''
+          });
+        }
+      });
+
+      for (const [name, css] of cssMap.entries()) {
+        if (!usedCssNames.has(name)) {
+          ordered.push({ type: 'css', name: `${name}（HTML未参照・末尾扱い）`, css });
+        }
+      }
+
+      return { doc, ordered };
+    }
+
+    function splitSelectorList(selectorText) {
+      const result = [];
+      let current = '';
+      let depth = 0;
+      let quote = '';
+
+      for (let i = 0; i < selectorText.length; i++) {
+        const ch = selectorText[i];
+        if (quote) {
+          current += ch;
+          if (ch === quote && selectorText[i - 1] !== '\\') quote = '';
+          continue;
+        }
+        if (ch === '"' || ch === "'") {
+          quote = ch;
+          current += ch;
+          continue;
+        }
+        if (ch === '(' || ch === '[') depth++;
+        if (ch === ')' || ch === ']') depth--;
+        if (ch === ',' && depth === 0) {
+          result.push(current.trim());
+          current = '';
+        } else {
+          current += ch;
+        }
+      }
+      if (current.trim()) result.push(current.trim());
+      return result;
+    }
+
+    function calculateSpecificity(selector) {
+      let s = selector
+        .replace(/:where\([^)]*\)/g, '')
+        .replace(/"(?:\\.|[^"])*"|'(?:\\.|[^'])*'/g, '');
+
+      const ids = (s.match(/#[\w-]+/g) || []).length;
+      const classes = (s.match(/\.[\w-]+/g) || []).length;
+      const attrs = (s.match(/\[[^\]]+\]/g) || []).length;
+      const pseudos = (s.match(/:(?!:)[\w-]+(?:\([^)]*\))?/g) || []).length;
+      const pseudoElements = (s.match(/::[\w-]+/g) || []).length;
+
+      s = s
+        .replace(/#[\w-]+/g, ' ')
+        .replace(/\.[\w-]+/g, ' ')
+        .replace(/\[[^\]]+\]/g, ' ')
+        .replace(/::[\w-]+/g, ' ')
+        .replace(/:(?!:)[\w-]+(?:\([^)]*\))?/g, ' ')
+        .replace(/[>+~*]/g, ' ');
+
+      const elements = (s.match(/\b[a-zA-Z][\w-]*\b/g) || []).filter(x => x !== 'not').length;
+      return [ids, classes + attrs + pseudos, elements + pseudoElements];
+    }
+
+    function compareSpecificity(a, b) {
+      for (let i = 0; i < 3; i++) {
+        if (a[i] !== b[i]) return a[i] - b[i];
+      }
+      return 0;
+    }
+
+    function parseDeclarations(block) {
+      const declarations = [];
+      let current = '';
+      let depth = 0;
+      let quote = '';
+
+      for (let i = 0; i < block.length; i++) {
+        const ch = block[i];
+        if (quote) {
+          current += ch;
+          if (ch === quote && block[i - 1] !== '\\') quote = '';
+          continue;
+        }
+        if (ch === '"' || ch === "'") {
+          quote = ch;
+          current += ch;
+          continue;
+        }
+        if (ch === '(') depth++;
+        if (ch === ')') depth--;
+        if (ch === ';' && depth === 0) {
+          pushDecl(current);
+          current = '';
+        } else {
+          current += ch;
+        }
+      }
+      pushDecl(current);
+      return declarations;
+
+      function pushDecl(text) {
+        const idx = text.indexOf(':');
+        if (idx === -1) return;
+        const prop = text.slice(0, idx).trim().toLowerCase();
+        let value = text.slice(idx + 1).trim();
+        if (!prop || !value) return;
+        const important = /!important\s*$/i.test(value);
+        value = value.replace(/!important\s*$/i, '').trim();
+        declarations.push({ prop, value, important });
+      }
+    }
+
+    function parseCssRules(css, sourceName, layer = '', media = '') {
+      css = stripCssComments(css);
+      const rules = [];
+      parseBlock(css, sourceName, layer, media, rules);
+      return rules;
+    }
+
+    function parseBlock(css, sourceName, layer, media, rules) {
+      let i = 0;
+      while (i < css.length) {
+        const open = css.indexOf('{', i);
+        if (open === -1) break;
+        const prelude = css.slice(i, open).trim();
+        const close = findMatchingBrace(css, open);
+        if (close === -1) break;
+        const body = css.slice(open + 1, close);
+
+        if (prelude.startsWith('@media')) {
+          parseBlock(body, sourceName, layer, prelude, rules);
+        } else if (prelude.startsWith('@supports')) {
+          parseBlock(body, sourceName, layer, media ? `${media} and ${prelude}` : prelude, rules);
+        } else if (prelude.startsWith('@layer') && body.includes('{')) {
+          parseBlock(body, sourceName, prelude, media, rules);
+        } else if (!prelude.startsWith('@')) {
+          rules.push({ selectorText: prelude, declarations: parseDeclarations(body), sourceName, layer, media });
+        }
+        i = close + 1;
+      }
+    }
+
+    function findMatchingBrace(text, openIndex) {
+      let depth = 0;
+      let quote = '';
+      for (let i = openIndex; i < text.length; i++) {
+        const ch = text[i];
+        if (quote) {
+          if (ch === quote && text[i - 1] !== '\\') quote = '';
+          continue;
+        }
+        if (ch === '"' || ch === "'") {
+          quote = ch;
+          continue;
+        }
+        if (ch === '{') depth++;
+        if (ch === '}') depth--;
+        if (depth === 0) return i;
+      }
+      return -1;
+    }
+
+    function removePseudoStates(selector) {
+      // 疑似クラス・疑似要素を外し、通常状態のベースセレクタとして判定する。
+      // 例: button:hover → button、.btn::before → .btn
+      return selector
+        .replace(/::[A-Za-z0-9_-]+(?:[(][^)]*[)])?/g, '')
+        .replace(/:(?!not[(]|is[(]|where[(]|has[(])[A-Za-z0-9_-]+(?:[(][^)]*[)])?/g, '');
+    }
+
+    function selectorMayMatch(selector, targets, strict, doc) {
+      if (strict) {
+        try {
+          return targets.some(t => {
+            const nodes = [...doc.querySelectorAll(t)];
+            if (nodes.length === 0) return false;
+            return nodes.some(node => {
+              try { return node.matches(selector); } catch { return false; }
+            });
+          });
+        } catch {
+          return false;
+        }
+      }
+
+      return targets.some(t => {
+        const plain = t.trim();
+        return selector.includes(plain);
+      });
+    }
+
+    function selectorPseudoMayMatch(selector, targets, strict, doc) {
+      const baseSelector = removePseudoStates(selector).trim();
+      if (!baseSelector || baseSelector === selector) return false;
+
+      if (strict) {
+        return targets.some(t => {
+          try {
+            const nodes = [...doc.querySelectorAll(t)];
+            if (nodes.length === 0) return false;
+            return nodes.some(node => {
+              try { return node.matches(baseSelector); } catch { return false; }
+            });
+          } catch {
+            return false;
+          }
+        });
+      }
+
+      return targets.some(t => baseSelector.includes(t.trim()) || selector.includes(t.trim() + ':'));
+    }
+
+    function isMediaActive(media) {
+      if (!media) return true;
+      try {
+        const query = media.replace(/^@media\s*/i, '').replace(/^@supports\s*/i, '');
+        if (media.startsWith('@media')) return window.matchMedia(query).matches;
+        return true;
+      } catch {
+        return true;
+      }
+    }
+
+    function buildMergedCss(targetSelector, doc, orderedSources, options) {
+      const targets = splitSelectorList(targetSelector).filter(Boolean);
+      if (targets.length === 0) throw new Error('セレクタを入力してください。');
+
+      if (options.strict) {
+        const missing = targets.filter(t => {
+          try { return doc.querySelectorAll(t).length === 0; } catch { return true; }
+        });
+        if (missing.length) {
+          throw new Error(`HTML内に対象セレクタが見つかりません: ${missing.join(', ')}`);
+        }
+      }
+
+      const entries = [];
+      const pseudoEntriesBySelector = new Map();
+      let order = 0;
+      const missingLinks = [];
+
+      orderedSources.forEach(source => {
+        if (source.type === 'missing') {
+          missingLinks.push(source.name);
+          return;
+        }
+        const rules = parseCssRules(source.css, source.name);
+        for (const rule of rules) {
+          if (!isMediaActive(rule.media)) continue;
+          const selectorParts = splitSelectorList(rule.selectorText);
+          for (const selector of selectorParts) {
+            const normalMatch = selectorMayMatch(selector, targets, options.strict, doc);
+            const pseudoMatch = selectorPseudoMayMatch(selector, targets, options.strict, doc);
+            if (!normalMatch && !pseudoMatch) continue;
+
+            const specificity = calculateSpecificity(selector);
+            for (const decl of rule.declarations) {
+              const entry = { ...decl, selector, specificity, order: order++, source: rule.sourceName, media: rule.media };
+              if (normalMatch) {
+                entries.push(entry);
+              } else if (pseudoMatch) {
+                if (!pseudoEntriesBySelector.has(selector)) pseudoEntriesBySelector.set(selector, []);
+                pseudoEntriesBySelector.get(selector).push(entry);
+              }
+            }
+          }
+        }
+      });
+
+      const finalMap = new Map();
+
+      for (const entry of entries) {
+        const prev = finalMap.get(entry.prop);
+        if (!prev) {
+          finalMap.set(entry.prop, entry);
+          continue;
+        }
+
+        // CSSカスケードの要点:
+        // 1. !important の有無が違う場合は important が勝つ
+        // 2. 両方 important、または両方 normal の場合は詳細度を比較
+        // 3. 詳細度も同じなら後から読み込まれた宣言が勝つ
+        // 例: gap:16px!important; gap:26px!important; gap:36px; → gap:26px!important
+        if (prev.important !== entry.important) {
+          if (entry.important) finalMap.set(entry.prop, entry);
+          continue;
+        }
+
+        const sp = compareSpecificity(prev.specificity, entry.specificity);
+        if (sp < 0 || (sp === 0 && entry.order > prev.order)) {
+          finalMap.set(entry.prop, entry);
+        }
+      }
+
+      const finalEntries = [...finalMap.entries()].sort((a, b) => a[1].order - b[1].order);
+      const pseudoBlocks = [...pseudoEntriesBySelector.entries()]
+        .map(([selector, list]) => ({
+          selector,
+          finalEntries: (() => {
+            const map = new Map();
+            for (const entry of list) {
+              const prev = map.get(entry.prop);
+              if (!prev) { map.set(entry.prop, entry); continue; }
+              if (prev.important !== entry.important) {
+                if (entry.important) map.set(entry.prop, entry);
+                continue;
+              }
+              const sp = compareSpecificity(prev.specificity, entry.specificity);
+              if (sp < 0 || (sp === 0 && entry.order > prev.order)) map.set(entry.prop, entry);
+            }
+            return [...map.entries()].sort((a, b) => a[1].order - b[1].order);
+          })(),
+          firstOrder: Math.min(...list.map(x => x.order))
+        }))
+        .sort((a, b) => a.firstOrder - b.firstOrder);
+
+      return { finalEntries, pseudoBlocks, missingLinks, entries };
+    }
+
+    function formatDeclarationBlock(selectorText, finalEntries, comments) {
+      let text = `${selectorText} {
+`;
+      for (const [prop, entry] of finalEntries) {
+        if (comments) {
+          const where = entry.media ? ` / ${entry.media}` : '';
+          text += `  /* from: ${entry.source}${where} / ${entry.selector} */
+`;
+        }
+        text += `  ${prop}: ${entry.value}${entry.important ? ' !important' : ''};
+`;
+      }
+      text += `}
+`;
+      return text;
+    }
+
+    function formatMergedCss(targetSelector, merged, comments) {
+      let result = '';
+      if (merged.missingLinks.length) {
+        result += `/* 注意: HTMLで参照されていますが、アップロードされていないCSSがあります: ${merged.missingLinks.join(', ')} */
+`;
+      }
+      if (merged.entries.length === 0 && merged.pseudoBlocks.length === 0) {
+        return result + `/* 対象にマッチするCSSルールが見つかりませんでした。 */
+${targetSelector} {
+}
+`;
+      }
+
+      result += formatDeclarationBlock(targetSelector, merged.finalEntries, comments);
+
+      for (const block of merged.pseudoBlocks) {
+        result += `
+${formatDeclarationBlock(block.selector, block.finalEntries, comments)}`;
+      }
+
+      return result;
+    }
+
+    runBtn.addEventListener('click', async () => {
+      try {
+        setStatus('解析中...');
+        outputWithComments.textContent = '';
+        outputNoComments.textContent = '';
+
+        const htmlFile = htmlInput.files[0];
+        if (!htmlFile) throw new Error('HTMLファイルを選択してください。');
+
+        const selector = selectorInput.value.trim();
+        if (!selector) throw new Error('調べたい class / id / セレクタを入力してください。');
+
+        const htmlText = await readFileAsText(htmlFile);
+        const cssMap = new Map();
+
+        for (const file of cssInput.files) {
+          cssMap.set(file.name, await readFileAsText(file));
+        }
+
+        const { doc, ordered } = getHtmlCssOrder(htmlText, cssMap);
+        const merged = buildMergedCss(selector, doc, ordered, {
+          strict: strictTargetEl.checked,
+          includeInherited: includeInheritedEl.checked
+        });
+
+        outputWithComments.textContent = formatMergedCss(selector, merged, true);
+        outputNoComments.textContent = formatMergedCss(selector, merged, false);
+        setStatus(`完了: ${ordered.filter(x => x.type !== 'missing').length}個のCSSブロックを解析しました。`);
+      } catch (error) {
+        outputWithComments.textContent = '';
+        outputNoComments.textContent = '';
+        setStatus(error.message || String(error), true);
+      }
+    });
+
+    copyBtn.addEventListener('click', async () => {
+      const text = outputNoComments.textContent.trim();
+      if (!text || text === 'ここに結果が表示されます。') return;
+      await navigator.clipboard.writeText(text);
+      setStatus('コピーしました。');
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      const text = outputNoComments.textContent.trim();
+      if (!text || text === 'ここに結果が表示されます。') return;
+      const blob = new Blob([text + '\n'], { type: 'text/css' });
+      const a = document.createElement('a');
+      const safeName = selectorInput.value.trim().replace(/[^a-zA-Z0-9_-]+/g, '_') || 'extracted';
+      a.href = URL.createObjectURL(blob);
+      a.download = `${safeName}.css`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+  </script>
+</body>
+</html>
