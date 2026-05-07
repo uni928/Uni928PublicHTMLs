@@ -1,0 +1,721 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>遊戯王 Amazon商品登録・検索サイト作成ツール</title>
+<style>
+:root{
+--bg:#f3f4f6;--card:#fff;--text:#111827;--line:#e5e7eb;
+--main:#2563eb;--danger:#dc2626;
+}
+*{box-sizing:border-box}
+body{
+margin:0;
+font-family:system-ui,sans-serif;
+background:var(--bg);
+color:var(--text);
+}
+header{
+background:linear-gradient(135deg,#111827,#1e3a8a);
+color:#fff;
+padding:24px 16px;
+}
+main{
+max-width:1100px;
+margin:auto;
+padding:16px;
+display:grid;
+gap:16px;
+}
+.card{
+background:var(--card);
+border:1px solid var(--line);
+border-radius:18px;
+padding:16px;
+}
+.grid{
+display:grid;
+grid-template-columns:1fr 360px;
+gap:16px;
+}
+@media(max-width:900px){
+.grid{grid-template-columns:1fr}
+}
+input,button{
+font:inherit;
+}
+input[type=text]{
+width:100%;
+padding:12px;
+border-radius:12px;
+border:1px solid #ccc;
+}
+button{
+border:0;
+border-radius:12px;
+padding:10px 14px;
+cursor:pointer;
+font-weight:bold;
+}
+.primary{background:var(--main);color:#fff}
+.danger{background:#fee2e2;color:var(--danger)}
+.row{
+display:flex;
+gap:8px;
+flex-wrap:wrap;
+align-items:center;
+}
+.product{
+border:1px solid var(--line);
+border-radius:14px;
+padding:12px;
+margin-top:10px;
+background:#fafafa;
+}
+.preview-item{
+display:flex;
+justify-content:space-between;
+align-items:center;
+gap:10px;
+padding:10px;
+border:1px solid var(--line);
+border-radius:12px;
+background:#fff;
+margin-top:8px;
+}
+.small{
+padding:6px 10px;
+font-size:13px;
+}
+.muted{
+color:#666;
+font-size:14px;
+}
+.code{
+background:#111827;
+color:#fff;
+padding:12px;
+border-radius:12px;
+white-space:pre-wrap;
+overflow:auto;
+}
+</style>
+</head>
+<body>
+
+<header>
+<h1>遊戯王 Amazon商品登録・検索サイト作成ツール</h1>
+<p>IndexedDB自動保存 / JSONバックアップ / Github公開対応</p>
+</header>
+
+<main>
+
+<section class="grid">
+
+<div class="card">
+
+<h2>商品登録</h2>
+
+<input type="hidden" id="editId">
+
+<label>カード名</label>
+<input type="text" id="cardName" placeholder="青眼の白龍">
+
+<label style="margin-top:12px;display:block;">Amazon URL</label>
+<input type="text" id="amazonUrl" placeholder="https://www.amazon.co.jp/dp/B0XXXXXXXX">
+
+<p id="extractInfo" class="muted"></p>
+
+<div class="row" style="margin-top:12px;">
+<button class="primary" id="saveBtn">登録</button>
+<button id="clearBtn">クリア</button>
+</div>
+
+<div class="row" style="margin-top:16px;">
+<button id="backupBtn">JSONバックアップ</button>
+<label style="display:inline-flex;align-items:center;">
+<input type="file" id="restoreInput" accept=".json" style="display:none">
+<button type="button" onclick="document.getElementById('restoreInput').click()">JSON復元</button>
+</label>
+<button class="primary" id="downloadSiteBtn">検索用サイトを保存</button>
+<button class="danger" id="deleteAllBtn">全削除</button>
+</div>
+
+<div id="productList"></div>
+
+</div>
+
+<div class="card">
+
+<h2>検索プレビュー</h2>
+
+<input type="text" id="previewSearch" placeholder="カード名検索">
+
+<div class="row" style="margin-top:10px;">
+<label><input type="radio" name="mode" value="normal" checked> 通常検索</label>
+<label><input type="radio" name="mode" value="fuzzy"> あいまい検索</label>
+</div>
+
+<p class="muted">誤字脱字・長い商品名対策あり</p>
+
+<div id="previewResults"></div>
+
+</div>
+
+</section>
+
+<section class="card">
+
+<h2>ChatGPTで質問しながらGithub公開する手順</h2>
+
+<div class="code">1. 「検索用サイトを保存」を押す
+
+2. Githubで新規Repositoryを作成
+
+3. ダウンロードしたHTMLを index.html に変更してアップロード
+
+4. Settings → Pages → main branch を選択
+
+5. 公開URLが表示される
+
+ChatGPTへの質問例：
+
+Github Pagesで index.html を公開したいです。
+初心者向けに画面付きレベルで教えて下さい。</div>
+
+</section>
+
+</main>
+
+<script>
+const DB_NAME='YugiohAmazonDB';
+const STORE='products';
+const AMAZON='https://www.amazon.co.jp/dp/';
+
+let db;
+let products=[];
+
+const $=id=>document.getElementById(id);
+
+function normalize(text){
+return String(text||'')
+.toLowerCase()
+.normalize('NFKC')
+.replace(/[\s\-＿_・/／|｜:：,，.。()（）\[\]【】「」『』]/g,'');
+}
+
+function distance(a,b){
+a=normalize(a);
+b=normalize(b);
+
+const m=a.length;
+const n=b.length;
+
+const dp=Array.from({length:m+1},()=>Array(n+1).fill(0));
+
+for(let i=0;i<=m;i++)dp[i][0]=i;
+for(let j=0;j<=n;j++)dp[0][j]=j;
+
+for(let i=1;i<=m;i++){
+for(let j=1;j<=n;j++){
+const cost=a[i-1]===b[j-1]?0:1;
+dp[i][j]=Math.min(
+dp[i-1][j]+1,
+dp[i][j-1]+1,
+dp[i-1][j-1]+cost
+);
+}
+}
+return dp[m][n];
+}
+
+function fuzzyScore(name,query){
+const n=normalize(name);
+const q=normalize(query);
+
+if(!q)return 1;
+if(n.includes(q))return 1;
+
+let best=0;
+
+for(let len=Math.max(1,q.length-2);len<=Math.min(n.length,q.length+2);len++){
+for(let i=0;i<=n.length-len;i++){
+const part=n.slice(i,i+len);
+const d=distance(part,q);
+const score=1-d/Math.max(part.length,q.length);
+best=Math.max(best,score);
+}
+}
+
+const threshold=q.length>=8?0.62:q.length>=5?0.7:0.82;
+return best>=threshold?best:0;
+}
+
+function extractAmazonKey(url){
+url=(url||'').trim();
+
+const m=url.match(/(?:\/dp\/|\/gp\/product\/)([A-Z0-9]{10})/i);
+if(m)return m[1].toUpperCase();
+
+if(/^[A-Z0-9]{10}$/i.test(url))return url.toUpperCase();
+
+return '';
+}
+
+function fullAmazonUrl(key){
+return AMAZON+encodeURIComponent(key);
+}
+
+function openDB(){
+return new Promise((resolve,reject)=>{
+const req=indexedDB.open(DB_NAME,1);
+
+req.onupgradeneeded=()=>{
+req.result.createObjectStore(STORE,{keyPath:'id'});
+};
+
+req.onsuccess=()=>resolve(req.result);
+req.onerror=()=>reject(req.error);
+});
+}
+
+function loadProducts(){
+return new Promise((resolve,reject)=>{
+const req=db.transaction(STORE).objectStore(STORE).getAll();
+
+req.onsuccess=()=>{
+resolve(req.result.sort((a,b)=>a.order-b.order));
+};
+
+req.onerror=()=>reject(req.error);
+});
+}
+
+async function saveProduct(){
+
+const name=$('cardName').value.trim();
+const key=extractAmazonKey($('amazonUrl').value);
+const editId=$('editId').value;
+
+if(!name)return alert('カード名を入力してください');
+if(!key)return alert('Amazon URLを確認してください');
+
+const tx=db.transaction(STORE,'readwrite');
+const store=tx.objectStore(STORE);
+
+const item={
+id:editId||crypto.randomUUID(),
+name,
+amazonKey:key,
+order:editId?(products.find(p=>p.id===editId)?.order||0):products.length
+};
+
+store.put(item);
+
+await new Promise(r=>tx.oncomplete=r);
+
+products=await loadProducts();
+
+render();
+
+$('editId').value='';
+$('cardName').value='';
+$('amazonUrl').value='';
+}
+
+async function deleteItem(id){
+if(!confirm('削除しますか？'))return;
+
+const tx=db.transaction(STORE,'readwrite');
+tx.objectStore(STORE).delete(id);
+
+await new Promise(r=>tx.oncomplete=r);
+
+products=await loadProducts();
+
+products.forEach((p,i)=>p.order=i);
+
+const tx2=db.transaction(STORE,'readwrite');
+const store2=tx2.objectStore(STORE);
+
+products.forEach(p=>store2.put(p));
+
+await new Promise(r=>tx2.oncomplete=r);
+
+render();
+}
+
+async function move(index,dir){
+
+const next=index+dir;
+if(next<0||next>=products.length)return;
+
+[products[index],products[next]]=[products[next],products[index]];
+
+products.forEach((p,i)=>p.order=i);
+
+const tx=db.transaction(STORE,'readwrite');
+const store=tx.objectStore(STORE);
+
+products.forEach(p=>store.put(p));
+
+await new Promise(r=>tx.oncomplete=r);
+
+render();
+}
+
+function editItem(id){
+const p=products.find(v=>v.id===id);
+if(!p)return;
+
+$('editId').value=p.id;
+$('cardName').value=p.name;
+$('amazonUrl').value=fullAmazonUrl(p.amazonKey);
+}
+
+async function deleteAll(){
+if(!confirm('全削除しますか？'))return;
+
+const tx=db.transaction(STORE,'readwrite');
+tx.objectStore(STORE).clear();
+
+await new Promise(r=>tx.oncomplete=r);
+
+products=[];
+
+render();
+}
+
+function render(){
+
+const list=$('productList');
+
+list.innerHTML=products.map((p,i)=>`
+<div class="product">
+<b>${i+1}. ${escapeHtml(p.name)}</b>
+<div class="muted">${p.amazonKey}</div>
+
+<div class="row" style="margin-top:8px;">
+<button class="small" onclick="move(${i},-1)">↑</button>
+<button class="small" onclick="move(${i},1)">↓</button>
+<button class="small" onclick="editItem('${p.id}')">編集</button>
+<button class="small danger" onclick="deleteItem('${p.id}')">削除</button>
+<a href="${fullAmazonUrl(p.amazonKey)}" target="_blank">
+<button class="small">Amazon</button>
+</a>
+</div>
+</div>
+`).join('');
+
+renderPreview();
+}
+
+function renderPreview(){
+
+const q=$('previewSearch').value.trim();
+
+const mode=document.querySelector('input[name="mode"]:checked').value;
+
+const filtered=products
+.map((p,index)=>({
+...p,
+index,
+score:mode==='fuzzy'
+?fuzzyScore(p.name,q)
+:(normalize(p.name).includes(normalize(q))?1:0)
+}))
+.filter(p=>!q||p.score>0)
+.sort((a,b)=>b.score-a.score||a.index-b.index);
+
+$('previewResults').innerHTML=filtered.map(p=>`
+<div class="preview-item">
+<div>${escapeHtml(p.name)}</div>
+<a href="${fullAmazonUrl(p.amazonKey)}" target="_blank">
+<button class="small">開く</button>
+</a>
+</div>
+`).join('') || '<p>該当なし</p>';
+}
+
+function escapeHtml(str){
+return String(str).replace(/[&<>"']/g,s=>({
+'&':'&amp;',
+'<':'&lt;',
+'>':'&gt;',
+'"':'&quot;',
+"'":'&#39;'
+}[s]));
+}
+
+$('amazonUrl').addEventListener('input',()=>{
+const key=extractAmazonKey($('amazonUrl').value);
+
+$('extractInfo').textContent=
+key
+?`保存される商品ID: ${key}`
+:'商品IDを抽出できません';
+});
+
+$('saveBtn').addEventListener('click',saveProduct);
+
+$('clearBtn').addEventListener('click',()=>{
+$('editId').value='';
+$('cardName').value='';
+$('amazonUrl').value='';
+});
+
+$('previewSearch').addEventListener('input',renderPreview);
+
+document.querySelectorAll('input[name="mode"]').forEach(el=>{
+el.addEventListener('change',renderPreview);
+});
+
+$('backupBtn').addEventListener('click',()=>{
+
+const blob=new Blob(
+[JSON.stringify(products,null,2)],
+{type:'application/json'}
+);
+
+const a=document.createElement('a');
+a.href=URL.createObjectURL(blob);
+a.download='yugioh-products-backup.json';
+a.click();
+});
+
+$('restoreInput').addEventListener('change',async e=>{
+
+const file=e.target.files[0];
+if(!file)return;
+
+const text=await file.text();
+const data=JSON.parse(text);
+
+if(!Array.isArray(data))return alert('JSON形式エラー');
+
+await deleteAllSilently();
+
+const tx=db.transaction(STORE,'readwrite');
+const store=tx.objectStore(STORE);
+
+data.forEach((p,i)=>{
+store.put({
+id:crypto.randomUUID(),
+name:p.name,
+amazonKey:p.amazonKey,
+order:i
+});
+});
+
+await new Promise(r=>tx.oncomplete=r);
+
+products=await loadProducts();
+
+render();
+});
+
+async function deleteAllSilently(){
+const tx=db.transaction(STORE,'readwrite');
+tx.objectStore(STORE).clear();
+await new Promise(r=>tx.oncomplete=r);
+}
+
+$('downloadSiteBtn').addEventListener('click',()=>{
+
+const publicData=products.map(p=>({
+name:p.name,
+amazonKey:p.amazonKey
+}));
+
+const html=`<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>遊戯王 Amazon検索</title>
+<style>
+body{
+font-family:system-ui,sans-serif;
+margin:0;
+padding:20px;
+background:#f3f4f6;
+}
+.card{
+max-width:1000px;
+margin:auto;
+background:#fff;
+padding:16px;
+border-radius:16px;
+}
+.item{
+display:flex;
+justify-content:space-between;
+align-items:center;
+gap:10px;
+padding:10px;
+border:1px solid #ddd;
+border-radius:12px;
+margin-top:10px;
+}
+button{
+border:0;
+background:#2563eb;
+color:#fff;
+padding:8px 12px;
+border-radius:10px;
+font-weight:bold;
+}
+input[type=text]{
+width:100%;
+padding:12px;
+border-radius:12px;
+border:1px solid #ccc;
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+
+<h1>遊戯王 Amazon検索</h1>
+
+<input type="text" id="search" placeholder="カード名検索">
+
+<div style="margin-top:10px;">
+<label><input type="radio" name="mode" value="normal" checked> 通常検索</label>
+<label><input type="radio" name="mode" value="fuzzy"> あいまい検索</label>
+</div>
+
+<div id="list"></div>
+
+</div>
+
+<script>
+
+const PRODUCTS=${JSON.stringify(publicData)};
+const AMAZON='https://www.amazon.co.jp/dp/';
+
+function normalize(text){
+return String(text||'')
+.toLowerCase()
+.normalize('NFKC')
+.replace(/[\\\\s\\\\-＿_・/／|｜:：,，.。()（）\\\\[\\\\]【】「」『』]/g,'');
+}
+
+function distance(a,b){
+a=normalize(a);
+b=normalize(b);
+
+const m=a.length;
+const n=b.length;
+
+const dp=Array.from({length:m+1},()=>Array(n+1).fill(0));
+
+for(let i=0;i<=m;i++)dp[i][0]=i;
+for(let j=0;j<=n;j++)dp[0][j]=j;
+
+for(let i=1;i<=m;i++){
+for(let j=1;j<=n;j++){
+const cost=a[i-1]===b[j-1]?0:1;
+dp[i][j]=Math.min(
+dp[i-1][j]+1,
+dp[i][j-1]+1,
+dp[i-1][j-1]+cost
+);
+}
+}
+
+return dp[m][n];
+}
+
+function fuzzyScore(name,query){
+
+const n=normalize(name);
+const q=normalize(query);
+
+if(!q)return 1;
+if(n.includes(q))return 1;
+
+let best=0;
+
+for(let len=Math.max(1,q.length-2);len<=Math.min(n.length,q.length+2);len++){
+for(let i=0;i<=n.length-len;i++){
+
+const part=n.slice(i,i+len);
+
+const d=distance(part,q);
+
+const score=1-d/Math.max(part.length,q.length);
+
+best=Math.max(best,score);
+}
+}
+
+const threshold=q.length>=8?0.62:q.length>=5?0.7:0.82;
+
+return best>=threshold?best:0;
+}
+
+function render(){
+
+const q=document.getElementById('search').value.trim();
+
+const mode=document.querySelector('input[name=\"mode\"]:checked').value;
+
+const list=PRODUCTS
+.map((p,index)=>({
+...p,
+index,
+score:mode==='fuzzy'
+?fuzzyScore(p.name,q)
+:(normalize(p.name).includes(normalize(q))?1:0)
+}))
+.filter(p=>!q||p.score>0)
+.sort((a,b)=>b.score-a.score||a.index-b.index);
+
+document.getElementById('list').innerHTML=list.map(p=>\`
+<div class=\"item\">
+<div>\${p.name}</div>
+<a href=\"\${AMAZON+encodeURIComponent(p.amazonKey)}\" target=\"_blank\">
+<button>Amazon</button>
+</a>
+</div>
+\`).join('') || '<p>該当なし</p>';
+}
+
+document.getElementById('search').addEventListener('input',render);
+
+document.querySelectorAll('input[name=\"mode\"]').forEach(el=>{
+el.addEventListener('change',render);
+});
+
+render();
+
+<\/script>
+
+</body>
+</html>`;
+
+const blob=new Blob([html],{type:'text/html'});
+
+const a=document.createElement('a');
+a.href=URL.createObjectURL(blob);
+a.download='yugioh-amazon-search.html';
+a.click();
+});
+
+(async()=>{
+
+db=await openDB();
+
+products=await loadProducts();
+
+render();
+
+})();
+</script>
+
+</body>
+</html>
