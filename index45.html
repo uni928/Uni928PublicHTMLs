@@ -5470,6 +5470,19 @@ function updateCopyAreaPreview(fullHtml) {
 function refreshGeneratedContent(button, shouldCopy = false) {
   if (!button) return;
 
+  // 選択したボタンの固有クラス名を自動入力
+  const classNameInput = document.getElementById("classNameInput");
+
+  if (classNameInput) {
+    const autoClassName = [...button.classList].find(className =>
+      /^btn-[a-z]\d+/i.test(className)
+    );
+
+    if (autoClassName) {
+      classNameInput.value = autoClassName;
+    }
+  }
+
   const lazyElementHtml = buildLazyButtonHtml(button);
   const { cssText, elementHtml, javascriptText, fullHtml } = buildFullHtml(button);
 
