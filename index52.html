@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ChatGPT入力補助</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #d1d5db;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --danger: #dc2626;
+      --soft: #eef2ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .app {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    header {
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 22px;
+    }
+
+    .description {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+      overflow: hidden;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      background: #fafafa;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: white;
+      color: var(--text);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.15s ease;
+      touch-action: manipulation;
+    }
+
+    button:hover {
+      background: var(--soft);
+      border-color: #a5b4fc;
+    }
+
+    button.primary {
+      width: 100%;
+      border-radius: 14px;
+      background: var(--primary);
+      border-color: var(--primary);
+      color: white;
+      font-size: 16px;
+      padding: 14px 16px;
+    }
+
+    button.primary:hover {
+      background: var(--primary-dark);
+    }
+
+    button.secondary {
+      margin-top: 8px;
+      background: #111827;
+      border-color: #111827;
+    }
+
+    button.secondary:hover {
+      background: #374151;
+      border-color: #374151;
+    }
+
+    button.danger {
+      color: var(--danger);
+    }
+
+    .editor-area {
+      padding: 12px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 58vh;
+      resize: vertical;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      font-size: 16px;
+      line-height: 1.65;
+      color: var(--text);
+      outline: none;
+      background: white;
+    }
+
+    textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .bottom-area {
+      padding: 12px;
+      border-top: 1px solid var(--border);
+      background: #fafafa;
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%) translateY(20px);
+      opacity: 0;
+      pointer-events: none;
+      background: #111827;
+      color: white;
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      transition: 0.2s ease;
+      z-index: 10;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 640px) {
+      .app { padding: 10px; }
+      h1 { font-size: 18px; }
+      .description { font-size: 12px; }
+      .toolbar { gap: 6px; padding: 10px; }
+      button { padding: 9px 11px; font-size: 13px; }
+      textarea { min-height: 60vh; font-size: 16px; }
+      .desktop-only { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <h1>ChatGPT入力補助</h1>
+      <p class="description">この画面で文章を作成してからコピーします。Enterキーで誤送信しないための入力用ページです。</p>
+    </header>
+
+    <section class="card">
+      <div class="toolbar">
+        <button type="button" id="formatBreaksBtn">改行整理</button>
+        <button type="button" id="restoreBtn">入力内容復元</button>
+        <button type="button" id="addPromptFrameBtn" class="desktop-only">依頼文の型を追加</button>
+        <button type="button" id="trimSpacesBtn" class="desktop-only hidden">前後空白削除</button>
+        <button type="button" id="clearBtn" class="danger desktop-only">入力欄クリア</button>
+      </div>
+
+      <div class="editor-area">
+        <textarea id="editor" placeholder="ここにChatGPTへ送る文章を入力してください。ここではEnterを押しても送信されません。"></textarea>
+      </div>
+
+      <div class="bottom-area">
+        <button type="button" id="copyOpenBtn" class="primary">コピーして Gemini を開く（貼り付け作業が必要）</button>
+        <button type="button" id="copyOpenAppBtn" class="primary secondary" hidden>コピーして Gemini を開く（貼り付け作業が必要）</button>
+        <div class="status-row">
+          <span id="countInfo">0文字 / 0行</span>
+          <span id="saveInfo">未保存</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const DB_NAME = "chatgptInputHelperDB";
+    const STORE_NAME = "drafts";
+    const DRAFT_KEY = "mainDraft";
+    const TEMPLATE_KEY = "promptTemplate";
+    const DEFAULT_PROMPT_TEMPLATE = `以下の内容について、分かりやすく整理して回答してください。
+
+`;
+    const GEMINI_URL = "https://gemini.google.com/";
+
+    const editor = document.getElementById("editor");
+    const formatBreaksBtn = document.getElementById("formatBreaksBtn");
+    const restoreBtn = document.getElementById("restoreBtn");
+    const addPromptFrameBtn = document.getElementById("addPromptFrameBtn");
+    const trimSpacesBtn = document.getElementById("trimSpacesBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const copyOpenBtn = document.getElementById("copyOpenBtn");
+    const copyOpenAppBtn = document.getElementById("copyOpenAppBtn");
+    const countInfo = document.getElementById("countInfo");
+    const saveInfo = document.getElementById("saveInfo");
+    const toast = document.getElementById("toast");
+
+    let db = null;
+    let saveTimer = null;
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 1600);
+    }
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+
+        request.onupgradeneeded = event => {
+          const database = event.target.result;
+          if (!database.objectStoreNames.contains(STORE_NAME)) {
+            database.createObjectStore(STORE_NAME, { keyPath: "id" });
+          }
+        };
+
+        request.onsuccess = event => resolve(event.target.result);
+        request.onerror = event => reject(event.target.error);
+      });
+    }
+
+    function saveDraftNow() {
+      if (!db) return;
+
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      store.put({
+        id: DRAFT_KEY,
+        text: editor.value,
+        updatedAt: new Date().toISOString()
+      });
+
+      tx.oncomplete = () => {
+        const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        saveInfo.textContent = `保存済み ${time}`;
+      };
+
+      tx.onerror = () => {
+        saveInfo.textContent = "保存失敗";
+      };
+    }
+
+    function scheduleSave() {
+      saveInfo.textContent = "保存中...";
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveDraftNow, 250);
+    }
+
+    function loadDraft() {
+      return new Promise((resolve, reject) => {
+        if (!db) {
+          resolve(null);
+          return;
+        }
+
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const request = store.get(DRAFT_KEY);
+
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = event => reject(event.target.error);
+      });
+    }
+
+    function updateCount() {
+      const text = editor.value;
+      const lines = text.length ? text.split("\n").length : 0;
+      countInfo.textContent = `${text.length}文字 / ${lines}行`;
+    }
+
+    function hasOnlySingleLineBreaks(text) {
+      return text.includes("\n") && !text.includes("\n\n");
+    }
+
+    function hasOnlyDoubleLineBreaks(text) {
+      if (!text.includes("\n\n")) return false;
+      if (text.includes("\n\n\n")) return false;
+
+      const singleBreakPattern = /[^\n]\n[^\n]/;
+      return !singleBreakPattern.test(text);
+    }
+
+    function normalizeLineBreaks(text) {
+      const normalized = text.replace(/\r\n?/g, "\n");
+
+      // 1回改行のみ → 2回改行へ
+      if (hasOnlySingleLineBreaks(normalized)) {
+        return normalized.replace(/\n/g, "\n\n");
+      }
+
+      // 2回改行のみ → 1回改行へ
+      if (hasOnlyDoubleLineBreaks(normalized)) {
+        return normalized.replace(/\n\n/g, "\n");
+      }
+
+      // 3回以上改行 → 2回改行へ圧縮
+      let reduced = normalized;
+      while (reduced.includes("\n\n\n")) {
+        reduced = reduced.replace(/\n\n\n+/g, "\n\n");
+      }
+
+      // 1回改行と2回改行が混在 → 2回改行を1回へ
+      return reduced.replace(/\n\n/g, "\n");
+    }
+
+    function setEditorValue(value, message) {
+      editor.value = value;
+      updateCount();
+      scheduleSave();
+      showToast(message);
+      editor.focus();
+    }
+
+    formatBreaksBtn.addEventListener("click", () => {
+      setEditorValue(normalizeLineBreaks(editor.value), "改行を整理しました");
+    });
+
+    restoreBtn.addEventListener("click", async () => {
+      try {
+        const draft = await loadDraft();
+        if (!draft || !draft.text) {
+          showToast("復元できる入力内容がありません");
+          return;
+        }
+        editor.value = draft.text;
+        updateCount();
+        showToast("入力内容を復元しました");
+        editor.focus();
+      } catch (error) {
+        showToast("復元に失敗しました");
+      }
+    });
+
+    function getStoredValue(key) {
+      return new Promise((resolve) => {
+        if (!db) {
+          resolve(null);
+          return;
+        }
+
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const request = store.get(key);
+
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => resolve(null);
+      });
+    }
+
+    function saveStoredValue(key, text) {
+      return new Promise((resolve) => {
+        if (!db) {
+          resolve();
+          return;
+        }
+
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+        store.put({
+          id: key,
+          text,
+          updatedAt: new Date().toISOString()
+        });
+
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+      });
+    }
+
+    async function getPromptTemplate() {
+      const saved = await getStoredValue(TEMPLATE_KEY);
+      return saved?.text || DEFAULT_PROMPT_TEMPLATE;
+    }
+
+    function ensureTemplateEnding(text) {
+      return text.endsWith(`
+`) ? text : text + `
+
+`;
+    }
+
+    async function insertPromptTemplate() {
+      const frame = ensureTemplateEnding(await getPromptTemplate());
+      const next = editor.value.trim() ? frame + editor.value.trim() : frame;
+      setEditorValue(next, "依頼文の型を追加しました");
+    }
+
+    async function editPromptTemplate() {
+      const currentTemplate = await getPromptTemplate();
+      const editedTemplate = prompt(
+        `依頼文の型を編集できます。
+
+OKで保存
+キャンセルで中止`,
+        currentTemplate
+      );
+
+      if (editedTemplate === null) return;
+
+      await saveStoredValue(TEMPLATE_KEY, ensureTemplateEnding(editedTemplate));
+      showToast("依頼文の型を保存しました");
+    }
+
+    let promptFrameLongPressTimer = null;
+    let promptFrameLongPressed = false;
+
+    addPromptFrameBtn.addEventListener("pointerdown", () => {
+      promptFrameLongPressed = false;
+      clearTimeout(promptFrameLongPressTimer);
+
+      promptFrameLongPressTimer = setTimeout(async () => {
+        promptFrameLongPressed = true;
+        await editPromptTemplate();
+      }, 650);
+    });
+
+    ["pointerup", "pointerleave", "pointercancel"].forEach(eventName => {
+      addPromptFrameBtn.addEventListener(eventName, () => {
+        clearTimeout(promptFrameLongPressTimer);
+      });
+    });
+
+    addPromptFrameBtn.addEventListener("contextmenu", event => {
+      event.preventDefault();
+    });
+
+    addPromptFrameBtn.addEventListener("click", async event => {
+      if (promptFrameLongPressed) {
+        event.preventDefault();
+        promptFrameLongPressed = false;
+        return;
+      }
+
+      await insertPromptTemplate();
+    });
+
+    trimSpacesBtn.addEventListener("click", () => {
+      setEditorValue(editor.value.trim(), "前後の空白を削除しました");
+    });
+
+    clearBtn.addEventListener("click", () => {
+      if (!editor.value.trim()) return;
+      if (!confirm("入力欄をクリアしますか？保存済み内容も上書きされます。")) return;
+      setEditorValue("", "入力欄をクリアしました");
+    });
+
+    async function getSavedTemplate() {
+      return new Promise((resolve) => {
+        if (!db) {
+          resolve(`以下の内容について、分かりやすく整理して回答してください。
+
+`);
+          return;
+        }
+
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const request = store.get(TEMPLATE_KEY);
+
+        request.onsuccess = () => {
+          resolve(
+            request.result?.text ||
+            `以下の内容について、分かりやすく整理して回答してください。
+
+`
+          );
+        };
+
+        request.onerror = () => {
+          resolve(`以下の内容について、分かりやすく整理して回答してください。
+
+`);
+        };
+      });
+    }
+
+    async function saveTemplate(text) {
+      return new Promise((resolve) => {
+        if (!db) {
+          resolve();
+          return;
+        }
+
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+
+        store.put({
+          id: TEMPLATE_KEY,
+          text
+        });
+
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+      });
+    }
+
+    async function copyEditorText() {
+      const text = editor.value;
+      if (!text.trim()) {
+        showToast("コピーする文章がありません");
+        return false;
+      }
+
+      try {
+        editor.focus();
+        editor.select();
+        editor.setSelectionRange(0, text.length);
+
+        const success = document.execCommand("copy");
+        if (!success) {
+          throw new Error("copy failed");
+        }
+
+        return true;
+      } catch (error) {
+        showToast("コピーできませんでした。手動でコピーしてください");
+        return false;
+      }
+    }
+
+    function openGeminiWeb() {
+      window.open(GEMINI_URL, "_blank", "noopener,noreferrer");
+    }
+
+    copyOpenBtn.addEventListener("click", async () => {
+      const copied = await copyEditorText();
+      if (!copied) return;
+      showToast("コピーしました。ChatGPTを開きます");
+      openGeminiWeb();
+    });
+
+    copyOpenAppBtn.addEventListener("click", async () => {
+      const copied = await copyEditorText();
+      if (!copied) return;
+      showToast("コピーしました。Geminiを開きます");
+      openGeminiWeb();
+    });
+
+    editor.addEventListener("input", () => {
+      updateCount();
+      scheduleSave();
+    });
+
+    window.addEventListener("beforeunload", saveDraftNow);
+
+    (async function init() {
+      try {
+        db = await openDB();
+        saveInfo.textContent = "自動保存待機中";
+      } catch (error) {
+        saveInfo.textContent = "IndexedDB使用不可";
+      }
+      updateCount();
+    })();
+  </script>
+</body>
+</html>
