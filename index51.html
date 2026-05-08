@@ -210,7 +210,7 @@
       </div>
 
       <div class="bottom-area">
-        <button type="button" id="copyOpenBtn" class="primary">コピーして ChatGPT を開く（貼り付け作業が必要）</button>
+        <button type="button" id="copyOpenBtn" class="primary">コピーして ChatGPT を開く</button>
         <button type="button" id="copyOpenAppBtn" class="primary secondary">コピーして ChatGPTアプリを開く（貼り付け作業が必要）</button>
         <div class="status-row">
           <span id="countInfo">0文字 / 0行</span>
@@ -231,6 +231,13 @@
 
 `;
     const CHATGPT_URL = "https://chatgpt.com/";
+
+    function buildChatGPTPromptUrl(text) {
+      const url = new URL(CHATGPT_URL);
+      url.searchParams.set("temporary-chat", "true");
+      url.searchParams.set("prompt", text);
+      return url.toString();
+    }
 
     const editor = document.getElementById("editor");
     const formatBreaksBtn = document.getElementById("formatBreaksBtn");
@@ -568,13 +575,17 @@ OKで保存
       }
     }
 
-    function openChatGPTWeb() {
-      window.open(CHATGPT_URL, "_blank", "noopener,noreferrer");
+    function openChatGPTWeb(promptText = "") {
+      const url = promptText.trim()
+        ? buildChatGPTPromptUrl(promptText)
+        : CHATGPT_URL;
+
+      window.open(url, "_blank", "noopener,noreferrer");
     }
 
-    function openChatGPTAppWithFallback() {
+    function openChatGPTAppWithFallback(promptText = "") {
       const fallbackTimer = setTimeout(() => {
-        openChatGPTWeb();
+        openChatGPTWeb(promptText);
       }, 1200);
 
       const cancelFallback = () => clearTimeout(fallbackTimer);
@@ -583,21 +594,27 @@ OKで保存
         if (document.hidden) cancelFallback();
       }, { once: true });
 
-      window.location.href = "chatgpt://";
+      const encoded = encodeURIComponent(promptText);
+      window.location.href = `chatgpt://?prompt=${encoded}`;
     }
 
     copyOpenBtn.addEventListener("click", async () => {
-      const copied = await copyEditorText();
+      const text = editor.value;
+
+       const copied = await copyEditorText();
       if (!copied) return;
+
       showToast("コピーしました。ChatGPTを開きます");
-      openChatGPTWeb();
+      openChatGPTWeb(text);
     });
 
     copyOpenAppBtn.addEventListener("click", async () => {
-      const copied = await copyEditorText();
+      const text = editor.value;
+
+       const copied = await copyEditorText();
       if (!copied) return;
       showToast("コピーしました。アプリ起動を試します");
-      openChatGPTAppWithFallback();
+      openChatGPTAppWithFallback(text);
     });
 
     editor.addEventListener("input", () => {
