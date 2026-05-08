@@ -203,6 +203,7 @@
         <button type="button" id="addPromptFrameBtn" class="desktop-only">依頼文の型を追加</button>
         <button type="button" id="trimSpacesBtn" class="desktop-only hidden">前後空白削除</button>
         <button type="button" id="clearBtn" class="danger desktop-only">入力欄クリア</button>
+<button type="button" id="copyAllBtn">全文コピー</button>
       </div>
 
       <div class="editor-area">
@@ -212,6 +213,7 @@
       <div class="bottom-area">
         <button type="button" id="copyOpenBtn" class="primary">コピーして ChatGPT を開く</button>
         <button type="button" id="copyOpenAppBtn" class="primary secondary">コピーして ChatGPTアプリを開く（貼り付け作業が必要）</button>
+<button type="button" id="copyPromptUrlBtn">ChatGPT入力URLをコピー</button>
         <div class="status-row">
           <span id="countInfo">0文字 / 0行</span>
           <span id="saveInfo">未保存</span>
@@ -240,6 +242,7 @@
     }
 
     const editor = document.getElementById("editor");
+const copyAllBtn = document.getElementById("copyAllBtn");
     const formatBreaksBtn = document.getElementById("formatBreaksBtn");
     const restoreBtn = document.getElementById("restoreBtn");
     const addPromptFrameBtn = document.getElementById("addPromptFrameBtn");
@@ -620,6 +623,14 @@ OKで保存
     editor.addEventListener("input", () => {
       updateCount();
       scheduleSave();
+    });
+
+    copyAllBtn.addEventListener("click", async () => {
+      const copied = await copyEditorText();
+
+      if (!copied) return;
+
+      showToast("全文をコピーしました");
     });
 
     window.addEventListener("beforeunload", saveDraftNow);
