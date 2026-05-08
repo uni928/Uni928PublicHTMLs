@@ -226,6 +226,10 @@
     const DB_NAME = "chatgptInputHelperDB";
     const STORE_NAME = "drafts";
     const DRAFT_KEY = "mainDraft";
+    const TEMPLATE_KEY = "promptTemplate";
+    const DEFAULT_PROMPT_TEMPLATE = `以下の内容について、分かりやすく整理して回答してください。
+
+`;
     const CHATGPT_URL = "https://chatgpt.com/";
 
     const editor = document.getElementById("editor");
@@ -377,10 +381,107 @@
       }
     });
 
-    addPromptFrameBtn.addEventListener("click", () => {
-      const frame = "以下の内容について、分かりやすく整理して回答してください。\n\n";
+    function getStoredValue(key) {
+      return new Promise((resolve) => {
+        if (!db) {
+          resolve(null);
+          return;
+        }
+
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const request = store.get(key);
+
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => resolve(null);
+      });
+    }
+
+    function saveStoredValue(key, text) {
+      return new Promise((resolve) => {
+        if (!db) {
+          resolve();
+          return;
+        }
+
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+        store.put({
+          id: key,
+          text,
+          updatedAt: new Date().toISOString()
+        });
+
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+      });
+    }
+
+    async function getPromptTemplate() {
+      const saved = await getStoredValue(TEMPLATE_KEY);
+      return saved?.text || DEFAULT_PROMPT_TEMPLATE;
+    }
+
+    function ensureTemplateEnding(text) {
+      return text.endsWith(`
+`) ? text : text + `
+
+`;
+    }
+
+    async function insertPromptTemplate() {
+      const frame = ensureTemplateEnding(await getPromptTemplate());
       const next = editor.value.trim() ? frame + editor.value.trim() : frame;
       setEditorValue(next, "依頼文の型を追加しました");
+    }
+
+    async function editPromptTemplate() {
+      const currentTemplate = await getPromptTemplate();
+      const editedTemplate = prompt(
+        `依頼文の型を編集できます。
+
+OKで保存
+キャンセルで中止`,
+        currentTemplate
+      );
+
+      if (editedTemplate === null) return;
+
+      await saveStoredValue(TEMPLATE_KEY, ensureTemplateEnding(editedTemplate));
+      showToast("依頼文の型を保存しました");
+    }
+
+    let promptFrameLongPressTimer = null;
+    let promptFrameLongPressed = false;
+
+    addPromptFrameBtn.addEventListener("pointerdown", () => {
+      promptFrameLongPressed = false;
+      clearTimeout(promptFrameLongPressTimer);
+
+      promptFrameLongPressTimer = setTimeout(async () => {
+        promptFrameLongPressed = true;
+        await editPromptTemplate();
+      }, 650);
+    });
+
+    ["pointerup", "pointerleave", "pointercancel"].forEach(eventName => {
+      addPromptFrameBtn.addEventListener(eventName, () => {
+        clearTimeout(promptFrameLongPressTimer);
+      });
+    });
+
+    addPromptFrameBtn.addEventListener("contextmenu", event => {
+      event.preventDefault();
+    });
+
+    addPromptFrameBtn.addEventListener("click", async event => {
+      if (promptFrameLongPressed) {
+        event.preventDefault();
+        promptFrameLongPressed = false;
+        return;
+      }
+
+      await insertPromptTemplate();
     });
 
     trimSpacesBtn.addEventListener("click", () => {
@@ -393,6 +494,56 @@
       setEditorValue("", "入力欄をクリアしました");
     });
 
+    async function getSavedTemplate() {
+      return new Promise((resolve) => {
+        if (!db) {
+          resolve(`以下の内容について、分かりやすく整理して回答してください。
+
+`);
+          return;
+        }
+
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const request = store.get(TEMPLATE_KEY);
+
+        request.onsuccess = () => {
+          resolve(
+            request.result?.text ||
+            `以下の内容について、分かりやすく整理して回答してください。
+
+`
+          );
+        };
+
+        request.onerror = () => {
+          resolve(`以下の内容について、分かりやすく整理して回答してください。
+
+`);
+        };
+      });
+    }
+
+    async function saveTemplate(text) {
+      return new Promise((resolve) => {
+        if (!db) {
+          resolve();
+          return;
+        }
+
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+
+        store.put({
+          id: TEMPLATE_KEY,
+          text
+        });
+
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+      });
+    }
+
     async function copyEditorText() {
       const text = editor.value;
       if (!text.trim()) {
@@ -401,7 +552,15 @@
       }
 
       try {
-        await navigator.clipboard.writeText(text);
+        editor.focus();
+        editor.select();
+        editor.setSelectionRange(0, text.length);
+
+        const success = document.execCommand("copy");
+        if (!success) {
+          throw new Error("copy failed");
+        }
+
         return true;
       } catch (error) {
         showToast("コピーできませんでした。手動でコピーしてください");
