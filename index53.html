@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>HTML圧縮</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:system-ui,sans-serif;background:#f3f4f6;color:#111827;display:flex;align-items:center;justify-content:center;padding:24px}.app{width:min(720px,100%);background:#fff;border-radius:18px;box-shadow:0 20px 60px #0002;padding:28px}h1{margin:0 0 10px;font-size:26px}.lead{margin:0 0 20px;color:#4b5563;line-height:1.7}#drop{border:3px dashed #9ca3af;border-radius:16px;background:#f9fafb;padding:42px 20px;text-align:center;cursor:pointer;transition:.2s}#drop.on{border-color:#2563eb;background:#eff6ff}.t{font-size:20px;font-weight:700;margin-bottom:8px}.s{color:#6b7280;line-height:1.6}input{display:none}#status{margin-top:18px;padding:14px 16px;border-radius:12px;background:#f3f4f6;color:#374151;line-height:1.6;white-space:pre-wrap}.note{margin-top:18px;padding:14px 16px;border-left:4px solid #f59e0b;background:#fffbeb;color:#78350f;border-radius:10px;line-height:1.7;font-size:14px}
+</style>
+</head>
+<body>
+<main class="app">
+<h1>HTML圧縮</h1>
+<p class="lead">単一HTMLをドラッグ＆ドロップすると、gzip圧縮した自己解凍HTMLをダウンロードします。</p>
+<div id="drop"><div class="t">ここに .html をドロップ</div><div class="s">またはクリックして選択</div><input id="file" type="file" accept=".html,.htm,text/html"></div>
+<div id="status">待機中です。</div>
+<div class="note">外部CSS・画像・JSを相対パスで参照しているHTMLは、自己解凍HTML単体では参照切れになることがあります。</div>
+</main>
+<script>
+const d=document.getElementById('drop'),f=document.getElementById('file'),st=document.getElementById('status');
+d.onclick=()=>f.click();
+f.onchange=()=>{if(f.files[0])run(f.files[0]);f.value=''};
+for(const e of['dragenter','dragover'])d.addEventListener(e,x=>{x.preventDefault();d.classList.add('on')});
+for(const e of['dragleave','drop'])d.addEventListener(e,x=>{x.preventDefault();d.classList.remove('on')});
+d.ondrop=e=>{const x=e.dataTransfer.files[0];if(x)run(x)};
+async function run(file){
+ if(!/\.html?$/i.test(file.name))return msg('HTMLファイルを指定してください。');
+ try{
+  if(!CompressionStream||!DecompressionStream)throw Error('このブラウザは圧縮・解凍APIに対応していません。');
+  msg('圧縮中です...');
+  const src=await file.text(),raw=new TextEncoder().encode(src),gz=await gzip(raw),b64=btoaBytes(gz),out=pack(b64),name=file.name.replace(/\.html?$/i,'')+'.packed.html';
+  dl(name,out);
+  msg(`完了しました。\n元サイズ: ${fmt(raw.length)}\n圧縮データ: ${fmt(gz.length)}\n出力: ${name}`);
+ }catch(e){msg('エラー: '+e.message)}
+}
+async function gzip(bytes){
+ const s=new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'));
+ return new Uint8Array(await new Response(s).arrayBuffer())
+}
+function btoaBytes(bytes){
+ let r='',n=32768;
+ for(let i=0;i<bytes.length;i+=n)r+=String.fromCharCode(...bytes.subarray(i,i+n));
+ return btoa(r)
+}
+function dl(name,text){
+ const a=document.createElement('a'),u=URL.createObjectURL(new Blob([text],{type:'text/html'}));
+ a.href=u;a.download=name;a.click();URL.revokeObjectURL(u)
+}
+function fmt(b){return b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(1)+' MB'}
+function msg(x){st.textContent=x}
+function pack(b64){return `<!doctype html><meta charset=utf-8><script>let b='${b64}';(async()=>{try{let s=Uint8Array.from(atob(b),c=>c.charCodeAt(0));s=new Blob([s]).stream().pipeThrough(new DecompressionStream('gzip'));document.open();document.write(new TextDecoder().decode(await new Response(s).arrayBuffer()));document.close()}catch(e){document.body.textContent='解凍エラー: '+e.message}})()<\/script>`}
+</script>
+</body>
+</html>
