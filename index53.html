@@ -5,50 +5,83 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>HTML圧縮</title>
 <style>
-*{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:system-ui,sans-serif;background:#f3f4f6;color:#111827;display:flex;align-items:center;justify-content:center;padding:24px}.app{width:min(720px,100%);background:#fff;border-radius:18px;box-shadow:0 20px 60px #0002;padding:28px}h1{margin:0 0 10px;font-size:26px}.lead{margin:0 0 20px;color:#4b5563;line-height:1.7}#drop{border:3px dashed #9ca3af;border-radius:16px;background:#f9fafb;padding:42px 20px;text-align:center;cursor:pointer;transition:.2s}#drop.on{border-color:#2563eb;background:#eff6ff}.t{font-size:20px;font-weight:700;margin-bottom:8px}.s{color:#6b7280;line-height:1.6}input{display:none}#status{margin-top:18px;padding:14px 16px;border-radius:12px;background:#f3f4f6;color:#374151;line-height:1.6;white-space:pre-wrap}.note{margin-top:18px;padding:14px 16px;border-left:4px solid #f59e0b;background:#fffbeb;color:#78350f;border-radius:10px;line-height:1.7;font-size:14px}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:system-ui,sans-serif;background:#f3f4f6;color:#111827;display:flex;align-items:center;justify-content:center;padding:24px}.a{width:min(760px,100%);background:#fff;border-radius:18px;box-shadow:0 20px 60px #0002;padding:28px}h1{margin:0 0 10px;font-size:26px}.l{margin:0 0 20px;color:#4b5563;line-height:1.7}.m{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 18px}.m label{border:2px solid #e5e7eb;border-radius:14px;padding:14px;cursor:pointer;background:#f9fafb}.m input{display:inline-block}.m b{display:block;margin:0 0 4px}.m span{display:block;color:#6b7280;font-size:13px;line-height:1.5}#d{border:3px dashed #9ca3af;border-radius:16px;background:#f9fafb;padding:42px 20px;text-align:center;cursor:pointer;transition:.2s}#d.o{border-color:#2563eb;background:#eff6ff}.t{font-size:20px;font-weight:700;margin-bottom:8px}.s{color:#6b7280;line-height:1.6}#f{display:none}#r{margin-top:18px;padding:14px 16px;border-radius:12px;background:#f3f4f6;color:#374151;line-height:1.6;white-space:pre-wrap}.n{margin-top:18px;padding:14px 16px;border-left:4px solid #f59e0b;background:#fffbeb;color:#78350f;border-radius:10px;line-height:1.7;font-size:14px}@media(max-width:640px){.m{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<main class="app">
+<main class="a">
 <h1>HTML圧縮</h1>
-<p class="lead">単一HTMLをドラッグ＆ドロップすると、gzip圧縮した自己解凍HTMLをダウンロードします。</p>
-<div id="drop"><div class="t">ここに .html をドロップ</div><div class="s">またはクリックして選択</div><input id="file" type="file" accept=".html,.htm,text/html"></div>
-<div id="status">待機中です。</div>
-<div class="note">外部CSS・画像・JSを相対パスで参照しているHTMLは、自己解凍HTML単体では参照切れになることがあります。</div>
+<p class="l">単一HTMLをドラッグ＆ドロップすると、選択したモードで処理し、gzip圧縮した自己解凍HTMLをダウンロードします。</p>
+<div class="m">
+<label><input type="radio" name="mode" value="safe" checked> <b>安全版</b><span>HTMLの中身を変えず、そのままgzip圧縮します。壊れにくいです。</span></label>
+<label><input type="radio" name="mode" value="try"> <b>挑戦版</b><span>圧縮前に連続空白・コメントなどを安全寄りに削ってからgzip圧縮します。</span></label>
+</div>
+<div id="d"><div class="t">ここに .html をドロップ</div><div class="s">またはクリックして選択</div><input id="f" type="file" accept=".html,.htm,text/html"></div>
+<div id="r">待機中です。</div>
+<div class="n">安全版は元HTMLをそのまま圧縮します。挑戦版は script / style / textarea / pre 内部を触らず、外側の連続空白・HTMLコメントなどを削ります。</div>
 </main>
 <script>
-const d=document.getElementById('drop'),f=document.getElementById('file'),st=document.getElementById('status');
+const d=document.getElementById('d');
+const f=document.getElementById('f');
+const r=document.getElementById('r');
 d.onclick=()=>f.click();
 f.onchange=()=>{if(f.files[0])run(f.files[0]);f.value=''};
-for(const e of['dragenter','dragover'])d.addEventListener(e,x=>{x.preventDefault();d.classList.add('on')});
-for(const e of['dragleave','drop'])d.addEventListener(e,x=>{x.preventDefault();d.classList.remove('on')});
+for(const e of ['dragenter','dragover'])d.addEventListener(e,x=>{x.preventDefault();d.classList.add('o')});
+for(const e of ['dragleave','drop'])d.addEventListener(e,x=>{x.preventDefault();d.classList.remove('o')});
 d.ondrop=e=>{const x=e.dataTransfer.files[0];if(x)run(x)};
 async function run(file){
- if(!/\.html?$/i.test(file.name))return msg('HTMLファイルを指定してください。');
+ if(!/\.html?$/i.test(file.name)){msg('HTMLファイルを指定してください。');return}
  try{
-  if(!CompressionStream||!DecompressionStream)throw Error('このブラウザは圧縮・解凍APIに対応していません。');
+  if(!window.CompressionStream||!window.DecompressionStream)throw Error('このブラウザは圧縮・解凍APIに対応していません。');
+  const mode=document.querySelector('input[name="mode"]:checked').value;
+  msg((mode==='safe'?'安全版':'挑戦版')+'で処理中です...');
+  const src=await file.text();
+  const body=mode==='try'?tryMinify(src):src;
+  const srcBytes=new TextEncoder().encode(src);
+  const bodyBytes=new TextEncoder().encode(body);
   msg('圧縮中です...');
-  const src=await file.text(),raw=new TextEncoder().encode(src),gz=await gzip(raw),b64=btoaBytes(gz),out=pack(b64),name=file.name.replace(/\.html?$/i,'')+'.packed.html';
-  dl(name,out);
-  msg(`完了しました。\n元サイズ: ${fmt(raw.length)}\n圧縮データ: ${fmt(gz.length)}\n出力: ${name}`);
+  const gz=await gzip(bodyBytes);
+  const b64=bytesToBase64(gz);
+  const out=makePackedHtml(b64);
+  const name=file.name.replace(/\.html?$/i,'')+'.'+mode+'.packed.html';
+  download(name,out);
+  msg('完了しました。\nモード: '+(mode==='safe'?'安全版':'挑戦版')+'\n元サイズ: '+fmt(srcBytes.length)+'\n圧縮前データ: '+fmt(bodyBytes.length)+'\n圧縮データ: '+fmt(gz.length)+'\n出力: '+name);
  }catch(e){msg('エラー: '+e.message)}
 }
+function tryMinify(html){
+ const blocks=[];
+ html=html.replace(/<(script|style|textarea|pre)\b[^>]*>[\s\S]*?<\/\1>/gi,m=>'@@BLOCK'+(blocks.push(m)-1)+'@@');
+ html=html.replace(/<!--(?!\[if)[\s\S]*?-->/g,'');
+ html=html.replace(/[ \t\r\n\f]{2,}/g,' ');
+ html=html.replace(/> </g,'><');
+ html=html.replace(/@@BLOCK(\d+)@@/g,(_,i)=>blocks[i]);
+ return html.trim()
+}
 async function gzip(bytes){
- const s=new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'));
- return new Uint8Array(await new Response(s).arrayBuffer())
+ const stream=new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'));
+ return new Uint8Array(await new Response(stream).arrayBuffer())
 }
-function btoaBytes(bytes){
- let r='',n=32768;
- for(let i=0;i<bytes.length;i+=n)r+=String.fromCharCode(...bytes.subarray(i,i+n));
- return btoa(r)
+function bytesToBase64(bytes){
+ let s='';
+ const n=32768;
+ for(let i=0;i<bytes.length;i+=n)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+n));
+ return btoa(s)
 }
-function dl(name,text){
- const a=document.createElement('a'),u=URL.createObjectURL(new Blob([text],{type:'text/html'}));
- a.href=u;a.download=name;a.click();URL.revokeObjectURL(u)
+function download(name,text){
+ const url=URL.createObjectURL(new Blob([text],{type:'text/html'}));
+ const a=document.createElement('a');
+ a.href=url;
+ a.download=name;
+ document.body.appendChild(a);
+ a.click();
+ a.remove();
+ URL.revokeObjectURL(url)
 }
 function fmt(b){return b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(1)+' MB'}
-function msg(x){st.textContent=x}
-function pack(b64){return `<!doctype html><meta charset=utf-8><script>let b='${b64}';(async()=>{try{let s=Uint8Array.from(atob(b),c=>c.charCodeAt(0));s=new Blob([s]).stream().pipeThrough(new DecompressionStream('gzip'));document.open();document.write(new TextDecoder().decode(await new Response(s).arrayBuffer()));document.close()}catch(e){document.body.textContent='解凍エラー: '+e.message}})()<\/script>`}
+function msg(x){r.textContent=x}
+function makePackedHtml(b64){
+ return '<!doctype html><meta charset=utf-8><script>let b="'+b64+'";(async()=>{try{let x=Uint8Array.from(atob(b),c=>c.charCodeAt(0));let s=new Blob([x]).stream().pipeThrough(new DecompressionStream("gzip"));document.open();document.write(new TextDecoder().decode(await new Response(s).arrayBuffer()));document.close()}catch(e){document.body.textContent="解凍エラー: "+e.message}})()<\/script>'
+}
 </script>
 </body>
 </html>
