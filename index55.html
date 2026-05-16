@@ -216,7 +216,7 @@ function makePackedHtml(b64){
 }
 
 function makeRawHead(){
- return '<!doctype html><meta charset=utf-8><script>let o=__OFFSET__;async function f(){try{let a=await(await fetch("")).arrayBuffer();a=a.slice(o);let s=new Blob([a]).stream().pipeThrough(new DecompressionStream("gzip"));document.open();document.write(new TextDecoder("utf-8").decode(await new Response(s).arrayBuffer()));document.close()}catch(e){document.body.textContent="解凍エラー: "+e.message}}f()<\/script><noscript>';
+ return '<!doctype html><meta charset=utf-8><script>let o=__OFFSET__;async function f(){try{let a=await(await fetch("")).arrayBuffer();a=a.slice(o);let s=new Blob([a]).stream().pipeThrough(new DecompressionStream("gzip"));document.open();document.write(new TextDecoder("utf-8").decode(await new Response(s).arrayBuffer()));document.close()}catch(e){document.body.textContent="解凍エラー: "+e.message}}f()<\/script>';
 }
 
 function makeRawFile(template,gz){
