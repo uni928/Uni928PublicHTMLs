@@ -212,11 +212,11 @@ function msg(x){
 }
 
 function makePackedHtml(b64){
- return '<!doctype html><meta charset=utf-8><script>let b="'+b64+'";(async()=>{try{let x=Uint8Array.from(atob(b),c=>c.charCodeAt(0));let s=new Blob([x]).stream().pipeThrough(new DecompressionStream("gzip"));document.open();document.write(new TextDecoder("utf-8").decode(await new Response(s).arrayBuffer()));document.close()}catch(e){document.body.textContent="解凍エラー: "+e.message}})()<\\/script>';
+ return '<!doctype html><meta charset=utf-8><script>let b="'+b64+'";(async()=>{try{let x=Uint8Array.from(atob(b),c=>c.charCodeAt(0));let s=new Blob([x]).stream().pipeThrough(new DecompressionStream("gzip"));document.open();document.write(new TextDecoder("utf-8").decode(await new Response(s).arrayBuffer()));document.close()}catch(e){document.body.textContent="解凍エラー: "+e.message}})()<\/script>';
 }
 
 function makeRawHead(){
- return '<!doctype html><meta charset=utf-8><script>let o=__OFFSET__;async function f(){try{let a=await(await fetch("")).arrayBuffer();a=a.slice(o);let s=new Blob([a]).stream().pipeThrough(new DecompressionStream("gzip"));document.open();document.write(new TextDecoder("utf-8").decode(await new Response(s).arrayBuffer()));document.close()}catch(e){document.body.textContent="解凍エラー: "+e.message}}f()<\\/script><noscript>';
+ return '<!doctype html><meta charset=utf-8><script>let o=__OFFSET__;async function f(){try{let a=await(await fetch("")).arrayBuffer();a=a.slice(o);let s=new Blob([a]).stream().pipeThrough(new DecompressionStream("gzip"));document.open();document.write(new TextDecoder("utf-8").decode(await new Response(s).arrayBuffer()));document.close()}catch(e){document.body.textContent="解凍エラー: "+e.message}}f()<\/script><noscript>';
 }
 
 function makeRawFile(template,gz){
