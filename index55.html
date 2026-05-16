@@ -94,8 +94,8 @@ function removeSeqFromEnd(bytes,seq){
  return {bytes:a,pos:pos}
 }
 function makeNoscriptBinaryPacked(gz){
- const enc=new TextEncoder(),seq=enc.encode('</noscript>'),res=removeSeqFromEnd(gz,seq),idx='['+res.pos.join(',')+']';
- const tpl='<meta charset=utf-8><script type=module>q=new TextEncoder().encode("</noscript>");p='+idx+';a=new Uint8Array((await(await fetch("")).arrayBuffer()).slice(__));for(i=p.length;i--;){b=new Uint8Array(a.length+11);b.set(a.slice(0,p[i]));b.set(q,p[i]);b.set(a.slice(p[i]),p[i]+11);a=b}a=await new Response(new Blob([a]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();document.write(new TextDecoder().decode(a))<\/script><noscript>';
+ const enc=new TextEncoder(),seq=enc.encode('<¥/noscript>'),res=removeSeqFromEnd(gz,seq),idx='['+res.pos.join(',')+']';
+ const tpl='<meta charset=utf-8><script type=module>q=new TextEncoder().encode("<¥/noscript>");p='+idx+';a=new Uint8Array((await(await fetch("")).arrayBuffer()).slice(__));for(i=p.length;i--;){b=new Uint8Array(a.length+11);b.set(a.slice(0,p[i]));b.set(q,p[i]);b.set(a.slice(p[i]),p[i]+11);a=b}a=await new Response(new Blob([a]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();document.write(new TextDecoder().decode(a))<\/script><noscript>';
  const encTpl=new TextEncoder();
  let off=0,head='';
  for(let i=0;i<10;i++){
