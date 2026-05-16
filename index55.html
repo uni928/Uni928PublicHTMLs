@@ -1,0 +1,244 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>HTML圧縮</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:system-ui,sans-serif;background:#f3f4f6;color:#111827;display:flex;align-items:center;justify-content:center;padding:24px}
+.a{width:min(840px,100%);background:#fff;border-radius:18px;box-shadow:0 20px 60px #0002;padding:28px}
+h1{margin:0 0 10px;font-size:26px}
+.l{margin:0 0 20px;color:#4b5563;line-height:1.7}
+.m{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 18px}
+.m label,.o{border:2px solid #e5e7eb;border-radius:14px;padding:14px;background:#f9fafb}
+.m label{cursor:pointer}
+.m b,.o b{display:block;margin:0 0 4px}
+.m span,.o span{display:block;color:#6b7280;font-size:13px;line-height:1.5}
+.o{margin:0 0 10px}
+#d{border:3px dashed #9ca3af;border-radius:16px;background:#f9fafb;padding:42px 20px;text-align:center;cursor:pointer;transition:.2s}
+#d.v{border-color:#2563eb;background:#eff6ff}
+.t{font-size:20px;font-weight:700;margin-bottom:8px}
+.s{color:#6b7280;line-height:1.6}
+#f{display:none}
+#r{margin-top:18px;padding:14px 16px;border-radius:12px;background:#f3f4f6;color:#374151;line-height:1.6;white-space:pre-wrap}
+.n{margin-top:18px;padding:14px 16px;border-left:4px solid #f59e0b;background:#fffbeb;color:#78350f;border-radius:10px;line-height:1.7;font-size:14px}
+@media(max-width:640px){.m{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="a">
+<h1>HTML圧縮</h1>
+<p class="l">単一HTMLをドラッグ＆ドロップすると、選択したモードで処理し、自己解凍HTMLを作成します。</p>
+
+<div class="m">
+<label><input type="radio" name="mode" value="safe" checked> <b>安全版</b><span>HTMLの中身を変えず、そのままgzip圧縮します。</span></label>
+<label><input type="radio" name="mode" value="try"> <b>挑戦版</b><span>圧縮前に連続空白・コメントなどを安全寄りに削ります。</span></label>
+</div>
+
+<label class="o">
+<input id="raw" type="checkbox" checked>
+<b>単一HTMLに生バイナリ埋め込み</b>
+<span>Base64化せず、HTML末尾にgzip済みバイナリを直接連結します。</span>
+</label>
+
+<div id="d">
+<div class="t">ここに .html をドロップ</div>
+<div class="s">またはクリックして選択</div>
+<input id="f" type="file" accept=".html,.htm,text/html">
+</div>
+
+<div id="r">待機中です。</div>
+
+<div class="n">
+生バイナリ埋め込み版は、生成HTML自身をfetchして指定byte以降を取り出し、gzip解凍後にUTF-8としてHTMLへ戻します。
+</div>
+</main>
+
+<script>
+const d=document.getElementById('d');
+const f=document.getElementById('f');
+const r=document.getElementById('r');
+const raw=document.getElementById('raw');
+
+d.onclick=()=>f.click();
+
+f.onchange=()=>{
+ if(f.files[0])run(f.files[0]);
+ f.value='';
+};
+
+for(const e of ['dragenter','dragover']){
+ d.addEventListener(e,x=>{
+  x.preventDefault();
+  d.classList.add('v');
+ });
+}
+
+for(const e of ['dragleave','drop']){
+ d.addEventListener(e,x=>{
+  x.preventDefault();
+  d.classList.remove('v');
+ });
+}
+
+d.ondrop=e=>{
+ const x=e.dataTransfer.files[0];
+ if(x)run(x);
+};
+
+async function run(file){
+ if(!/\.html?$/i.test(file.name)){
+  msg('HTMLファイルを指定してください。');
+  return;
+ }
+
+ try{
+  if(!window.CompressionStream||!window.DecompressionStream){
+   throw Error('このブラウザは圧縮・解凍APIに対応していません。');
+  }
+
+  const mode=document.querySelector('input[name="mode"]:checked').value;
+  const base=file.name.replace(/\.html?$/i,'');
+  const src=await file.text();
+  const body=mode==='try'?tryMinify(src):src;
+
+  const srcBytes=new TextEncoder().encode(src);
+  const bodyBytes=new TextEncoder().encode(body);
+
+  msg('圧縮中です...');
+
+  const gz=await gzip(bodyBytes);
+
+  if(raw.checked){
+   const name=base+'.'+mode+'.raw-packed.html';
+   const head=makeRawHead();
+   const out=makeRawFile(head,gz);
+   downloadBytes(name,out,'text/html');
+
+   msg(
+    '完了しました。\n'+
+    '形式: 生バイナリ埋め込み版\n'+
+    'モード: '+(mode==='safe'?'安全版':'挑戦版')+'\n'+
+    '元サイズ: '+fmt(srcBytes.length)+'\n'+
+    '圧縮前データ: '+fmt(bodyBytes.length)+'\n'+
+    'gzip: '+fmt(gz.length)+'\n'+
+    '出力HTML: '+fmt(out.length)
+   );
+  }else{
+   const b64=bytesToBase64(gz);
+   const out=makePackedHtml(b64);
+   const name=base+'.'+mode+'.packed.html';
+
+   downloadText(name,out);
+
+   msg(
+    '完了しました。\n'+
+    '形式: Base64版\n'+
+    'モード: '+(mode==='safe'?'安全版':'挑戦版')+'\n'+
+    '元サイズ: '+fmt(srcBytes.length)+'\n'+
+    '圧縮前データ: '+fmt(bodyBytes.length)+'\n'+
+    'gzip: '+fmt(gz.length)
+   );
+  }
+
+ }catch(e){
+  msg('エラー: '+e.message);
+ }
+}
+
+function tryMinify(html){
+ const blocks=[];
+
+ html=html.replace(
+  /<(script|style|textarea|pre)\b[^>]*>[\s\S]*?<\/\1>/gi,
+  m=>'@@BLOCK'+(blocks.push(m)-1)+'@@'
+ );
+
+ html=html.replace(/<!--(?!\[if)[\s\S]*?-->/g,'');
+ html=html.replace(/[ \t\r\n\f]{2,}/g,' ');
+ html=html.replace(/> </g,'><');
+
+ html=html.replace(/@@BLOCK(\d+)@@/g,(_,i)=>blocks[i]);
+
+ return html.trim();
+}
+
+async function gzip(bytes){
+ const stream=new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'));
+ return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+function bytesToBase64(bytes){
+ let s='';
+ const n=32768;
+
+ for(let i=0;i<bytes.length;i+=n){
+  s+=String.fromCharCode.apply(null,bytes.subarray(i,i+n));
+ }
+
+ return btoa(s);
+}
+
+function downloadText(name,text){
+ downloadBytes(name,new TextEncoder().encode(text),'text/html');
+}
+
+function downloadBytes(name,bytes,type){
+ const url=URL.createObjectURL(new Blob([bytes],{type}));
+ const a=document.createElement('a');
+
+ a.href=url;
+ a.download=name;
+
+ document.body.appendChild(a);
+ a.click();
+ a.remove();
+
+ URL.revokeObjectURL(url);
+}
+
+function fmt(b){
+ return b<1024
+  ?b+' B'
+  :b<1048576
+   ?(b/1024).toFixed(1)+' KB'
+   :(b/1048576).toFixed(1)+' MB';
+}
+
+function msg(x){
+ r.textContent=x;
+}
+
+function makePackedHtml(b64){
+ return '<!doctype html><meta charset=utf-8><script>let b="'+b64+'";(async()=>{try{let x=Uint8Array.from(atob(b),c=>c.charCodeAt(0));let s=new Blob([x]).stream().pipeThrough(new DecompressionStream("gzip"));document.open();document.write(new TextDecoder("utf-8").decode(await new Response(s).arrayBuffer()));document.close()}catch(e){document.body.textContent="解凍エラー: "+e.message}})()<\\/script>';
+}
+
+function makeRawHead(){
+ return '<!doctype html><meta charset=utf-8><script>let o=__OFFSET__;async function f(){try{let a=await(await fetch("")).arrayBuffer();a=a.slice(o);let s=new Blob([a]).stream().pipeThrough(new DecompressionStream("gzip"));document.open();document.write(new TextDecoder("utf-8").decode(await new Response(s).arrayBuffer()));document.close()}catch(e){document.body.textContent="解凍エラー: "+e.message}}f()<\\/script><noscript>';
+}
+
+function makeRawFile(template,gz){
+ const enc=new TextEncoder();
+ let off=0;
+ let head='';
+
+ for(let i=0;i<10;i++){
+  head=template.replace('__OFFSET__',String(off));
+  const n=enc.encode(head).length;
+  if(n===off)break;
+  off=n;
+ }
+
+ const h=enc.encode(template.replace('__OFFSET__',String(off)));
+
+ const out=new Uint8Array(h.length+gz.length);
+ out.set(h,0);
+ out.set(gz,h.length);
+
+ return out;
+}
+</script>
+</body>
+</html>
