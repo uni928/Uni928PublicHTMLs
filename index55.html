@@ -14,13 +14,13 @@
 <h1>HTML圧縮</h1>
 <p class="l">単一HTMLをドラッグ＆ドロップすると、選択したモードで処理し、自己解凍HTMLを作成します。</p>
 <div class="m">
-<label><input type="radio" name="mode" value="safe" checked> <b>安全版</b><span>HTMLの中身を変えず、そのままgzip圧縮します。</span></label>
-<label><input type="radio" name="mode" value="try"> <b>挑戦版</b><span>圧縮前に連続空白・コメントなどを安全寄りに削ります。</span></label>
+<label><input type="radio" name="mode" value="safe"> <b>安全版</b><span>HTMLの中身を変えず、そのままgzip圧縮します。</span></label>
+<label><input type="radio" name="mode" value="try" checked> <b>挑戦版</b><span>圧縮前に連続空白・コメントなどを安全寄りに削ります。</span></label>
 </div>
-<label class="o"><input id="raw" type="checkbox" checked><b>単一HTMLに生バイナリ埋め込み</b><span>記事方式に近く、自己HTMLをfetchして末尾のgzipバイナリをArrayBufferで読みます。</span></label>
+<label class="o"><input id="raw" type="checkbox" checked><b>単一HTMLに生バイナリ埋め込み</b><span>Base64化せず、HTML先頭の固定offset以降にgzip済みバイナリを直接連結します。</span></label>
 <div id="d"><div class="t">ここに .html をドロップ</div><div class="s">またはクリックして選択</div><input id="f" type="file" accept=".html,.htm,text/html"></div>
 <div id="r">待機中です。</div>
-<div class="n">生バイナリ版は、HTMLヘッダー直後から末尾までを圧縮済みバイナリとして読みます。復号後はUTF-8としてHTMLへ戻します。</div>
+<div class="n">出力される自己解凍HTMLは、固定offset方式でgzipバイナリを読みます。復号後はUTF-8としてHTMLへ戻します。ツール本体の表示は維持し、出力ファイル側だけを短くしています。</div>
 </main>
 <script>
 const d=document.getElementById('d'),f=document.getElementById('f'),r=document.getElementById('r'),raw=document.getElementById('raw');
@@ -37,11 +37,11 @@ async function run(file){
   msg('圧縮中です...');
   const gz=await gzip(bodyBytes);
   if(raw.checked){
-   const name=base+'.'+mode+'.raw-sfx.html',out=makeArticleStyleRawFile(gz);
+   const name=base+'.'+mode+'.sfx.html',out=makeRawFixedOffset(gz);
    downloadBytes(name,out,'text/html');
-   msg('完了しました。\n形式: 記事方式 生バイナリ埋め込み版\nモード: '+label(mode)+'\n元サイズ: '+fmt(srcBytes.length)+'\n圧縮前データ: '+fmt(bodyBytes.length)+'\ngzip: '+fmt(gz.length)+'\n出力HTML: '+fmt(out.length)+'\n出力: '+name);
+   msg('完了しました。\n形式: 固定offset 生バイナリ埋め込み版\nモード: '+label(mode)+'\n元サイズ: '+fmt(srcBytes.length)+'\n圧縮前データ: '+fmt(bodyBytes.length)+'\ngzip: '+fmt(gz.length)+'\n出力HTML: '+fmt(out.length)+'\n出力: '+name);
   }else{
-   const b64=bytesToBase64(gz),out=makePackedHtml(b64),name=base+'.'+mode+'.packed.html';
+   const b64=bytesToBase64(gz),out=makeBase64Packed(b64),name=base+'.'+mode+'.packed.html';
    downloadText(name,out);
    msg('完了しました。\n形式: Base64版\nモード: '+label(mode)+'\n元サイズ: '+fmt(srcBytes.length)+'\n圧縮前データ: '+fmt(bodyBytes.length)+'\ngzip: '+fmt(gz.length)+'\n出力HTML: '+fmt(new TextEncoder().encode(out).length)+'\n出力: '+name);
   }
@@ -69,21 +69,22 @@ function downloadBytes(name,bytes,type){
 }
 function fmt(b){return b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(1)+' MB'}
 function msg(x){r.textContent=x}
-function makePackedHtml(b64){
- return '<!doctype html><meta charset=utf-8><script>b="'+b64+'";onload=async()=>{try{x=Uint8Array.from(atob(b),c=>c.charCodeAt(0));s=new Blob([x]).stream().pipeThrough(new DecompressionStream("gzip"));document.open();document.write(new TextDecoder("utf-8").decode(await new Response(s).arrayBuffer()));document.close()}catch(e){document.body.textContent="解凍エラー:"+e.message}}<\/script>'
+function makeBase64Packed(b64){
+ return '<!doctype html><meta charset=utf-8><script>b="'+b64+'";onload=async()=>{try{x=Uint8Array.from(atob(b),c=>c.charCodeAt(0));s=new Blob([x]).stream().pipeThrough(new DecompressionStream("gzip"));document.open();document.write(new TextDecoder().decode(await new Response(s).arrayBuffer()));document.close()}catch(e){document.body.textContent="解凍エラー:"+e.message}}<\/script>'
 }
-function makeArticleStyleRawFile(gz){
- const tpl='<script>let o=__OFFSET__,a=await(await fetch("")).arrayBuffer();a=a.slice(o);a=await new Response(new Blob([a]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();document.open();document.write(new TextDecoder("utf-8").decode(a));document.close()<\/script><noscript>';
+function makeRawFixedOffset(gz){
+ const tpl='<meta charset=utf-8><script type=module>a=await(await fetch("")).arrayBuffer();a=a.slice(__);a=await new Response(new Blob([a]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();document.write(new TextDecoder().decode(a))<\/script><noscript>';
  const enc=new TextEncoder();
- let o=0,h='';
+ let off=0,head='';
  for(let i=0;i<10;i++){
-  h=tpl.replace('__OFFSET__',o);
-  const n=enc.encode(h).length;
-  if(n===o)break;
-  o=n;
+  head=tpl.replace('__',off);
+  const n=enc.encode(head).length;
+  if(n===off)break;
+  off=n
  }
- const head=enc.encode(tpl.replace('__OFFSET__',o)),out=new Uint8Array(head.length+gz.length);
- out.set(head);out.set(gz,head.length);
+ const h=enc.encode(tpl.replace('__',off)),out=new Uint8Array(h.length+gz.length);
+ out.set(h);
+ out.set(gz,h.length);
  return out
 }
 </script>
