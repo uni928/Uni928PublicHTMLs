@@ -13,101 +13,292 @@
 <main class="a">
 <h1>HTML圧縮</h1>
 <p class="l">単一HTMLをドラッグ＆ドロップすると、選択したモードで処理し、自己解凍HTMLを作成します。</p>
+
 <div class="m">
-<label><input type="radio" name="mode" value="safe"> <b>安全版</b><span>HTMLの中身を変えず、そのままgzip圧縮します。</span></label>
-<label><input type="radio" name="mode" value="try" checked> <b>挑戦版</b><span>圧縮前に連続空白・コメントなどを安全寄りに削ります。</span></label>
+<label><input type="radio" name="mode" value="safe"><b>安全版</b><span>HTMLの中身を変えず、そのままgzip圧縮します。</span></label>
+<label><input type="radio" name="mode" value="try" checked><b>挑戦版</b><span>圧縮前に連続空白・コメントなどを安全寄りに削ります。</span></label>
 </div>
-<label class="o"><input id="raw" type="checkbox" checked><b>単一HTMLに生バイナリ埋め込み</b><span><code>&lt;noscript&gt;</code> 直後にgzipバイナリを連結します。バイナリ内の <code>&lt;/noscript</code> は削除位置を記録して復元します。</span></label>
-<div id="d"><div class="t">ここに .html をドロップ</div><div class="s">またはクリックして選択</div><input id="f" type="file" accept=".html,.htm,text/html"></div>
+
+<label class="o">
+<input id="raw" type="checkbox" checked>
+<b>単一HTMLに生バイナリ埋め込み</b>
+<span>&lt;noscript&gt; 直後にgzipバイナリを連結します。バイナリ内の &lt;/noscript は削除位置を記録して復元します。</span>
+</label>
+
+<div id="d">
+<div class="t">ここに .html をドロップ</div>
+<div class="s">またはクリックして選択</div>
+<input id="f" type="file" accept=".html,.htm,text/html">
+</div>
+
 <div id="r">待機中です。</div>
-<div class="n">生バイナリ版にチェックが入っている場合、生バイナリ版とBase64版を両方生成して、短い方を自動採用します。</div>
+
+<div class="n">
+生バイナリ版にチェックが入っている場合、生バイナリ版とBase64版を両方生成して、短い方を自動採用します。
+</div>
 </main>
+
 <script>
-const d=document.getElementById('d'),f=document.getElementById('f'),r=document.getElementById('r'),raw=document.getElementById('raw');
+const d=document.getElementById('d'),
+f=document.getElementById('f'),
+r=document.getElementById('r'),
+raw=document.getElementById('raw');
+
 d.onclick=()=>f.click();
-f.onchange=()=>{if(f.files[0])run(f.files[0]);f.value=''};
-for(const e of['dragenter','dragover'])d.addEventListener(e,x=>{x.preventDefault();d.classList.add('v')});
-for(const e of['dragleave','drop'])d.addEventListener(e,x=>{x.preventDefault();d.classList.remove('v')});
-d.ondrop=e=>{const x=e.dataTransfer.files[0];if(x)run(x)};
+
+f.onchange=()=>{
+ if(f.files[0])run(f.files[0]);
+ f.value='';
+};
+
+for(const e of['dragenter','dragover'])
+ d.addEventListener(e,x=>{
+  x.preventDefault();
+  d.classList.add('v');
+ });
+
+for(const e of['dragleave','drop'])
+ d.addEventListener(e,x=>{
+  x.preventDefault();
+  d.classList.remove('v');
+ });
+
+d.ondrop=e=>{
+ const x=e.dataTransfer.files[0];
+ if(x)run(x);
+};
+
 async function run(file){
- if(!/\.html?$/i.test(file.name)){msg('HTMLファイルを指定してください。');return}
+
+ if(!/\.html?$/i.test(file.name)){
+  msg('HTMLファイルを指定してください。');
+  return;
+ }
+
  try{
-  if(!window.CompressionStream||!window.DecompressionStream)throw Error('このブラウザは圧縮・解凍APIに対応していません。');
-  const mode=document.querySelector('input[name="mode"]:checked').value,base=file.name.replace(/\.html?$/i,''),src=await file.text(),body=mode==='try'?tryMinify(src):src,enc=new TextEncoder(),srcBytes=enc.encode(src),bodyBytes=enc.encode(body);
+
+  if(!window.CompressionStream||!window.DecompressionStream)
+   throw Error('このブラウザは圧縮・解凍APIに対応していません。');
+
+  const mode=document.querySelector('input[name="mode"]:checked').value;
+  const base=file.name.replace(/\.html?$/i,'');
+  const src=await file.text();
+
+  const body=mode==='try'?tryMinify(src):src;
+
+  const enc=new TextEncoder();
+  const srcBytes=enc.encode(src);
+  const bodyBytes=enc.encode(body);
+
   msg('圧縮中です...');
-  const gz=await gzip(bodyBytes),b64=makeBase64Packed(bytesToBase64(gz));
-  let out=b64,kind='Base64版',extra='',name=base+'.'+mode+'.packed.html';
+
+  const gz=await gzip(bodyBytes);
+
+  const b64=makeBase64Packed(bytesToBase64(gz));
+
+  let out=b64;
+  let kind='Base64版';
+  let extra='';
+  let name=base+'.'+mode+'.packed.html';
+
   if(raw.checked){
+
    const bin=makeNoscriptBinaryPacked(gz);
+
    if(bin.length<b64.length){
-    out=bin;kind='noscript生バイナリ版';name=base+'.'+mode+'.sfx.html';extra='\n削除した </noscript: '+bin.removed+'箇所';
+    out=bin;
+    kind='noscript生バイナリ版';
+    name=base+'.'+mode+'.sfx.html';
+    extra='\n削除した </noscript : '+bin.removed+' 箇所';
    }else{
     extra='\n生バイナリ版よりBase64版の方が短いため採用';
    }
   }
+
   downloadBytes(name,out,'text/html');
-  msg('完了しました。\n採用形式: '+kind+'\nモード: '+label(mode)+'\n元サイズ: '+fmt(srcBytes.length)+'\n圧縮前データ: '+fmt(bodyBytes.length)+'\ngzip: '+fmt(gz.length)+'\n出力HTML: '+fmt(out.length)+extra+'\n出力: '+name);
- }catch(e){msg('エラー: '+e.message)}
+
+  msg(
+   '完了しました。\n'+
+   '採用形式: '+kind+'\n'+
+   'モード: '+label(mode)+'\n'+
+   '元サイズ: '+fmt(srcBytes.length)+'\n'+
+   '圧縮前データ: '+fmt(bodyBytes.length)+'\n'+
+   'gzip: '+fmt(gz.length)+'\n'+
+   '出力HTML: '+fmt(out.length)+
+   extra+'\n'+
+   '出力: '+name
+  );
+
+ }catch(e){
+  msg('エラー: '+e.message);
+ }
 }
-function label(m){return m==='safe'?'安全版':'挑戦版'}
+
+function label(m){
+ return m==='safe'?'安全版':'挑戦版';
+}
+
 function tryMinify(html){
+
  const blocks=[];
- html=html.replace(/<(script|style|textarea|pre)\b[^>]*>[\s\S]*?<\/\1>/gi,m=>'@@BLOCK'+(blocks.push(m)-1)+'@@');
+
+ html=html.replace(
+  /<(script|style|textarea|pre)\b[^>]*>[\s\S]*?<\/\1>/gi,
+  m=>'@@BLOCK'+(blocks.push(m)-1)+'@@'
+ );
+
  html=html.replace(/<!--(?!\[if)[\s\S]*?-->/g,'');
  html=html.replace(/[ \t\r\n\f]{2,}/g,' ');
  html=html.replace(/> </g,'><');
+
  html=html.replace(/@@BLOCK(\d+)@@/g,(_,i)=>blocks[i]);
- return html.trim()
+
+ return html.trim();
 }
+
 async function gzip(bytes){
- const stream=new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'));
- return new Uint8Array(await new Response(stream).arrayBuffer())
+
+ const stream=new Blob([bytes])
+  .stream()
+  .pipeThrough(new CompressionStream('gzip'));
+
+ return new Uint8Array(
+  await new Response(stream).arrayBuffer()
+ );
 }
-function bytesToBase64(bytes){let s='',n=32768;for(let i=0;i<bytes.length;i+=n)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+n));return btoa(s)}
+
+function bytesToBase64(bytes){
+
+ let s='';
+ const n=32768;
+
+ for(let i=0;i<bytes.length;i+=n)
+  s+=String.fromCharCode.apply(null,bytes.subarray(i,i+n));
+
+ return btoa(s);
+}
+
 function downloadBytes(name,bytes,type){
- const url=URL.createObjectURL(new Blob([bytes],{type:type})),a=document.createElement('a');
- a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)
+
+ const url=URL.createObjectURL(
+  new Blob([bytes],{type:type})
+ );
+
+ const a=document.createElement('a');
+
+ a.href=url;
+ a.download=name;
+
+ document.body.appendChild(a);
+ a.click();
+ a.remove();
+
+ URL.revokeObjectURL(url);
 }
-function fmt(b){return b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(1)+' MB'}
-function msg(x){r.textContent=x}
+
+function fmt(b){
+
+ return b<1024
+  ?b+' B'
+  :b<1048576
+   ?(b/1024).toFixed(1)+' KB'
+   :(b/1048576).toFixed(1)+' MB';
+}
+
+function msg(x){
+ r.textContent=x;
+}
+
 function makeBase64Packed(b64){
- return new TextEncoder().encode('<!doctype html><meta charset=utf-8><script>b="'+b64+'";onload=async()=>{try{x=Uint8Array.from(atob(b),c=>c.charCodeAt(0));s=new Blob([x]).stream().pipeThrough(new DecompressionStream("gzip"));document.open();document.write(new TextDecoder().decode(await new Response(s).arrayBuffer()));document.close()}catch(e){document.body.textContent="解凍エラー:"+e.message}}<\/script>')
+
+ return new TextEncoder().encode(
+'<!doctype html><meta charset=utf-8><script>b="'+b64+'";onload=async()=>{try{x=Uint8Array.from(atob(b),c=>c.charCodeAt(0));s=new Blob([x]).stream().pipeThrough(new DecompressionStream("gzip"));document.open();document.write(new TextDecoder().decode(await new Response(s).arrayBuffer()));document.close()}catch(e){document.body.textContent="解凍エラー:"+e.message}}<\/script>'
+ );
 }
+
 function lastIndexOfBytes(a,b){
- outer:for(let i=a.length-b.length;i>=0;i--){
-  for(let j=0;j<b.length;j++)if(a[i+j]!==b[j])continue outer;
-  return i
+
+ outer:
+ for(let i=a.length-b.length;i>=0;i--){
+
+  for(let j=0;j<b.length;j++)
+   if(a[i+j]!==b[j])
+    continue outer;
+
+  return i;
  }
- return -1
+
+ return -1;
 }
+
 function removeSeqFromEnd(bytes,seq){
- let a=new Uint8Array(bytes),pos=[];
+
+ let a=new Uint8Array(bytes);
+ const pos=[];
+
  for(;;){
+
   const p=lastIndexOfBytes(a,seq);
+
   if(p<0)break;
+
   pos.push(p);
+
   const n=new Uint8Array(a.length-seq.length);
+
   n.set(a.subarray(0,p),0);
   n.set(a.subarray(p+seq.length),p);
-  a=n
+
+  a=n;
  }
- return {bytes:a,pos:pos}
+
+ return {
+  bytes:a,
+  pos:pos
+ };
 }
+
 function makeNoscriptBinaryPacked(gz){
- const enc=new TextEncoder(),seq=enc.encode('</noscript'),res=removeSeqFromEnd(gz,seq),idx='['+res.pos.join(',')+']',L=seq.length;
- const tpl='<meta charset=utf-8><script type=module>q=new TextEncoder().encode("</noscript");p='+idx+';a=new Uint8Array((await(await fetch("")).arrayBuffer()).slice(__));for(i=p.length;i--;){b=new Uint8Array(a.length+10);b.set(a.slice(0,p[i]));b.set(q,p[i]);b.set(a.slice(p[i]),p[i]+10);a=b}a=await new Response(new Blob([a]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();document.write(new TextDecoder().decode(a))<\/script><noscript>';
+
+ const enc=new TextEncoder();
+
+ const seq=enc.encode('</noscript');
+
+ const res=removeSeqFromEnd(gz,seq);
+
+ res.pos.sort((a,b)=>a-b);
+
+ const idx='['+res.pos.join(',')+']';
+
+ const tpl=
+'<meta charset=utf-8><script type=module>q=new TextEncoder().encode("</noscript");p='+idx+';a=new Uint8Array((await(await fetch("")).arrayBuffer()).slice(__));for(i=p.length;i--;){b=new Uint8Array(a.length+10);b.set(a.slice(0,p[i]),0);b.set(q,p[i]);b.set(a.slice(p[i]),p[i]+10);a=b}a=await new Response(new Blob([a]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();document.write(new TextDecoder().decode(a))<\/script><noscript>';
+
  const encTpl=new TextEncoder();
- let off=0,head='';
+
+ let off=0;
+ let head='';
+
  for(let i=0;i<10;i++){
+
   head=tpl.replace('__',off);
+
   const n=encTpl.encode(head).length;
+
   if(n===off)break;
-  off=n
+
+  off=n;
  }
- const h=encTpl.encode(tpl.replace('__',off)),out=new Uint8Array(h.length+res.bytes.length);
- out.set(h);out.set(res.bytes,h.length);
+
+ const h=encTpl.encode(tpl.replace('__',off));
+
+ const out=new Uint8Array(h.length+res.bytes.length);
+
+ out.set(h,0);
+ out.set(res.bytes,h.length);
+
  out.removed=res.pos.length;
- return out
+
+ return out;
 }
 </script>
 </body>
