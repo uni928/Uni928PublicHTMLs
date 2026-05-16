@@ -73,7 +73,7 @@ function makeBase64Packed(b64){
  return '<!doctype html><meta charset=utf-8><script>b="'+b64+'";onload=async()=>{try{x=Uint8Array.from(atob(b),c=>c.charCodeAt(0));s=new Blob([x]).stream().pipeThrough(new DecompressionStream("gzip"));document.open();document.write(new TextDecoder().decode(await new Response(s).arrayBuffer()));document.close()}catch(e){document.body.textContent="解凍エラー:"+e.message}}<\/script>'
 }
 function makeRawFixedOffset(gz){
- const tpl='<meta charset=utf-8><script type=module>a=await(await fetch("")).arrayBuffer();a=a.slice(__);a=await new Response(new Blob([a]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();document.write(new TextDecoder().decode(a))<\/script><noscript>';
+ const tpl='<meta charset=11><script type=module>a=await(await fetch("")).arrayBuffer();a=a.slice(__);a=await new Response(new Blob([a]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();document.write(new TextDecoder().decode(a))<\/script><noscript>';
  const enc=new TextEncoder();
  let off=0,head='';
  for(let i=0;i<10;i++){
