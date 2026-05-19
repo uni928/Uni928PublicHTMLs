@@ -81,6 +81,7 @@ button:disabled {
 
 .sidebar {
   display: flex;
+  height: 100vh;
   flex-direction: column;
 }
 
@@ -385,7 +386,7 @@ h2 {
 
 .editor {
   width: 100%;
-  height: 5000;
+  height: 9990;
   resize: none;
   outline: none;
   color: var(--code-ink);
@@ -413,7 +414,7 @@ h2 {
 
 .ai-panel {
   display: flex;
-  height: 5000;
+  height: 9990;
   flex-direction: column;
   border-left: 1px solid var(--line);
   border-right: 0;
