@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Folder Editor</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="appShell" class="app-shell ai-closed">
+      <aside id="sidebar" class="sidebar">
+        <header class="sidebar-header">
+          <div>
+            <h1>AI Folder Editor</h1>
+            <p>Alt + G でChatGPTパネル</p>
+          </div>
+          <div class="sidebar-actions">
+            <button id="openFolderButton" class="primary-button" type="button">フォルダを開く</button>
+            <button id="closeSidebarButton" class="icon-button" type="button" aria-label="ファイルパネルを閉じる">×</button>
+          </div>
+        </header>
+        <div id="folderMeta" class="folder-meta">フォルダ未選択</div>
+        <nav id="fileTree" class="file-tree" aria-label="ファイルツリー"></nav>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div class="file-heading">
+            <span id="currentPath" class="current-path">ファイルを選択してください</span>
+            <span id="dirtyBadge" class="dirty-badge" hidden>未保存</span>
+          </div>
+          <div class="topbar-actions">
+            <button id="toggleSidebarButton" class="ghost-button" type="button">ファイル</button>
+            <button id="toggleAiButton" class="ghost-button" type="button">AIパネル</button>
+            <button id="saveButton" class="primary-button" type="button" disabled>保存</button>
+          </div>
+        </header>
+
+        <section class="editor-surface" aria-label="テキストエディタ">
+          <pre id="lineNumbers" class="line-numbers" aria-hidden="true">1</pre>
+          <textarea
+            id="editor"
+            class="editor"
+            spellcheck="false"
+            autocomplete="off"
+            autocapitalize="off"
+            disabled
+            placeholder="左のツリーからテキストファイルを開きます"
+          ></textarea>
+        </section>
+
+        <section id="centerDiffPanel" class="center-diff-panel" aria-label="差分プレビュー" hidden></section>
+
+        <footer id="statusBar" class="status-bar">準備完了</footer>
+      </main>
+
+      <aside id="aiPanel" class="ai-panel" hidden>
+        <header class="panel-header">
+          <div>
+            <h2>ChatGPT反映パネル</h2>
+            <p>依頼を書いてコピー、ChatGPTの結果を貼り付けて反映します。</p>
+          </div>
+          <button id="closeAiButton" class="icon-button" type="button" aria-label="AIパネルを閉じる">×</button>
+        </header>
+
+        <section class="panel-section">
+          <label for="promptInput">依頼プロンプト</label>
+          <textarea
+            id="promptInput"
+            class="prompt-input"
+            placeholder="例: このクラスの責務を整理して、読みやすくリファクタしてください。"
+          ></textarea>
+          <div class="button-row">
+            <button id="copyPromptButton" class="primary-button wide" type="button">
+              プロンプトをコピーしてChatGPTを開く
+            </button>
+          </div>
+          <div id="promptMeta" class="prompt-meta">現在のファイルと、コード中で参照されている同名ファイルを自動で含めます。</div>
+        </section>
+
+        <section class="panel-section">
+          <label for="resultInput">ChatGPTの結果</label>
+          <textarea
+            id="resultInput"
+            class="result-input"
+            placeholder="ChatGPTのパッチ結果をここに貼り付けます。"
+          ></textarea>
+          <div class="button-row">
+            <button id="applyResultButton" class="primary-button wide" type="button">反映する</button>
+          </div>
+        </section>
+
+        <section id="diffPanel" class="diff-panel" aria-live="polite"></section>
+      </aside>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
