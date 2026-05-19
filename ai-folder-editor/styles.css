@@ -51,7 +51,7 @@ button:disabled {
 .app-shell {
   display: grid;
   grid-template-columns: minmax(230px, 280px) minmax(0, 1fr) minmax(360px, 420px);
-  height: auto;
+  
   overflow: hidden;
 }
 
@@ -358,7 +358,7 @@ h2 {
 
 .center-diff-panel .diff-rows {
   max-height: none;
-  height: auto;
+  
 }
 
 .line-numbers,
@@ -385,7 +385,7 @@ h2 {
 
 .editor {
   width: 100%;
-  height: auto;
+  
   resize: none;
   outline: none;
   color: var(--code-ink);
