@@ -29,7 +29,6 @@
 body {
   margin: 0;
   min-height: 100vh;
-  height: 8000;
   color: var(--ink);
   background: var(--bg);
 }
@@ -305,6 +304,58 @@ h2 {
   max-width: 1160px;
 }
 
+.inline-diff-editor {
+  position: relative;
+  margin-inline: auto;
+  width: min(100%, 1280px);
+}
+
+.inline-editor-preview {
+  margin: 0;
+  padding: 24px;
+  overflow: auto;
+  border-radius: 10px;
+  border: 1px solid #25282d;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  font:
+    14px/1.55 "Cascadia Mono",
+    Consolas,
+    "Courier New",
+    monospace;
+  white-space: pre;
+}
+
+.inline-diff-section {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.inline-diff-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfaf7;
+}
+
+.inline-diff-rows {
+  display: grid;
+  max-height: 420px;
+  overflow: auto;
+  font:
+    12px/1.5 "Cascadia Mono",
+    Consolas,
+    "Courier New",
+    monospace;
+}
+
 .center-diff-panel .diff-rows {
   max-height: none;
 }
@@ -436,8 +487,8 @@ label {
 }
 
 .diff-panel {
-  flex: 1 0 260px;
-  min-height: 220px;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
   padding: 12px 12px 20px;
 }

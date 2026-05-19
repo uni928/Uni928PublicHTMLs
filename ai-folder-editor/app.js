@@ -948,7 +948,9 @@ function replacePatchText(source, oldText, newText, occurrence, path, editIndex)
 
   if (occurrence === undefined || occurrence === null) {
     if (positions.length > 1) {
-      throw new Error(`${path} のedits[${editIndex}].oldが${positions.length}回一致します。oldに前後の行を含めて一意にしてください。`);
+      throw new Error(
+        `${path} のedits[${editIndex}].oldが${positions.length}回一致します。再度「プロンプトをコピーしてChatGPTを開く」を実行して、一意なOldを含むパッチを生成してください。`,
+      );
     }
     position = positions[0];
   } else {
@@ -1038,6 +1040,83 @@ function renderCenterDiffPanel(changes) {
   const status = document.createElement("div");
   status.className = "diff-stats";
   status.textContent = `${changes.length} ファイル`;
+
+  const close = document.createElement("button");
+  close.className = "ghost-button";
+  close.type = "button";
+  close.textContent = "閉じる";
+  close.addEventListener("click", renderDiffEmpty);
+
+  toolbar.append(title, status, close);
+  dom.centerDiffPanel.append(toolbar);
+
+  const editorMeta = state.activePath ? state.files.get(state.activePath) : null;
+  const editorContent = state.activePath ? dom.editor.value : "";
+
+  const editorWrapper = document.createElement("div");
+  editorWrapper.className = "inline-diff-editor";
+
+  const editorLines = splitLines(editorContent);
+
+  for (const change of changes) {
+    if (change.path !== state.activePath) continue;
+
+    const diff = buildLineDiff(change.oldContent, change.content);
+
+    const section = document.createElement("section");
+    section.className = "inline-diff-section";
+
+    const header = document.createElement("div");
+    header.className = "inline-diff-header";
+
+    const path = document.createElement("div");
+    path.className = "diff-path";
+    path.textContent = change.path;
+
+    const actions = document.createElement("div");
+    actions.className = "diff-actions";
+
+    const accept = document.createElement("button");
+    accept.className = "choice-button accept";
+    accept.type = "button";
+    accept.textContent = "反映する";
+    accept.addEventListener("click", async () => {
+      await acceptChange(change);
+      renderDiffPanel(changes);
+    });
+
+    const reject = document.createElement("button");
+    reject.className = "choice-button reject";
+    reject.type = "button";
+    reject.textContent = "反映しない";
+    reject.addEventListener("click", () => {
+      change.status = "skipped";
+      renderDiffPanel(changes);
+    });
+
+    actions.append(accept, reject);
+    header.append(path, actions);
+
+    const rows = document.createElement("div");
+    rows.className = "inline-diff-rows";
+
+    for (const row of compactRows(diff.rows)) {
+      rows.append(renderDiffRow(row));
+    }
+
+    section.append(header, rows);
+    editorWrapper.append(section);
+  }
+
+  if (editorMeta) {
+    const editorPreview = document.createElement("pre");
+    editorPreview.className = "inline-editor-preview";
+    editorPreview.textContent = editorLines.join("\n");
+    editorWrapper.prepend(editorPreview);
+  }
+
+  dom.centerDiffPanel.append(editorWrapper);
+  return;
 
   toolbar.append(title, status);
   dom.centerDiffPanel.append(toolbar);
