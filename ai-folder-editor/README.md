@@ -5,7 +5,7 @@
 ## 起動
 
 ```powershell
-cd C:\CodexFolder\ai-folder-editor
+cd C:\Folder\ai-folder-editor
 node server.mjs
 ```
 
