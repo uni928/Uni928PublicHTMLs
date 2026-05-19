@@ -81,7 +81,7 @@ button:disabled {
 
 .sidebar {
   display: flex;
-  height: 100vh;
+  height: 9990;
   flex-direction: column;
 }
 
