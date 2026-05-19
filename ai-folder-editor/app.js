@@ -1,4 +1,4 @@
-const MAX_DIRECT_PROMPT_LENGTH = 9961;
+const MAX_DIRECT_PROMPT_LENGTH = 9921;
 const MAX_DIFF_CELLS = 220000;
 const MAX_DIFF_TOTAL_LINES = 3000;
 const IGNORED_DIRECTORIES = new Set([
@@ -38,7 +38,6 @@ const TEXT_EXTENSIONS = new Set([
   ".csv",
   ".cxx",
   ".dart",
-  ".env",
   ".fs",
   ".fsproj",
   ".go",
