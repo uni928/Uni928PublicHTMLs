@@ -658,6 +658,7 @@ async function prepareDiffFromResult() {
     }
 
     const changes = [];
+    let totalEditCount = 0;
 
     for (const file of files) {
       const path = normalizeResultPath(file.path);
@@ -667,7 +668,9 @@ async function prepareDiffFromResult() {
       let content;
 
       if (Array.isArray(file.edits) || Array.isArray(file.patch) || Array.isArray(file.operations)) {
-        content = applyPatchEdits(oldContent, file.edits ?? file.patch ?? file.operations, path);
+        const editList = file.edits ?? file.patch ?? file.operations;
+        totalEditCount += editList.length;
+        content = applyPatchEdits(oldContent, editList, path);
       } else {
         const rawContent = file.content ?? file.contentLines ?? file.newContent ?? file.body;
         content = coerceContent(rawContent);
@@ -682,6 +685,9 @@ async function prepareDiffFromResult() {
 
       changes.push({
         content,
+        editCount: Array.isArray(file.edits) || Array.isArray(file.patch) || Array.isArray(file.operations)
+          ? (file.edits ?? file.patch ?? file.operations).length
+          : 1,
         oldContent,
         path,
         status: "pending",
@@ -693,7 +699,8 @@ async function prepareDiffFromResult() {
     if (changes.length === 0) {
       setStatus("反映できる差分はありませんでした。");
     } else {
-      setStatus(`${changes.length} 件の差分を確認できます。採用または元のままを選んでください。`);
+      const editCount = totalEditCount || changes.reduce((sum, change) => sum + (change.editCount || 1), 0);
+      setStatus(`${changes.length} ファイル / ${editCount} 編集ブロックの差分を確認できます。採用または元のままを選んでください。`);
     }
   } catch (error) {
     renderDiffError(error);
@@ -1218,7 +1225,7 @@ function renderCenterDiffPanel(change, allChanges) {
 
   const title = document.createElement("div");
   title.className = "diff-path";
-  title.textContent = `中央パネル確認: ${change.path}`;
+  title.textContent = `中央パネル確認: ${change.path}${change.editCount ? ` / ${change.editCount} 編集ブロック` : ""}`;
 
   const status = document.createElement("div");
   status.className = "diff-stats";
@@ -1291,7 +1298,7 @@ function renderChangeCard(change, allChanges) {
 
   const status = document.createElement("div");
   status.className = "diff-stats";
-  status.textContent = getChangeStatusText(change.status);
+  status.textContent = `${getChangeStatusText(change.status)}${change.editCount ? ` / ${change.editCount} 編集ブロック` : ""}`;
 
   titleRow.append(title, status);
 
