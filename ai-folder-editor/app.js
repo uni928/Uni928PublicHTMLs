@@ -956,6 +956,7 @@ function pickPatchField(source, keys) {
 
 function replacePatchText(source, oldText, newText, occurrence, path, editIndex) {
   let positions = findAllOccurrences(source, oldText);
+  let replacementOldLength = oldText.length;
 
   if (positions.length === 0) {
     const repairedOldText = normalizeCopiedMarkdownLinks(oldText);
@@ -965,7 +966,17 @@ function replacePatchText(source, oldText, newText, occurrence, path, editIndex)
         oldText = repairedOldText;
         newText = normalizeCopiedMarkdownLinks(newText);
         positions = repairedPositions;
+        replacementOldLength = oldText.length;
       }
+    }
+  }
+
+  if (positions.length === 0) {
+    const flexible = findFlexibleMatch(source, oldText);
+
+    if (flexible) {
+      positions = [flexible.position];
+      replacementOldLength = flexible.length;
     }
   }
 
@@ -1004,7 +1015,7 @@ function replacePatchText(source, oldText, newText, occurrence, path, editIndex)
     position = positions[occurrenceNumber - 1];
   }
 
-  return `${source.slice(0, position)}${newText}${source.slice(position + oldText.length)}`;
+  return `${source.slice(0, position)}${newText}${source.slice(position + replacementOldLength)}`;
 }
 
 function findAllOccurrences(source, search) {
@@ -1023,6 +1034,40 @@ function findAllOccurrences(source, search) {
 
 function normalizeCopiedMarkdownLinks(text) {
   return text.replace(/\[([\s\S]*?)\]\((?:https?:\/\/|mailto:)[^)]+\)/g, "$1");
+}
+
+function normalizePatchLeadingWhitespace(text) {
+  return text
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/[ \t]+$/gm, "")
+    .replace(/(^|\n)([ \t\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]+)/g, (_, lineStart, indent) => {
+      return `${lineStart}${indent.replace(/[^\t]/g, " ")}`;
+    })
+    .trim();
+}
+
+function findFlexibleMatch(source, search) {
+  const normalizedSearch = normalizePatchLeadingWhitespace(search);
+  const sourceLines = source.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  const searchLines = search.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+
+  for (let i = 0; i <= sourceLines.length - searchLines.length; i += 1) {
+    const candidate = sourceLines.slice(i, i + searchLines.length).join("\n");
+
+    if (normalizePatchLeadingWhitespace(candidate) === normalizedSearch) {
+      const startIndex = source.indexOf(candidate);
+
+      if (startIndex >= 0) {
+        return {
+          length: candidate.length,
+          position: startIndex,
+        };
+      }
+    }
+  }
+
+  return null;
 }
 
 function formatErrorSnippet(text) {
