@@ -583,6 +583,7 @@ async function buildChatGptPrompt(userPrompt) {
     "- ノーブレークスペース、全角スペース、細いスペースなどの特殊空白文字を絶対に使わないでください。",
     "- OLD/NEW内のコードをコピーする際も、見た目が同じでも特殊空白に変換しないでください。",
     "- 結果欄へ貼り付けるパッチ内でも、インデントは半角スペースだけにしてください。",
+    "- 元コード側に特殊空白が混ざっていても、通常の半角スペースとして扱われます。出力側では半角スペースだけを使ってください。",
     "- 変更不要なら Begin/End のみで FILE を出さないでください。",
     "",
     "推奨返答形式:",
@@ -666,7 +667,6 @@ async function prepareDiffFromResult() {
     }
 
     const changes = [];
-    let totalEditCount = 0;
 
     for (const file of files) {
       const path = normalizeResultPath(file.path);
@@ -677,10 +677,8 @@ async function prepareDiffFromResult() {
 
       if (Array.isArray(file.edits) || Array.isArray(file.patch) || Array.isArray(file.operations)) {
         const editList = file.edits ?? file.patch ?? file.operations;
-        totalEditCount += editList.length;
-
-        const verifiedChanges = [];
         let previewContent = oldContent;
+        const verifiedChanges = [];
 
         editList.forEach((edit, editIndex) => {
           const beforeEditContent = previewContent;
@@ -727,8 +725,7 @@ async function prepareDiffFromResult() {
     if (changes.length === 0) {
       setStatus("反映できる差分はありませんでした。");
     } else {
-      const editCount = totalEditCount || changes.reduce((sum, change) => sum + (change.editCount || 1), 0);
-      setStatus(`${changes.length} ファイル / ${editCount} 編集ブロックの差分を確認できます。採用または元のままを選んでください。`);
+      setStatus(`${changes.length} 編集ブロックの差分を確認できます。採用または元のままを選んでください。`);
     }
   } catch (error) {
     renderDiffError(error);
@@ -1056,7 +1053,7 @@ function replacePatchText(source, oldText, newText, occurrence, path, editIndex)
     position = positions[occurrenceNumber - 1];
   }
 
-  return `${source.slice(0, position)}${newText}${source.slice(position + replacementOldLength)}`;
+  return replaceRangeAndNormalizeSpecialSpaces(source, position, replacementOldLength, newText);
 }
 
 function findAllOccurrences(source, search) {
@@ -1101,16 +1098,6 @@ function normalizePatchLooseLine(line) {
   return normalizeSpecialSpaces(line).replace(/[ \t]+$/g, "");
 }
 
-function normalizePatchLooseText(text) {
-  return String(text)
-    .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n")
-    .split("\n")
-    .map(normalizePatchLooseLine)
-    .join("\n")
-    .trim();
-}
-
 function getLineRanges(text) {
   const ranges = [];
   let start = 0;
@@ -1150,6 +1137,19 @@ function findFlexibleMatch(source, search) {
   }
 
   return null;
+}
+
+function replaceRangeAndNormalizeSpecialSpaces(source, position, length, replacement) {
+  const before = source.slice(0, position);
+  const matched = source.slice(position, position + length);
+  const after = source.slice(position + length);
+  const normalizedReplacement = normalizeSpecialSpaces(replacement);
+
+  if (normalizeSpecialSpaces(matched) === normalizedReplacement) {
+    return `${before}${normalizeSpecialSpaces(matched)}${after}`;
+  }
+
+  return `${before}${normalizedReplacement}${after}`;
 }
 
 function formatErrorSnippet(text) {
@@ -1346,7 +1346,7 @@ function renderChangeCard(change, allChanges) {
 
   const status = document.createElement("div");
   status.className = "diff-stats";
-  status.textContent = `${getChangeStatusText(change.status)}${change.editCount ? ` / ${change.editCount} 編集ブロック` : ""}`;
+  status.textContent = `${getChangeStatusText(change.status)}${change.editBlockIndex ? ` / 編集ブロック ${change.editBlockIndex}` : ""}`;
 
   titleRow.append(title, status);
 
