@@ -670,7 +670,29 @@ async function prepareDiffFromResult() {
       if (Array.isArray(file.edits) || Array.isArray(file.patch) || Array.isArray(file.operations)) {
         const editList = file.edits ?? file.patch ?? file.operations;
         totalEditCount += editList.length;
-        content = applyPatchEdits(oldContent, editList, path);
+
+        let previewContent = oldContent;
+
+        editList.forEach((edit, editIndex) => {
+          const beforeEditContent = previewContent;
+          const afterEditContent = applyPatchEdits(beforeEditContent, [edit], path);
+
+          if (beforeEditContent !== afterEditContent) {
+            changes.push({
+              content: afterEditContent,
+              editBlockIndex: editIndex + 1,
+              editCount: 1,
+              edits: [edit],
+              oldContent: beforeEditContent,
+              path,
+              status: "pending",
+            });
+          }
+
+          previewContent = afterEditContent;
+        });
+
+        continue;
       } else {
         const rawContent = file.content ?? file.contentLines ?? file.newContent ?? file.body;
         content = coerceContent(rawContent);
@@ -685,9 +707,7 @@ async function prepareDiffFromResult() {
 
       changes.push({
         content,
-        editCount: Array.isArray(file.edits) || Array.isArray(file.patch) || Array.isArray(file.operations)
-          ? (file.edits ?? file.patch ?? file.operations).length
-          : 1,
+        editCount: 1,
         oldContent,
         path,
         status: "pending",
@@ -1225,7 +1245,7 @@ function renderCenterDiffPanel(change, allChanges) {
 
   const title = document.createElement("div");
   title.className = "diff-path";
-  title.textContent = `中央パネル確認: ${change.path}${change.editCount ? ` / ${change.editCount} 編集ブロック` : ""}`;
+  title.textContent = `中央パネル確認: ${change.path}${change.editBlockIndex ? ` / 編集ブロック ${change.editBlockIndex}` : ""}`;
 
   const status = document.createElement("div");
   status.className = "diff-stats";
@@ -1294,7 +1314,7 @@ function renderChangeCard(change, allChanges) {
 
   const title = document.createElement("div");
   title.className = "diff-path";
-  title.textContent = change.path;
+  title.textContent = `${change.path}${change.editBlockIndex ? ` / 編集ブロック ${change.editBlockIndex}` : ""}`;
 
   const status = document.createElement("div");
   status.className = "diff-stats";
@@ -1376,7 +1396,15 @@ function renderDiffRow(row) {
 
 async function acceptChange(change) {
   const meta = await getOrCreateMeta(change.path);
-  meta.content = change.content;
+
+  let nextContent = change.content;
+
+  if (Array.isArray(change.edits) && change.edits.length > 0) {
+    const currentContent = state.activePath === change.path ? dom.editor.value : await getCurrentContent(change.path);
+    nextContent = applyPatchEdits(currentContent, change.edits, change.path);
+  }
+
+  meta.content = nextContent;
   meta.loaded = true;
   meta.dirty = true;
   await writeMetaToDisk(meta);
@@ -1389,7 +1417,7 @@ async function acceptChange(change) {
   change.status = "applied";
   updateDirtyUi();
   renderTree();
-  setStatus(`${change.path} に提案を反映しました。`);
+  setStatus(`${change.path}${change.editBlockIndex ? ` の編集ブロック ${change.editBlockIndex}` : ""} に提案を反映しました。`);
 }
 
 async function getCurrentContent(path) {
