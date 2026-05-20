@@ -783,29 +783,43 @@ function parseResultJson(raw) {
 }
 
 function parseRawPatchResult(raw) {
-  const text = stripPatchFence(raw).trim();
+  const text = stripPatchFence(raw).replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
   if (!text.includes("*** Begin Patch") || !text.includes("*** File:")) return null;
 
-  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  const markerPattern = /(^|\n)\*\*\* (Begin Patch|End Patch|File:[^\n]*|Old|New|End File)[ \t]*(?=\n|$)/g;
+  const markers = [];
+
+  for (const match of text.matchAll(markerPattern)) {
+    markers.push({
+      index: match.index + (match[1] ? 1 : 0),
+      marker: match[2].trim(),
+      markerEnd: match.index + match[0].length,
+    });
+  }
+
   const files = [];
   let currentFile = null;
   let currentEdit = null;
-  let mode = "";
 
-  const finishEdit = () => {
+  const contentBetween = (fromMarker, toMarker) => {
+    const start = fromMarker.markerEnd;
+    const end = toMarker ? toMarker.index : text.length;
+    return trimOneTrailingLineBreak(text.slice(start, end).replace(/^\n/, ""));
+  };
+
+  const pushEdit = () => {
     if (!currentFile || !currentEdit) return;
 
     currentFile.edits.push({
-      old: normalizeSpecialSpaces(trimOneTrailingLineBreak(currentEdit.oldLines.join("\n"))),
-      new: normalizeSpecialSpaces(trimOneTrailingLineBreak(currentEdit.newLines.join("\n"))),
+      old: normalizeSpecialSpaces(currentEdit.old),
+      new: normalizeSpecialSpaces(currentEdit.new),
     });
 
     currentEdit = null;
-    mode = "";
   };
 
-  const finishFile = () => {
-    finishEdit();
+  const pushFile = () => {
+    pushEdit();
 
     if (currentFile) {
       if (currentFile.edits.length > 0) {
@@ -815,56 +829,57 @@ function parseRawPatchResult(raw) {
     }
   };
 
-  for (const line of lines) {
-    const marker = normalizeSpecialSpaces(line).trim();
+  for (let i = 0; i < markers.length; i += 1) {
+    const marker = markers[i];
+    const nextMarker = markers[i + 1] || null;
 
-    if (marker === "*** Begin Patch" || marker === "*** End Patch") {
-      if (marker === "*** End Patch") finishFile();
+    if (marker.marker === "Begin Patch") {
       continue;
     }
 
-    if (marker.startsWith("*** File:")) {
-      finishFile();
+    if (marker.marker === "End Patch") {
+      pushFile();
+      continue;
+    }
+
+    if (marker.marker.startsWith("File:")) {
+      pushFile();
       currentFile = {
         edits: [],
-        path: marker.replace(/^\*\*\* File:\s*/, "").trim(),
+        path: marker.marker.replace(/^File:\s*/, "").trim(),
       };
       continue;
     }
 
-    if (marker === "*** End File") {
-      finishFile();
+    if (marker.marker === "End File") {
+      pushFile();
       continue;
     }
 
-    if (marker === "*** Old") {
+    if (marker.marker === "Old") {
       if (!currentFile) {
         throw new Error("raw patchで *** File より前に *** Old があります。");
       }
-      finishEdit();
-      currentEdit = { oldLines: [], newLines: [] };
-      mode = "old";
+
+      pushEdit();
+      currentEdit = {
+        old: contentBetween(marker, nextMarker),
+        new: "",
+      };
       continue;
     }
 
-    if (marker === "*** New") {
-      if (!currentEdit) {
+    if (marker.marker === "New") {
+      if (!currentFile || !currentEdit) {
         throw new Error(`${currentFile?.path || "不明なファイル"} のraw patchに *** Old より前の *** New があります。`);
       }
-      mode = "new";
+
+      currentEdit.new = contentBetween(marker, nextMarker);
       continue;
-    }
-
-    if (!currentFile || !currentEdit || !mode) continue;
-
-    if (mode === "old") {
-      currentEdit.oldLines.push(line);
-    } else {
-      currentEdit.newLines.push(line);
     }
   }
 
-  finishFile();
+  pushFile();
 
   for (const file of files) {
     const invalidIndex = file.edits.findIndex((edit) => edit.old.length === 0);
@@ -873,7 +888,7 @@ function parseRawPatchResult(raw) {
     }
   }
 
-  return { files, format: "ai-folder-editor-raw-patch-v3", summary: "raw patch" };
+  return { files, format: "ai-folder-editor-raw-patch-v4", summary: "raw patch" };
 }
 
 function stripPatchFence(raw) {
