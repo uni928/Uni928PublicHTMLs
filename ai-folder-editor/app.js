@@ -1037,33 +1037,60 @@ function normalizeCopiedMarkdownLinks(text) {
 }
 
 function normalizePatchLeadingWhitespace(text) {
-  return text
+  return normalizePatchLooseText(text);
+}
+
+function normalizePatchLooseLine(line) {
+  return String(line)
+    .replace(/[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/g, " ")
+    .replace(/[ \t]+$/g, "");
+}
+
+function normalizePatchLooseText(text) {
+  return String(text)
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n")
-    .replace(/[ \t]+$/gm, "")
-    .replace(/(^|\n)([ \t\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]+)/g, (_, lineStart, indent) => {
-      return `${lineStart}${indent.replace(/[^\t]/g, " ")}`;
-    })
+    .split("\n")
+    .map(normalizePatchLooseLine)
+    .join("\n")
     .trim();
 }
 
+function getLineRanges(text) {
+  const ranges = [];
+  let start = 0;
+
+  for (let index = 0; index <= text.length; index += 1) {
+    if (index === text.length || text[index] === "\n") {
+      let end = index;
+      if (end > start && text[end - 1] === "\r") end -= 1;
+      ranges.push({
+        end,
+        line: text.slice(start, end),
+        next: index < text.length ? index + 1 : index,
+        start,
+      });
+      start = index + 1;
+    }
+  }
+
+  return ranges;
+}
+
 function findFlexibleMatch(source, search) {
-  const normalizedSearch = normalizePatchLeadingWhitespace(search);
-  const sourceLines = source.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-  const searchLines = search.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  const sourceRanges = getLineRanges(source);
+  const searchLines = String(search).replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  const normalizedSearch = searchLines.map(normalizePatchLooseLine).join("\n").trim();
 
-  for (let i = 0; i <= sourceLines.length - searchLines.length; i += 1) {
-    const candidate = sourceLines.slice(i, i + searchLines.length).join("\n");
+  for (let i = 0; i <= sourceRanges.length - searchLines.length; i += 1) {
+    const sourceSlice = sourceRanges.slice(i, i + searchLines.length);
+    const normalizedCandidate = sourceSlice.map((item) => normalizePatchLooseLine(item.line)).join("\n").trim();
 
-    if (normalizePatchLeadingWhitespace(candidate) === normalizedSearch) {
-      const startIndex = source.indexOf(candidate);
-
-      if (startIndex >= 0) {
-        return {
-          length: candidate.length,
-          position: startIndex,
-        };
-      }
+    if (normalizedCandidate === normalizedSearch) {
+      return {
+        length: sourceSlice.at(-1).end - sourceSlice[0].start,
+        position: sourceSlice[0].start,
+      };
     }
   }
 
