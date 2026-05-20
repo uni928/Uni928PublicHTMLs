@@ -181,6 +181,10 @@ dom.copyGeminiPromptButton.addEventListener("click", () => copyPromptAndOpenAi("
 dom.applyResultButton.addEventListener("click", prepareDiffFromResult);
 dom.editor.addEventListener("input", onEditorInput);
 dom.editor.addEventListener("scroll", syncLineNumberScroll);
+dom.resultInput.addEventListener("input", normalizeResultInputSpecialSpaces);
+dom.resultInput.addEventListener("paste", () => {
+  requestAnimationFrame(normalizeResultInputSpecialSpaces);
+});
 
 document.addEventListener("keydown", (event) => {
   if (event.altKey && event.key.toLowerCase() === "g") {
@@ -578,6 +582,7 @@ async function buildChatGptPrompt(userPrompt) {
     "- インデントや空白には、通常の半角スペース U+0020 とタブ U+0009 だけを使ってください。",
     "- ノーブレークスペース、全角スペース、細いスペースなどの特殊空白文字を絶対に使わないでください。",
     "- OLD/NEW内のコードをコピーする際も、見た目が同じでも特殊空白に変換しないでください。",
+    "- 結果欄へ貼り付けるパッチ内でも、インデントは半角スペースだけにしてください。",
     "- 変更不要なら Begin/End のみで FILE を出さないでください。",
     "",
     "推奨返答形式:",
@@ -645,7 +650,10 @@ function escapeRegExp(value) {
 
 async function prepareDiffFromResult() {
   try {
-    const raw = dom.resultInput.value.trim();
+    const raw = normalizeSpecialSpaces(dom.resultInput.value).trim();
+    if (raw !== dom.resultInput.value.trim()) {
+      dom.resultInput.value = raw;
+    }
     if (!raw) throw new Error("ChatGPTまたはGeminiの結果を貼り付けてください。");
     if (!state.rootHandle) throw new Error("先にフォルダを開いてください。");
 
@@ -671,27 +679,27 @@ async function prepareDiffFromResult() {
         const editList = file.edits ?? file.patch ?? file.operations;
         totalEditCount += editList.length;
 
+        const verifiedChanges = [];
         let previewContent = oldContent;
 
         editList.forEach((edit, editIndex) => {
           const beforeEditContent = previewContent;
           const afterEditContent = applyPatchEdits(beforeEditContent, [edit], path);
 
-          if (beforeEditContent !== afterEditContent) {
-            changes.push({
-              content: afterEditContent,
-              editBlockIndex: editIndex + 1,
-              editCount: 1,
-              edits: [edit],
-              oldContent: beforeEditContent,
-              path,
-              status: "pending",
-            });
-          }
+          verifiedChanges.push({
+            content: afterEditContent,
+            editBlockIndex: editIndex + 1,
+            editCount: 1,
+            edits: [edit],
+            oldContent: beforeEditContent,
+            path,
+            status: "pending",
+          });
 
           previewContent = afterEditContent;
         });
 
+        changes.push(...verifiedChanges.filter((change) => change.oldContent !== change.content));
         continue;
       } else {
         const rawContent = file.content ?? file.contentLines ?? file.newContent ?? file.body;
@@ -1073,6 +1081,16 @@ function normalizeSpecialSpaces(text) {
   return String(text).replace(/[\u00a0\u1680\u180e\u2000-\u200b\u202f\u205f\u3000\ufeff]/g, " ");
 }
 
+function normalizeResultInputSpecialSpaces() {
+  const normalized = normalizeSpecialSpaces(dom.resultInput.value);
+  if (normalized === dom.resultInput.value) return;
+
+  const selectionStart = dom.resultInput.selectionStart;
+  const selectionEnd = dom.resultInput.selectionEnd;
+  dom.resultInput.value = normalized;
+  dom.resultInput.setSelectionRange(selectionStart, selectionEnd);
+}
+
 function normalizePatchLeadingWhitespace(text) {
   return normalizeSpecialSpaces(text).replace(/(^|\n)([ \t]+)/g, (_, lineStart, indent) => {
     return `${lineStart}${indent.replace(/[^\t]/g, " ")}`;
@@ -1197,12 +1215,17 @@ function renderDiffPanel(changes) {
   acceptAll.type = "button";
   acceptAll.textContent = "すべて採用";
   acceptAll.addEventListener("click", async () => {
-    for (const change of pendingChanges) {
-      if (change.status === "pending") {
-        await acceptChange(change);
+    try {
+      for (const change of pendingChanges) {
+        if (change.status === "pending") {
+          await acceptChange(change);
+        }
       }
+      renderDiffPanel(changes);
+    } catch (error) {
+      renderDiffError(error);
+      setStatus(firstErrorLine(error.message), true);
     }
-    renderDiffPanel(changes);
   });
 
   const close = document.createElement("button");
@@ -1260,9 +1283,14 @@ function renderCenterDiffPanel(change, allChanges) {
   accept.type = "button";
   accept.textContent = "反映する";
   accept.addEventListener("click", async () => {
-    await acceptChange(change);
-    hideCenterDiffPreview();
-    renderDiffPanel(allChanges);
+    try {
+      await acceptChange(change);
+      hideCenterDiffPreview();
+      renderDiffPanel(allChanges);
+    } catch (error) {
+      renderDiffError(error);
+      setStatus(firstErrorLine(error.message), true);
+    }
   });
 
   const reject = document.createElement("button");
@@ -1336,9 +1364,14 @@ function renderChangeCard(change, allChanges) {
   accept.textContent = "提案を採用";
   accept.disabled = change.status !== "pending";
   accept.addEventListener("click", async () => {
-    await acceptChange(change);
-    if (state.centerPreviewChange === change) hideCenterDiffPreview();
-    renderDiffPanel(allChanges);
+    try {
+      await acceptChange(change);
+      if (state.centerPreviewChange === change) hideCenterDiffPreview();
+      renderDiffPanel(allChanges);
+    } catch (error) {
+      renderDiffError(error);
+      setStatus(firstErrorLine(error.message), true);
+    }
   });
 
   const reject = document.createElement("button");
