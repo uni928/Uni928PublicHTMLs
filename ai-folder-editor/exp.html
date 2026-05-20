@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Folder Editor の説明</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="exp-page">
+      <header class="exp-hero">
+        <div>
+          <p class="exp-kicker">AI Folder Editor</p>
+          <h1>ChatGPTを開いて使う、フォルダ型AIエディタ</h1>
+          <p>
+            ローカルのフォルダを直接開き、現在のコードを含めた編集依頼をChatGPTへ渡し、返ってきた差分を確認しながら反映します。
+          </p>
+        </div>
+        <a class="primary-button link-button" href="./index.html">エディタへ戻る</a>
+      </header>
+
+      <section class="exp-section">
+        <h2>基本の流れ</h2>
+        <div class="exp-steps">
+          <article>
+            <strong>1. フォルダを開く</strong>
+            <p>編集したいプロジェクトフォルダを選ぶと、テキストとして扱えるファイルだけが左側に並びます。その後修正するファイルを選びます。</p>
+          </article>
+          <article>
+            <strong>2. 依頼を書く</strong>
+            <p>AIパネルで反映パネルを開き、やりたい変更を短く書いてChatGPT用プロンプトをコピーします。2回ボタンを押すことでChatGPTに遷移します。</p>
+          </article>
+          <article>
+            <strong>3. 差分を反映する</strong>
+            <p>ChatGPTのパッチ結果を貼り付けると、差分を確認しながら採用またはスキップできます。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="exp-section exp-grid">
+        <article>
+          <h2>プロンプト生成</h2>
+          <p>
+            開いているファイルに加えて、コード内に同名参照があるファイルも自動で含めます。画像やzipなどの非テキストファイル、文字化けが多い内容は除外します。
+          </p>
+        </article>
+        <article>
+          <h2>コピーと遷移</h2>
+          <p>
+            9961文字以内ならChatGPTのURLにプロンプトを入れて開きます。超える場合はプロンプトをコピーし、ChatGPT側で貼り付けて実行します。
+          </p>
+        </article>
+        <article>
+          <h2>差分確認</h2>
+          <p>
+            右の反映パネルで一覧を見て、必要な差分は中央パネルで確認できます。中央パネルでは赤が削除、緑が追加です。
+          </p>
+        </article>
+        <article>
+          <h2>反映形式</h2>
+          <p>
+            ChatGPTにはファイル全文ではなく、<code>*** Old</code> と <code>*** New</code> の最小パッチを返すよう指示します。出力文字数を抑え、必要な場所だけを置き換えます。
+          </p>
+        </article>
+      </section>
+
+      <section class="exp-section">
+        <h2>ChatGPTに期待する出力</h2>
+        <pre class="exp-code"><code>*** Begin Patch
+*** File: path/to/file.js
+*** Old
+置き換え前の一意なコード断片
+*** New
+置き換え後のコード断片
+*** End File
+*** End Patch</code></pre>
+      </section>
+
+      <section class="exp-section">
+        <h2>便利な操作</h2>
+        <div class="exp-shortcuts">
+          <span><kbd>Alt</kbd> + <kbd>G</kbd> ChatGPT反映パネル</span>
+          <span><kbd>Ctrl</kbd> + <kbd>S</kbd> 保存</span>
+          <span>右パネルの「中央パネルで確認」で差分位置へ移動</span>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

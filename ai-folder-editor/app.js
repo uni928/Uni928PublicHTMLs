@@ -666,7 +666,8 @@ async function prepareDiffFromResult() {
       setStatus(`${changes.length} 件の差分を確認できます。採用または元のままを選んでください。`);
     }
   } catch (error) {
-    setStatus(error.message, true);
+    renderDiffError(error);
+    setStatus(firstErrorLine(error.message), true);
   }
 }
 
@@ -942,7 +943,13 @@ function replacePatchText(source, oldText, newText, occurrence, path, editIndex)
   }
 
   if (positions.length === 0) {
-    throw new Error(`${path} のedits[${editIndex}].oldが現在の内容に一致しません。`);
+    throw new Error(
+      [
+        `${path} のedits[${editIndex}].oldが現在の内容に一致しません。`,
+        "Oldの内容:",
+        formatErrorSnippet(oldText),
+      ].join("\n"),
+    );
   }
 
   let position;
@@ -950,7 +957,12 @@ function replacePatchText(source, oldText, newText, occurrence, path, editIndex)
   if (occurrence === undefined || occurrence === null) {
     if (positions.length > 1) {
       throw new Error(
-        `${path} のedits[${editIndex}].oldが${positions.length}回一致します。再度「プロンプトをコピーしてChatGPTを開く」を実行して、一意なOldを含むパッチを生成してください。`,
+        [
+          `${path} のedits[${editIndex}].oldが${positions.length}回一致します。`,
+          "再度「プロンプトをコピーしてChatGPTを開く」を実行して、一意なOldを含むパッチを生成してください。",
+          "Oldの内容:",
+          formatErrorSnippet(oldText),
+        ].join("\n"),
       );
     }
     position = positions[0];
@@ -984,6 +996,48 @@ function findAllOccurrences(source, search) {
 
 function normalizeCopiedMarkdownLinks(text) {
   return text.replace(/\[([\s\S]*?)\]\((?:https?:\/\/|mailto:)[^)]+\)/g, "$1");
+}
+
+function formatErrorSnippet(text) {
+  const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  if (normalized.length <= 1200) return normalized;
+  return `${normalized.slice(0, 1200)}\n... (${normalized.length - 1200}文字省略)`;
+}
+
+function firstErrorLine(message) {
+  return String(message).split(/\r?\n/)[0] || "エラーが発生しました。";
+}
+
+function renderDiffError(error) {
+  hideCenterDiffPreview();
+  dom.diffPanel.innerHTML = "";
+
+  const card = document.createElement("article");
+  card.className = "diff-card diff-error-card";
+
+  const header = document.createElement("header");
+  header.className = "diff-card-header";
+
+  const titleRow = document.createElement("div");
+  titleRow.className = "diff-title-row";
+
+  const title = document.createElement("div");
+  title.className = "diff-path";
+  title.textContent = "反映エラー";
+
+  const status = document.createElement("div");
+  status.className = "diff-stats";
+  status.textContent = "パッチを反映できませんでした";
+
+  titleRow.append(title, status);
+
+  const body = document.createElement("pre");
+  body.className = "diff-error-body";
+  body.textContent = error?.message || String(error);
+
+  header.append(titleRow);
+  card.append(header, body);
+  dom.diffPanel.append(card);
 }
 
 function renderDiffPanel(changes) {
