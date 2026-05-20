@@ -583,6 +583,7 @@ async function buildChatGptPrompt(userPrompt) {
     "- ノーブレークスペース、全角スペース、細いスペースなどの特殊空白文字を絶対に使わないでください。",
     "- OLD/NEW内のコードをコピーする際も、見た目が同じでも特殊空白に変換しないでください。",
     "- 1ファイル内に複数箇所の変更がある場合は、変更箇所ごとに *** Old / *** New を分けてください。",
+    "- 同じOLDが複数回出る場合は、可能なら前後の行を含めて一意にしてください。",
     "- 変更不要なら Begin/End のみで FILE を出さないでください。",
     "",
     "推奨返答形式:",
@@ -686,7 +687,7 @@ async function prepareDiffFromResult() {
 
         editList.forEach((edit, editIndex) => {
           const beforeEditContent = previewContent;
-          const afterEditContent = applyPatchEdits(beforeEditContent, [edit], path);
+          const afterEditContent = applyPatchEdits(beforeEditContent, [edit], path, { allowFirstWhenMultiple: true });
 
           fileChanges.push({
             content: afterEditContent,
@@ -785,21 +786,94 @@ function parseRawPatchResult(raw) {
   const text = stripPatchFence(raw).trim();
   if (!text.includes("*** Begin Patch") || !text.includes("*** File:")) return null;
 
+  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
   const files = [];
-  const filePattern = /^\*\*\* File:\s*(.+?)\s*$/gm;
-  const matches = [...text.matchAll(filePattern)];
+  let currentFile = null;
+  let currentEdit = null;
+  let mode = "";
 
-  for (let i = 0; i < matches.length; i += 1) {
-    const match = matches[i];
-    const path = match[1].trim();
-    const blockStart = match.index + match[0].length;
-    const blockEnd = i + 1 < matches.length ? matches[i + 1].index : text.indexOf("*** End Patch", blockStart);
-    const block = text.slice(blockStart, blockEnd < 0 ? undefined : blockEnd);
-    const edits = parseRawPatchEdits(block, path);
-    if (edits.length > 0) files.push({ path, edits });
+  const finishEdit = () => {
+    if (!currentFile || !currentEdit) return;
+
+    currentFile.edits.push({
+      old: normalizeSpecialSpaces(trimOneTrailingLineBreak(currentEdit.oldLines.join("\n"))),
+      new: normalizeSpecialSpaces(trimOneTrailingLineBreak(currentEdit.newLines.join("\n"))),
+    });
+
+    currentEdit = null;
+    mode = "";
+  };
+
+  const finishFile = () => {
+    finishEdit();
+
+    if (currentFile) {
+      if (currentFile.edits.length > 0) {
+        files.push(currentFile);
+      }
+      currentFile = null;
+    }
+  };
+
+  for (const line of lines) {
+    const marker = normalizeSpecialSpaces(line).trim();
+
+    if (marker === "*** Begin Patch" || marker === "*** End Patch") {
+      if (marker === "*** End Patch") finishFile();
+      continue;
+    }
+
+    if (marker.startsWith("*** File:")) {
+      finishFile();
+      currentFile = {
+        edits: [],
+        path: marker.replace(/^\*\*\* File:\s*/, "").trim(),
+      };
+      continue;
+    }
+
+    if (marker === "*** End File") {
+      finishFile();
+      continue;
+    }
+
+    if (marker === "*** Old") {
+      if (!currentFile) {
+        throw new Error("raw patchで *** File より前に *** Old があります。");
+      }
+      finishEdit();
+      currentEdit = { oldLines: [], newLines: [] };
+      mode = "old";
+      continue;
+    }
+
+    if (marker === "*** New") {
+      if (!currentEdit) {
+        throw new Error(`${currentFile?.path || "不明なファイル"} のraw patchに *** Old より前の *** New があります。`);
+      }
+      mode = "new";
+      continue;
+    }
+
+    if (!currentFile || !currentEdit || !mode) continue;
+
+    if (mode === "old") {
+      currentEdit.oldLines.push(line);
+    } else {
+      currentEdit.newLines.push(line);
+    }
   }
 
-  return { files, format: "ai-folder-editor-raw-patch-v2", summary: "raw patch" };
+  finishFile();
+
+  for (const file of files) {
+    const invalidIndex = file.edits.findIndex((edit) => edit.old.length === 0);
+    if (invalidIndex >= 0) {
+      throw new Error(`${file.path} の編集ブロック ${invalidIndex + 1} の Old が空です。`);
+    }
+  }
+
+  return { files, format: "ai-folder-editor-raw-patch-v3", summary: "raw patch" };
 }
 
 function stripPatchFence(raw) {
@@ -959,7 +1033,7 @@ function decodeLooseJsonString(value) {
   });
 }
 
-function applyPatchEdits(oldContent, edits, path) {
+function applyPatchEdits(oldContent, edits, path, options = {}) {
   if (!Array.isArray(edits)) {
     throw new Error(`${path} のeditsが配列ではありません。`);
   }
@@ -988,7 +1062,7 @@ function applyPatchEdits(oldContent, edits, path) {
     const lineEnding = detectLineEnding(content);
     oldText = alignLineEndings(oldText, lineEnding);
     newText = alignLineEndings(newText, lineEnding);
-    content = replacePatchText(content, oldText, newText, edit.occurrence, path, index);
+    content = replacePatchText(content, oldText, newText, edit.occurrence, path, index, options);
   });
 
   return content;
@@ -1003,7 +1077,7 @@ function pickPatchField(source, keys) {
   return undefined;
 }
 
-function replacePatchText(source, oldText, newText, occurrence, path, editIndex) {
+function replacePatchText(source, oldText, newText, occurrence, path, editIndex, options = {}) {
   let positions = findAllOccurrences(source, oldText);
   let replacementOldLength = oldText.length;
 
@@ -1042,7 +1116,7 @@ function replacePatchText(source, oldText, newText, occurrence, path, editIndex)
   let position;
 
   if (occurrence === undefined || occurrence === null) {
-    if (positions.length > 1) {
+    if (positions.length > 1 && !options.allowFirstWhenMultiple) {
       throw new Error(
         [
           `${path} のedits[${editIndex}].oldが${positions.length}回一致します。`,
@@ -1445,7 +1519,7 @@ async function acceptChange(change) {
 
   if (Array.isArray(change.edits) && change.edits.length > 0) {
     const currentContent = state.activePath === change.path ? dom.editor.value : await getCurrentContent(change.path);
-    nextContent = applyPatchEdits(currentContent, change.edits, change.path);
+    nextContent = applyPatchEdits(currentContent, change.edits, change.path, { allowFirstWhenMultiple: true });
   }
 
   meta.content = nextContent;
