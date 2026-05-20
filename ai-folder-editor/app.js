@@ -666,6 +666,11 @@ async function prepareDiffFromResult() {
       throw new Error("JSONに files 配列が見つかりません。");
     }
 
+    const expectedEditCount = files.reduce((sum, file) => {
+      const edits = file.edits ?? file.patch ?? file.operations;
+      return sum + (Array.isArray(edits) ? edits.length : 1);
+    }, 0);
+
     const changes = [];
 
     for (const file of files) {
@@ -682,14 +687,13 @@ async function prepareDiffFromResult() {
           continue;
         }
 
-        const fileChanges = [];
         let previewContent = originalContent;
 
         editList.forEach((edit, editIndex) => {
           const beforeEditContent = previewContent;
           const afterEditContent = applyPatchEdits(beforeEditContent, [edit], path, { allowFirstWhenMultiple: true });
 
-          fileChanges.push({
+          changes.push({
             content: afterEditContent,
             editBlockIndex: editIndex + 1,
             editBlockTotal: editList.length,
@@ -703,11 +707,6 @@ async function prepareDiffFromResult() {
           previewContent = afterEditContent;
         });
 
-        if (fileChanges.length !== editList.length) {
-          throw new Error(`${path} の編集ブロック数が一致しません。期待: ${editList.length} / 解析: ${fileChanges.length}`);
-        }
-
-        changes.push(...fileChanges);
         continue;
       } else {
         const rawContent = file.content ?? file.contentLines ?? file.newContent ?? file.body;
@@ -730,6 +729,10 @@ async function prepareDiffFromResult() {
         path,
         status: "pending",
       });
+    }
+
+    if (changes.length !== expectedEditCount) {
+      throw new Error(`差分ブロック数が一致しません。期待: ${expectedEditCount} / 表示予定: ${changes.length}`);
     }
 
     renderDiffPanel(changes);
@@ -786,109 +789,97 @@ function parseRawPatchResult(raw) {
   const text = stripPatchFence(raw).replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
   if (!text.includes("*** Begin Patch") || !text.includes("*** File:")) return null;
 
-  const markerPattern = /(^|\n)\*\*\* (Begin Patch|End Patch|File:[^\n]*|Old|New|End File)[ \t]*(?=\n|$)/g;
-  const markers = [];
-
-  for (const match of text.matchAll(markerPattern)) {
-    markers.push({
-      index: match.index + (match[1] ? 1 : 0),
-      marker: match[2].trim(),
-      markerEnd: match.index + match[0].length,
-    });
-  }
-
+  const lines = text.split("\n");
   const files = [];
-  let currentFile = null;
-  let currentEdit = null;
+  let index = 0;
 
-  const contentBetween = (fromMarker, toMarker) => {
-    const start = fromMarker.markerEnd;
-    const end = toMarker ? toMarker.index : text.length;
-    return trimOneTrailingLineBreak(text.slice(start, end).replace(/^\n/, ""));
-  };
+  const isMarker = (line, marker) => normalizeSpecialSpaces(line).trim() === marker;
+  const isFileMarker = (line) => normalizeSpecialSpaces(line).trim().startsWith("*** File:");
 
-  const pushEdit = () => {
-    if (!currentFile || !currentEdit) return;
+  while (index < lines.length) {
+    const marker = normalizeSpecialSpaces(lines[index]).trim();
 
-    currentFile.edits.push({
-      old: normalizeSpecialSpaces(currentEdit.old),
-      new: normalizeSpecialSpaces(currentEdit.new),
-    });
-
-    currentEdit = null;
-  };
-
-  const pushFile = () => {
-    pushEdit();
-
-    if (currentFile) {
-      if (currentFile.edits.length > 0) {
-        files.push(currentFile);
-      }
-      currentFile = null;
-    }
-  };
-
-  for (let i = 0; i < markers.length; i += 1) {
-    const marker = markers[i];
-    const nextMarker = markers[i + 1] || null;
-
-    if (marker.marker === "Begin Patch") {
+    if (!marker.startsWith("*** File:")) {
+      index += 1;
       continue;
     }
 
-    if (marker.marker === "End Patch") {
-      pushFile();
-      continue;
-    }
+    const path = marker.replace(/^\*\*\* File:\s*/, "").trim();
+    const edits = [];
+    index += 1;
 
-    if (marker.marker.startsWith("File:")) {
-      pushFile();
-      currentFile = {
-        edits: [],
-        path: marker.marker.replace(/^File:\s*/, "").trim(),
-      };
-      continue;
-    }
+    while (index < lines.length) {
+      const current = normalizeSpecialSpaces(lines[index]).trim();
 
-    if (marker.marker === "End File") {
-      pushFile();
-      continue;
-    }
-
-    if (marker.marker === "Old") {
-      if (!currentFile) {
-        throw new Error("raw patchで *** File より前に *** Old があります。");
+      if (current === "*** End File") {
+        index += 1;
+        break;
       }
 
-      pushEdit();
-      currentEdit = {
-        old: contentBetween(marker, nextMarker),
-        new: "",
-      };
-      continue;
-    }
-
-    if (marker.marker === "New") {
-      if (!currentFile || !currentEdit) {
-        throw new Error(`${currentFile?.path || "不明なファイル"} のraw patchに *** Old より前の *** New があります。`);
+      if (current === "*** End Patch" || current.startsWith("*** File:")) {
+        break;
       }
 
-      currentEdit.new = contentBetween(marker, nextMarker);
-      continue;
+      if (current !== "*** Old") {
+        index += 1;
+        continue;
+      }
+
+      index += 1;
+      const oldLines = [];
+
+      while (index < lines.length && !isMarker(lines[index], "*** New")) {
+        const maybeMarker = normalizeSpecialSpaces(lines[index]).trim();
+
+        if (maybeMarker === "*** Old" || maybeMarker === "*** End File" || maybeMarker === "*** End Patch" || maybeMarker.startsWith("*** File:")) {
+          throw new Error(`${path} の編集ブロック ${edits.length + 1} に *** New がありません。`);
+        }
+
+        oldLines.push(lines[index]);
+        index += 1;
+      }
+
+      if (index >= lines.length || !isMarker(lines[index], "*** New")) {
+        throw new Error(`${path} の編集ブロック ${edits.length + 1} に *** New がありません。`);
+      }
+
+      index += 1;
+      const newLines = [];
+
+      while (index < lines.length) {
+        const maybeMarker = normalizeSpecialSpaces(lines[index]).trim();
+
+        if (maybeMarker === "*** Old" || maybeMarker === "*** End File" || maybeMarker === "*** End Patch" || maybeMarker.startsWith("*** File:")) {
+          break;
+        }
+
+        newLines.push(lines[index]);
+        index += 1;
+      }
+
+      const oldText = normalizeSpecialSpaces(trimOneTrailingLineBreak(oldLines.join("\n")));
+      const newText = normalizeSpecialSpaces(trimOneTrailingLineBreak(newLines.join("\n")));
+
+      if (!oldText) {
+        throw new Error(`${path} の編集ブロック ${edits.length + 1} の Old が空です。`);
+      }
+
+      edits.push({ old: oldText, new: newText });
+    }
+
+    if (edits.length > 0) {
+      files.push({ path, edits });
     }
   }
 
-  pushFile();
+  const rawOldCount = lines.filter((line) => normalizeSpecialSpaces(line).trim() === "*** Old").length;
+  const parsedOldCount = files.reduce((sum, file) => sum + file.edits.length, 0);
 
-  for (const file of files) {
-    const invalidIndex = file.edits.findIndex((edit) => edit.old.length === 0);
-    if (invalidIndex >= 0) {
-      throw new Error(`${file.path} の編集ブロック ${invalidIndex + 1} の Old が空です。`);
-    }
+  if (rawOldCount !== parsedOldCount) {
+    throw new Error(`raw patchのOld数と解析数が一致しません。Old数: ${rawOldCount} / 解析: ${parsedOldCount}`);
   }
 
-  return { files, format: "ai-folder-editor-raw-patch-v4", summary: "raw patch" };
+  return { files, format: "ai-folder-editor-raw-patch-v5", summary: "raw patch" };
 }
 
 function stripPatchFence(raw) {
@@ -917,8 +908,8 @@ function parseRawPatchEdits(block, path) {
     const editEnd = editEndCandidates.length ? Math.min(...editEndCandidates) : block.length;
 
     edits.push({
-      old: normalizeSpecialSpaces(trimOneTrailingLineBreak(block.slice(oldStart, newMarker))),
-      new: normalizeSpecialSpaces(trimOneTrailingLineBreak(block.slice(newStart, editEnd))),
+      old: trimOneTrailingLineBreak(block.slice(oldStart, newMarker)),
+      new: trimOneTrailingLineBreak(block.slice(newStart, editEnd)),
     });
     cursor = editEnd;
   }
