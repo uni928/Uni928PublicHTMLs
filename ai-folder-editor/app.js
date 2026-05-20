@@ -582,7 +582,7 @@ async function buildChatGptPrompt(userPrompt) {
     "- インデントや空白には、通常の半角スペース U+0020 とタブ U+0009 だけを使ってください。",
     "- ノーブレークスペース、全角スペース、細いスペースなどの特殊空白文字を絶対に使わないでください。",
     "- OLD/NEW内のコードをコピーする際も、見た目が同じでも特殊空白に変換しないでください。",
-    "- 結果欄へ貼り付けるパッチ内でも、インデントは半角スペースだけにしてください。",
+    "- 1ファイル内に複数箇所の変更がある場合は、変更箇所ごとに *** Old / *** New を分けてください。",
     "- 変更不要なら Begin/End のみで FILE を出さないでください。",
     "",
     "推奨返答形式:",
@@ -666,29 +666,32 @@ async function prepareDiffFromResult() {
     }
 
     const changes = [];
-    let totalEditCount = 0;
 
     for (const file of files) {
       const path = normalizeResultPath(file.path);
       if (!path) throw new Error("空のpathを含む結果があります。");
 
-      const oldContent = await getCurrentContent(path);
+      const originalContent = await getCurrentContent(path);
       let content;
 
       if (Array.isArray(file.edits) || Array.isArray(file.patch) || Array.isArray(file.operations)) {
         const editList = file.edits ?? file.patch ?? file.operations;
-        totalEditCount += editList.length;
 
-        const verifiedChanges = [];
-        let previewContent = oldContent;
+        if (editList.length === 0) {
+          continue;
+        }
+
+        const fileChanges = [];
+        let previewContent = originalContent;
 
         editList.forEach((edit, editIndex) => {
           const beforeEditContent = previewContent;
           const afterEditContent = applyPatchEdits(beforeEditContent, [edit], path);
 
-          verifiedChanges.push({
+          fileChanges.push({
             content: afterEditContent,
             editBlockIndex: editIndex + 1,
+            editBlockTotal: editList.length,
             editCount: 1,
             edits: [edit],
             oldContent: beforeEditContent,
@@ -699,7 +702,11 @@ async function prepareDiffFromResult() {
           previewContent = afterEditContent;
         });
 
-        changes.push(...verifiedChanges.filter((change) => change.oldContent !== change.content));
+        if (fileChanges.length !== editList.length) {
+          throw new Error(`${path} の編集ブロック数が一致しません。期待: ${editList.length} / 解析: ${fileChanges.length}`);
+        }
+
+        changes.push(...fileChanges);
         continue;
       } else {
         const rawContent = file.content ?? file.contentLines ?? file.newContent ?? file.body;
@@ -708,15 +715,17 @@ async function prepareDiffFromResult() {
         if (Array.isArray(rawContent) && file.finalNewline === true && !content.endsWith("\n")) {
           content += "\n";
         }
-        content = alignLineEndings(content, detectLineEnding(oldContent));
+        content = alignLineEndings(content, detectLineEnding(originalContent));
       }
 
-      if (oldContent === content) continue;
+      if (originalContent === content) continue;
 
       changes.push({
         content,
+        editBlockIndex: 1,
+        editBlockTotal: 1,
         editCount: 1,
-        oldContent,
+        oldContent: originalContent,
         path,
         status: "pending",
       });
@@ -727,8 +736,7 @@ async function prepareDiffFromResult() {
     if (changes.length === 0) {
       setStatus("反映できる差分はありませんでした。");
     } else {
-      const editCount = totalEditCount || changes.reduce((sum, change) => sum + (change.editCount || 1), 0);
-      setStatus(`${changes.length} ファイル / ${editCount} 編集ブロックの差分を確認できます。採用または元のままを選んでください。`);
+      setStatus(`${changes.length} 編集ブロックの差分を確認できます。採用または元のままを選んでください。`);
     }
   } catch (error) {
     renderDiffError(error);
@@ -1056,7 +1064,7 @@ function replacePatchText(source, oldText, newText, occurrence, path, editIndex)
     position = positions[occurrenceNumber - 1];
   }
 
-  return `${source.slice(0, position)}${newText}${source.slice(position + replacementOldLength)}`;
+  return replaceRangeAndNormalizeSpecialSpaces(source, position, replacementOldLength, newText);
 }
 
 function findAllOccurrences(source, search) {
@@ -1101,16 +1109,6 @@ function normalizePatchLooseLine(line) {
   return normalizeSpecialSpaces(line).replace(/[ \t]+$/g, "");
 }
 
-function normalizePatchLooseText(text) {
-  return String(text)
-    .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n")
-    .split("\n")
-    .map(normalizePatchLooseLine)
-    .join("\n")
-    .trim();
-}
-
 function getLineRanges(text) {
   const ranges = [];
   let start = 0;
@@ -1150,6 +1148,19 @@ function findFlexibleMatch(source, search) {
   }
 
   return null;
+}
+
+function replaceRangeAndNormalizeSpecialSpaces(source, position, length, replacement) {
+  const before = source.slice(0, position);
+  const matched = source.slice(position, position + length);
+  const after = source.slice(position + length);
+  const normalizedReplacement = normalizeSpecialSpaces(replacement);
+
+  if (normalizeSpecialSpaces(matched) === normalizedReplacement) {
+    return `${before}${normalizeSpecialSpaces(matched)}${after}`;
+  }
+
+  return `${before}${normalizedReplacement}${after}`;
 }
 
 function formatErrorSnippet(text) {
@@ -1268,7 +1279,7 @@ function renderCenterDiffPanel(change, allChanges) {
 
   const title = document.createElement("div");
   title.className = "diff-path";
-  title.textContent = `中央パネル確認: ${change.path}${change.editBlockIndex ? ` / 編集ブロック ${change.editBlockIndex}` : ""}`;
+  title.textContent = `中央パネル確認: ${change.path}${change.editBlockIndex ? ` / 編集ブロック ${change.editBlockIndex}/${change.editBlockTotal || "?"}` : ""}`;
 
   const status = document.createElement("div");
   status.className = "diff-stats";
@@ -1342,11 +1353,11 @@ function renderChangeCard(change, allChanges) {
 
   const title = document.createElement("div");
   title.className = "diff-path";
-  title.textContent = `${change.path}${change.editBlockIndex ? ` / 編集ブロック ${change.editBlockIndex}` : ""}`;
+  title.textContent = `${change.path}${change.editBlockIndex ? ` / 編集ブロック ${change.editBlockIndex}/${change.editBlockTotal || "?"}` : ""}`;
 
   const status = document.createElement("div");
   status.className = "diff-stats";
-  status.textContent = `${getChangeStatusText(change.status)}${change.editCount ? ` / ${change.editCount} 編集ブロック` : ""}`;
+  status.textContent = `${getChangeStatusText(change.status)}${change.editBlockIndex ? ` / 編集ブロック ${change.editBlockIndex}/${change.editBlockTotal || "?"}` : ""}`;
 
   titleRow.append(title, status);
 
@@ -1450,7 +1461,7 @@ async function acceptChange(change) {
   change.status = "applied";
   updateDirtyUi();
   renderTree();
-  setStatus(`${change.path}${change.editBlockIndex ? ` の編集ブロック ${change.editBlockIndex}` : ""} に提案を反映しました。`);
+  setStatus(`${change.path}${change.editBlockIndex ? ` の編集ブロック ${change.editBlockIndex}/${change.editBlockTotal || "?"}` : ""} に提案を反映しました。`);
 }
 
 async function getCurrentContent(path) {
