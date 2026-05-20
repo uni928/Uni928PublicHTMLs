@@ -139,6 +139,7 @@ const dom = {
   centerDiffPanel: document.querySelector("#centerDiffPanel"),
   closeAiButton: document.querySelector("#closeAiButton"),
   closeSidebarButton: document.querySelector("#closeSidebarButton"),
+  copyGeminiPromptButton: document.querySelector("#copyGeminiPromptButton"),
   copyPromptButton: document.querySelector("#copyPromptButton"),
   currentPath: document.querySelector("#currentPath"),
   diffPanel: document.querySelector("#diffPanel"),
@@ -175,7 +176,8 @@ dom.toggleAiButton.addEventListener("click", () => setAiPanelOpen(!isAiPanelOpen
 dom.closeAiButton.addEventListener("click", () => setAiPanelOpen(false));
 dom.toggleSidebarButton.addEventListener("click", () => setSidebarOpen(!isSidebarOpen()));
 dom.closeSidebarButton.addEventListener("click", () => setSidebarOpen(false));
-dom.copyPromptButton.addEventListener("click", copyPromptAndOpenChatGpt);
+dom.copyPromptButton.addEventListener("click", () => copyPromptAndOpenAi("chatgpt"));
+dom.copyGeminiPromptButton.addEventListener("click", () => copyPromptAndOpenAi("gemini"));
 dom.applyResultButton.addEventListener("click", prepareDiffFromResult);
 dom.editor.addEventListener("input", onEditorInput);
 dom.editor.addEventListener("scroll", syncLineNumberScroll);
@@ -411,7 +413,7 @@ async function ensureWritablePermission(handle) {
   }
 }
 
-async function copyPromptAndOpenChatGpt() {
+async function copyPromptAndOpenAi(target) {
   let popup = null;
 
   try {
@@ -421,12 +423,13 @@ async function copyPromptAndOpenChatGpt() {
     if (!state.activePath) throw new Error("先に編集対象のファイルを開いてください。");
     if (!navigator.clipboard?.writeText) throw new Error("このブラウザではクリップボードコピーが使えません。");
 
+    const service = getAiServiceConfig(target);
     const permissionState = await getClipboardWritePermissionState();
     const copyOnlyFirst = permissionState === "unknown" && !state.clipboardUnknownFirstCopyDone;
 
-    if (permissionState === "denied") {
+    if (permissionState === "denied" || permissionState === "prompt") {
       const requestedState = await requestClipboardWritePermission();
-      if (requestedState !== "granted") {
+      if (requestedState === "denied" || (permissionState === "denied" && requestedState !== "granted")) {
         throw new Error("クリップボードへのコピー権限がありません。ブラウザの権限設定を確認してください。");
       }
     }
@@ -435,7 +438,7 @@ async function copyPromptAndOpenChatGpt() {
       popup = window.open("about:blank", "_blank");
     }
 
-    setStatus("ChatGPT用プロンプトを組み立てています...");
+    setStatus(`${service.name}用プロンプトを組み立てています...`);
     const { includedPaths, prompt } = await buildChatGptPrompt(userPrompt);
     await navigator.clipboard.writeText(prompt);
     state.clipboardUnknownFirstCopyDone = true;
@@ -443,14 +446,18 @@ async function copyPromptAndOpenChatGpt() {
 
     if (copyOnlyFirst) {
       setStatus(
-        `プロンプトをコピーしました。権限チェックできない環境のため、この初回はChatGPTを開きません。もう一度押すと開きます。${prompt.length}文字、対象 ${includedPaths.length} ファイル。`,
+        `プロンプトをコピーしました。クリップボード権限を事前確認できない環境のため、この初回は${service.name}を開きません。もう一度「${service.buttonLabel}」を押すと${service.name}を開きます。${prompt.length}文字、対象 ${includedPaths.length} ファイル。`,
       );
       return;
     }
 
-    const url = buildChatGptUrl(prompt);
+    const url = buildAiServiceUrl(service.id, prompt);
 
-    if (prompt.length <= MAX_DIRECT_PROMPT_LENGTH) {
+    if (service.id === "gemini") {
+      setStatus(
+        `プロンプトをコピーし、Geminiを開きました。GeminiはURLにプロンプトを入れられないため、画面で貼り付けて実行してください。${prompt.length}文字、対象 ${includedPaths.length} ファイル。`,
+      );
+    } else if (prompt.length <= MAX_DIRECT_PROMPT_LENGTH) {
       setStatus(`プロンプトをコピーし、ChatGPTを開きました。${prompt.length}文字、対象 ${includedPaths.length} ファイル。`);
     } else {
       setStatus(
@@ -458,11 +465,27 @@ async function copyPromptAndOpenChatGpt() {
       );
     }
 
-    openPromptTarget(url, popup);
+    openPromptTarget(url, popup, service.name);
   } catch (error) {
     if (popup) popup.close();
     setStatus(error.message, true);
   }
+}
+
+function getAiServiceConfig(target) {
+  if (target === "gemini") {
+    return {
+      buttonLabel: "プロンプトをコピーしてGeminiを開く",
+      id: "gemini",
+      name: "Gemini",
+    };
+  }
+
+  return {
+    buttonLabel: "プロンプトをコピーしてChatGPTを開く",
+    id: "chatgpt",
+    name: "ChatGPT",
+  };
 }
 
 async function getClipboardWritePermissionState() {
@@ -477,17 +500,21 @@ async function getClipboardWritePermissionState() {
 }
 
 async function requestClipboardWritePermission() {
-  if (!navigator.permissions?.request) return "denied";
+  if (!navigator.permissions?.request) return "unknown";
 
   try {
     const status = await navigator.permissions.request({ name: "clipboard-write" });
     return status.state;
   } catch {
-    return "denied";
+    return "unknown";
   }
 }
 
-function buildChatGptUrl(prompt) {
+function buildAiServiceUrl(target, prompt) {
+  if (target === "gemini") {
+    return new URL("https://gemini.google.com/app");
+  }
+
   const url = new URL("https://chatgpt.com/");
   url.searchParams.set("temporary-chat", "true");
 
@@ -498,7 +525,7 @@ function buildChatGptUrl(prompt) {
   return url;
 }
 
-function openPromptTarget(url, popup) {
+function openPromptTarget(url, popup, serviceName) {
   if (popup) {
     popup.location.href = url.toString();
     return;
@@ -506,7 +533,7 @@ function openPromptTarget(url, popup) {
 
   const opened = window.open(url.toString(), "_blank", "noopener,noreferrer");
   if (!opened) {
-    throw new Error("ChatGPTを開けませんでした。ポップアップブロックを解除して、もう一度押してください。");
+    throw new Error(`${serviceName}を開けませんでした。ポップアップブロックを解除して、もう一度押してください。`);
   }
 }
 
@@ -538,7 +565,7 @@ async function buildChatGptPrompt(userPrompt) {
 
   const prompt = [
     "あなたはAI Folder Editorのコード編集アシスタントです。",
-    "ユーザーはChatGPTの出力をアプリの「反映する」ボタンで読み取り、差分を確認して採用します。",
+    "ユーザーはChatGPTまたはGeminiの出力をアプリの「反映する」ボタンで読み取り、差分を確認して採用します。",
     "",
     "重要な返答ルール:",
     "- 返答は説明なしで、下の raw patch 形式だけにしてください。コードフェンスで囲んで構いません。",
@@ -616,7 +643,7 @@ function escapeRegExp(value) {
 async function prepareDiffFromResult() {
   try {
     const raw = dom.resultInput.value.trim();
-    if (!raw) throw new Error("ChatGPTの結果を貼り付けてください。");
+    if (!raw) throw new Error("ChatGPTまたはGeminiの結果を貼り付けてください。");
     if (!state.rootHandle) throw new Error("先にフォルダを開いてください。");
 
     syncActiveEditorToCache();
@@ -705,7 +732,7 @@ function parseResultJson(raw) {
   const loosePatchResult = parseLooseJsonPatchResult(candidate);
   if (loosePatchResult) return loosePatchResult;
 
-  throw new Error("パッチとして解析できませんでした。ChatGPTの返答全体を貼り付けてください。");
+  throw new Error("パッチとして解析できませんでした。ChatGPTまたはGeminiの返答全体を貼り付けてください。");
 }
 
 function parseRawPatchResult(raw) {
@@ -1530,7 +1557,7 @@ function isSidebarOpen() {
   return !dom.appShell.classList.contains("sidebar-closed");
 }
 
-function renderDiffEmpty(message = "ChatGPTの結果を反映すると、ここに差分が表示されます。") {
+function renderDiffEmpty(message = "ChatGPTまたはGeminiの結果を反映すると、ここに差分が表示されます。") {
   dom.diffPanel.innerHTML = "";
   hideCenterDiffPreview();
 

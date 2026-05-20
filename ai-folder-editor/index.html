@@ -58,33 +58,36 @@
       <aside id="aiPanel" class="ai-panel" hidden>
         <header class="panel-header">
           <div>
-            <h2>ChatGPT反映パネル</h2>
-            <p>依頼を書いてコピー、ChatGPTの結果を貼り付けて反映します。</p>
+            <h2>AI反映パネル</h2>
+            <p>依頼を書いてコピー、ChatGPTまたはGeminiの結果を貼り付けて反映します。</p>
           </div>
           <button id="closeAiButton" class="icon-button" type="button" aria-label="AIパネルを閉じる">×</button>
         </header>
 
         <section class="panel-section">
-          <label for="promptInput">依頼プロンプト</label>
+          <label for="promptInput">依頼プロンプト(開くボタンは2回押して下さい)</label>
           <textarea
             id="promptInput"
             class="prompt-input"
             placeholder="例: このクラスの責務を整理して、読みやすくリファクタしてください。"
           ></textarea>
-          <div class="button-row">
+          <div class="button-row prompt-copy-row">
             <button id="copyPromptButton" class="primary-button wide" type="button">
               プロンプトをコピーしてChatGPTを開く
+            </button>
+            <button id="copyGeminiPromptButton" class="ghost-button wide" type="button">
+              プロンプトをコピーしてGeminiを開く
             </button>
           </div>
           <div id="promptMeta" class="prompt-meta">現在のファイルと、コード中で参照されている同名ファイルを自動で含めます。</div>
         </section>
 
         <section class="panel-section">
-          <label for="resultInput">ChatGPTの結果</label>
+          <label for="resultInput">AIの結果</label>
           <textarea
             id="resultInput"
             class="result-input"
-            placeholder="ChatGPTのパッチ結果をここに貼り付けます。"
+            placeholder="ChatGPTまたはGeminiのパッチ結果をここに貼り付けます。"
           ></textarea>
           <div class="button-row">
             <button id="applyResultButton" class="primary-button wide" type="button">反映する</button>

@@ -539,6 +539,15 @@ label {
   align-items: center;
 }
 
+.prompt-copy-row > * {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  white-space: normal;
+  line-height: 1.25;
+  padding-block: 6px;
+}
+
 .prompt-meta {
   line-height: 1.5;
 }
