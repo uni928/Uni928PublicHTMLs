@@ -81,7 +81,7 @@ button:disabled {
 
 .sidebar {
   display: flex;
-  height: 9990;
+  height: 100vh;
   flex-direction: column;
 }
 
@@ -240,6 +240,8 @@ h2 {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   background: #fbfaf7;
 }
 
@@ -290,6 +292,7 @@ h2 {
 }
 
 .center-diff-panel {
+  height: 100%;
   min-height: 0;
   overflow: auto;
   padding: 14px 16px 28px;
@@ -359,7 +362,49 @@ h2 {
 
 .center-diff-panel .diff-rows {
   max-height: none;
-  
+}
+
+.center-diff-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  background: #fbfaf7;
+}
+
+.center-code-diff {
+  display: grid;
+  width: min(100%, 1280px);
+  margin: 0 auto;
+  overflow: visible;
+  border: 1px solid #25282d;
+  border-radius: 8px;
+  background: var(--code-bg);
+  font:
+    13px/1.55 "Cascadia Mono",
+    Consolas,
+    "Courier New",
+    monospace;
+}
+
+.center-code-diff .diff-row {
+  grid-template-columns: 58px 58px minmax(0, 1fr);
+}
+
+.center-code-diff .diff-row.context {
+  color: var(--code-ink);
+  background: var(--code-bg);
+}
+
+.center-code-diff .diff-row.omit {
+  color: #aeb4bc;
+  background: #25282d;
+}
+
+.center-code-diff .old-line,
+.center-code-diff .new-line {
+  background: rgba(0, 0, 0, 0.16);
 }
 
 .line-numbers,
@@ -386,7 +431,8 @@ h2 {
 
 .editor {
   width: 100%;
-  height: 9990;
+  height: 100%;
+  min-height: 0;
   resize: none;
   outline: none;
   color: var(--code-ink);
@@ -414,8 +460,9 @@ h2 {
 
 .ai-panel {
   display: flex;
-  height: 9990;
   flex-direction: column;
+  height: 100vh;
+  max-height: 100vh;
   border-left: 1px solid var(--line);
   border-right: 0;
   box-shadow: var(--shadow);
@@ -553,6 +600,8 @@ label {
 .diff-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .choice-button.accept {
@@ -563,6 +612,12 @@ label {
 .choice-button.reject {
   color: #5c1f27;
   background: #f1d9dd;
+}
+
+.choice-button.center-check {
+  margin-left: auto;
+  color: #21343f;
+  background: #dfe8f0;
 }
 
 .diff-rows {

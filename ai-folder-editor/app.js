@@ -161,6 +161,7 @@ const dom = {
 
 const state = {
   activePath: "",
+  centerPreviewChange: null,
   clipboardUnknownFirstCopyDone: false,
   fileTree: null,
   files: new Map(),
@@ -987,13 +988,16 @@ function normalizeCopiedMarkdownLinks(text) {
 
 function renderDiffPanel(changes) {
   dom.diffPanel.innerHTML = "";
+  const pendingChanges = changes.filter((change) => change.status === "pending");
 
-  if (changes.length === 0) {
+  if (pendingChanges.length === 0) {
     renderDiffEmpty("差分はありません。");
     return;
   }
 
-  renderCenterDiffPanel(changes);
+  if (state.centerPreviewChange && state.centerPreviewChange.status !== "pending") {
+    hideCenterDiffPreview();
+  }
 
   const toolbar = document.createElement("div");
   toolbar.className = "diff-toolbar";
@@ -1003,7 +1007,7 @@ function renderDiffPanel(changes) {
   acceptAll.type = "button";
   acceptAll.textContent = "すべて採用";
   acceptAll.addEventListener("click", async () => {
-    for (const change of changes) {
+    for (const change of pendingChanges) {
       if (change.status === "pending") {
         await acceptChange(change);
       }
@@ -1020,12 +1024,28 @@ function renderDiffPanel(changes) {
   toolbar.append(acceptAll, close);
   dom.diffPanel.append(toolbar);
 
-  for (const change of changes) {
+  for (const change of pendingChanges) {
     dom.diffPanel.append(renderChangeCard(change, changes));
   }
 }
 
-function renderCenterDiffPanel(changes) {
+async function showChangeInCenter(change, allChanges) {
+  if (change.status !== "pending") return;
+
+  if (state.activePath !== change.path && state.files.has(change.path)) {
+    await openFile(change.path);
+  }
+
+  state.centerPreviewChange = change;
+  renderCenterDiffPanel(change, allChanges);
+
+  requestAnimationFrame(() => {
+    const target = dom.centerDiffPanel.querySelector(".diff-row.added, .diff-row.removed");
+    target?.scrollIntoView({ block: "center" });
+  });
+}
+
+function renderCenterDiffPanel(change, allChanges) {
   dom.centerDiffPanel.innerHTML = "";
   dom.centerDiffPanel.hidden = false;
   dom.editorSurface.hidden = true;
@@ -1035,95 +1055,61 @@ function renderCenterDiffPanel(changes) {
 
   const title = document.createElement("div");
   title.className = "diff-path";
-  title.textContent = "差分プレビュー";
+  title.textContent = `中央パネル確認: ${change.path}`;
 
   const status = document.createElement("div");
   status.className = "diff-stats";
-  status.textContent = `${changes.length} ファイル`;
+  const diff = buildLineDiff(change.oldContent, change.content);
+  status.textContent = `+${diff.added} / -${diff.removed}`;
+
+  const actions = document.createElement("div");
+  actions.className = "diff-actions";
+
+  const accept = document.createElement("button");
+  accept.className = "choice-button accept";
+  accept.type = "button";
+  accept.textContent = "反映する";
+  accept.addEventListener("click", async () => {
+    await acceptChange(change);
+    hideCenterDiffPreview();
+    renderDiffPanel(allChanges);
+  });
+
+  const reject = document.createElement("button");
+  reject.className = "choice-button reject";
+  reject.type = "button";
+  reject.textContent = "反映しない";
+  reject.addEventListener("click", () => {
+    change.status = "skipped";
+    hideCenterDiffPreview();
+    renderDiffPanel(allChanges);
+  });
 
   const close = document.createElement("button");
   close.className = "ghost-button";
   close.type = "button";
   close.textContent = "閉じる";
-  close.addEventListener("click", renderDiffEmpty);
+  close.addEventListener("click", hideCenterDiffPreview);
 
-  toolbar.append(title, status, close);
+  actions.append(accept, reject, close);
+  toolbar.append(title, status, actions);
   dom.centerDiffPanel.append(toolbar);
 
-  const editorMeta = state.activePath ? state.files.get(state.activePath) : null;
-  const editorContent = state.activePath ? dom.editor.value : "";
+  const rows = document.createElement("div");
+  rows.className = "center-code-diff";
 
-  const editorWrapper = document.createElement("div");
-  editorWrapper.className = "inline-diff-editor";
-
-  const editorLines = splitLines(editorContent);
-
-  for (const change of changes) {
-    if (change.path !== state.activePath) continue;
-
-    const diff = buildLineDiff(change.oldContent, change.content);
-
-    const section = document.createElement("section");
-    section.className = "inline-diff-section";
-
-    const header = document.createElement("div");
-    header.className = "inline-diff-header";
-
-    const path = document.createElement("div");
-    path.className = "diff-path";
-    path.textContent = change.path;
-
-    const actions = document.createElement("div");
-    actions.className = "diff-actions";
-
-    const accept = document.createElement("button");
-    accept.className = "choice-button accept";
-    accept.type = "button";
-    accept.textContent = "反映する";
-    accept.addEventListener("click", async () => {
-      await acceptChange(change);
-      renderDiffPanel(changes);
-    });
-
-    const reject = document.createElement("button");
-    reject.className = "choice-button reject";
-    reject.type = "button";
-    reject.textContent = "反映しない";
-    reject.addEventListener("click", () => {
-      change.status = "skipped";
-      renderDiffPanel(changes);
-    });
-
-    actions.append(accept, reject);
-    header.append(path, actions);
-
-    const rows = document.createElement("div");
-    rows.className = "inline-diff-rows";
-
-    for (const row of compactRows(diff.rows)) {
-      rows.append(renderDiffRow(row));
-    }
-
-    section.append(header, rows);
-    editorWrapper.append(section);
+  for (const row of diff.rows) {
+    rows.append(renderDiffRow(row));
   }
 
-  if (editorMeta) {
-    const editorPreview = document.createElement("pre");
-    editorPreview.className = "inline-editor-preview";
-    editorPreview.textContent = editorLines.join("\n");
-    editorWrapper.prepend(editorPreview);
-  }
+  dom.centerDiffPanel.append(rows);
+}
 
-  dom.centerDiffPanel.append(editorWrapper);
-  return;
-
-  toolbar.append(title, status);
-  dom.centerDiffPanel.append(toolbar);
-
-  for (const change of changes) {
-    dom.centerDiffPanel.append(renderChangeCard(change, changes));
-  }
+function hideCenterDiffPreview() {
+  state.centerPreviewChange = null;
+  dom.centerDiffPanel.innerHTML = "";
+  dom.centerDiffPanel.hidden = true;
+  dom.editorSurface.hidden = false;
 }
 
 function renderChangeCard(change, allChanges) {
@@ -1161,6 +1147,7 @@ function renderChangeCard(change, allChanges) {
   accept.disabled = change.status !== "pending";
   accept.addEventListener("click", async () => {
     await acceptChange(change);
+    if (state.centerPreviewChange === change) hideCenterDiffPreview();
     renderDiffPanel(allChanges);
   });
 
@@ -1171,10 +1158,20 @@ function renderChangeCard(change, allChanges) {
   reject.disabled = change.status !== "pending";
   reject.addEventListener("click", () => {
     change.status = "skipped";
+    if (state.centerPreviewChange === change) hideCenterDiffPreview();
     renderDiffPanel(allChanges);
   });
 
-  actions.append(accept, reject);
+  const center = document.createElement("button");
+  center.className = "choice-button center-check";
+  center.type = "button";
+  center.textContent = "中央パネルで確認";
+  center.disabled = change.status !== "pending";
+  center.addEventListener("click", () => {
+    showChangeInCenter(change, allChanges);
+  });
+
+  actions.append(accept, reject, center);
   header.append(titleRow, stats, actions);
 
   const rows = document.createElement("div");
@@ -1481,9 +1478,7 @@ function isSidebarOpen() {
 
 function renderDiffEmpty(message = "ChatGPTの結果を反映すると、ここに差分が表示されます。") {
   dom.diffPanel.innerHTML = "";
-  dom.centerDiffPanel.innerHTML = "";
-  dom.centerDiffPanel.hidden = true;
-  dom.editorSurface.hidden = false;
+  hideCenterDiffPreview();
 
   const empty = document.createElement("div");
   empty.className = "diff-empty";
