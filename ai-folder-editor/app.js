@@ -575,6 +575,9 @@ async function buildChatGptPrompt(userPrompt) {
     "- NEW は OLD を置き換える新コード断片です。削除は NEW を空にしてください。",
     "- 追記や挿入は、OLD に挿入位置周辺の一意な既存断片、NEW にその既存断片へ追加コードを含めた断片を入れてください。",
     "- URLをMarkdownリンクにしないでください。コード内のURLはそのままテキストとして出してください。",
+    "- インデントや空白には、通常の半角スペース U+0020 とタブ U+0009 だけを使ってください。",
+    "- ノーブレークスペース、全角スペース、細いスペースなどの特殊空白文字を絶対に使わないでください。",
+    "- OLD/NEW内のコードをコピーする際も、見た目が同じでも特殊空白に変換しないでください。",
     "- 変更不要なら Begin/End のみで FILE を出さないでください。",
     "",
     "推奨返答形式:",
@@ -782,8 +785,8 @@ function parseRawPatchEdits(block, path) {
     const editEnd = editEndCandidates.length ? Math.min(...editEndCandidates) : block.length;
 
     edits.push({
-      old: trimOneTrailingLineBreak(block.slice(oldStart, newMarker)),
-      new: trimOneTrailingLineBreak(block.slice(newStart, editEnd)),
+      old: normalizeSpecialSpaces(trimOneTrailingLineBreak(block.slice(oldStart, newMarker))),
+      new: normalizeSpecialSpaces(trimOneTrailingLineBreak(block.slice(newStart, editEnd))),
     });
     cursor = editEnd;
   }
@@ -930,6 +933,9 @@ function applyPatchEdits(oldContent, edits, path) {
     let oldText = coerceContent(oldValue);
     let newText = coerceContent(newValue);
 
+    if (oldText !== null) oldText = normalizeSpecialSpaces(oldText);
+    if (newText !== null) newText = normalizeSpecialSpaces(newText);
+
     if (oldText === null) throw new Error(`${path} のedits[${index}].oldが文字列ではありません。`);
     if (newText === null) throw new Error(`${path} のedits[${index}].newが文字列ではありません。`);
     if (Array.isArray(oldValue) && edit.oldFinalNewline === true && !oldText.endsWith("\n")) oldText += "\n";
@@ -1036,14 +1042,18 @@ function normalizeCopiedMarkdownLinks(text) {
   return text.replace(/\[([\s\S]*?)\]\((?:https?:\/\/|mailto:)[^)]+\)/g, "$1");
 }
 
+function normalizeSpecialSpaces(text) {
+  return String(text).replace(/[\u00a0\u1680\u180e\u2000-\u200b\u202f\u205f\u3000\ufeff]/g, " ");
+}
+
 function normalizePatchLeadingWhitespace(text) {
-  return normalizePatchLooseText(text);
+  return normalizeSpecialSpaces(text).replace(/(^|\n)([ \t]+)/g, (_, lineStart, indent) => {
+    return `${lineStart}${indent.replace(/[^\t]/g, " ")}`;
+  });
 }
 
 function normalizePatchLooseLine(line) {
-  return String(line)
-    .replace(/[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/g, " ")
-    .replace(/[ \t]+$/g, "");
+  return normalizeSpecialSpaces(line).replace(/[ \t]+$/g, "");
 }
 
 function normalizePatchLooseText(text) {
