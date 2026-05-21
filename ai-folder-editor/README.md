@@ -11,6 +11,12 @@ node server.mjs
 
 ブラウザで `http://127.0.0.1:5177/` を開きます。
 
+## 試す
+
+試したい場合は下記の URL からお試しください。
+
+https://uni928.github.io/Uni928PublicHTMLs/ai-folder-editor/index.html
+
 ## 使い方
 
 1. `フォルダを開く` で編集対象フォルダを選びます。
