@@ -500,10 +500,16 @@
       if (ffmpegLoaded) return;
 
       if (!window.FFmpeg || !window.FFmpeg.FFmpeg) {
+
+        if(FFmpeg) {
+          window.FFmpeg = FFmpeg;
+        }
+        else {
         throw new Error(
           "ffmpeg.js の読み込みに失敗しました。\n" +
           "scriptタグのURL・ネット接続・ローカルサーバー起動を確認してください。"
         );
+        }
       }
 
       setStatus("ffmpeg.wasm を読み込んでいます。初回は少し時間がかかります。");
