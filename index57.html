@@ -326,7 +326,7 @@
       <h2>注意</h2>
       <p class="notice">
         書き出し処理はブラウザ内で行われます。長い動画や高画質動画では処理に時間がかかります。<br />
-        ffmpeg.wasm をCDNから読み込むため、初回実行時はインターネット接続が必要です。
+        HTMLを直接ダブルクリックして file:// で開くと、ブラウザの制限で ffmpeg.wasm が動かない場合があります。ローカルで使う場合は、このHTMLがあるフォルダでローカルサーバーを起動してください。
       </p>
     </section>
   </main>
@@ -496,7 +496,7 @@
     async function loadFFmpeg() {
       if (ffmpegLoaded) return;
       if (!window.FFmpeg) {
-        throw new Error("ffmpeg.wasm の読み込みに失敗しました。インターネット接続またはCDNへのアクセスを確認してください。");
+        throw new Error("ffmpeg.wasm の読み込みに失敗しました。HTMLを file:// で直接開いている場合は、ローカルサーバーで起動してください。完全オフラインで使う場合は ffmpeg.js / ffmpeg-core.js / ffmpeg-core.wasm / ffmpeg-core.worker.js を同じフォルダに配置する必要があります。");
       }
 
       setStatus("ffmpeg.wasm を読み込んでいます。初回は少し時間がかかります。");
@@ -505,7 +505,7 @@
 
       ffmpeg.on("log", ({ message }) => {
         if (message) setStatus(`処理中...
-` + message);
+${message}`);
       });
 
       ffmpeg.on("progress", ({ progress }) => {
@@ -513,7 +513,9 @@
       });
 
       await ffmpeg.load({
-        coreURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js"
+        coreURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js",
+        wasmURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm",
+        workerURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.worker.js"
       });
 
       ffmpegLoaded = true;
@@ -608,7 +610,7 @@
       } catch (error) {
         console.error(error);
         setStatus(`エラーが発生しました。
-` + (error.message || error));
+${error.message || error}`);
       } finally {
         exportBtn.disabled = false;
       }
