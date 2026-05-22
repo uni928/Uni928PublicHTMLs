@@ -496,45 +496,40 @@
       };
     }
 
-    async function loadFFmpeg() {
-      if (ffmpegLoaded) return;
+async function loadFFmpeg() {
+  if (ffmpegLoaded) return;
 
-      if (!window.FFmpeg || !window.FFmpeg.FFmpeg) {
+  const FFmpegClass = window.FFmpeg && window.FFmpeg.FFmpeg;
 
-        if(FFmpeg) {
-          window.FFmpeg = FFmpeg;
-        }
-        else {
-        throw new Error(
-          "ffmpeg.js の読み込みに失敗しました。\n" +
-          "scriptタグのURL・ネット接続・ローカルサーバー起動を確認してください。"
-        );
-        }
-      }
+  if (!FFmpegClass) {
+    throw new Error(
+      "ffmpeg.js の読み込みに失敗しました。\n" +
+      "scriptタグのURL・ネット接続・ローカルサーバー起動を確認してください。"
+    );
+  }
 
-      setStatus("ffmpeg.wasm を読み込んでいます。初回は少し時間がかかります。");
+  setStatus("ffmpeg.wasm を読み込んでいます。初回は少し時間がかかります。");
 
-      const { FFmpeg } = window.FFmpeg;
-      ffmpeg = new FFmpeg();
+  ffmpeg = new FFmpegClass();
 
-      ffmpeg.on("log", ({ message }) => {
-        if (message) {
-          setStatus(`処理中...\n${message}`);
-        }
-      });
-
-      ffmpeg.on("progress", ({ progress }) => {
-        setProgress(progress);
-      });
-
-      await ffmpeg.load({
-        coreURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js",
-        wasmURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm",
-        workerURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.worker.js"
-      });
-
-      ffmpegLoaded = true;
+  ffmpeg.on("log", ({ message }) => {
+    if (message) {
+      setStatus(`処理中...\n${message}`);
     }
+  });
+
+  ffmpeg.on("progress", ({ progress }) => {
+    setProgress(progress);
+  });
+
+  await ffmpeg.load({
+    coreURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js",
+    wasmURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm",
+    workerURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.worker.js"
+  });
+
+  ffmpegLoaded = true;
+}
 
     function getOutputFileName() {
       const base = currentFile.name.replace(/\.[^.]+$/, "") || "trimmed-video";
@@ -575,7 +570,7 @@
       exportBtn.disabled = true;
       setProgress(0);
       setStatus("書き出し準備中です。");
-loadFile(e.target.files[0])
+
       try {
         await loadFFmpeg();
 
