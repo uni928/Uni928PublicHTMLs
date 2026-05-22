@@ -498,17 +498,23 @@
 
     async function loadFFmpeg() {
       if (ffmpegLoaded) return;
-      if (!window.FFmpeg) {
-        throw new Error("ffmpeg.wasm の読み込みに失敗しました。HTMLを file:// で直接開いている場合は、ローカルサーバーで起動してください。完全オフラインで使う場合は ffmpeg.js / ffmpeg-core.js / ffmpeg-core.wasm / ffmpeg-core.worker.js を同じフォルダに配置する必要があります。");
+
+      if (!window.FFmpeg || !window.FFmpeg.FFmpeg) {
+        throw new Error(
+          "ffmpeg.js の読み込みに失敗しました。\n" +
+          "scriptタグのURL・ネット接続・ローカルサーバー起動を確認してください。"
+        );
       }
 
       setStatus("ffmpeg.wasm を読み込んでいます。初回は少し時間がかかります。");
+
       const { FFmpeg } = window.FFmpeg;
       ffmpeg = new FFmpeg();
 
       ffmpeg.on("log", ({ message }) => {
-        if (message) setStatus(`処理中...
-${message}`);
+        if (message) {
+          setStatus(`処理中...\n${message}`);
+        }
       });
 
       ffmpeg.on("progress", ({ progress }) => {
@@ -612,8 +618,7 @@ ${message}`);
         setTimeout(() => URL.revokeObjectURL(url), 30000);
       } catch (error) {
         console.error(error);
-        setStatus(`エラーが発生しました。
-${error.message || error}`);
+        setStatus(`エラーが発生しました。\n${error.message || error}`);
       } finally {
         exportBtn.disabled = false;
       }
