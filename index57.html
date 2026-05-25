@@ -128,6 +128,19 @@
       gap: 8px;
     }
 
+    .range-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .range-value {
+      color: #38bdf8;
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+    }
+
     .status {
       font-size: 12px;
       color: #94a3b8;
@@ -229,6 +242,28 @@
         <label class="control-label" for="rotationRange">自動回転速度</label>
         <input id="rotationRange" type="range" min="0" max="0.04" step="0.002" value="0.01" />
 
+        <label class="control-label range-heading" for="sunAngleRange">
+          <span>太陽の角度</span>
+          <span class="range-value" id="sunAngleValue">45°</span>
+        </label>
+        <input id="sunAngleRange" type="range" min="0" max="360" step="1" value="45" />
+
+        <label class="control-label range-heading" for="sunStrengthRange">
+          <span>太陽の強さ</span>
+          <span class="range-value" id="sunStrengthValue">2.2</span>
+        </label>
+        <input id="sunStrengthRange" type="range" min="0" max="6" step="0.1" value="2.2" />
+
+        <label class="control-label" for="sunPatternSelect">太陽のパターン</label>
+        <select id="sunPatternSelect">
+          <option value="standard">標準</option>
+          <option value="soft">やわらかい光</option>
+          <option value="side">横から強め</option>
+          <option value="back">逆光</option>
+          <option value="top">真上</option>
+          <option value="sunset">夕方風</option>
+        </select>
+
         <div class="row">
           <button id="resetCameraBtn">カメラ初期化</button>
           <button id="centerBtn">中央配置</button>
@@ -278,6 +313,11 @@
     const scaleRange = document.getElementById('scaleRange');
     const rotationRange = document.getElementById('rotationRange');
     const backgroundSelect = document.getElementById('backgroundSelect');
+    const sunAngleRange = document.getElementById('sunAngleRange');
+    const sunAngleValue = document.getElementById('sunAngleValue');
+    const sunStrengthRange = document.getElementById('sunStrengthRange');
+    const sunStrengthValue = document.getElementById('sunStrengthValue');
+    const sunPatternSelect = document.getElementById('sunPatternSelect');
     const resetCameraBtn = document.getElementById('resetCameraBtn');
     const centerBtn = document.getElementById('centerBtn');
     const sampleBtn = document.getElementById('sampleBtn');
@@ -309,6 +349,43 @@
     const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.9);
     fillLight.position.set(-4, 3, -5);
     scene.add(fillLight);
+
+    const sunPatterns = {
+      standard: { angle: 45, strength: 2.2, height: 7, color: 0xffffff, ambient: 1.8, fill: 0.9 },
+      soft: { angle: 35, strength: 1.5, height: 8, color: 0xffffff, ambient: 2.1, fill: 1.2 },
+      side: { angle: 90, strength: 3.2, height: 4.5, color: 0xffffff, ambient: 1.4, fill: 0.45 },
+      back: { angle: 225, strength: 3.4, height: 4.2, color: 0xffffff, ambient: 1.25, fill: 0.35 },
+      top: { angle: 45, strength: 2.8, height: 10, color: 0xffffff, ambient: 1.6, fill: 0.7 },
+      sunset: { angle: 315, strength: 2.6, height: 2.6, color: 0xffb86b, ambient: 1.35, fill: 0.55 }
+    };
+
+    function updateSunLight() {
+      const pattern = sunPatterns[sunPatternSelect.value] || sunPatterns.standard;
+      const angle = Number(sunAngleRange.value);
+      const strength = Number(sunStrengthRange.value);
+      const rad = THREE.MathUtils.degToRad(angle);
+      const radius = 7;
+
+      keyLight.position.set(
+        Math.cos(rad) * radius,
+        pattern.height,
+        Math.sin(rad) * radius
+      );
+      keyLight.intensity = strength;
+      keyLight.color.set(pattern.color);
+      ambient.intensity = pattern.ambient;
+      fillLight.intensity = pattern.fill;
+
+      sunAngleValue.textContent = `${angle}°`;
+      sunStrengthValue.textContent = strength.toFixed(1);
+    }
+
+    function applySunPattern(patternName) {
+      const pattern = sunPatterns[patternName] || sunPatterns.standard;
+      sunAngleRange.value = pattern.angle;
+      sunStrengthRange.value = pattern.strength;
+      updateSunLight();
+    }
 
     const grid = new THREE.GridHelper(10, 20, 0x64748b, 0x334155);
     scene.add(grid);
@@ -744,6 +821,11 @@
         grid.material.transparent = false;
       }
     });
+
+    sunAngleRange.addEventListener('input', updateSunLight);
+    sunStrengthRange.addEventListener('input', updateSunLight);
+    sunPatternSelect.addEventListener('change', () => applySunPattern(sunPatternSelect.value));
+    updateSunLight();
 
     resetCameraBtn.addEventListener('click', fitCameraToModel);
     centerBtn.addEventListener('click', centerModel);
