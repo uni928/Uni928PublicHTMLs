@@ -3,719 +3,739 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>動画トリミングツール</title>
+  <title>3D Model Previewer</title>
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #f3f4f6;
-      color: #111827;
+      background: #111827;
+      color: #f9fafb;
+      overflow: hidden;
     }
 
-    header {
-      padding: 22px 16px;
-      text-align: center;
-      background: linear-gradient(135deg, #111827, #374151);
-      color: white;
+    .app {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      width: 100vw;
+      height: 100vh;
     }
 
-    header h1 {
-      margin: 0 0 8px;
-      font-size: 26px;
-    }
-
-    header p {
-      margin: 0;
-      color: #d1d5db;
-      font-size: 14px;
-    }
-
-    main {
-      max-width: 980px;
-      margin: 24px auto;
-      padding: 0 16px 40px;
-    }
-
-    .card {
-      background: white;
-      border-radius: 18px;
+    aside {
+      background: #020617;
+      border-right: 1px solid #1f2937;
       padding: 20px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-      margin-bottom: 18px;
+      overflow-y: auto;
+      z-index: 2;
     }
 
-    .upload-area {
-      border: 2px dashed #9ca3af;
+    h1 {
+      font-size: 22px;
+      margin: 0 0 8px;
+    }
+
+    .subtitle {
+      color: #9ca3af;
+      font-size: 13px;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .panel {
+      background: #0f172a;
+      border: 1px solid #1e293b;
       border-radius: 16px;
-      padding: 28px 16px;
-      text-align: center;
-      background: #f9fafb;
-      transition: 0.2s;
+      padding: 16px;
+      margin-bottom: 16px;
     }
 
-    .upload-area.dragover {
-      background: #eef2ff;
-      border-color: #6366f1;
-    }
-
-    input[type="file"] { display: none; }
-
-    .button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      border: none;
-      border-radius: 999px;
-      padding: 11px 18px;
-      background: #2563eb;
-      color: white;
+    .panel-title {
+      font-size: 14px;
       font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .drop-zone {
+      border: 2px dashed #334155;
+      border-radius: 16px;
+      padding: 22px 14px;
+      text-align: center;
+      color: #cbd5e1;
       cursor: pointer;
       transition: 0.2s;
-      text-decoration: none;
+      background: #020617;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.dragover {
+      border-color: #38bdf8;
+      color: #e0f2fe;
+      background: #082f49;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    label,
+    .control-label {
+      display: block;
+      font-size: 12px;
+      color: #cbd5e1;
+      margin: 12px 0 6px;
+    }
+
+    input[type="range"],
+    select {
+      width: 100%;
+    }
+
+    select,
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: #1e293b;
+      color: #f8fafc;
       font-size: 14px;
     }
 
-    .button:hover {
-      background: #1d4ed8;
-      transform: translateY(-1px);
-    }
-
-    .button.secondary { background: #4b5563; }
-    .button.secondary:hover { background: #374151; }
-    .button.danger { background: #dc2626; }
-    .button.danger:hover { background: #b91c1c; }
-
-    .button:disabled {
-      background: #9ca3af;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .video-wrap {
+    button {
+      cursor: pointer;
+      transition: 0.2s;
       width: 100%;
-      max-height: 520px;
-      margin-top: 12px;
-      background: #000;
-      border-radius: 16px;
-      overflow: hidden;
-      position: relative;
+      margin-top: 10px;
     }
 
-    video {
-      display: block;
-      width: 100%;
-      max-height: 520px;
-      background: #000;
-      transform-origin: center center;
+    button:hover {
+      background: #334155;
     }
 
-    .crop-guide {
-      pointer-events: none;
-      position: absolute;
-      inset: 0;
-      border: 2px solid rgba(37, 99, 235, 0.9);
-      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.42);
+    .primary {
+      background: #0284c7;
     }
 
-    .controls,
-    .crop-controls {
+    .primary:hover {
+      background: #0369a1;
+    }
+
+    .row {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
-      margin-top: 18px;
-    }
-
-    .field {
-      background: #f9fafb;
-      border-radius: 14px;
-      padding: 14px;
-    }
-
-    .field label {
-      display: flex;
-      justify-content: space-between;
+      grid-template-columns: 1fr 1fr;
       gap: 8px;
-      font-weight: 700;
-      margin-bottom: 8px;
-      color: #374151;
-    }
-
-    .field label small {
-      color: #6b7280;
-      font-weight: 600;
-    }
-
-    input[type="range"] { width: 100%; }
-
-    input[type="number"] {
-      width: 100%;
-      padding: 10px;
-      border-radius: 10px;
-      border: 1px solid #d1d5db;
-      font-size: 16px;
-    }
-
-    .summary {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-top: 18px;
-    }
-
-    .summary-item {
-      padding: 14px;
-      background: #f3f4f6;
-      border-radius: 14px;
-      text-align: center;
-    }
-
-    .summary-item span {
-      display: block;
-      color: #6b7280;
-      font-size: 12px;
-      margin-bottom: 5px;
-    }
-
-    .summary-item strong { font-size: 18px; }
-
-    .actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 18px;
-    }
-
-    .notice {
-      font-size: 13px;
-      color: #6b7280;
-      line-height: 1.7;
     }
 
     .status {
-      margin-top: 14px;
-      padding: 12px 14px;
-      border-radius: 12px;
-      background: #eff6ff;
-      color: #1e40af;
-      font-size: 14px;
-      line-height: 1.7;
-      white-space: pre-wrap;
+      font-size: 12px;
+      color: #94a3b8;
+      line-height: 1.6;
+      word-break: break-all;
+      min-height: 40px;
     }
 
-    .progress-wrap {
-      margin-top: 12px;
-      width: 100%;
-      height: 12px;
-      border-radius: 999px;
-      background: #e5e7eb;
+    main {
+      position: relative;
       overflow: hidden;
     }
 
-    .progress-bar {
-      width: 0%;
+    #viewer {
+      width: 100%;
       height: 100%;
-      background: #2563eb;
-      transition: width 0.2s;
+      display: block;
     }
 
-    .hidden { display: none; }
+    .toolbar {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      display: flex;
+      gap: 8px;
+      z-index: 3;
+    }
 
-    @media (max-width: 720px) {
-      .controls,
-      .crop-controls,
-      .summary { grid-template-columns: 1fr; }
+    .toolbar button {
+      width: auto;
+      margin: 0;
+      background: rgba(15, 23, 42, 0.78);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+    }
+
+    .hint {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: #94a3b8;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .hint strong {
+      display: block;
+      color: #e5e7eb;
+      font-size: 22px;
+      margin-bottom: 8px;
+    }
+
+    @media (max-width: 800px) {
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+      }
+
+      aside {
+        max-height: 46vh;
+        border-right: none;
+        border-bottom: 1px solid #1f2937;
+      }
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>動画トリミングツール</h1>
-    <p>動画を読み込み、時間範囲と上下左右の削り幅を指定してMP4で書き出せます。</p>
-  </header>
-
-  <main>
-    <section class="card">
-      <div id="uploadArea" class="upload-area">
-        <p><strong>動画ファイルを選択</strong></p>
-        <p class="notice">MP4 / WebM / MOV など、ブラウザで再生できる動画に対応しています。</p>
-        <label class="button" for="videoInput">動画を選択</label>
-        <input id="videoInput" type="file" accept="video/*" />
-      </div>
-    </section>
-
-    <section id="editorCard" class="card hidden">
-      <h2>編集</h2>
-      <p id="fileName" class="notice"></p>
-
-      <div class="video-wrap" id="videoWrap">
-        <video id="video" controls></video>
-        <div id="cropGuide" class="crop-guide"></div>
+  <div class="app">
+    <aside>
+      <h1>3D Model Previewer</h1>
+      <div class="subtitle">
+        GLB / GLTF / OBJ / FBX ファイルをドラッグ＆ドロップして、ブラウザ上で3Dモデルを確認できます。
       </div>
 
-      <div class="controls">
-        <div class="field">
-          <label for="startRange">開始位置</label>
-          <input id="startRange" type="range" min="0" max="0" step="0.01" value="0" />
-          <input id="startInput" type="number" min="0" step="0.01" value="0" />
-        </div>
-
-        <div class="field">
-          <label for="endRange">終了位置</label>
-          <input id="endRange" type="range" min="0" max="0" step="0.01" value="0" />
-          <input id="endInput" type="number" min="0" step="0.01" value="0" />
-        </div>
+      <div class="panel">
+        <div class="panel-title">モデル読み込み</div>
+        <label class="drop-zone" id="dropZone">
+          <input id="fileInput" type="file" accept=".glb,.gltf,.obj,.fbx,.png,.jpg,.jpeg,.webp,.bmp,.gif,.tga" multiple />
+          ここにモデルとテクスチャをまとめてドロップ<br />またはクリックして複数選択
+        </label>
+        <button class="primary" id="sampleBtn">サンプルを表示</button>
       </div>
 
-      <h3>上下左右を削る</h3>
-      <p class="notice">数値は元動画に対する割合です。例: 左を10%にすると、左端10%を削って書き出します。</p>
+      <div class="panel">
+        <div class="panel-title">表示設定</div>
 
-      <div class="crop-controls">
-        <div class="field">
-          <label for="cropTop">上 <small id="cropTopText">0%</small></label>
-          <input id="cropTop" type="range" min="0" max="45" step="1" value="0" />
-        </div>
-        <div class="field">
-          <label for="cropBottom">下 <small id="cropBottomText">0%</small></label>
-          <input id="cropBottom" type="range" min="0" max="45" step="1" value="0" />
-        </div>
-        <div class="field">
-          <label for="cropLeft">左 <small id="cropLeftText">0%</small></label>
-          <input id="cropLeft" type="range" min="0" max="45" step="1" value="0" />
-        </div>
-        <div class="field">
-          <label for="cropRight">右 <small id="cropRightText">0%</small></label>
-          <input id="cropRight" type="range" min="0" max="45" step="1" value="0" />
+        <label class="control-label" for="backgroundSelect">背景</label>
+        <select id="backgroundSelect">
+          <option value="dark">ダーク</option>
+          <option value="light">ライト</option>
+          <option value="grid">グリッド強調</option>
+        </select>
+
+        <label class="control-label" for="scaleRange">モデルサイズ</label>
+        <input id="scaleRange" type="range" min="0.1" max="5" step="0.1" value="1" />
+
+        <label class="control-label" for="rotationRange">自動回転速度</label>
+        <input id="rotationRange" type="range" min="0" max="0.04" step="0.002" value="0.01" />
+
+        <div class="row">
+          <button id="resetCameraBtn">カメラ初期化</button>
+          <button id="centerBtn">中央配置</button>
         </div>
       </div>
 
-      <div class="summary">
-        <div class="summary-item">
-          <span>開始</span>
-          <strong id="startText">00:00.00</strong>
-        </div>
-        <div class="summary-item">
-          <span>終了</span>
-          <strong id="endText">00:00.00</strong>
-        </div>
-        <div class="summary-item">
-          <span>長さ</span>
-          <strong id="durationText">00:00.00</strong>
-        </div>
+      <div class="panel">
+        <div class="panel-title">モデル情報</div>
+        <div class="status" id="status">まだモデルは読み込まれていません。FBXと同じフォルダにあるテクスチャ画像も、まとめて選択またはドロップしてください。</div>
       </div>
+    </aside>
 
-      <div class="actions">
-        <button id="setStartBtn" class="button secondary">現在位置を開始にする</button>
-        <button id="setEndBtn" class="button secondary">現在位置を終了にする</button>
-        <button id="previewBtn" class="button">範囲をプレビュー</button>
-        <button id="exportBtn" class="button danger">動画を書き出す</button>
-        <button id="resetCropBtn" class="button secondary">削り幅リセット</button>
-        <button id="resetBtn" class="button secondary">全体リセット</button>
+    <main>
+      <canvas id="viewer"></canvas>
+      <div class="hint" id="hint">
+        <strong>3Dモデルを読み込んでください</strong>
+        マウスドラッグで回転、ホイールで拡大縮小できます。
       </div>
-
-      <div id="progressWrap" class="progress-wrap hidden">
-        <div id="progressBar" class="progress-bar"></div>
+      <div class="toolbar">
+        <button id="wireframeBtn">ワイヤー表示</button>
+        <button id="screenshotBtn">画像保存</button>
       </div>
-      <div id="status" class="status hidden"></div>
-    </section>
+    </main>
+  </div>
 
-    <section class="card">
-      <h2>注意</h2>
-      <p class="notice">
-        書き出し処理はブラウザ内で行われます。長い動画や高画質動画では処理に時間がかかります。<br />
-        HTMLを直接ダブルクリックして file:// で開くと、ブラウザの制限で ffmpeg.wasm が動かない場合があります。ローカルで使う場合は、このHTMLがあるフォルダでローカルサーバーを起動してください。
-      </p>
-    </section>
-  </main>
-
-<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
-<script src="https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js"></script>
-<script src="https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.worker.js"></script>
-<link rel="preload" href="https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm" as="fetch" crossorigin="anonymous">
-  <script>
-    const videoInput = document.getElementById("videoInput");
-    const uploadArea = document.getElementById("uploadArea");
-    const editorCard = document.getElementById("editorCard");
-    const video = document.getElementById("video");
-    const videoWrap = document.getElementById("videoWrap");
-    const cropGuide = document.getElementById("cropGuide");
-    const fileName = document.getElementById("fileName");
-
-    const startRange = document.getElementById("startRange");
-    const endRange = document.getElementById("endRange");
-    const startInput = document.getElementById("startInput");
-    const endInput = document.getElementById("endInput");
-
-    const cropTop = document.getElementById("cropTop");
-    const cropBottom = document.getElementById("cropBottom");
-    const cropLeft = document.getElementById("cropLeft");
-    const cropRight = document.getElementById("cropRight");
-    const cropTopText = document.getElementById("cropTopText");
-    const cropBottomText = document.getElementById("cropBottomText");
-    const cropLeftText = document.getElementById("cropLeftText");
-    const cropRightText = document.getElementById("cropRightText");
-
-    const startText = document.getElementById("startText");
-    const endText = document.getElementById("endText");
-    const durationText = document.getElementById("durationText");
-
-    const setStartBtn = document.getElementById("setStartBtn");
-    const setEndBtn = document.getElementById("setEndBtn");
-    const previewBtn = document.getElementById("previewBtn");
-    const exportBtn = document.getElementById("exportBtn");
-    const resetCropBtn = document.getElementById("resetCropBtn");
-    const resetBtn = document.getElementById("resetBtn");
-    const statusBox = document.getElementById("status");
-    const progressWrap = document.getElementById("progressWrap");
-    const progressBar = document.getElementById("progressBar");
-
-    let objectUrl = null;
-    let currentFile = null;
-    let previewTimer = null;
-    let ffmpeg = null;
-    let ffmpegLoaded = false;
-
-    function formatTime(seconds) {
-      seconds = Math.max(0, Number(seconds) || 0);
-      const min = Math.floor(seconds / 60);
-      const sec = seconds % 60;
-      return String(min).padStart(2, "0") + ":" + sec.toFixed(2).padStart(5, "0");
-    }
-
-    function setStatus(message) {
-      statusBox.classList.remove("hidden");
-      statusBox.textContent = message;
-    }
-
-    function setProgress(ratio) {
-      progressWrap.classList.remove("hidden");
-      const percent = Math.max(0, Math.min(100, Math.round((ratio || 0) * 100)));
-      progressBar.style.width = percent + "%";
-    }
-
-    function getStart() { return Number(startInput.value) || 0; }
-    function getEnd() { return Number(endInput.value) || 0; }
-
-    function syncUI(source) {
-      let start = getStart();
-      let end = getEnd();
-      const max = Number(video.duration) || 0;
-
-      start = Math.max(0, Math.min(start, max));
-      end = Math.max(0, Math.min(end, max));
-
-      if (start > end) {
-        if (source === "start") end = start;
-        else start = end;
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
       }
-
-      startInput.value = start.toFixed(2);
-      endInput.value = end.toFixed(2);
-      startRange.value = start;
-      endRange.value = end;
-
-      startText.textContent = formatTime(start);
-      endText.textContent = formatTime(end);
-      durationText.textContent = formatTime(end - start);
     }
+  </script>
 
-    function getCropValues() {
-      return {
-        top: Number(cropTop.value) || 0,
-        bottom: Number(cropBottom.value) || 0,
-        left: Number(cropLeft.value) || 0,
-        right: Number(cropRight.value) || 0
-      };
-    }
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+    import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 
-    function applyCrop() {
-      const { top, bottom, left, right } = getCropValues();
-      const visibleW = Math.max(1, 100 - left - right);
-      const visibleH = Math.max(1, 100 - top - bottom);
-      const scaleX = 100 / visibleW;
-      const scaleY = 100 / visibleH;
-      const moveX = (right - left) / 2;
-      const moveY = (bottom - top) / 2;
+    const canvas = document.getElementById('viewer');
+    const fileInput = document.getElementById('fileInput');
+    const dropZone = document.getElementById('dropZone');
+    const statusEl = document.getElementById('status');
+    const hintEl = document.getElementById('hint');
+    const scaleRange = document.getElementById('scaleRange');
+    const rotationRange = document.getElementById('rotationRange');
+    const backgroundSelect = document.getElementById('backgroundSelect');
+    const resetCameraBtn = document.getElementById('resetCameraBtn');
+    const centerBtn = document.getElementById('centerBtn');
+    const sampleBtn = document.getElementById('sampleBtn');
+    const wireframeBtn = document.getElementById('wireframeBtn');
+    const screenshotBtn = document.getElementById('screenshotBtn');
 
-      video.style.transform = `scale(${scaleX}, ${scaleY}) translate(${moveX}%, ${moveY}%)`;
-      videoWrap.style.clipPath = `inset(${top}% ${right}% ${bottom}% ${left}%)`;
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x111827);
 
-      cropGuide.style.top = top + "%";
-      cropGuide.style.right = right + "%";
-      cropGuide.style.bottom = bottom + "%";
-      cropGuide.style.left = left + "%";
+    const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 1000);
+    camera.position.set(3, 2.4, 4.5);
 
-      cropTopText.textContent = top + "%";
-      cropBottomText.textContent = bottom + "%";
-      cropLeftText.textContent = left + "%";
-      cropRightText.textContent = right + "%";
-    }
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.shadowMap.enabled = true;
 
-    function resetCrop() {
-      cropTop.value = 0;
-      cropBottom.value = 0;
-      cropLeft.value = 0;
-      cropRight.value = 0;
-      applyCrop();
-    }
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
 
-    function loadFile(file) {
-      if (!file) return;
-      currentFile = file;
+    const ambient = new THREE.HemisphereLight(0xffffff, 0x334155, 1.8);
+    scene.add(ambient);
 
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-      objectUrl = URL.createObjectURL(file);
-      video.src = objectUrl;
-      fileName.textContent = "読み込み中: " + file.name;
-      editorCard.classList.remove("hidden");
-      statusBox.classList.add("hidden");
-      progressWrap.classList.add("hidden");
-      progressBar.style.width = "0%";
-      resetCrop();
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
+    keyLight.position.set(5, 7, 4);
+    keyLight.castShadow = true;
+    scene.add(keyLight);
 
-      video.onloadedmetadata = () => {
-        const duration = video.duration || 0;
-        [startRange, endRange].forEach(input => {
-          input.max = duration;
-          input.step = 0.01;
-        });
-        [startInput, endInput].forEach(input => {
-          input.max = duration;
-          input.step = 0.01;
-        });
+    const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.9);
+    fillLight.position.set(-4, 3, -5);
+    scene.add(fillLight);
 
-        startInput.value = "0.00";
-        startRange.value = "0";
-        endInput.value = duration.toFixed(2);
-        endRange.value = duration;
-        fileName.textContent = "ファイル: " + file.name + " / 全体: " + formatTime(duration);
-        syncUI("end");
-      };
-    }
+    const grid = new THREE.GridHelper(10, 20, 0x64748b, 0x334155);
+    scene.add(grid);
 
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    const existing = document.querySelector(`script[src="${src}"]`);
-    if (existing) {
-      existing.addEventListener("load", resolve, { once: true });
-      existing.addEventListener("error", reject, { once: true });
-      if (window.FFmpeg?.FFmpeg) resolve();
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src = src;
-    script.onload = resolve;
-    script.onerror = () => reject(new Error(src + " の読み込みに失敗しました。"));
-    document.head.appendChild(script);
-  });
-}
-
-async function loadFFmpeg() {
-  if (ffmpegLoaded) return;
-
-  await loadScript("https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js");
-
-  const FFmpegClass = window.FFmpeg?.FFmpeg;
-
-  if (!FFmpegClass) {
-    console.log("window.FFmpeg =", window.FFmpeg);
-    throw new Error(
-      "FFmpegクラスが見つかりません。\n" +
-      "ffmpeg.jsの読み込みに失敗している可能性があります。"
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(10, 10),
+      new THREE.ShadowMaterial({ opacity: 0.22 })
     );
-  }
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    scene.add(floor);
 
-  setStatus("ffmpeg.wasm を読み込んでいます。初回は少し時間がかかります。");
+    let currentModel = null;
+    let originalMaterials = [];
+    let wireframe = false;
+    let activeObjectUrls = [];
 
-  ffmpeg = new FFmpegClass();
-
-  ffmpeg.on("log", ({ message }) => {
-    if (message) setStatus(`処理中...\n${message}`);
-  });
-
-  ffmpeg.on("progress", ({ progress }) => {
-    setProgress(progress);
-  });
-
-  await ffmpeg.load({
-    coreURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js",
-    wasmURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm",
-    workerURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.worker.js"
-  });
-
-  ffmpegLoaded = true;
-}
-
-    function getOutputFileName() {
-      const base = currentFile.name.replace(/\.[^.]+$/, "") || "trimmed-video";
-      return base + "_trimmed.mp4";
+    function resize() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      camera.aspect = rect.width / rect.height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(rect.width, rect.height, false);
     }
 
-    function buildCropFilter() {
-      const width = video.videoWidth;
-      const height = video.videoHeight;
-      const { top, bottom, left, right } = getCropValues();
+    window.addEventListener('resize', resize);
+    resize();
 
-      const x = Math.round(width * left / 100);
-      const y = Math.round(height * top / 100);
-      let cropW = Math.round(width * (100 - left - right) / 100);
-      let cropH = Math.round(height * (100 - top - bottom) / 100);
+    function clearModel() {
+      activeObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+      activeObjectUrls = [];
 
-      cropW = Math.max(2, cropW - (cropW % 2));
-      cropH = Math.max(2, cropH - (cropH % 2));
-
-      return `crop=${cropW}:${cropH}:${x}:${y}`;
+      if (!currentModel) return;
+      scene.remove(currentModel);
+      currentModel.traverse((obj) => {
+        if (obj.geometry) obj.geometry.dispose();
+        if (obj.material) {
+          const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+          mats.forEach((mat) => mat.dispose && mat.dispose());
+        }
+      });
+      currentModel = null;
+      originalMaterials = [];
     }
 
-    async function exportVideo() {
-      if (!currentFile) {
-        alert("動画を選択してください。");
-        return;
-      }
+    function prepareModel(model, fileName = 'サンプルモデル') {
+      clearModel();
+      currentModel = model;
+      scene.add(currentModel);
 
-      const start = getStart();
-      const end = getEnd();
-      const trimDuration = end - start;
+      currentModel.traverse((obj) => {
+        if (obj.isMesh) {
+          obj.castShadow = true;
+          obj.receiveShadow = true;
+          originalMaterials.push({ obj, material: obj.material });
+        }
+      });
 
-      if (trimDuration <= 0) {
-        alert("終了位置は開始位置より後にしてください。");
-        return;
-      }
+      scaleRange.value = 1;
+      wireframe = false;
+      wireframeBtn.textContent = 'ワイヤー表示';
+      centerModel();
+      fitCameraToModel();
+      hintEl.style.display = 'none';
 
-      exportBtn.disabled = true;
-      setProgress(0);
-      setStatus("書き出し準備中です。");
+      const meshCount = countMeshes(currentModel);
+      statusEl.innerHTML = `読み込み完了：${fileName}<br>メッシュ数：${meshCount}`;
+    }
 
-      try {
-        await loadFFmpeg();
+    function countMeshes(root) {
+      let count = 0;
+      root.traverse((obj) => {
+        if (obj.isMesh) count++;
+      });
+      return count;
+    }
 
-        const inputName = "input" + (currentFile.name.match(/\.[^.]+$/)?.[0] || ".mp4");
-        const outputName = "output.mp4";
+    function centerModel() {
+      if (!currentModel) return;
+      const box = new THREE.Box3().setFromObject(currentModel);
+      const center = box.getCenter(new THREE.Vector3());
+      currentModel.position.sub(center);
 
-        try { await ffmpeg.deleteFile(inputName); } catch (_) {}
-        try { await ffmpeg.deleteFile(outputName); } catch (_) {}
+      const newBox = new THREE.Box3().setFromObject(currentModel);
+      const minY = newBox.min.y;
+      currentModel.position.y -= minY;
+    }
 
-        setStatus("動画をメモリに読み込んでいます。");
-        await ffmpeg.writeFile(inputName, new Uint8Array(await currentFile.arrayBuffer()));
+    function fitCameraToModel() {
+      if (!currentModel) return;
+      const box = new THREE.Box3().setFromObject(currentModel);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      const maxSize = Math.max(size.x, size.y, size.z) || 1;
+      const distance = maxSize * 2.1;
 
-        const cropFilter = buildCropFilter();
-        const args = [
-          "-ss", String(start),
-          "-i", inputName,
-          "-t", String(trimDuration),
-          "-vf", cropFilter,
-          "-c:v", "libx264",
-          "-preset", "veryfast",
-          "-crf", "23",
-          "-c:a", "aac",
-          "-b:a", "128k",
-          "-movflags", "+faststart",
-          outputName
+      camera.position.set(center.x + distance, center.y + distance * 0.7, center.z + distance);
+      camera.near = distance / 100;
+      camera.far = distance * 100;
+      camera.updateProjectionMatrix();
+      controls.target.copy(center);
+      controls.update();
+    }
+
+    function createFileMap(files) {
+      const map = new Map();
+      files.forEach((file) => {
+        map.set(file.name, file);
+        map.set(file.name.toLowerCase(), file);
+
+        if (file.webkitRelativePath) {
+          map.set(file.webkitRelativePath, file);
+          map.set(file.webkitRelativePath.toLowerCase(), file);
+        }
+      });
+      return map;
+    }
+
+    function createLoadingManager(fileMap, objectUrls) {
+      const manager = new THREE.LoadingManager();
+
+      manager.setURLModifier((url) => {
+        const cleanUrl = decodeURIComponent(url)
+          .replace(/^\.\//, '')
+          .replace(/^\//, '')
+          .replaceAll('\\', '/');
+
+        const fileName = cleanUrl.split('/').pop();
+        const candidates = [
+          cleanUrl,
+          cleanUrl.toLowerCase(),
+          fileName,
+          fileName ? fileName.toLowerCase() : ''
         ];
 
-        setStatus("動画を書き出しています。画面を閉じずにお待ちください。");
-        await ffmpeg.exec(args);
+        for (const key of candidates) {
+          if (fileMap.has(key)) {
+            const objectUrl = URL.createObjectURL(fileMap.get(key));
+            objectUrls.push(objectUrl);
+            return objectUrl;
+          }
+        }
 
-        setStatus("書き出しファイルを作成しています。");
-        const data = await ffmpeg.readFile(outputName);
-        const blob = new Blob([data.buffer], { type: "video/mp4" });
-        const url = URL.createObjectURL(blob);
+        return url;
+      });
 
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = getOutputFileName();
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+      return manager;
+    }
 
-        setProgress(1);
-        setStatus("書き出しが完了しました。ダウンロードを開始しました。");
+    function keepUrlsAlive(urls) {
+      activeObjectUrls.push(...urls);
+    }
 
-        setTimeout(() => URL.revokeObjectURL(url), 30000);
-      } catch (error) {
-        console.error(error);
-        setStatus(`エラーが発生しました。\n${error.message || error}`);
-      } finally {
-        exportBtn.disabled = false;
+    function getMainModelFile(files) {
+      return files.find((file) => /\.(glb|gltf|obj|fbx)$/i.test(file.name));
+    }
+
+    function loadFileList(fileList) {
+      const files = Array.from(fileList || []);
+      const file = getMainModelFile(files);
+
+      if (!file) {
+        statusEl.textContent = 'モデルファイルが見つかりません。GLB / GLTF / OBJ / FBX のいずれかを含めてください。';
+        return;
+      }
+
+      loadFile(file, files);
+    }
+
+    function isTextureFile(file) {
+      const name = file.name.toLowerCase();
+      return ['.png', '.jpg', '.jpeg', '.webp', '.bmp', '.gif', '.tga'].some((ext) => name.endsWith(ext));
+    }
+
+    function normalizeTextureName(name) {
+      const baseName = name.toLowerCase().split('/').pop().split('\\').pop();
+      const withoutExt = baseName.includes('.') ? baseName.substring(0, baseName.lastIndexOf('.')) : baseName;
+      return withoutExt
+        .replaceAll('_', '')
+        .replaceAll('-', '')
+        .replaceAll(' ', '')
+        .replaceAll('.', '');
+    }
+
+    function findTextureFileByType(files, typeWords) {
+      const textures = files.filter(isTextureFile);
+      if (textures.length === 0) return null;
+
+      const hit = textures.find((file) => {
+        const name = normalizeTextureName(file.name);
+        return typeWords.some((word) => name.includes(word));
+      });
+
+      return hit || textures[0];
+    }
+
+    function loadTextureFromFile(file, objectUrls) {
+      if (!file) return null;
+      const textureUrl = URL.createObjectURL(file);
+      objectUrls.push(textureUrl);
+
+      const texture = new THREE.TextureLoader().load(textureUrl);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.flipY = false;
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      return texture;
+    }
+
+    function applyExternalTexturesToFBX(fbx, files, objectUrls) {
+      const diffuseFile = findTextureFileByType(files, [
+        'basecolor',
+        'basecolour',
+        'diffuse',
+        'albedo',
+        'color',
+        'colour',
+        'col',
+        'tex'
+      ]);
+      const normalFile = findTextureFileByType(files, ['normal', 'nrm', 'bump']);
+      const roughnessFile = findTextureFileByType(files, ['roughness', 'rough']);
+      const metalnessFile = findTextureFileByType(files, ['metallic', 'metalness', 'metal']);
+
+      const diffuseTexture = loadTextureFromFile(diffuseFile, objectUrls);
+      const normalTexture = normalFile && normalFile !== diffuseFile ? loadTextureFromFile(normalFile, objectUrls) : null;
+      const roughnessTexture = roughnessFile && roughnessFile !== diffuseFile ? loadTextureFromFile(roughnessFile, objectUrls) : null;
+      const metalnessTexture = metalnessFile && metalnessFile !== diffuseFile ? loadTextureFromFile(metalnessFile, objectUrls) : null;
+
+      fbx.traverse((child) => {
+        if (!child.isMesh) return;
+
+        const oldMaterials = Array.isArray(child.material) ? child.material : [child.material];
+        const newMaterials = oldMaterials.map((oldMat) => {
+          const mat = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            roughness: 0.65,
+            metalness: 0.05,
+            side: THREE.DoubleSide
+          });
+
+          if (oldMat && oldMat.map) mat.map = oldMat.map;
+          if (diffuseTexture && !mat.map) mat.map = diffuseTexture;
+          if (normalTexture) mat.normalMap = normalTexture;
+          if (roughnessTexture) mat.roughnessMap = roughnessTexture;
+          if (metalnessTexture) mat.metalnessMap = metalnessTexture;
+
+          mat.needsUpdate = true;
+          return mat;
+        });
+
+        child.material = Array.isArray(child.material) ? newMaterials : newMaterials[0];
+        child.castShadow = true;
+        child.receiveShadow = true;
+      });
+
+      return Boolean(diffuseTexture);
+    }
+
+    function loadFile(file, allFiles = [file]) {
+      if (!file) return;
+
+      const extension = file.name.split('.').pop().toLowerCase();
+      const objectUrls = [];
+      const fileMap = createFileMap(allFiles);
+      const manager = createLoadingManager(fileMap, objectUrls);
+      const url = URL.createObjectURL(file);
+      objectUrls.push(url);
+      statusEl.textContent = `読み込み中：${file.name}`;
+
+      const onLoaded = (model) => {
+        prepareModel(model, file.name);
+        keepUrlsAlive(objectUrls);
+      };
+
+      const onError = (error) => {
+        objectUrls.forEach((url) => URL.revokeObjectURL(url));
+        showError(error);
+      };
+
+      if (extension === 'glb' || extension === 'gltf') {
+        const loader = new GLTFLoader(manager);
+        loader.load(
+          url,
+          (gltf) => onLoaded(gltf.scene),
+          undefined,
+          onError
+        );
+      } else if (extension === 'obj') {
+        const loader = new OBJLoader(manager);
+        loader.load(
+          url,
+          (obj) => {
+            obj.traverse((child) => {
+              if (child.isMesh && !child.material) {
+                child.material = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.7 });
+              }
+            });
+            onLoaded(obj);
+          },
+          undefined,
+          onError
+        );
+      } else if (extension === 'fbx') {
+        const loader = new FBXLoader(manager);
+        loader.load(
+          url,
+          (fbx) => {
+            const textureApplied = applyExternalTexturesToFBX(fbx, allFiles, objectUrls);
+            onLoaded(fbx);
+            if (textureApplied) {
+              statusEl.innerHTML += '<br>外部テクスチャを反映しました。';
+            } else {
+              statusEl.innerHTML += '<br>外部テクスチャは見つかりませんでした。';
+            }
+          },
+          undefined,
+          onError
+        );
+      } else {
+        objectUrls.forEach((url) => URL.revokeObjectURL(url));
+        statusEl.textContent = '対応形式は GLB / GLTF / OBJ / FBX です。';
       }
     }
 
-    videoInput.addEventListener("change", e => loadFile(e.target.files[0]));
+    function showError(error) {
+      console.error(error);
+      statusEl.textContent = 'モデルの読み込みに失敗しました。FBXとテクスチャ画像をまとめて選択しているか、ファイル名の参照が一致しているか確認してください。';
+    }
 
-    uploadArea.addEventListener("dragover", e => {
-      e.preventDefault();
-      uploadArea.classList.add("dragover");
+    fileInput.addEventListener('change', (event) => loadFileList(event.target.files));
+
+    dropZone.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      dropZone.classList.add('dragover');
     });
 
-    uploadArea.addEventListener("dragleave", () => uploadArea.classList.remove("dragover"));
-
-    uploadArea.addEventListener("drop", e => {
-      e.preventDefault();
-      uploadArea.classList.remove("dragover");
-      loadFile(e.dataTransfer.files[0]);
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('dragover');
     });
 
-    startRange.addEventListener("input", () => {
-      startInput.value = Number(startRange.value).toFixed(2);
-      syncUI("start");
+    dropZone.addEventListener('drop', (event) => {
+      event.preventDefault();
+      dropZone.classList.remove('dragover');
+      loadFileList(event.dataTransfer.files);
     });
 
-    endRange.addEventListener("input", () => {
-      endInput.value = Number(endRange.value).toFixed(2);
-      syncUI("end");
+    scaleRange.addEventListener('input', () => {
+      if (!currentModel) return;
+      const scale = Number(scaleRange.value);
+      currentModel.scale.setScalar(scale);
+      centerModel();
     });
 
-    startInput.addEventListener("input", () => syncUI("start"));
-    endInput.addEventListener("input", () => syncUI("end"));
-
-    [cropTop, cropBottom, cropLeft, cropRight].forEach(input => {
-      input.addEventListener("input", applyCrop);
+    backgroundSelect.addEventListener('change', () => {
+      const value = backgroundSelect.value;
+      if (value === 'light') {
+        scene.background = new THREE.Color(0xe5e7eb);
+        grid.material.color.set(0x64748b);
+        grid.material.opacity = 0.45;
+        grid.material.transparent = true;
+      } else if (value === 'grid') {
+        scene.background = new THREE.Color(0x020617);
+        grid.material.color.set(0x38bdf8);
+        grid.material.opacity = 0.75;
+        grid.material.transparent = true;
+      } else {
+        scene.background = new THREE.Color(0x111827);
+        grid.material.color.set(0x64748b);
+        grid.material.opacity = 1;
+        grid.material.transparent = false;
+      }
     });
 
-    setStartBtn.addEventListener("click", () => {
-      startInput.value = video.currentTime.toFixed(2);
-      syncUI("start");
+    resetCameraBtn.addEventListener('click', fitCameraToModel);
+    centerBtn.addEventListener('click', centerModel);
+
+    sampleBtn.addEventListener('click', () => {
+      const group = new THREE.Group();
+
+      const body = new THREE.Mesh(
+        new THREE.TorusKnotGeometry(0.75, 0.22, 160, 24),
+        new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.25, metalness: 0.35 })
+      );
+      body.position.y = 1.25;
+      group.add(body);
+
+      const base = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.95, 1.15, 0.3, 48),
+        new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.6, metalness: 0.15 })
+      );
+      base.position.y = 0.15;
+      group.add(base);
+
+      prepareModel(group, 'サンプルモデル');
     });
 
-    setEndBtn.addEventListener("click", () => {
-      endInput.value = video.currentTime.toFixed(2);
-      syncUI("end");
-    });
-
-    previewBtn.addEventListener("click", () => {
-      clearInterval(previewTimer);
-      const start = getStart();
-      const end = getEnd();
-      video.currentTime = start;
-      video.play();
-
-      previewTimer = setInterval(() => {
-        if (video.currentTime >= end) {
-          video.pause();
-          video.currentTime = start;
-          clearInterval(previewTimer);
+    wireframeBtn.addEventListener('click', () => {
+      if (!currentModel) return;
+      wireframe = !wireframe;
+      currentModel.traverse((obj) => {
+        if (obj.isMesh) {
+          const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+          mats.forEach((mat) => {
+            mat.wireframe = wireframe;
+          });
         }
-      }, 80);
+      });
+      wireframeBtn.textContent = wireframe ? '通常表示' : 'ワイヤー表示';
     });
 
-    exportBtn.addEventListener("click", exportVideo);
-    resetCropBtn.addEventListener("click", resetCrop);
-
-    resetBtn.addEventListener("click", () => {
-      if (!video.duration) return;
-      startInput.value = "0.00";
-      startRange.value = "0";
-      endInput.value = video.duration.toFixed(2);
-      endRange.value = video.duration;
-      resetCrop();
-      syncUI("end");
+    screenshotBtn.addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.download = '3d-preview.png';
+      link.href = renderer.domElement.toDataURL('image/png');
+      link.click();
     });
 
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      if (currentModel) {
+        currentModel.rotation.y += Number(rotationRange.value);
+      }
+      renderer.render(scene, camera);
+    }
 
+    animate();
   </script>
 </body>
 </html>
