@@ -373,16 +373,79 @@
       fitCameraToModel();
       hintEl.style.display = 'none';
 
-      const meshCount = countMeshes(currentModel);
-      statusEl.innerHTML = `読み込み完了：${fileName}<br>メッシュ数：${meshCount}`;
+      const info = getModelInfo(currentModel);
+      statusEl.innerHTML = [
+        `読み込み完了：${escapeHtml(fileName)}`,
+        `メッシュ数：${formatNumber(info.meshCount)}`,
+        `頂点数：${formatNumber(info.vertexCount)}`,
+        `面数：${formatNumber(info.faceCount)}`,
+        `マテリアル数：${formatNumber(info.materialCount)}`,
+        `サイズ：${formatSize(info.size)}`
+      ].join('<br>');
     }
 
-    function countMeshes(root) {
-      let count = 0;
+    function getModelInfo(root) {
+      const info = {
+        meshCount: 0,
+        vertexCount: 0,
+        faceCount: 0,
+        materialCount: 0,
+        size: new THREE.Vector3()
+      };
+
+      const materials = new Set();
+
       root.traverse((obj) => {
-        if (obj.isMesh) count++;
+        if (!obj.isMesh) return;
+
+        info.meshCount++;
+
+        const geometry = obj.geometry;
+        if (geometry) {
+          const position = geometry.getAttribute('position');
+          if (position) {
+            info.vertexCount += position.count;
+          }
+
+          if (geometry.index) {
+            info.faceCount += Math.floor(geometry.index.count / 3);
+          } else if (position) {
+            info.faceCount += Math.floor(position.count / 3);
+          }
+        }
+
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        mats.forEach((mat) => {
+          if (mat) materials.add(mat);
+        });
       });
-      return count;
+
+      info.materialCount = materials.size;
+
+      const box = new THREE.Box3().setFromObject(root);
+      if (!box.isEmpty()) {
+        box.getSize(info.size);
+      }
+
+      return info;
+    }
+
+    function formatNumber(value) {
+      return Number(value || 0).toLocaleString('ja-JP');
+    }
+
+    function formatSize(size) {
+      return `${size.x.toFixed(2)} × ${size.y.toFixed(2)} × ${size.z.toFixed(2)}`;
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[char]));
     }
 
     function centerModel() {
