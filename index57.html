@@ -128,19 +128,6 @@
       gap: 8px;
     }
 
-    .range-heading {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-    }
-
-    .range-value {
-      color: #38bdf8;
-      font-variant-numeric: tabular-nums;
-      font-weight: 700;
-    }
-
     .status {
       font-size: 12px;
       color: #94a3b8;
@@ -221,7 +208,7 @@
         <div class="panel-title">モデル読み込み</div>
         <label class="drop-zone" id="dropZone">
           <input id="fileInput" type="file" accept=".glb,.gltf,.obj,.fbx,.png,.jpg,.jpeg,.webp,.bmp,.gif,.tga" multiple />
-          ここにモデルとテクスチャをまとめてドロップ<br />またはクリックして複数選択
+          ここにモデル・テクスチャ・フォルダをまとめてドロップ<br />またはクリックして複数選択
         </label>
         <button class="primary" id="sampleBtn">サンプルを表示</button>
       </div>
@@ -242,28 +229,6 @@
         <label class="control-label" for="rotationRange">自動回転速度</label>
         <input id="rotationRange" type="range" min="0" max="0.04" step="0.002" value="0.01" />
 
-        <label class="control-label range-heading" for="sunAngleRange">
-          <span>太陽の角度</span>
-          <span class="range-value" id="sunAngleValue">45°</span>
-        </label>
-        <input id="sunAngleRange" type="range" min="0" max="360" step="1" value="45" />
-
-        <label class="control-label range-heading" for="sunStrengthRange">
-          <span>太陽の強さ</span>
-          <span class="range-value" id="sunStrengthValue">2.2</span>
-        </label>
-        <input id="sunStrengthRange" type="range" min="0" max="6" step="0.1" value="2.2" />
-
-        <label class="control-label" for="sunPatternSelect">太陽のパターン</label>
-        <select id="sunPatternSelect">
-          <option value="standard">標準</option>
-          <option value="soft">やわらかい光</option>
-          <option value="side">横から強め</option>
-          <option value="back">逆光</option>
-          <option value="top">真上</option>
-          <option value="sunset">夕方風</option>
-        </select>
-
         <div class="row">
           <button id="resetCameraBtn">カメラ初期化</button>
           <button id="centerBtn">中央配置</button>
@@ -272,7 +237,7 @@
 
       <div class="panel">
         <div class="panel-title">モデル情報</div>
-        <div class="status" id="status">まだモデルは読み込まれていません。FBXと同じフォルダにあるテクスチャ画像も、まとめて選択またはドロップしてください。</div>
+        <div class="status" id="status">まだモデルは読み込まれていません。FBXとテクスチャ画像、またはそれらを含むフォルダをまとめてドロップしてください。</div>
       </div>
     </aside>
 
@@ -313,11 +278,6 @@
     const scaleRange = document.getElementById('scaleRange');
     const rotationRange = document.getElementById('rotationRange');
     const backgroundSelect = document.getElementById('backgroundSelect');
-    const sunAngleRange = document.getElementById('sunAngleRange');
-    const sunAngleValue = document.getElementById('sunAngleValue');
-    const sunStrengthRange = document.getElementById('sunStrengthRange');
-    const sunStrengthValue = document.getElementById('sunStrengthValue');
-    const sunPatternSelect = document.getElementById('sunPatternSelect');
     const resetCameraBtn = document.getElementById('resetCameraBtn');
     const centerBtn = document.getElementById('centerBtn');
     const sampleBtn = document.getElementById('sampleBtn');
@@ -349,43 +309,6 @@
     const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.9);
     fillLight.position.set(-4, 3, -5);
     scene.add(fillLight);
-
-    const sunPatterns = {
-      standard: { angle: 45, strength: 2.2, height: 7, color: 0xffffff, ambient: 1.8, fill: 0.9 },
-      soft: { angle: 35, strength: 1.5, height: 8, color: 0xffffff, ambient: 2.1, fill: 1.2 },
-      side: { angle: 90, strength: 3.2, height: 4.5, color: 0xffffff, ambient: 1.4, fill: 0.45 },
-      back: { angle: 225, strength: 3.4, height: 4.2, color: 0xffffff, ambient: 1.25, fill: 0.35 },
-      top: { angle: 45, strength: 2.8, height: 10, color: 0xffffff, ambient: 1.6, fill: 0.7 },
-      sunset: { angle: 315, strength: 2.6, height: 2.6, color: 0xffb86b, ambient: 1.35, fill: 0.55 }
-    };
-
-    function updateSunLight() {
-      const pattern = sunPatterns[sunPatternSelect.value] || sunPatterns.standard;
-      const angle = Number(sunAngleRange.value);
-      const strength = Number(sunStrengthRange.value);
-      const rad = THREE.MathUtils.degToRad(angle);
-      const radius = 7;
-
-      keyLight.position.set(
-        Math.cos(rad) * radius,
-        pattern.height,
-        Math.sin(rad) * radius
-      );
-      keyLight.intensity = strength;
-      keyLight.color.set(pattern.color);
-      ambient.intensity = pattern.ambient;
-      fillLight.intensity = pattern.fill;
-
-      sunAngleValue.textContent = `${angle}°`;
-      sunStrengthValue.textContent = strength.toFixed(1);
-    }
-
-    function applySunPattern(patternName) {
-      const pattern = sunPatterns[patternName] || sunPatterns.standard;
-      sunAngleRange.value = pattern.angle;
-      sunStrengthRange.value = pattern.strength;
-      updateSunLight();
-    }
 
     const grid = new THREE.GridHelper(10, 20, 0x64748b, 0x334155);
     scene.add(grid);
@@ -450,79 +373,16 @@
       fitCameraToModel();
       hintEl.style.display = 'none';
 
-      const info = getModelInfo(currentModel);
-      statusEl.innerHTML = [
-        `読み込み完了：${escapeHtml(fileName)}`,
-        `メッシュ数：${formatNumber(info.meshCount)}`,
-        `頂点数：${formatNumber(info.vertexCount)}`,
-        `面数：${formatNumber(info.faceCount)}`,
-        `マテリアル数：${formatNumber(info.materialCount)}`,
-        `サイズ：${formatSize(info.size)}`
-      ].join('<br>');
+      const meshCount = countMeshes(currentModel);
+      statusEl.innerHTML = `読み込み完了：${fileName}<br>メッシュ数：${meshCount}`;
     }
 
-    function getModelInfo(root) {
-      const info = {
-        meshCount: 0,
-        vertexCount: 0,
-        faceCount: 0,
-        materialCount: 0,
-        size: new THREE.Vector3()
-      };
-
-      const materials = new Set();
-
+    function countMeshes(root) {
+      let count = 0;
       root.traverse((obj) => {
-        if (!obj.isMesh) return;
-
-        info.meshCount++;
-
-        const geometry = obj.geometry;
-        if (geometry) {
-          const position = geometry.getAttribute('position');
-          if (position) {
-            info.vertexCount += position.count;
-          }
-
-          if (geometry.index) {
-            info.faceCount += Math.floor(geometry.index.count / 3);
-          } else if (position) {
-            info.faceCount += Math.floor(position.count / 3);
-          }
-        }
-
-        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-        mats.forEach((mat) => {
-          if (mat) materials.add(mat);
-        });
+        if (obj.isMesh) count++;
       });
-
-      info.materialCount = materials.size;
-
-      const box = new THREE.Box3().setFromObject(root);
-      if (!box.isEmpty()) {
-        box.getSize(info.size);
-      }
-
-      return info;
-    }
-
-    function formatNumber(value) {
-      return Number(value || 0).toLocaleString('ja-JP');
-    }
-
-    function formatSize(size) {
-      return `${size.x.toFixed(2)} × ${size.y.toFixed(2)} × ${size.z.toFixed(2)}`;
-    }
-
-    function escapeHtml(value) {
-      return String(value).replace(/[&<>"']/g, (char) => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;'
-      }[char]));
+      return count;
     }
 
     function centerModel() {
@@ -552,43 +412,69 @@
       controls.update();
     }
 
-    function createFileMap(files) {
-      const map = new Map();
-      files.forEach((file) => {
-        map.set(file.name, file);
-        map.set(file.name.toLowerCase(), file);
+    function normalizeAssetPath(path) {
+      return decodeURIComponent(String(path || ''))
+        .replace(/^file:\/\/\//i, '')
+        .replace(/^\.\//, '')
+        .replace(/^\//, '')
+        .replaceAll('\\', '/')
+        .replace(/\/+/g, '/')
+        .toLowerCase();
+    }
 
-        if (file.webkitRelativePath) {
-          map.set(file.webkitRelativePath, file);
-          map.set(file.webkitRelativePath.toLowerCase(), file);
-        }
+    function getBaseName(path) {
+      const normalized = normalizeAssetPath(path);
+      return normalized.split('/').pop() || normalized;
+    }
+
+    function getFileRelativePath(file) {
+      return file.relativePath || file.webkitRelativePath || file.name;
+    }
+
+    function createFileMap(files) {
+      const exact = new Map();
+      const byName = new Map();
+      const entries = [];
+
+      files.forEach((file) => {
+        const relativePath = normalizeAssetPath(getFileRelativePath(file));
+        const fileName = getBaseName(file.name);
+
+        exact.set(relativePath, file);
+        exact.set(normalizeAssetPath(file.name), file);
+        byName.set(fileName, file);
+
+        entries.push({ path: relativePath, name: fileName, file });
       });
-      return map;
+
+      return { exact, byName, entries };
+    }
+
+    function findFileForAssetUrl(assetUrl, fileMap) {
+      const cleanUrl = normalizeAssetPath(assetUrl);
+      const fileName = getBaseName(cleanUrl);
+
+      if (fileMap.exact.has(cleanUrl)) return fileMap.exact.get(cleanUrl);
+      if (fileMap.byName.has(fileName)) return fileMap.byName.get(fileName);
+
+      const suffixHit = fileMap.entries.find((entry) => {
+        return entry.path.endsWith('/' + cleanUrl) || entry.path.endsWith(cleanUrl);
+      });
+      if (suffixHit) return suffixHit.file;
+
+      const nameHit = fileMap.entries.find((entry) => entry.name === fileName);
+      return nameHit ? nameHit.file : null;
     }
 
     function createLoadingManager(fileMap, objectUrls) {
       const manager = new THREE.LoadingManager();
 
       manager.setURLModifier((url) => {
-        const cleanUrl = decodeURIComponent(url)
-          .replace(/^\.\//, '')
-          .replace(/^\//, '')
-          .replaceAll('\\', '/');
-
-        const fileName = cleanUrl.split('/').pop();
-        const candidates = [
-          cleanUrl,
-          cleanUrl.toLowerCase(),
-          fileName,
-          fileName ? fileName.toLowerCase() : ''
-        ];
-
-        for (const key of candidates) {
-          if (fileMap.has(key)) {
-            const objectUrl = URL.createObjectURL(fileMap.get(key));
-            objectUrls.push(objectUrl);
-            return objectUrl;
-          }
+        const matchedFile = findFileForAssetUrl(url, fileMap);
+        if (matchedFile) {
+          const objectUrl = URL.createObjectURL(matchedFile);
+          objectUrls.push(objectUrl);
+          return objectUrl;
         }
 
         return url;
@@ -615,6 +501,133 @@
       }
 
       loadFile(file, files);
+    }
+
+    function readEntries(reader) {
+      return new Promise((resolve) => {
+        let done = false;
+        const finish = (entries) => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          resolve(entries || []);
+        };
+        const timer = setTimeout(() => finish([]), 1500);
+
+        try {
+          reader.readEntries(
+            (entries) => finish(entries),
+            () => finish([])
+          );
+        } catch (error) {
+          finish([]);
+        }
+      });
+    }
+
+    function getFileFromEntry(fileEntry, relativePath) {
+      return new Promise((resolve) => {
+        let done = false;
+        const finish = (file) => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          resolve(file || null);
+        };
+        const timer = setTimeout(() => finish(null), 1500);
+
+        try {
+          fileEntry.file(
+            (file) => {
+              try {
+                Object.defineProperty(file, 'relativePath', {
+                  value: relativePath || file.name,
+                  configurable: true
+                });
+              } catch (error) {
+                file.relativePath = relativePath || file.name;
+              }
+              finish(file);
+            },
+            () => finish(null)
+          );
+        } catch (error) {
+          finish(null);
+        }
+      });
+    }
+
+    async function collectFilesFromEntry(entry, parentPath = '') {
+      if (!entry) return [];
+
+      const currentPath = parentPath ? `${parentPath}/${entry.name}` : entry.name;
+
+      if (entry.isFile) {
+        const file = await getFileFromEntry(entry, currentPath);
+        return file ? [file] : [];
+      }
+
+      if (entry.isDirectory) {
+        const reader = entry.createReader();
+        const files = [];
+
+        while (true) {
+          const entries = await readEntries(reader);
+          if (!entries.length) break;
+
+          for (const child of entries) {
+            files.push(...await collectFilesFromEntry(child, currentPath));
+          }
+        }
+
+        return files;
+      }
+
+      return [];
+    }
+
+    function getEntriesFromDataTransfer(dataTransfer) {
+      return Array.from(dataTransfer.items || [])
+        .map((item) => item.webkitGetAsEntry ? item.webkitGetAsEntry() : null)
+        .filter(Boolean);
+    }
+
+    function hasDroppedDirectory(dataTransfer) {
+      return getEntriesFromDataTransfer(dataTransfer).some((entry) => entry.isDirectory);
+    }
+
+    function wait(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    async function getDroppedFiles(dataTransfer) {
+      const fallbackFiles = Array.from(dataTransfer.files || []);
+
+      // 通常のファイル複数ドロップでは、ここで即座に読み込みます。
+      // フォルダ展開処理に入るとブラウザ環境によって止まることがあるため、モデルファイルが見えている場合は優先します。
+      if (getMainModelFile(fallbackFiles)) {
+        return fallbackFiles;
+      }
+
+      const entries = getEntriesFromDataTransfer(dataTransfer);
+      if (!entries.length || !hasDroppedDirectory(dataTransfer)) {
+        return fallbackFiles;
+      }
+
+      const collectPromise = (async () => {
+        const files = [];
+        for (const entry of entries) {
+          files.push(...await collectFilesFromEntry(entry));
+        }
+        return files;
+      })();
+
+      const files = await Promise.race([
+        collectPromise,
+        wait(3000).then(() => [])
+      ]);
+
+      return files.length ? files : fallbackFiles;
     }
 
     function isTextureFile(file) {
@@ -789,10 +802,36 @@
       dropZone.classList.remove('dragover');
     });
 
-    dropZone.addEventListener('drop', (event) => {
+    dropZone.addEventListener('drop', async (event) => {
       event.preventDefault();
+      event.stopPropagation();
       dropZone.classList.remove('dragover');
-      loadFileList(event.dataTransfer.files);
+
+      const directFiles = Array.from(event.dataTransfer.files || []);
+
+      // ファイルが直接見えている通常ドロップでは、確認処理を挟まず即読み込みます。
+      if (getMainModelFile(directFiles)) {
+        loadFileList(directFiles);
+        return;
+      }
+
+      statusEl.textContent = 'ドロップされたファイルを確認中です...';
+
+      try {
+        const files = await getDroppedFiles(event.dataTransfer);
+        if (files.length) {
+          loadFileList(files);
+        } else {
+          statusEl.textContent = 'ドラッグ＆ドロップされたファイルを取得できませんでした。ファイル単体、またはモデルを含むフォルダをドロップしてください。';
+        }
+      } catch (error) {
+        console.error(error);
+        if (directFiles.length) {
+          loadFileList(directFiles);
+        } else {
+          statusEl.textContent = 'ドラッグ＆ドロップされたファイルを取得できませんでした。';
+        }
+      }
     });
 
     scaleRange.addEventListener('input', () => {
@@ -821,11 +860,6 @@
         grid.material.transparent = false;
       }
     });
-
-    sunAngleRange.addEventListener('input', updateSunLight);
-    sunStrengthRange.addEventListener('input', updateSunLight);
-    sunPatternSelect.addEventListener('change', () => applySunPattern(sunPatternSelect.value));
-    updateSunLight();
 
     resetCameraBtn.addEventListener('click', fitCameraToModel);
     centerBtn.addEventListener('click', centerModel);
