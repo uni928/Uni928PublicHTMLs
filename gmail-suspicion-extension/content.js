@@ -3,6 +3,9 @@
   const MAX_PROMPT_WITH_URL = 3000;
   const CHATGPT_BASE = 'https://chatgpt.com/?temporary-chat=true';
   const GEMINI_URL = 'https://gemini.google.com/app';
+  // Gmail URL末尾のメッセージトークンから保存する先頭文字数です。
+  // 3文字は情報量が少ない一方で衝突しやすいため、必要なら8〜10程度に変更してください。
+  const MAIL_KEY_PREFIX_LENGTH = 3;
 
   const DEFAULT_MEMORY = {
     version: 1,
@@ -10,10 +13,12 @@
     rules: [],
     domains: {},
     senders: {},
+    analyzedKeys: {},
     stats: { imports: 0, samples: 0 }
   };
 
   let memory = structuredClone(DEFAULT_MEMORY);
+  let lastPromptEmails = [];
   let observer = null;
   let scanTimer = null;
 
@@ -71,8 +76,9 @@
     panel.querySelector('#gsm-open-chatgpt').addEventListener('click', () => openAi('chatgpt'));
     panel.querySelector('#gsm-open-gemini').addEventListener('click', () => openAi('gemini'));
     panel.querySelector('#gsm-copy-prompt').addEventListener('click', async () => {
-      await copyText(buildPrompt(collectVisibleEmails()));
-      setStatus('プロンプトをコピーしました。');
+      const emails = snapshotPromptEmails();
+      await copyText(buildPrompt(emails));
+      setStatus(`プロンプトをコピーしました。対象メール${emails.length}件を一時保持しました。`);
     });
     panel.querySelector('#gsm-apply').addEventListener('click', applyResult);
     panel.querySelector('#gsm-clear').addEventListener('click', clearMemory);
@@ -121,6 +127,7 @@
     merged.rules = Array.isArray(value.rules) ? value.rules.slice(0, 80).map(normalizeRule).filter(Boolean) : [];
     merged.domains = compactMap(value.domains, 120);
     merged.senders = compactMap(value.senders, 160);
+    merged.analyzedKeys = compactAnalyzedKeys(value.analyzedKeys, 2500);
     merged.stats = { ...merged.stats, ...(value.stats || {}) };
     return merged;
   }
@@ -141,6 +148,21 @@
     return out;
   }
 
+  function compactAnalyzedKeys(obj, maxKeys) {
+    const out = {};
+    Object.entries(obj || {})
+      .filter(([key, value]) => key && value)
+      .sort((a, b) => String(b[1]?.at || '').localeCompare(String(a[1]?.at || '')))
+      .slice(0, maxKeys)
+      .forEach(([key, value]) => {
+        out[String(key).slice(0, 16)] = {
+          at: String(value?.at || ''),
+          score: clamp(Number(value?.score || 0), 0, 100)
+        };
+      });
+    return out;
+  }
+
   function normalizeRule(rule) {
     if (!rule || typeof rule !== 'object') return null;
     const type = String(rule.type || '').toLowerCase();
@@ -152,11 +174,19 @@
   }
 
   function collectVisibleEmails(limit = 60) {
+    // 一覧取得は旧バージョンと同じく、URLトークンが取れない行も対象にします。
+    // Gmailの一覧行では、環境や表示状態によってメールURLがDOM上に出ない場合があります。
+    // そのため、mailKeyは「取れたら解析済み判定に使う補助情報」として扱います。
     const rows = findEmailRows().slice(0, limit);
     return rows.map((row, index) => {
       const parsed = parseRow(row);
+      const token = extractGmailMessageTokenFromRow(row);
+      const mailKey = makeAnalyzedKeyFromToken(token);
+      const fallbackKey = makeFallbackAnalyzedKey(parsed);
       return {
         id: index + 1,
+        mailKey,
+        fallbackKey,
         sender: parsed.sender,
         domain: extractDomain(parsed.sender),
         subject: parsed.subject,
@@ -165,12 +195,84 @@
     }).filter(x => x.sender || x.subject || x.snippet);
   }
 
+  function snapshotPromptEmails() {
+    lastPromptEmails = collectVisibleEmails();
+    return lastPromptEmails;
+  }
+
   function findEmailRows() {
     const trRows = [...document.querySelectorAll('tr[role="row"]')]
       .filter(row => row.offsetParent && row.innerText && row.innerText.length > 10);
     if (trRows.length) return trRows;
     return [...document.querySelectorAll('div[role="link"][tabindex]')]
       .filter(row => row.offsetParent && row.innerText && row.innerText.length > 10);
+  }
+
+  function extractGmailMessageTokenFromRow(row) {
+    // Gmailの一覧行に含まれる href / 属性から、#inbox/FMfc... の末尾トークンをできるだけ拾います。
+    // ただし一覧表示ではURLがDOMに存在しないこともあるため、失敗時は空文字を返します。
+    const hrefCandidates = [];
+    for (const link of row.querySelectorAll('a[href]')) {
+      hrefCandidates.push(link.href || '');
+      hrefCandidates.push(link.getAttribute('href') || '');
+    }
+    for (const href of hrefCandidates) {
+      const token = extractTokenFromHref(href);
+      if (token) return token;
+    }
+
+    const attrNames = [
+      'data-thread-id',
+      'data-legacy-thread-id',
+      'data-legacy-message-id',
+      'data-legacy-last-message-id',
+      'data-message-id'
+    ];
+    for (const name of attrNames) {
+      const direct = row.getAttribute(name) || '';
+      const nested = row.querySelector(`[${name}]`)?.getAttribute(name) || '';
+      for (const value of [direct, nested]) {
+        const token = cleanGmailToken(value);
+        if (token) return token;
+      }
+    }
+    return '';
+  }
+
+  function extractTokenFromHref(href) {
+    const value = String(href || '');
+    if (!value) return '';
+    const hash = value.includes('#') ? value.split('#').pop() : value;
+    const lastPart = hash.split(/[/?&]/).filter(Boolean).pop() || '';
+    return cleanGmailToken(lastPart);
+  }
+
+  function cleanGmailToken(value) {
+    const raw = String(value || '').trim().replace(/^thread-[af]:/i, '').replace(/^msg-[af]:/i, '');
+    if (/^[A-Za-z0-9_-]{8,}$/.test(raw)) return raw;
+    return '';
+  }
+
+ function makeAnalyzedKeyFromToken(token) {
+   const text = String(token || '');
+   return text.slice(-MAIL_KEY_PREFIX_LENGTH);
+ }
+
+  function makeFallbackAnalyzedKey(email) {
+    // URLトークンが取れないGmail表示でも、判定直後の反映と再表示ができるようにする予備キーです。
+    // 本文は使わず、一覧に見えている短い情報だけから短いハッシュを作ります。
+    const source = `${normalizeSender(email.sender)}|${clean(email.subject).slice(0, 80)}|${clean(email.snippet).slice(0, 80)}`;
+    if (!source.replace(/[|\s]/g, '')) return '';
+    return `fb:${shortHash(source)}`;
+  }
+
+  function shortHash(text) {
+    let hash = 2166136261;
+    for (let i = 0; i < text.length; i++) {
+      hash ^= text.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0).toString(36).slice(0, 8);
   }
 
   function parseRow(row) {
@@ -199,6 +301,14 @@
   function scanVisibleRows() {
     for (const row of findEmailRows()) {
       const parsed = parseRow(row);
+      const token = extractGmailMessageTokenFromRow(row);
+      const mailKey = makeAnalyzedKeyFromToken(token);
+      const fallbackKey = makeFallbackAnalyzedKey(parsed);
+      const analyzed = (mailKey && memory.analyzedKeys[mailKey]) || (fallbackKey && memory.analyzedKeys[fallbackKey]);
+      if (!analyzed) {
+        clearDecoration(row);
+        continue;
+      }
       const result = scoreEmail(parsed);
       decorateRow(row, result);
     }
@@ -270,6 +380,12 @@
     else if (result.score >= 40) row.classList.add('gsm-row-mid');
   }
 
+  function clearDecoration(row) {
+    const badge = row.querySelector(':scope .gsm-badge');
+    if (badge) badge.remove();
+    row.classList.remove('gsm-row-mid', 'gsm-row-high', 'gsm-row-critical');
+  }
+
   function riskClass(score) {
     if (score >= 85) return 'gsm-risk-critical';
     if (score >= 65) return 'gsm-risk-high';
@@ -278,7 +394,7 @@
   }
 
   async function openAi(kind) {
-    const emails = collectVisibleEmails();
+    const emails = snapshotPromptEmails();
     const prompt = buildPrompt(emails);
     await copyText(prompt);
     setStatus(`${kind === 'chatgpt' ? 'ChatGPT' : 'Gemini'}用プロンプトをコピーしました。`);
@@ -295,7 +411,8 @@
     const compactMemory = {
       rules: memory.rules.slice(0, 40),
       suspiciousDomains: topEntries(memory.domains, 30),
-      suspiciousSenders: topEntries(memory.senders, 30)
+      suspiciousSenders: topEntries(memory.senders, 30),
+      analyzedKeyCount: Object.keys(memory.analyzedKeys || {}).length
     };
     return `あなたはフィッシングメール・詐欺メールのリスク判定補助AIです。\n` +
       `次のGmail一覧データを、本文全文ではなく件名・送信者・短いスニペットだけで判定してください。\n` +
@@ -305,7 +422,8 @@
       `- メール本文、個人名、長い件名、長いスニペットを保存用ルールに含めない。\n` +
       `- 保存する特徴は domain / sender / 短いkeyword / subject_keyword / sender_keyword 程度に圧縮する。\n` +
       `- 正規の通知メールを過剰に危険扱いしない。\n` +
-      `- scoreは0〜100。0安全、100非常に怪しい。\n\n` +
+      `- scoreは0〜100。0安全、100非常に怪しい。\n` +
+      `- itemsには必ず入力一覧のidをそのまま返す。mailKeyは出力不要。\n\n` +
       `出力JSONスキーマ:\n` +
       `{"items":[{"id":1,"score":0,"reason":"20字以内"}],"rules":[{"type":"keyword|subject_keyword|sender_keyword|domain","value":"短い特徴","score":0,"reason":"20字以内"}],"domains":{"example.com":{"score":0,"reason":"20字以内"}},"senders":{"sender@example.com":{"score":0,"reason":"20字以内"}}}\n\n` +
       `既存の圧縮記憶:\n${JSON.stringify(compactMemory)}\n\n` +
@@ -349,11 +467,18 @@
       next.senders[key] = mergeScore(next.senders[key], info);
       samples++;
     }
-    const visible = collectVisibleEmails();
+    const visible = lastPromptEmails.length ? lastPromptEmails : collectVisibleEmails();
     for (const item of (data.items || [])) {
       const email = visible.find(e => Number(e.id) === Number(item.id));
       const score = clamp(Number(item.score), 0, 100);
       if (!email || !Number.isFinite(score)) continue;
+      const analyzedKey = email.mailKey || email.fallbackKey || '';
+      if (analyzedKey) {
+        next.analyzedKeys[analyzedKey] = {
+          at: new Date().toISOString(),
+          score
+        };
+      }
       const domain = extractDomain(email.sender);
       const sender = normalizeSender(email.sender);
       const reason = String(item.reason || '').slice(0, 80);
@@ -368,7 +493,7 @@
     next.stats.samples = (next.stats.samples || 0) + samples;
     await saveMemory(next);
     textarea.value = '';
-    setStatus(`反映しました。保存特徴: ルール${next.rules.length}件 / ドメイン${Object.keys(next.domains).length}件 / 送信者${Object.keys(next.senders).length}件`);
+    setStatus(`反映しました。解析済み${Object.keys(next.analyzedKeys).length}件 / ルール${next.rules.length}件 / ドメイン${Object.keys(next.domains).length}件 / 送信者${Object.keys(next.senders).length}件`);
   }
 
   function mergeScore(oldValue, info) {
@@ -429,6 +554,7 @@
         <span>保存ルール</span><span>${memory.rules.length}</span>
         <span>保存ドメイン</span><span>${Object.keys(memory.domains).length}</span>
         <span>保存送信者</span><span>${Object.keys(memory.senders).length}</span>
+        <span>解析済み</span><span>${Object.keys(memory.analyzedKeys || {}).length}</span>
         <span>反映回数</span><span>${memory.stats.imports || 0}</span>
       </div>`;
   }
