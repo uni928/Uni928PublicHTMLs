@@ -207,7 +207,7 @@
       <div class="panel">
         <div class="panel-title">モデル読み込み</div>
         <label class="drop-zone" id="dropZone">
-          <input id="fileInput" type="file" accept=".glb,.gltf,.obj,.fbx,.png,.jpg,.jpeg,.webp,.bmp,.gif,.tga" multiple />
+          <input id="fileInput" type="file" accept=".glb,.gltf,.obj,.fbx,.mtl,.png,.jpg,.jpeg,.webp,.bmp,.gif,.tga" multiple />
           ここにモデル・テクスチャ・フォルダをまとめてドロップ<br />またはクリックして複数選択
         </label>
         <button class="primary" id="sampleBtn">サンプルを表示</button>
@@ -268,6 +268,7 @@
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+    import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
     import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 
     const canvas = document.getElementById('viewer');
@@ -496,7 +497,7 @@
       const file = getMainModelFile(files);
 
       if (!file) {
-        statusEl.textContent = 'モデルファイルが見つかりません。GLB / GLTF / OBJ / FBX のいずれかを含めてください。';
+        statusEl.textContent = 'モデルファイルが見つかりません。GLB / GLTF / OBJ / FBX のいずれかを含めてください。OBJの場合はMTLも同時に選択できます。';
         return;
       }
 
@@ -720,6 +721,102 @@
       return Boolean(diffuseTexture);
     }
 
+    function isMtlFile(file) {
+      return /\.mtl$/i.test(file.name);
+    }
+
+    function removeExtension(name) {
+      const baseName = getBaseName(name);
+      const index = baseName.lastIndexOf('.');
+      return index >= 0 ? baseName.substring(0, index) : baseName;
+    }
+
+    function getMtlFileForObj(objFile, files) {
+      const mtlFiles = files.filter(isMtlFile);
+      if (!mtlFiles.length) return null;
+
+      const objBase = removeExtension(objFile.name).toLowerCase();
+      const sameBase = mtlFiles.find((file) => removeExtension(file.name).toLowerCase() === objBase);
+      return sameBase || mtlFiles[0];
+    }
+
+    function isAlmostBlackColor(color) {
+      if (!color) return false;
+      return color.r < 0.03 && color.g < 0.03 && color.b < 0.03;
+    }
+
+    function fixTextureForPreview(texture, flipY = true) {
+      if (!texture) return;
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.flipY = flipY;
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.needsUpdate = true;
+    }
+
+    function fixMaterialForPreview(mat) {
+      if (!mat) return;
+
+      mat.side = THREE.DoubleSide;
+
+      const textureKeys = [
+        'map',
+        'alphaMap',
+        'aoMap',
+        'bumpMap',
+        'displacementMap',
+        'emissiveMap',
+        'lightMap',
+        'metalnessMap',
+        'normalMap',
+        'roughnessMap',
+        'specularMap'
+      ];
+
+      textureKeys.forEach((key) => {
+        if (mat[key]) fixTextureForPreview(mat[key], true);
+      });
+
+      // MTLのKdが 0 0 0 の場合、map_Kdのテクスチャ色にも黒が乗算されて真っ黒になります。
+      // テクスチャがある材質は白を基準色にして、画像本来の色を表示します。
+      if (mat.map && mat.color) {
+        mat.color.set(0xffffff);
+      }
+
+      // テクスチャがない材質まで黒く潰れる場合は、プレビュー用に最低限見える色へ補正します。
+      if (!mat.map && mat.color && isAlmostBlackColor(mat.color)) {
+        mat.color.set(0xcbd5e1);
+      }
+
+      if ('emissive' in mat && mat.emissive && mat.emissiveIntensity > 0) {
+        mat.emissiveIntensity = Math.min(mat.emissiveIntensity, 0.25);
+      }
+
+      mat.needsUpdate = true;
+    }
+
+    function fixMaterialsForPreview(materialOrArray) {
+      const materials = Array.isArray(materialOrArray) ? materialOrArray : [materialOrArray];
+      materials.forEach(fixMaterialForPreview);
+    }
+
+    function applyObjMaterialFallback(obj) {
+      obj.traverse((child) => {
+        if (!child.isMesh) return;
+
+        if (!child.material) {
+          child.material = new THREE.MeshStandardMaterial({
+            color: 0xcbd5e1,
+            roughness: 0.7,
+            side: THREE.DoubleSide
+          });
+          return;
+        }
+
+        fixMaterialsForPreview(child.material);
+      });
+    }
+
     function loadFile(file, allFiles = [file]) {
       if (!file) return;
 
@@ -750,20 +847,57 @@
           onError
         );
       } else if (extension === 'obj') {
-        const loader = new OBJLoader(manager);
-        loader.load(
-          url,
-          (obj) => {
-            obj.traverse((child) => {
-              if (child.isMesh && !child.material) {
-                child.material = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.7 });
+        const mtlFile = getMtlFileForObj(file, allFiles);
+
+        const loadObj = (materials = null) => {
+          const loader = new OBJLoader(manager);
+          if (materials) loader.setMaterials(materials);
+
+          loader.load(
+            url,
+            (obj) => {
+              applyObjMaterialFallback(obj);
+              onLoaded(obj);
+              if (mtlFile) {
+                statusEl.innerHTML += `<br>MTLを反映しました：${mtlFile.name}<br>黒く潰れる材質をプレビュー用に補正しました`;
+              } else {
+                statusEl.innerHTML += '<br>MTLファイルは見つかりませんでした。';
               }
-            });
-            onLoaded(obj);
-          },
-          undefined,
-          onError
-        );
+            },
+            undefined,
+            onError
+          );
+        };
+
+        if (mtlFile) {
+          const mtlUrl = URL.createObjectURL(mtlFile);
+          objectUrls.push(mtlUrl);
+
+          const mtlLoader = new MTLLoader(manager);
+          mtlLoader.setMaterialOptions({
+            side: THREE.DoubleSide,
+            wrap: THREE.RepeatWrapping,
+            normalizeRGB: true,
+            ignoreZeroRGBs: true
+          });
+          mtlLoader.load(
+            mtlUrl,
+            (materials) => {
+              materials.preload();
+              Object.values(materials.materials).forEach((mat) => {
+                fixMaterialForPreview(mat);
+              });
+              loadObj(materials);
+            },
+            undefined,
+            () => {
+              statusEl.innerHTML = `MTLの読み込みに失敗しました：${mtlFile.name}<br>OBJのみで読み込みます。`;
+              loadObj(null);
+            }
+          );
+        } else {
+          loadObj(null);
+        }
       } else if (extension === 'fbx') {
         const loader = new FBXLoader(manager);
         loader.load(
@@ -782,7 +916,7 @@
         );
       } else {
         objectUrls.forEach((url) => URL.revokeObjectURL(url));
-        statusEl.textContent = '対応形式は GLB / GLTF / OBJ / FBX です。';
+        statusEl.textContent = '対応形式は GLB / GLTF / OBJ / FBX です。OBJ用のMTLも同時読み込みできます。';
       }
     }
 
