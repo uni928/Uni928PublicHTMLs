@@ -219,7 +219,7 @@
         <label class="control-label" for="backgroundSelect">背景</label>
         <select id="backgroundSelect">
           <option value="dark">ダーク</option>
-          <option value="light">ライト</option>
+          <option value="light" selected>ライト</option>
           <option value="grid">グリッド強調</option>
         </select>
 
@@ -502,6 +502,24 @@
       }
 
       loadFile(file, files);
+
+      const value = backgroundSelect.value;
+      if (value === 'light') {
+        scene.background = new THREE.Color(0xe5e7eb);
+        grid.material.color.set(0x64748b);
+        grid.material.opacity = 0.45;
+        grid.material.transparent = true;
+      } else if (value === 'grid') {
+        scene.background = new THREE.Color(0x020617);
+        grid.material.color.set(0x38bdf8);
+        grid.material.opacity = 0.75;
+        grid.material.transparent = true;
+      } else {
+        scene.background = new THREE.Color(0x111827);
+        grid.material.color.set(0x64748b);
+        grid.material.opacity = 1;
+        grid.material.transparent = false;
+      }
     }
 
     function readEntries(reader) {
