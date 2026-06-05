@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>黒画面区間検出ツール</title>
+<title>複数動画 黒画面区間検出ツール</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
   :root {
@@ -14,6 +14,7 @@
     --accent: #2563eb;
     --danger: #dc2626;
     --ok: #16a34a;
+    --warn: #d97706;
   }
 
   * {
@@ -37,6 +38,11 @@
     font-size: 24px;
   }
 
+  h2 {
+    margin-top: 0;
+    font-size: 18px;
+  }
+
   .lead {
     margin: 0;
     color: var(--sub);
@@ -44,7 +50,7 @@
   }
 
   main {
-    width: min(1100px, 100%);
+    width: min(1200px, 100%);
     margin: 0 auto;
     padding: 16px;
   }
@@ -86,6 +92,7 @@
   .drop-sub {
     color: var(--sub);
     font-size: 13px;
+    line-height: 1.6;
   }
 
   .grid {
@@ -94,7 +101,7 @@
     gap: 16px;
   }
 
-  @media (max-width: 800px) {
+  @media (max-width: 880px) {
     .grid {
       grid-template-columns: 1fr;
     }
@@ -166,6 +173,14 @@
     background: var(--danger);
   }
 
+  button.ok {
+    background: var(--ok);
+  }
+
+  button.warn {
+    background: var(--warn);
+  }
+
   button:disabled {
     opacity: 0.55;
     cursor: not-allowed;
@@ -185,12 +200,12 @@
 
   .summary {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 8px;
     margin-top: 12px;
   }
 
-  @media (max-width: 760px) {
+  @media (max-width: 860px) {
     .summary {
       grid-template-columns: repeat(2, 1fr);
     }
@@ -217,7 +232,6 @@
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
-    margin-top: 12px;
   }
 
   th, td {
@@ -225,6 +239,7 @@
     padding: 9px 8px;
     text-align: left;
     white-space: nowrap;
+    vertical-align: top;
   }
 
   th {
@@ -236,23 +251,64 @@
 
   .table-wrap {
     overflow: auto;
-    max-height: 420px;
+    max-height: 460px;
     border: 1px solid var(--border);
     border-radius: 12px;
-  }
-
-  .black-preview {
-    width: 64px;
-    height: 28px;
-    background: #000;
-    border-radius: 6px;
-    border: 1px solid #222;
+    margin-top: 12px;
   }
 
   .note {
     font-size: 12px;
     color: var(--sub);
     line-height: 1.6;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .badge.waiting {
+    background: #e2e8f0;
+    color: #334155;
+  }
+
+  .badge.running {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .badge.done {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .badge.error {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .badge.stopped {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  details {
+    margin: 0;
+  }
+
+  summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .small {
+    font-size: 12px;
+    color: var(--sub);
   }
 
   canvas {
@@ -262,22 +318,25 @@
 </head>
 <body>
 <header>
-  <h1>黒画面区間検出ツール</h1>
-  <p class="lead">動画をドラッグ＆ドロップすると、真っ黒な区間をフレーム番号と時間で一覧表示します。</p>
+  <h1>複数動画 黒画面区間検出ツール</h1>
+  <p class="lead">複数の動画をドラッグ＆ドロップすると、順番に自動解析して黒画面区間を一覧化します。</p>
 </header>
 
 <main>
   <section class="card">
     <div id="dropZone">
-      <div class="drop-title">ここに動画をドラッグ＆ドロップ</div>
-      <div class="drop-sub">またはクリックして動画ファイルを選択してください。MP4 / MOV / WebM など、ブラウザで再生できる形式に対応します。</div>
-      <input id="fileInput" type="file" accept="video/*">
+      <div class="drop-title">ここに複数の動画をドラッグ＆ドロップ</div>
+      <div class="drop-sub">
+        またはクリックして動画ファイルを複数選択してください。<br>
+        MP4 / MOV / WebM など、ブラウザで再生できる形式に対応します。
+      </div>
+      <input id="fileInput" type="file" accept="video/*" multiple>
     </div>
   </section>
 
   <section class="grid">
     <div class="card">
-      <h2>動画プレビュー</h2>
+      <h2>現在解析中の動画</h2>
       <video id="video" controls muted playsinline></video>
       <div class="status" id="videoInfo">動画が未選択です。</div>
     </div>
@@ -323,45 +382,85 @@
       </div>
 
       <div class="buttons">
-        <button id="analyzeBtn" disabled>解析開始</button>
+        <button id="startBtn" disabled>順番に解析開始</button>
         <button id="stopBtn" class="danger" disabled>停止</button>
-        <button id="csvBtn" class="secondary" disabled>CSV保存</button>
-        <button id="copyBtn" class="secondary" disabled>結果コピー</button>
+        <button id="clearBtn" class="secondary" disabled>一覧クリア</button>
+        <button id="csvAllBtn" class="ok" disabled>全結果CSV保存</button>
+        <button id="copyAllBtn" class="secondary" disabled>全結果コピー</button>
       </div>
+      <p class="note">
+        複数動画はキューに入り、上から順番に解析されます。解析中に追加でドラッグ＆ドロップした動画も末尾に追加されます。
+      </p>
     </div>
   </section>
 
   <section class="card">
-    <h2>解析状況</h2>
-    <progress id="progress" value="0" max="100"></progress>
-    <div class="status" id="status">動画を選択してください。</div>
+    <h2>全体の進行状況</h2>
+    <progress id="overallProgress" value="0" max="100"></progress>
+    <div class="status" id="overallStatus">動画を追加してください。</div>
     <div class="summary">
       <div class="summary-item">
+        <div class="num" id="fileCount">0</div>
+        <div class="cap">動画数</div>
+      </div>
+      <div class="summary-item">
+        <div class="num" id="doneCount">0</div>
+        <div class="cap">完了数</div>
+      </div>
+      <div class="summary-item">
         <div class="num" id="totalFrames">-</div>
-        <div class="cap">総フレーム数</div>
+        <div class="cap">現在の総フレーム数</div>
       </div>
       <div class="summary-item">
-        <div class="num" id="blackFrames">-</div>
-        <div class="cap">黒フレーム数</div>
+        <div class="num" id="segmentCount">0</div>
+        <div class="cap">黒区間総数</div>
       </div>
       <div class="summary-item">
-        <div class="num" id="segmentCount">-</div>
-        <div class="cap">黒区間数</div>
-      </div>
-      <div class="summary-item">
-        <div class="num" id="blackSeconds">-</div>
+        <div class="num" id="blackSeconds">0</div>
         <div class="cap">黒区間合計秒</div>
       </div>
     </div>
   </section>
 
   <section class="card">
-    <h2>黒画面区間</h2>
+    <h2>現在の動画の解析状況</h2>
+    <progress id="currentProgress" value="0" max="100"></progress>
+    <div class="status" id="currentStatus">待機中です。</div>
+  </section>
+
+  <section class="card">
+    <h2>動画ごとの結果</h2>
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
             <th>#</th>
+            <th>状態</th>
+            <th>ファイル名</th>
+            <th>長さ</th>
+            <th>総フレーム</th>
+            <th>黒フレーム</th>
+            <th>黒区間数</th>
+            <th>黒区間合計</th>
+            <th>詳細</th>
+          </tr>
+        </thead>
+        <tbody id="fileResultBody">
+          <tr><td colspan="9">まだ動画がありません。</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>黒画面区間の全一覧</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>動画#</th>
+            <th>ファイル名</th>
+            <th>区間#</th>
             <th>開始フレーム</th>
             <th>終了フレーム</th>
             <th>フレーム数</th>
@@ -370,15 +469,14 @@
             <th>長さ</th>
           </tr>
         </thead>
-        <tbody id="resultBody">
-          <tr><td colspan="7">まだ結果はありません。</td></tr>
+        <tbody id="segmentResultBody">
+          <tr><td colspan="9">まだ結果はありません。</td></tr>
         </tbody>
       </table>
     </div>
     <p class="note">
-      注意: ブラウザのみで動作するため、動画ファイルの正確なFPSを自動取得できないことがあります。
-      フレーム番号を正確にしたい場合は、元動画のFPSを入力してください。
-      また、圧縮ノイズのある黒画面では「黒判定しきい値」を少し上げると検出しやすくなります。
+      注意: ブラウザだけでは動画の正確なFPSを常に取得できません。フレーム番号を正確にしたい場合は、元動画のFPSを入力してください。
+      また、ブラウザで再生できない動画形式は解析できません。
     </p>
   </section>
 </main>
@@ -393,10 +491,11 @@
   const canvas = document.getElementById("canvas");
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
 
-  const analyzeBtn = document.getElementById("analyzeBtn");
+  const startBtn = document.getElementById("startBtn");
   const stopBtn = document.getElementById("stopBtn");
-  const csvBtn = document.getElementById("csvBtn");
-  const copyBtn = document.getElementById("copyBtn");
+  const clearBtn = document.getElementById("clearBtn");
+  const csvAllBtn = document.getElementById("csvAllBtn");
+  const copyAllBtn = document.getElementById("copyAllBtn");
 
   const fpsInput = document.getElementById("fpsInput");
   const sampleScaleInput = document.getElementById("sampleScale");
@@ -406,25 +505,31 @@
   const seekPaddingInput = document.getElementById("seekPadding");
 
   const videoInfo = document.getElementById("videoInfo");
-  const statusEl = document.getElementById("status");
-  const progressEl = document.getElementById("progress");
-  const resultBody = document.getElementById("resultBody");
+  const overallStatus = document.getElementById("overallStatus");
+  const currentStatus = document.getElementById("currentStatus");
+  const overallProgress = document.getElementById("overallProgress");
+  const currentProgress = document.getElementById("currentProgress");
 
+  const fileCountEl = document.getElementById("fileCount");
+  const doneCountEl = document.getElementById("doneCount");
   const totalFramesEl = document.getElementById("totalFrames");
-  const blackFramesEl = document.getElementById("blackFrames");
   const segmentCountEl = document.getElementById("segmentCount");
   const blackSecondsEl = document.getElementById("blackSeconds");
 
-  let currentFileName = "";
-  let objectUrl = "";
+  const fileResultBody = document.getElementById("fileResultBody");
+  const segmentResultBody = document.getElementById("segmentResultBody");
+
+  let jobs = [];
+  let isRunning = false;
   let stopRequested = false;
-  let lastResults = [];
+  let currentObjectUrl = "";
 
   dropZone.addEventListener("click", () => fileInput.click());
 
   fileInput.addEventListener("change", () => {
-    if (fileInput.files && fileInput.files[0]) {
-      loadVideo(fileInput.files[0]);
+    if (fileInput.files && fileInput.files.length) {
+      addFiles(fileInput.files);
+      fileInput.value = "";
     }
   });
 
@@ -443,129 +548,243 @@
   });
 
   dropZone.addEventListener("drop", e => {
-    const file = e.dataTransfer.files && e.dataTransfer.files[0];
-    if (!file) return;
-    if (!file.type.startsWith("video/")) {
+    const files = Array.from(e.dataTransfer.files || []).filter(file => file.type.startsWith("video/"));
+    if (!files.length) {
       alert("動画ファイルを選択してください。");
       return;
     }
-    loadVideo(file);
+    addFiles(files);
   });
 
-  function loadVideo(file) {
-    resetResults();
-    currentFileName = file.name;
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-    objectUrl = URL.createObjectURL(file);
-    video.src = objectUrl;
-    video.load();
+  startBtn.addEventListener("click", runQueue);
 
-    videoInfo.textContent = "読み込み中: " + file.name;
-    statusEl.textContent = "動画メタデータを読み込んでいます。";
-    analyzeBtn.disabled = true;
-
-    video.onloadedmetadata = () => {
-      const duration = video.duration || 0;
-      const fps = getFps();
-      const total = Math.max(1, Math.floor(duration * fps));
-      videoInfo.textContent = [
-        "ファイル名: " + file.name,
-        "長さ: " + formatTime(duration),
-        "推定総フレーム: " + total.toLocaleString() + " frames",
-        "サイズ: " + video.videoWidth + "x" + video.videoHeight
-      ].join(" / ");
-      statusEl.textContent = "解析できます。FPSが違う場合は、解析前に変更してください。";
-      totalFramesEl.textContent = total.toLocaleString();
-      analyzeBtn.disabled = false;
-    };
-  }
-
-  analyzeBtn.addEventListener("click", analyze);
   stopBtn.addEventListener("click", () => {
     stopRequested = true;
-    statusEl.textContent = "停止処理中です。現在のフレーム処理が終わると停止します。";
+    stopBtn.disabled = true;
+    overallStatus.textContent = "停止要求を受け付けました。現在のフレーム処理が終わると停止します。";
+    currentStatus.textContent = "停止処理中です。";
   });
 
-  csvBtn.addEventListener("click", downloadCsv);
-  copyBtn.addEventListener("click", copyResults);
+  clearBtn.addEventListener("click", () => {
+    if (isRunning) return;
+    jobs = [];
+    resetView();
+    renderAll();
+  });
 
-  async function analyze() {
-    if (!video.src || !isFinite(video.duration)) return;
+  csvAllBtn.addEventListener("click", downloadAllCsv);
+  copyAllBtn.addEventListener("click", copyAllResults);
 
+  function addFiles(fileList) {
+    const files = Array.from(fileList);
+    const startIndex = jobs.length;
+
+    files.forEach((file, i) => {
+      jobs.push({
+        id: startIndex + i + 1,
+        file,
+        name: file.name,
+        status: "waiting",
+        error: "",
+        duration: null,
+        totalFrames: null,
+        blackFrames: null,
+        blackSeconds: null,
+        segments: []
+      });
+    });
+
+    overallStatus.textContent = files.length + " 本の動画を追加しました。";
+    startBtn.disabled = !jobs.some(j => j.status === "waiting" || j.status === "stopped");
+    clearBtn.disabled = jobs.length === 0 || isRunning;
+    renderAll();
+
+    if (!isRunning) {
+      runQueue();
+    }
+  }
+
+  async function runQueue() {
+    if (isRunning) return;
+    if (!jobs.some(j => j.status === "waiting" || j.status === "stopped")) return;
+
+    isRunning = true;
     stopRequested = false;
-    analyzeBtn.disabled = true;
+    startBtn.disabled = true;
     stopBtn.disabled = false;
-    csvBtn.disabled = true;
-    copyBtn.disabled = true;
-    resetResults(false);
-
-    const fps = getFps();
-    const duration = video.duration;
-    const totalFrames = Math.max(1, Math.floor(duration * fps));
-    const threshold = clamp(Number(blackThresholdInput.value), 0, 255);
-    const requiredRatio = clamp(Number(blackRatioInput.value), 0, 100) / 100;
-    const minFrames = Math.max(1, Math.floor(Number(minFramesInput.value) || 1));
-    const seekPadding = Math.max(0, Number(seekPaddingInput.value) || 0);
-    const sampleScale = Math.max(16, Math.floor(Number(sampleScaleInput.value) || 96));
-
-    setupCanvas(sampleScale);
-
-    let blackFrameFlags = new Array(totalFrames).fill(false);
-    let blackCount = 0;
-
-    statusEl.textContent = "解析中です。動画が長い場合は時間がかかります。";
-    progressEl.value = 0;
-    totalFramesEl.textContent = totalFrames.toLocaleString();
+    clearBtn.disabled = true;
+    setInputsDisabled(true);
 
     try {
+      for (const job of jobs) {
+        if (stopRequested) break;
+        if (job.status !== "waiting" && job.status !== "stopped") continue;
+
+        await analyzeJob(job);
+        updateOverallProgress();
+        renderAll();
+      }
+    } finally {
+      isRunning = false;
+      stopBtn.disabled = true;
+      clearBtn.disabled = jobs.length === 0;
+      setInputsDisabled(false);
+
+      const remaining = jobs.filter(j => j.status === "waiting" || j.status === "stopped").length;
+      startBtn.disabled = remaining === 0;
+
+      if (stopRequested) {
+        overallStatus.textContent = "解析を停止しました。未解析の動画は「順番に解析開始」で再開できます。";
+      } else {
+        overallStatus.textContent = "すべての解析が完了しました。";
+        currentStatus.textContent = "完了しました。";
+        currentProgress.value = 100;
+      }
+
+      updateExportButtons();
+    }
+  }
+
+  async function analyzeJob(job) {
+    job.status = "running";
+    job.error = "";
+    job.segments = [];
+    renderAll();
+
+    if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+    currentObjectUrl = URL.createObjectURL(job.file);
+    video.src = currentObjectUrl;
+    video.load();
+
+    videoInfo.textContent = "読み込み中: " + job.name;
+    currentStatus.textContent = "動画メタデータを読み込んでいます。";
+    currentProgress.value = 0;
+
+    try {
+      await waitForMetadata();
+
+      const fps = getFps();
+      const duration = video.duration || 0;
+      const totalFrames = Math.max(1, Math.floor(duration * fps));
+      const threshold = clamp(Number(blackThresholdInput.value), 0, 255);
+      const requiredRatio = clamp(Number(blackRatioInput.value), 0, 100) / 100;
+      const minFrames = Math.max(1, Math.floor(Number(minFramesInput.value) || 1));
+      const seekPadding = Math.max(0, Number(seekPaddingInput.value) || 0);
+      const sampleScale = Math.max(16, Math.floor(Number(sampleScaleInput.value) || 96));
+
+      job.duration = duration;
+      job.totalFrames = totalFrames;
+      job.blackFrames = 0;
+      job.blackSeconds = 0;
+
+      totalFramesEl.textContent = totalFrames.toLocaleString();
+      videoInfo.textContent = [
+        "ファイル名: " + job.name,
+        "長さ: " + formatTime(duration),
+        "推定総フレーム: " + totalFrames.toLocaleString() + " frames",
+        "サイズ: " + video.videoWidth + "x" + video.videoHeight
+      ].join(" / ");
+
+      setupCanvas(sampleScale);
+
+      const blackFlags = new Array(totalFrames).fill(false);
+      let blackCount = 0;
+
       for (let frame = 0; frame < totalFrames; frame++) {
         if (stopRequested) {
-          statusEl.textContent = "解析を停止しました。";
-          break;
+          job.status = "stopped";
+          currentStatus.textContent = "停止しました: " + job.name;
+          return;
         }
 
         const t = Math.min(duration, frame / fps + seekPadding);
         await seekVideo(t);
+
         const isBlack = judgeCurrentFrame(threshold, requiredRatio);
-        blackFrameFlags[frame] = isBlack;
+        blackFlags[frame] = isBlack;
         if (isBlack) blackCount++;
 
         if (frame % 5 === 0 || frame === totalFrames - 1) {
           const percent = ((frame + 1) / totalFrames) * 100;
-          progressEl.value = percent;
-          statusEl.textContent =
-            "解析中: " + (frame + 1).toLocaleString() + " / " +
-            totalFrames.toLocaleString() + " frames (" + percent.toFixed(1) + "%)";
+          currentProgress.value = percent;
+          const currentJobIndex = jobs.indexOf(job) + 1;
+          currentStatus.textContent =
+            "解析中: " +
+            (frame + 1).toLocaleString() + " / " +
+            totalFrames.toLocaleString() + " frames (" + percent.toFixed(1) + "%)" +
+            " / " + currentJobIndex + "/" + jobs.length + "本目" +
+            " / " + job.name;
+          updateOverallStatus(job, frame + 1, totalFrames);
           await wait(0);
         }
       }
 
-      const segments = buildSegments(blackFrameFlags, fps, minFrames);
-      lastResults = segments;
+      const segments = buildSegments(blackFlags, fps, minFrames);
 
-      renderResults(segments);
-      blackFramesEl.textContent = blackCount.toLocaleString();
-      segmentCountEl.textContent = segments.length.toLocaleString();
-      const totalBlackSeconds = segments.reduce((sum, s) => sum + s.durationSec, 0);
-      blackSecondsEl.textContent = totalBlackSeconds.toFixed(3);
+      job.status = "done";
+      job.blackFrames = blackCount;
+      job.segments = segments;
+      job.blackSeconds = segments.reduce((sum, s) => sum + s.durationSec, 0);
 
-      if (!stopRequested) {
-        progressEl.value = 100;
-        statusEl.textContent =
-          "解析完了: 黒区間 " + segments.length + " 件 / 黒フレーム " +
-          blackCount.toLocaleString() + " frames";
-      }
-
-      csvBtn.disabled = segments.length === 0;
-      copyBtn.disabled = segments.length === 0;
+      currentProgress.value = 100;
+      currentStatus.textContent =
+        "完了: " + job.name + " / 黒区間 " + segments.length + " 件";
     } catch (err) {
       console.error(err);
-      statusEl.textContent = "解析中にエラーが発生しました: " + err.message;
+      job.status = "error";
+      job.error = err.message || String(err);
+      currentStatus.textContent = "エラー: " + job.name + " / " + job.error;
     } finally {
-      analyzeBtn.disabled = false;
-      stopBtn.disabled = true;
       video.pause();
+      updateExportButtons();
+      updateSummary();
+      renderAll();
     }
+  }
+
+  function updateOverallStatus(currentJob, currentFrame, currentTotal) {
+    const done = jobs.filter(j => j.status === "done" || j.status === "error").length;
+    const total = jobs.length;
+    const fileWeight = total ? 100 / total : 0;
+    const currentRatio = currentTotal ? currentFrame / currentTotal : 0;
+    overallProgress.value = Math.min(100, (done * fileWeight) + (currentRatio * fileWeight));
+
+    const currentJobIndex = jobs.indexOf(currentJob) + 1;
+    overallStatus.textContent =
+      "全体: " + done + " / " + total + " 本完了。現在: " +
+      currentJobIndex + "/" + total + "本目 / " + currentJob.name;
+  }
+
+  function updateOverallProgress() {
+    const completed = jobs.filter(j => j.status === "done" || j.status === "error").length;
+    overallProgress.value = jobs.length ? (completed / jobs.length) * 100 : 0;
+  }
+
+  function waitForMetadata() {
+    return new Promise((resolve, reject) => {
+      if (video.readyState >= 1 && isFinite(video.duration)) {
+        resolve();
+        return;
+      }
+
+      const onLoaded = () => {
+        cleanup();
+        resolve();
+      };
+
+      const onError = () => {
+        cleanup();
+        reject(new Error("動画を読み込めませんでした。ブラウザ非対応形式の可能性があります。"));
+      };
+
+      const cleanup = () => {
+        video.removeEventListener("loadedmetadata", onLoaded);
+        video.removeEventListener("error", onError);
+      };
+
+      video.addEventListener("loadedmetadata", onLoaded, { once: true });
+      video.addEventListener("error", onError, { once: true });
+    });
   }
 
   function setupCanvas(sampleScale) {
@@ -635,86 +854,255 @@
     return segments;
   }
 
-  function renderResults(segments) {
-    if (!segments.length) {
-      resultBody.innerHTML = '<tr><td colspan="7">黒画面区間は見つかりませんでした。</td></tr>';
+  function renderAll() {
+    renderFileResults();
+    renderSegmentResults();
+    updateSummary();
+    updateExportButtons();
+  }
+
+  function renderFileResults() {
+    if (!jobs.length) {
+      fileResultBody.innerHTML = '<tr><td colspan="9">まだ動画がありません。</td></tr>';
       return;
     }
 
-    resultBody.innerHTML = segments.map(s => `
-      <tr>
+    fileResultBody.innerHTML = jobs.map((job, i) => {
+      const detailHtml = job.status === "error"
+        ? escapeHtml(job.error)
+        : createDetailHtml(job);
+
+      return `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${statusBadge(job.status)}</td>
+          <td title="${escapeHtml(job.name)}">${escapeHtml(job.name)}</td>
+          <td>${job.duration == null ? "-" : formatTime(job.duration)}</td>
+          <td>${job.totalFrames == null ? "-" : job.totalFrames.toLocaleString()}</td>
+          <td>${job.blackFrames == null ? "-" : job.blackFrames.toLocaleString()}</td>
+          <td>${job.segments ? job.segments.length.toLocaleString() : "-"}</td>
+          <td>${job.blackSeconds == null ? "-" : job.blackSeconds.toFixed(3) + " 秒"}</td>
+          <td>${detailHtml}</td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  function createDetailHtml(job) {
+    if (!job.segments || !job.segments.length) {
+      if (job.status === "done") return '<span class="small">黒区間なし</span>';
+      return '<span class="small">未解析</span>';
+    }
+
+    const rows = job.segments.map(s =>
+      `<tr>
         <td>${s.index}</td>
-        <td>${s.startFrame.toLocaleString()}</td>
-        <td>${s.endFrame.toLocaleString()}</td>
-        <td>${s.frameCount.toLocaleString()}</td>
+        <td>${s.startFrame}</td>
+        <td>${s.endFrame}</td>
+        <td>${s.frameCount}</td>
         <td>${formatTime(s.startSec)}</td>
         <td>${formatTime(s.endSec)}</td>
-        <td>${s.durationSec.toFixed(3)} 秒</td>
+        <td>${s.durationSec.toFixed(3)}秒</td>
+      </tr>`
+    ).join("");
+
+    return `
+      <details>
+        <summary>${job.segments.length} 件を表示</summary>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>開始F</th>
+              <th>終了F</th>
+              <th>F数</th>
+              <th>開始</th>
+              <th>終了</th>
+              <th>長さ</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </details>
+    `;
+  }
+
+  function renderSegmentResults() {
+    const all = [];
+
+    jobs.forEach((job, jobIndex) => {
+      if (!job.segments) return;
+      job.segments.forEach(seg => {
+        all.push({ job, jobIndex: jobIndex + 1, seg });
+      });
+    });
+
+    if (!all.length) {
+      segmentResultBody.innerHTML = '<tr><td colspan="9">まだ結果はありません。</td></tr>';
+      return;
+    }
+
+    segmentResultBody.innerHTML = all.map(({ job, jobIndex, seg }) => `
+      <tr>
+        <td>${jobIndex}</td>
+        <td title="${escapeHtml(job.name)}">${escapeHtml(job.name)}</td>
+        <td>${seg.index}</td>
+        <td>${seg.startFrame.toLocaleString()}</td>
+        <td>${seg.endFrame.toLocaleString()}</td>
+        <td>${seg.frameCount.toLocaleString()}</td>
+        <td>${formatTime(seg.startSec)}</td>
+        <td>${formatTime(seg.endSec)}</td>
+        <td>${seg.durationSec.toFixed(3)} 秒</td>
       </tr>
     `).join("");
   }
 
-  function downloadCsv() {
-    if (!lastResults.length) return;
+  function statusBadge(status) {
+    const label = {
+      waiting: "待機中",
+      running: "解析中",
+      done: "完了",
+      error: "エラー",
+      stopped: "停止"
+    }[status] || status;
 
-    const header = [
-      "index",
-      "start_frame",
-      "end_frame",
-      "frame_count",
-      "start_time",
-      "end_time",
-      "duration_seconds"
+    return `<span class="badge ${status}">${label}</span>`;
+  }
+
+  function updateSummary() {
+    fileCountEl.textContent = jobs.length.toLocaleString();
+    doneCountEl.textContent = jobs.filter(j => j.status === "done").length.toLocaleString();
+
+    const totalSegments = jobs.reduce((sum, j) => sum + ((j.segments && j.segments.length) || 0), 0);
+    const totalBlackSeconds = jobs.reduce((sum, j) => sum + (j.blackSeconds || 0), 0);
+
+    segmentCountEl.textContent = totalSegments.toLocaleString();
+    blackSecondsEl.textContent = totalBlackSeconds.toFixed(3);
+  }
+
+  function updateExportButtons() {
+    const hasAnyResult = jobs.some(j => j.status === "done" || (j.segments && j.segments.length));
+    csvAllBtn.disabled = !hasAnyResult;
+    copyAllBtn.disabled = !hasAnyResult;
+  }
+
+  function downloadAllCsv() {
+    const rows = [
+      [
+        "video_index",
+        "file_name",
+        "video_status",
+        "duration",
+        "total_frames",
+        "black_frames",
+        "segment_index",
+        "start_frame",
+        "end_frame",
+        "frame_count",
+        "start_time",
+        "end_time",
+        "duration_seconds",
+        "error"
+      ]
     ];
 
-    const rows = lastResults.map(s => [
-      s.index,
-      s.startFrame,
-      s.endFrame,
-      s.frameCount,
-      formatTime(s.startSec),
-      formatTime(s.endSec),
-      s.durationSec.toFixed(6)
-    ]);
+    jobs.forEach((job, jobIndex) => {
+      if (job.segments && job.segments.length) {
+        job.segments.forEach(seg => {
+          rows.push([
+            jobIndex + 1,
+            job.name,
+            statusLabel(job.status),
+            job.duration == null ? "" : formatTime(job.duration),
+            job.totalFrames == null ? "" : job.totalFrames,
+            job.blackFrames == null ? "" : job.blackFrames,
+            seg.index,
+            seg.startFrame,
+            seg.endFrame,
+            seg.frameCount,
+            formatTime(seg.startSec),
+            formatTime(seg.endSec),
+            seg.durationSec.toFixed(6),
+            job.error || ""
+          ]);
+        });
+      } else {
+        rows.push([
+          jobIndex + 1,
+          job.name,
+          statusLabel(job.status),
+          job.duration == null ? "" : formatTime(job.duration),
+          job.totalFrames == null ? "" : job.totalFrames,
+          job.blackFrames == null ? "" : job.blackFrames,
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          job.error || ""
+        ]);
+      }
+    });
 
-    const csv = [header, ...rows]
-      .map(row => row.map(csvEscape).join(","))
-      .join("\r\n");
-
+    const csv = rows.map(row => row.map(csvEscape).join(",")).join("\r\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
-    const base = currentFileName ? currentFileName.replace(/\.[^.]+$/, "") : "result";
     a.href = URL.createObjectURL(blob);
-    a.download = base + "_black_segments.csv";
+    a.download = "black_segments_all_results.csv";
     a.click();
     URL.revokeObjectURL(a.href);
   }
 
-  async function copyResults() {
-    if (!lastResults.length) return;
+  async function copyAllResults() {
+    const lines = [];
 
-    const text = lastResults.map(s =>
-      "#" + s.index + " " +
-      s.startFrame + "f～" + s.endFrame + "f / " +
-      formatTime(s.startSec) + "～" + formatTime(s.endSec) +
-      " / " + s.durationSec.toFixed(3) + "秒"
-    ).join("\n");
+    jobs.forEach((job, jobIndex) => {
+      lines.push("動画#" + (jobIndex + 1) + " " + job.name + " [" + statusLabel(job.status) + "]");
 
-    await navigator.clipboard.writeText(text);
-    statusEl.textContent = "結果をクリップボードにコピーしました。";
+      if (job.error) {
+        lines.push("  エラー: " + job.error);
+      } else if (!job.segments || !job.segments.length) {
+        lines.push("  黒区間なし");
+      } else {
+        job.segments.forEach(seg => {
+          lines.push(
+            "  #" + seg.index + " " +
+            seg.startFrame + "f～" + seg.endFrame + "f / " +
+            formatTime(seg.startSec) + "～" + formatTime(seg.endSec) +
+            " / " + seg.durationSec.toFixed(3) + "秒"
+          );
+        });
+      }
+    });
+
+    await navigator.clipboard.writeText(lines.join("\n"));
+    overallStatus.textContent = "全結果をクリップボードにコピーしました。";
   }
 
-  function resetResults(resetStatus = true) {
-    lastResults = [];
-    resultBody.innerHTML = '<tr><td colspan="7">まだ結果はありません。</td></tr>';
-    progressEl.value = 0;
+  function resetView() {
+    video.removeAttribute("src");
+    video.load();
+    if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+    currentObjectUrl = "";
+    videoInfo.textContent = "動画が未選択です。";
+    overallStatus.textContent = "動画を追加してください。";
+    currentStatus.textContent = "待機中です。";
+    overallProgress.value = 0;
+    currentProgress.value = 0;
     totalFramesEl.textContent = "-";
-    blackFramesEl.textContent = "-";
-    segmentCountEl.textContent = "-";
-    blackSecondsEl.textContent = "-";
-    csvBtn.disabled = true;
-    copyBtn.disabled = true;
-    if (resetStatus) statusEl.textContent = "動画を選択してください。";
+  }
+
+  function setInputsDisabled(disabled) {
+    [
+      fpsInput,
+      sampleScaleInput,
+      blackThresholdInput,
+      blackRatioInput,
+      minFramesInput,
+      seekPaddingInput
+    ].forEach(input => input.disabled = disabled);
   }
 
   function seekVideo(time) {
@@ -723,10 +1111,12 @@
         cleanup();
         resolve();
       };
+
       const onError = () => {
         cleanup();
         reject(new Error("動画のシークに失敗しました。"));
       };
+
       const cleanup = () => {
         video.removeEventListener("seeked", onSeeked);
         video.removeEventListener("error", onError);
@@ -760,11 +1150,30 @@
   }
 
   function csvEscape(value) {
-    const str = String(value);
+    const str = String(value ?? "");
     if (/[",\r\n]/.test(str)) {
       return '"' + str.replace(/"/g, '""') + '"';
     }
     return str;
+  }
+
+  function statusLabel(status) {
+    return {
+      waiting: "待機中",
+      running: "解析中",
+      done: "完了",
+      error: "エラー",
+      stopped: "停止"
+    }[status] || status;
+  }
+
+  function escapeHtml(str) {
+    return String(str ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
   }
 
   function clamp(value, min, max) {
@@ -775,6 +1184,9 @@
   function wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
+
+  resetView();
+  renderAll();
 })();
 </script>
 </body>
