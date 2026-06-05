@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>黒画面区間検出ツール</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --text: #222;
+    --sub: #666;
+    --border: #d9dde3;
+    --accent: #2563eb;
+    --danger: #dc2626;
+    --ok: #16a34a;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  header {
+    padding: 24px 16px 8px;
+    text-align: center;
+  }
+
+  h1 {
+    margin: 0 0 8px;
+    font-size: 24px;
+  }
+
+  .lead {
+    margin: 0;
+    color: var(--sub);
+    font-size: 14px;
+  }
+
+  main {
+    width: min(1100px, 100%);
+    margin: 0 auto;
+    padding: 16px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  }
+
+  #dropZone {
+    border: 2px dashed #aab3c2;
+    border-radius: 16px;
+    padding: 36px 18px;
+    text-align: center;
+    background: #fbfcff;
+    transition: 0.2s;
+    cursor: pointer;
+  }
+
+  #dropZone.dragover {
+    border-color: var(--accent);
+    background: #eff6ff;
+  }
+
+  #fileInput {
+    display: none;
+  }
+
+  .drop-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .drop-sub {
+    color: var(--sub);
+    font-size: 13px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 800px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  video {
+    width: 100%;
+    max-height: 360px;
+    background: #000;
+    border-radius: 12px;
+  }
+
+  .settings {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  @media (max-width: 560px) {
+    .settings {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  input[type="number"], input[type="text"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+  }
+
+  .hint {
+    margin-top: 4px;
+    color: var(--sub);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  button {
+    border: none;
+    border-radius: 999px;
+    padding: 10px 16px;
+    font-weight: 700;
+    cursor: pointer;
+    background: var(--accent);
+    color: #fff;
+  }
+
+  button.secondary {
+    background: #475569;
+  }
+
+  button.danger {
+    background: var(--danger);
+  }
+
+  button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .status {
+    font-size: 14px;
+    color: var(--sub);
+    line-height: 1.7;
+  }
+
+  progress {
+    width: 100%;
+    height: 16px;
+    margin: 8px 0;
+  }
+
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  @media (max-width: 760px) {
+    .summary {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  .summary-item {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px;
+  }
+
+  .summary-item .num {
+    font-size: 20px;
+    font-weight: 800;
+  }
+
+  .summary-item .cap {
+    color: var(--sub);
+    font-size: 12px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-top: 12px;
+  }
+
+  th, td {
+    border-bottom: 1px solid var(--border);
+    padding: 9px 8px;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  th {
+    background: #f8fafc;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  .table-wrap {
+    overflow: auto;
+    max-height: 420px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+
+  .black-preview {
+    width: 64px;
+    height: 28px;
+    background: #000;
+    border-radius: 6px;
+    border: 1px solid #222;
+  }
+
+  .note {
+    font-size: 12px;
+    color: var(--sub);
+    line-height: 1.6;
+  }
+
+  canvas {
+    display: none;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>黒画面区間検出ツール</h1>
+  <p class="lead">動画をドラッグ＆ドロップすると、真っ黒な区間をフレーム番号と時間で一覧表示します。</p>
+</header>
+
+<main>
+  <section class="card">
+    <div id="dropZone">
+      <div class="drop-title">ここに動画をドラッグ＆ドロップ</div>
+      <div class="drop-sub">またはクリックして動画ファイルを選択してください。MP4 / MOV / WebM など、ブラウザで再生できる形式に対応します。</div>
+      <input id="fileInput" type="file" accept="video/*">
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>動画プレビュー</h2>
+      <video id="video" controls muted playsinline></video>
+      <div class="status" id="videoInfo">動画が未選択です。</div>
+    </div>
+
+    <div class="card">
+      <h2>検出設定</h2>
+      <div class="settings">
+        <div>
+          <label for="fpsInput">FPS</label>
+          <input id="fpsInput" type="number" min="1" max="240" step="0.001" value="30">
+          <div class="hint">フレーム番号の基準です。元動画のFPSが分かる場合は合わせてください。</div>
+        </div>
+
+        <div>
+          <label for="sampleScale">解析サイズ</label>
+          <input id="sampleScale" type="number" min="16" max="320" step="1" value="96">
+          <div class="hint">小さいほど高速、大きいほど精密です。</div>
+        </div>
+
+        <div>
+          <label for="blackThreshold">黒判定しきい値</label>
+          <input id="blackThreshold" type="number" min="0" max="255" step="1" value="16">
+          <div class="hint">RGB平均がこの値以下のピクセルを黒とみなします。</div>
+        </div>
+
+        <div>
+          <label for="blackRatio">黒ピクセル率</label>
+          <input id="blackRatio" type="number" min="0" max="100" step="0.1" value="98">
+          <div class="hint">この割合以上が黒なら、そのフレームを黒フレームとします。</div>
+        </div>
+
+        <div>
+          <label for="minFrames">最小区間フレーム数</label>
+          <input id="minFrames" type="number" min="1" max="100000" step="1" value="1">
+          <div class="hint">短すぎる黒フレームを除外したい場合に増やします。</div>
+        </div>
+
+        <div>
+          <label for="seekPadding">シーク補正秒</label>
+          <input id="seekPadding" type="number" min="0" max="0.5" step="0.001" value="0.001">
+          <div class="hint">フレーム境界の読み取り安定用です。通常は変更不要です。</div>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button id="analyzeBtn" disabled>解析開始</button>
+        <button id="stopBtn" class="danger" disabled>停止</button>
+        <button id="csvBtn" class="secondary" disabled>CSV保存</button>
+        <button id="copyBtn" class="secondary" disabled>結果コピー</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>解析状況</h2>
+    <progress id="progress" value="0" max="100"></progress>
+    <div class="status" id="status">動画を選択してください。</div>
+    <div class="summary">
+      <div class="summary-item">
+        <div class="num" id="totalFrames">-</div>
+        <div class="cap">総フレーム数</div>
+      </div>
+      <div class="summary-item">
+        <div class="num" id="blackFrames">-</div>
+        <div class="cap">黒フレーム数</div>
+      </div>
+      <div class="summary-item">
+        <div class="num" id="segmentCount">-</div>
+        <div class="cap">黒区間数</div>
+      </div>
+      <div class="summary-item">
+        <div class="num" id="blackSeconds">-</div>
+        <div class="cap">黒区間合計秒</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>黒画面区間</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>開始フレーム</th>
+            <th>終了フレーム</th>
+            <th>フレーム数</th>
+            <th>開始時間</th>
+            <th>終了時間</th>
+            <th>長さ</th>
+          </tr>
+        </thead>
+        <tbody id="resultBody">
+          <tr><td colspan="7">まだ結果はありません。</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">
+      注意: ブラウザのみで動作するため、動画ファイルの正確なFPSを自動取得できないことがあります。
+      フレーム番号を正確にしたい場合は、元動画のFPSを入力してください。
+      また、圧縮ノイズのある黒画面では「黒判定しきい値」を少し上げると検出しやすくなります。
+    </p>
+  </section>
+</main>
+
+<canvas id="canvas"></canvas>
+
+<script>
+(() => {
+  const dropZone = document.getElementById("dropZone");
+  const fileInput = document.getElementById("fileInput");
+  const video = document.getElementById("video");
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+  const analyzeBtn = document.getElementById("analyzeBtn");
+  const stopBtn = document.getElementById("stopBtn");
+  const csvBtn = document.getElementById("csvBtn");
+  const copyBtn = document.getElementById("copyBtn");
+
+  const fpsInput = document.getElementById("fpsInput");
+  const sampleScaleInput = document.getElementById("sampleScale");
+  const blackThresholdInput = document.getElementById("blackThreshold");
+  const blackRatioInput = document.getElementById("blackRatio");
+  const minFramesInput = document.getElementById("minFrames");
+  const seekPaddingInput = document.getElementById("seekPadding");
+
+  const videoInfo = document.getElementById("videoInfo");
+  const statusEl = document.getElementById("status");
+  const progressEl = document.getElementById("progress");
+  const resultBody = document.getElementById("resultBody");
+
+  const totalFramesEl = document.getElementById("totalFrames");
+  const blackFramesEl = document.getElementById("blackFrames");
+  const segmentCountEl = document.getElementById("segmentCount");
+  const blackSecondsEl = document.getElementById("blackSeconds");
+
+  let currentFileName = "";
+  let objectUrl = "";
+  let stopRequested = false;
+  let lastResults = [];
+
+  dropZone.addEventListener("click", () => fileInput.click());
+
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files && fileInput.files[0]) {
+      loadVideo(fileInput.files[0]);
+    }
+  });
+
+  ["dragenter", "dragover"].forEach(type => {
+    dropZone.addEventListener(type, e => {
+      e.preventDefault();
+      dropZone.classList.add("dragover");
+    });
+  });
+
+  ["dragleave", "drop"].forEach(type => {
+    dropZone.addEventListener(type, e => {
+      e.preventDefault();
+      dropZone.classList.remove("dragover");
+    });
+  });
+
+  dropZone.addEventListener("drop", e => {
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!file) return;
+    if (!file.type.startsWith("video/")) {
+      alert("動画ファイルを選択してください。");
+      return;
+    }
+    loadVideo(file);
+  });
+
+  function loadVideo(file) {
+    resetResults();
+    currentFileName = file.name;
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(file);
+    video.src = objectUrl;
+    video.load();
+
+    videoInfo.textContent = "読み込み中: " + file.name;
+    statusEl.textContent = "動画メタデータを読み込んでいます。";
+    analyzeBtn.disabled = true;
+
+    video.onloadedmetadata = () => {
+      const duration = video.duration || 0;
+      const fps = getFps();
+      const total = Math.max(1, Math.floor(duration * fps));
+      videoInfo.textContent = [
+        "ファイル名: " + file.name,
+        "長さ: " + formatTime(duration),
+        "推定総フレーム: " + total.toLocaleString() + " frames",
+        "サイズ: " + video.videoWidth + "x" + video.videoHeight
+      ].join(" / ");
+      statusEl.textContent = "解析できます。FPSが違う場合は、解析前に変更してください。";
+      totalFramesEl.textContent = total.toLocaleString();
+      analyzeBtn.disabled = false;
+    };
+  }
+
+  analyzeBtn.addEventListener("click", analyze);
+  stopBtn.addEventListener("click", () => {
+    stopRequested = true;
+    statusEl.textContent = "停止処理中です。現在のフレーム処理が終わると停止します。";
+  });
+
+  csvBtn.addEventListener("click", downloadCsv);
+  copyBtn.addEventListener("click", copyResults);
+
+  async function analyze() {
+    if (!video.src || !isFinite(video.duration)) return;
+
+    stopRequested = false;
+    analyzeBtn.disabled = true;
+    stopBtn.disabled = false;
+    csvBtn.disabled = true;
+    copyBtn.disabled = true;
+    resetResults(false);
+
+    const fps = getFps();
+    const duration = video.duration;
+    const totalFrames = Math.max(1, Math.floor(duration * fps));
+    const threshold = clamp(Number(blackThresholdInput.value), 0, 255);
+    const requiredRatio = clamp(Number(blackRatioInput.value), 0, 100) / 100;
+    const minFrames = Math.max(1, Math.floor(Number(minFramesInput.value) || 1));
+    const seekPadding = Math.max(0, Number(seekPaddingInput.value) || 0);
+    const sampleScale = Math.max(16, Math.floor(Number(sampleScaleInput.value) || 96));
+
+    setupCanvas(sampleScale);
+
+    let blackFrameFlags = new Array(totalFrames).fill(false);
+    let blackCount = 0;
+
+    statusEl.textContent = "解析中です。動画が長い場合は時間がかかります。";
+    progressEl.value = 0;
+    totalFramesEl.textContent = totalFrames.toLocaleString();
+
+    try {
+      for (let frame = 0; frame < totalFrames; frame++) {
+        if (stopRequested) {
+          statusEl.textContent = "解析を停止しました。";
+          break;
+        }
+
+        const t = Math.min(duration, frame / fps + seekPadding);
+        await seekVideo(t);
+        const isBlack = judgeCurrentFrame(threshold, requiredRatio);
+        blackFrameFlags[frame] = isBlack;
+        if (isBlack) blackCount++;
+
+        if (frame % 5 === 0 || frame === totalFrames - 1) {
+          const percent = ((frame + 1) / totalFrames) * 100;
+          progressEl.value = percent;
+          statusEl.textContent =
+            "解析中: " + (frame + 1).toLocaleString() + " / " +
+            totalFrames.toLocaleString() + " frames (" + percent.toFixed(1) + "%)";
+          await wait(0);
+        }
+      }
+
+      const segments = buildSegments(blackFrameFlags, fps, minFrames);
+      lastResults = segments;
+
+      renderResults(segments);
+      blackFramesEl.textContent = blackCount.toLocaleString();
+      segmentCountEl.textContent = segments.length.toLocaleString();
+      const totalBlackSeconds = segments.reduce((sum, s) => sum + s.durationSec, 0);
+      blackSecondsEl.textContent = totalBlackSeconds.toFixed(3);
+
+      if (!stopRequested) {
+        progressEl.value = 100;
+        statusEl.textContent =
+          "解析完了: 黒区間 " + segments.length + " 件 / 黒フレーム " +
+          blackCount.toLocaleString() + " frames";
+      }
+
+      csvBtn.disabled = segments.length === 0;
+      copyBtn.disabled = segments.length === 0;
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "解析中にエラーが発生しました: " + err.message;
+    } finally {
+      analyzeBtn.disabled = false;
+      stopBtn.disabled = true;
+      video.pause();
+    }
+  }
+
+  function setupCanvas(sampleScale) {
+    const vw = video.videoWidth || 1920;
+    const vh = video.videoHeight || 1080;
+
+    if (vw >= vh) {
+      canvas.width = sampleScale;
+      canvas.height = Math.max(1, Math.round(sampleScale * vh / vw));
+    } else {
+      canvas.height = sampleScale;
+      canvas.width = Math.max(1, Math.round(sampleScale * vw / vh));
+    }
+  }
+
+  function judgeCurrentFrame(threshold, requiredRatio) {
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = image.data;
+    const pixelCount = canvas.width * canvas.height;
+    let blackPixels = 0;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const brightness = (r + g + b) / 3;
+      if (brightness <= threshold) blackPixels++;
+    }
+
+    return blackPixels / pixelCount >= requiredRatio;
+  }
+
+  function buildSegments(flags, fps, minFrames) {
+    const segments = [];
+    let start = null;
+
+    for (let i = 0; i <= flags.length; i++) {
+      const isBlack = flags[i] === true;
+
+      if (isBlack && start === null) {
+        start = i;
+      }
+
+      if ((!isBlack || i === flags.length) && start !== null) {
+        const end = i - 1;
+        const count = end - start + 1;
+
+        if (count >= minFrames) {
+          const startSec = start / fps;
+          const endSec = (end + 1) / fps;
+          segments.push({
+            index: segments.length + 1,
+            startFrame: start,
+            endFrame: end,
+            frameCount: count,
+            startSec,
+            endSec,
+            durationSec: endSec - startSec
+          });
+        }
+
+        start = null;
+      }
+    }
+
+    return segments;
+  }
+
+  function renderResults(segments) {
+    if (!segments.length) {
+      resultBody.innerHTML = '<tr><td colspan="7">黒画面区間は見つかりませんでした。</td></tr>';
+      return;
+    }
+
+    resultBody.innerHTML = segments.map(s => `
+      <tr>
+        <td>${s.index}</td>
+        <td>${s.startFrame.toLocaleString()}</td>
+        <td>${s.endFrame.toLocaleString()}</td>
+        <td>${s.frameCount.toLocaleString()}</td>
+        <td>${formatTime(s.startSec)}</td>
+        <td>${formatTime(s.endSec)}</td>
+        <td>${s.durationSec.toFixed(3)} 秒</td>
+      </tr>
+    `).join("");
+  }
+
+  function downloadCsv() {
+    if (!lastResults.length) return;
+
+    const header = [
+      "index",
+      "start_frame",
+      "end_frame",
+      "frame_count",
+      "start_time",
+      "end_time",
+      "duration_seconds"
+    ];
+
+    const rows = lastResults.map(s => [
+      s.index,
+      s.startFrame,
+      s.endFrame,
+      s.frameCount,
+      formatTime(s.startSec),
+      formatTime(s.endSec),
+      s.durationSec.toFixed(6)
+    ]);
+
+    const csv = [header, ...rows]
+      .map(row => row.map(csvEscape).join(","))
+      .join("\r\n");
+
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    const base = currentFileName ? currentFileName.replace(/\.[^.]+$/, "") : "result";
+    a.href = URL.createObjectURL(blob);
+    a.download = base + "_black_segments.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  async function copyResults() {
+    if (!lastResults.length) return;
+
+    const text = lastResults.map(s =>
+      "#" + s.index + " " +
+      s.startFrame + "f～" + s.endFrame + "f / " +
+      formatTime(s.startSec) + "～" + formatTime(s.endSec) +
+      " / " + s.durationSec.toFixed(3) + "秒"
+    ).join("\n");
+
+    await navigator.clipboard.writeText(text);
+    statusEl.textContent = "結果をクリップボードにコピーしました。";
+  }
+
+  function resetResults(resetStatus = true) {
+    lastResults = [];
+    resultBody.innerHTML = '<tr><td colspan="7">まだ結果はありません。</td></tr>';
+    progressEl.value = 0;
+    totalFramesEl.textContent = "-";
+    blackFramesEl.textContent = "-";
+    segmentCountEl.textContent = "-";
+    blackSecondsEl.textContent = "-";
+    csvBtn.disabled = true;
+    copyBtn.disabled = true;
+    if (resetStatus) statusEl.textContent = "動画を選択してください。";
+  }
+
+  function seekVideo(time) {
+    return new Promise((resolve, reject) => {
+      const onSeeked = () => {
+        cleanup();
+        resolve();
+      };
+      const onError = () => {
+        cleanup();
+        reject(new Error("動画のシークに失敗しました。"));
+      };
+      const cleanup = () => {
+        video.removeEventListener("seeked", onSeeked);
+        video.removeEventListener("error", onError);
+      };
+
+      video.addEventListener("seeked", onSeeked, { once: true });
+      video.addEventListener("error", onError, { once: true });
+      video.currentTime = Math.min(Math.max(time, 0), video.duration || time);
+    });
+  }
+
+  function getFps() {
+    const fps = Number(fpsInput.value);
+    if (!isFinite(fps) || fps <= 0) return 30;
+    return fps;
+  }
+
+  function formatTime(sec) {
+    if (!isFinite(sec)) return "00:00:00.000";
+
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = Math.floor(sec % 60);
+    const ms = Math.round((sec - Math.floor(sec)) * 1000);
+
+    return [
+      String(h).padStart(2, "0"),
+      String(m).padStart(2, "0"),
+      String(s).padStart(2, "0")
+    ].join(":") + "." + String(ms).padStart(3, "0");
+  }
+
+  function csvEscape(value) {
+    const str = String(value);
+    if (/[",\r\n]/.test(str)) {
+      return '"' + str.replace(/"/g, '""') + '"';
+    }
+    return str;
+  }
+
+  function clamp(value, min, max) {
+    if (!isFinite(value)) return min;
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+})();
+</script>
+</body>
+</html>
