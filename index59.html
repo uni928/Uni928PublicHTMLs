@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Google AI Plus 値下げ・仕様まとめ調査作業</title>
+  <style>
+    :root {
+      --bg: #f7f9fc;
+      --card: #ffffff;
+      --text: #162033;
+      --muted: #5f6b7a;
+      --line: #e2e8f0;
+      --blue: #1a73e8;
+      --green: #188038;
+      --yellow: #fbbc04;
+      --red: #d93025;
+      --shadow: 0 16px 50px rgba(15, 23, 42, 0.10);
+      --radius: 24px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(66,133,244,.18), transparent 32rem),
+        radial-gradient(circle at top right, rgba(52,168,83,.14), transparent 28rem),
+        var(--bg);
+      line-height: 1.75;
+    }
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .wrap { width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
+    header {
+      padding: 76px 0 48px;
+      position: relative;
+      overflow: hidden;
+    }
+    .badge {
+      display: inline-flex;
+      gap: .5em;
+      align-items: center;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(26,115,232,.10);
+      color: #174ea6;
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 18px;
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: 1.25fr .75fr;
+      gap: 28px;
+      align-items: stretch;
+    }
+    h1 {
+      font-size: clamp(32px, 5vw, 58px);
+      line-height: 1.08;
+      margin: 0 0 20px;
+      letter-spacing: -0.04em;
+    }
+    .lead {
+      font-size: clamp(17px, 2vw, 21px);
+      color: var(--muted);
+      max-width: 760px;
+      margin: 0 0 26px;
+    }
+    .heroCard, .card {
+      background: rgba(255,255,255,.82);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(226,232,240,.9);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .heroCard { padding: 28px; display: grid; align-content: center; }
+    .priceLabel { color: var(--muted); font-weight: 700; }
+    .priceRow { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 8px 0; }
+    .oldPrice { font-size: 28px; color: var(--muted); text-decoration: line-through; }
+    .newPrice { font-size: 54px; color: var(--green); font-weight: 900; letter-spacing: -0.06em; }
+    .small { color: var(--muted); font-size: 14px; }
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 28px; }
+    .kpi {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+    }
+    .kpi strong { display: block; font-size: 25px; line-height: 1.2; }
+    .kpi span { color: var(--muted); font-size: 13px; }
+    main { padding: 8px 0 72px; }
+    section { margin: 28px 0; }
+    .card { padding: clamp(22px, 3vw, 34px); }
+    h2 { font-size: clamp(24px, 3vw, 34px); margin: 0 0 14px; letter-spacing: -0.02em; }
+    h3 { margin: 18px 0 8px; font-size: 20px; }
+    .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .feature {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 20px;
+      background: #fff;
+    }
+    .icon {
+      width: 38px; height: 38px; border-radius: 13px;
+      display: grid; place-items: center; font-weight: 900;
+      margin-bottom: 10px;
+      color: #fff;
+    }
+    .blue { background: var(--blue); }
+    .green { background: var(--green); }
+    .yellow { background: var(--yellow); color: #3c4043; }
+    .red { background: var(--red); }
+    table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 18px; }
+    th, td { padding: 15px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { text-align: left; background: #eef4ff; color: #174ea6; }
+    tr:last-child td { border-bottom: none; }
+    .highlight { background: #f3fff6; font-weight: 800; color: var(--green); }
+    .note {
+      border-left: 5px solid var(--blue);
+      background: #eef4ff;
+      padding: 16px 18px;
+      border-radius: 14px;
+      color: #23395d;
+    }
+    .sourceList { padding-left: 1.2em; }
+    .sourceList li { margin: 8px 0; }
+
+    .pill { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:#eef4ff; color:#174ea6; font-size:12px; font-weight:800; }
+    .estimateBox { border:1px solid var(--line); border-radius:20px; padding:18px; background:#fff; }
+    .estimateBox strong { display:block; font-size:22px; margin-bottom:6px; }
+    .caution { border-left:5px solid var(--yellow); background:#fff8df; padding:16px 18px; border-radius:14px; color:#4d3b00; }
+    .sourceBlock { border:1px solid var(--line); border-radius:18px; padding:16px 18px; background:#fff; margin:12px 0; }
+    .sourceBlock h3 { margin-top:0; }
+    .cta {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 22px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-weight: 800;
+      background: var(--blue);
+      color: #fff;
+      box-shadow: 0 8px 22px rgba(26,115,232,.24);
+    }
+    .btn.secondary { background: #fff; color: var(--blue); border: 1px solid #c9dafd; box-shadow: none; }
+    footer { color: var(--muted); font-size: 13px; padding: 28px 0 44px; }
+    @media (max-width: 860px) {
+      .hero, .grid2, .grid3 { grid-template-columns: 1fr; }
+      .kpis { grid-template-columns: repeat(2, 1fr); }
+      .newPrice { font-size: 44px; }
+      table { font-size: 14px; }
+      th, td { padding: 12px 10px; }
+    }
+    @media (max-width: 520px) {
+      .kpis { grid-template-columns: 1fr; }
+      header { padding-top: 42px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap hero">
+      <div>
+        <div class="badge">調査作業｜Google AI Plus 値下げ</div>
+        <h1>Google AI Plusが<br>月額1,200円から725円へ</h1>
+        <p class="lead">
+          個人向けGoogle AIサブスクリプション「Google AI Plus」の価格改定、仕様、メリット、スペック、上位プランとの違いを資料サイト形式で整理しました。
+        </p>
+        <div class="cta">
+          <a class="btn" href="#spec">仕様を見る</a>
+          <a class="btn secondary" href="#compare">プラン比較へ</a>
+          <a class="btn secondary" href="#free-vs-plus">無料版との差</a>
+        </div>
+      </div>
+      <aside class="heroCard" aria-label="価格改定の要点">
+        <div class="priceLabel">新価格</div>
+        <div class="priceRow">
+          <span class="oldPrice">1,200円</span>
+          <span class="newPrice">725円</span>
+          <span>/月</span>
+        </div>
+        <p class="small">報道ベースでは年額プランも12,000円から7,250円へ引き下げ。ストレージは200GBから400GBへ倍増とされています。</p>
+      </aside>
+    </div>
+    <div class="wrap kpis">
+      <div class="kpi"><strong>約40%↓</strong><span>月額料金の引き下げ幅</span></div>
+      <div class="kpi"><strong>400GB</strong><span>Gmail・Drive・Photos共通ストレージ</span></div>
+      <div class="kpi"><strong>2x</strong><span>Gemini使用量上限</span></div>
+      <div class="kpi"><strong>最大5人</strong><span>ファミリー共有</span></div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card" id="overview">
+      <h2>値下げの概要</h2>
+      <p>
+        Google AI Plusは、Geminiアプリ、NotebookLM、GmailなどのGoogleアプリ内AI機能、クラウドストレージをまとめて使える個人向けプランです。
+        2026年6月9日時点の国内報道では、月額料金が1,200円から725円へ、年額料金が12,000円から7,250円へ引き下げられ、ストレージ容量も200GBから400GBへ倍増するとされています。
+      </p>
+      <div class="note">
+        価格は国・アカウント・キャンペーン・税表示・提供状況で変わる可能性があります。実際の契約前にはGoogle One上の表示価格を確認してください。
+      </div>
+    </section>
+
+    <section class="grid3" id="benefits">
+      <div class="feature">
+        <div class="icon blue">AI</div>
+        <h3>Geminiをより多く使える</h3>
+        <p>無料利用時と比べてGeminiの使用量上限が2倍。Gemini 3.1 ProやDeep Researchへのアクセス拡大も案内されています。</p>
+      </div>
+      <div class="feature">
+        <div class="icon green">400</div>
+        <h3>ストレージが実用的</h3>
+        <p>Gmail、Googleドライブ、Googleフォト共通で400GB。写真・動画・メール容量の不足対策としても使いやすい構成です。</p>
+      </div>
+      <div class="feature">
+        <div class="icon yellow">¥</div>
+        <h3>低価格で始めやすい</h3>
+        <p>月額725円なら、AI機能とクラウドストレージをまとめて試す入口として導入しやすい価格帯です。</p>
+      </div>
+    </section>
+
+    <section class="card" id="spec">
+      <h2>Google AI Plus の主な仕様</h2>
+      <table>
+        <tr><th>項目</th><th>内容</th></tr>
+        <tr><td>月額料金</td><td class="highlight">725円（改定後の報道価格）</td></tr>
+        <tr><td>年額料金</td><td>7,250円（改定後の報道価格）</td></tr>
+        <tr><td>クラウドストレージ</td><td>400GB。Gmail、Googleドライブ、Googleフォトで共通利用。</td></tr>
+        <tr><td>Gemini</td><td>使用量上限が無料時比2倍。Gemini 3.1 Pro、Deep Research、Omni in Geminiなどへのアクセス拡大。</td></tr>
+        <tr><td>NotebookLM</td><td>機能とモデルへの拡張アクセス。</td></tr>
+        <tr><td>Googleアプリ連携</td><td>Gemini in Gmailなど、Googleアプリ内でAI機能を利用可能。</td></tr>
+        <tr><td>生成系機能</td><td>画像・音楽・動画生成モデルへのアクセス拡大。Google Flowは月200クレジット。</td></tr>
+        <tr><td>ファミリー共有</td><td>最大5人まで共有可能。</td></tr>
+        <tr><td>対象</td><td>個人のGoogleアカウント向け。Workspace利用者は別途Workspace向けGeminiアドオンが案内されています。</td></tr>
+      </table>
+    </section>
+
+
+
+    <section class="card" id="free-vs-plus">
+      <h2>無料版Geminiと比べた「使える回数」と「クオリティ差」の目安</h2>
+      <p>
+        Googleは2026年5月17日以降、Geminiアプリの利用上限を単純な「1日◯回」ではなく、プロンプトの複雑さ、使用モデル、使用機能、チャットの長さを加味する「コンピュートベース」の上限として案内しています。そのため、厳密な回数は公開されていません。
+        ただし、公式ヘルプではGoogle AI Plusは無料版の標準上限に対して<strong>2倍</strong>、コンテキストウィンドウは<strong>32k tokens → 128k tokens</strong>と明示されています。
+      </p>
+      <div class="grid3">
+        <div class="estimateBox">
+          <span class="pill">回数の目安</span>
+          <strong>無料版の約2倍</strong>
+          <p>同じような短文質問を続ける場合、上限到達までの余裕はおおむね2倍と考えられます。長文ファイル、画像、Deep Research、Proモデル、拡張思考は消費が重くなります。</p>
+        </div>
+        <div class="estimateBox">
+          <span class="pill">長文処理の目安</span>
+          <strong>文脈量は4倍</strong>
+          <p>無料版は32k tokens、Plusは128k tokens。長いPDF、議事録、複数資料、長い会話履歴をまとめて扱う用途では差が出やすい項目です。</p>
+        </div>
+        <div class="estimateBox">
+          <span class="pill">混雑時の目安</span>
+          <strong>無料版より制限されにくい</strong>
+          <p>公式ヘルプでは、容量制約がある場合、AIプランなしのユーザーがプラン加入者より先に制限される場合があると説明されています。</p>
+        </div>
+      </div>
+      <div class="caution" style="margin-top:18px;">
+        目安としては「無料版で頻繁に上限通知が出る人」「長文ファイルやDeep Researchを使う人」はPlusの恩恵を感じやすく、短い雑談や軽い文章作成だけなら回答品質そのものの差は小さめです。
+      </div>
+    </section>
+
+    <section class="card" id="quality-difference">
+      <h2>クオリティ差の整理</h2>
+      <table>
+        <tr>
+          <th>比較項目</th>
+          <th>無料版</th>
+          <th>Google AI Plus</th>
+          <th>品質差の目安</th>
+        </tr>
+        <tr>
+          <td>使えるGeminiモデル</td>
+          <td>Gemini 3 Flash-Lite / Flash / Pro へのアクセスあり</td>
+          <td>Gemini 3 Flash-Lite / Flash / Pro へのアクセスあり</td>
+          <td>同じモデルを同じ条件で使う短文質問では、品質差は原理的に大きくありません。</td>
+        </tr>
+        <tr>
+          <td>上位モデル・高負荷機能の使いやすさ</td>
+          <td>標準上限。高需要時はDeep Researchなどが利用しにくくなる場合あり</td>
+          <td>標準比2倍。上限到達後もFlash-Liteで会話継続可能</td>
+          <td>Plusは「高品質モデルをより長く使える」差が中心です。</td>
+        </tr>
+        <tr>
+          <td>長文・資料読解</td>
+          <td>32k tokens</td>
+          <td class="highlight">128k tokens</td>
+          <td>大量資料・長い会話・長文コードでは、読み落としや文脈切れが減る可能性があります。</td>
+        </tr>
+        <tr>
+          <td>難問・コーディング・数学</td>
+          <td>Proモデル利用は可能だが、標準上限内</td>
+          <td>Proモデル利用の余裕が増える</td>
+          <td>Gemini Proは複雑な数学・コーディング・高度な推論に強いと公式説明されています。Plusはその利用枠を増やす効果です。</td>
+        </tr>
+        <tr>
+          <td>速度</td>
+          <td>Flash系は速い。Proは時間がかかる場合あり</td>
+          <td>同様。ただし上限余裕によりProを選びやすい</td>
+          <td>品質重視ならPro、速度重視ならFlashという使い分けになります。</td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="card" id="research-sources">
+      <h2>調査事項ごとの出典</h2>
+      <div class="sourceBlock">
+        <h3>1. 利用回数・上限の考え方</h3>
+        <p>Google公式ヘルプでは、利用上限はプロンプトの複雑さ、モデル、機能、チャット長で変動し、5時間ごとに更新され、週次上限に達するまで利用できると説明されています。また、Plusは標準上限の2倍、Proは4倍とされています。</p>
+        <ul class="sourceList">
+          <li><a href="https://support.google.com/gemini/answer/16275805?hl=en" target="_blank" rel="noopener">Google公式ヘルプ：Gemini Apps limits & upgrades for Google AI subscribers</a></li>
+        </ul>
+      </div>
+      <div class="sourceBlock">
+        <h3>2. コンテキストウィンドウの差</h3>
+        <p>同じ公式ヘルプで、AIプランなしは32k tokens、Google AI Plusは128k tokens、Google AI Pro / Ultraは1 million tokensと案内されています。</p>
+        <ul class="sourceList">
+          <li><a href="https://support.google.com/gemini/answer/16275805?hl=en" target="_blank" rel="noopener">Google公式ヘルプ：Context windows</a></li>
+        </ul>
+      </div>
+      <div class="sourceBlock">
+        <h3>3. モデル別の品質差</h3>
+        <p>公式ヘルプでは、Flash-Liteは日常作業向け、Flashは速度と推論のバランス、Proは複雑な数学・コーディング・高性能推論に強い最上位モデルと説明されています。</p>
+        <ul class="sourceList">
+          <li><a href="https://support.google.com/gemini/answer/16275805?hl=en" target="_blank" rel="noopener">Google公式ヘルプ：About Gemini 3 models</a></li>
+        </ul>
+      </div>
+      <div class="sourceBlock">
+        <h3>4. Google AI Plusに含まれる機能</h3>
+        <p>Google One公式ページでは、Google AI PlusにGeminiアプリ、NotebookLM、Gemini in Gmailなど、400GBストレージが含まれると説明されています。</p>
+        <ul class="sourceList">
+          <li><a href="https://one.google.com/intl/ja_jp/about/google-ai-plans/" target="_blank" rel="noopener">Google One公式：Google AI のプラン</a></li>
+        </ul>
+      </div>
+      <div class="sourceBlock">
+        <h3>5. 価格改定</h3>
+        <p>日本国内の報道では、月額1,200円から725円、年額12,000円から7,250円、ストレージ200GBから400GBへの変更として報じられています。</p>
+        <ul class="sourceList">
+          <li><a href="https://forest.watch.impress.co.jp/docs/news/2115471.html" target="_blank" rel="noopener">窓の杜：Google AI Plus 月額1,200円から725円へ</a></li>
+          <li><a href="https://www.itmedia.co.jp/news/articles/2606/09/news077.html" target="_blank" rel="noopener">ITmedia NEWS：Google AI Plus 値下げ・ストレージ倍増</a></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="card" id="compare">
+      <h2>他のGoogle AIプランとの比較</h2>
+      <table>
+        <tr>
+          <th>プラン</th>
+          <th>主な位置づけ</th>
+          <th>ストレージ</th>
+          <th>Gemini使用量</th>
+          <th>主な追加特典</th>
+        </tr>
+        <tr>
+          <td><strong>Google AI Plus</strong></td>
+          <td>低価格でAIとストレージを試す入口</td>
+          <td class="highlight">400GB</td>
+          <td>2倍</td>
+          <td>Gemini、NotebookLM、Gemini in Gmail、Google Flow 200クレジット/月</td>
+        </tr>
+        <tr>
+          <td><strong>Google AI Pro</strong></td>
+          <td>仕事・学習・制作でより多く使う中位プラン</td>
+          <td>5TB</td>
+          <td>4倍</td>
+          <td>Plusの全機能、Proモデルへの拡張アクセス、YouTube Premium Lite、Cloudクレジット等</td>
+        </tr>
+        <tr>
+          <td><strong>Google AI Ultra</strong></td>
+          <td>最大級の使用量・優先アクセスを求める上位プラン</td>
+          <td>20TB〜30TB</td>
+          <td>Proの5倍〜20倍</td>
+          <td>YouTube Premium個人プラン、上位AIアクセス、Google Flow高クレジット等</td>
+        </tr>
+      </table>
+      <p class="small">※上位プランの料金はGoogle Oneの契約画面・地域・税表示により変動する可能性があるため、この資料では主に公式比較表で確認できる仕様差を中心に整理しています。</p>
+    </section>
+
+    <section class="grid2">
+      <div class="card">
+        <h2>向いている人</h2>
+        <ul>
+          <li>無料版Geminiの上限に物足りなさを感じる人</li>
+          <li>Gmail・Googleフォト・Driveの容量不足を解消したい人</li>
+          <li>NotebookLMやDeep Researchを試したい人</li>
+          <li>Proほど高い使用量は不要だが、AI活用を日常化したい人</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h2>注意点</h2>
+        <ul>
+          <li>AI機能の提供国・対象年齢・対応言語には制限があります。</li>
+          <li>上限回数や利用可能モデルは随時変更される可能性があります。</li>
+          <li>法人・学校・Workspace用途では個人向けPlusではなく、Workspace向けGeminiの確認が必要です。</li>
+          <li>契約前にGoogle Oneの実際の表示価格を確認してください。</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="card" id="sources">
+      <h2>参考資料・出典</h2>
+      <ul class="sourceList">
+        <li><a href="https://support.google.com/gemini/answer/16275805?hl=en" target="_blank" rel="noopener">Google公式ヘルプ：Gemini Apps limits & upgrades for Google AI subscribers</a></li>
+        <li><a href="https://one.google.com/intl/ja_jp/about/google-ai-plans/" target="_blank" rel="noopener">Google One 公式：Google AI のプラン（クラウド ストレージ付き）</a></li>
+        <li><a href="https://forest.watch.impress.co.jp/docs/news/2115471.html" target="_blank" rel="noopener">窓の杜：Google AI Plus 月額1,200円から725円へ</a></li>
+        <li><a href="https://www.itmedia.co.jp/news/articles/2606/09/news077.html" target="_blank" rel="noopener">ITmedia NEWS：Google AI Plus 値下げ・ストレージ倍増</a></li>
+        <li><a href="https://www.watch.impress.co.jp/docs/news/2115528.html" target="_blank" rel="noopener">Impress Watch：Google AI Plus 値下げ・容量倍増</a></li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="wrap">
+    <p>作成日：2026年6月9日。掲載内容は作成時点の公開情報に基づく資料です。価格・機能・提供状況は変更される場合があります。</p>
+  </footer>
+</body>
+</html>
