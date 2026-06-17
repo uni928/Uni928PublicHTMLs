@@ -401,6 +401,14 @@
         </div>
 
         <div class="choice">
+          <input type="checkbox" id="rememberUnlock" checked>
+          <div>
+            <b>ログインに成功した場合のみIndexedDBに保存して、次回からパスワード不要にする</b>
+            <span>生成された保護ページで復号に成功したパスワードだけをブラウザ内に保存します。次回以降は保存済みの候補を自動で試し、失敗してもエラー表示は出しません。共有端末や他人が使う端末ではOFFにしてください。</span>
+          </div>
+        </div>
+
+        <div class="choice">
           <input type="checkbox" id="saveCapacity" checked>
           <div>
             <b>容量を節約する</b>
@@ -634,9 +642,13 @@ function currentTimestampCompact() {
     + pad(now.getSeconds());
 }
 
-function passwordInfoFileName(titleText) {
+function passwordInfoFileBase(titleText) {
   const base = sourceFileName || titleText || currentTimestampCompact();
-  return (sanitizeDownloadName(base) || currentTimestampCompact()) + 'パスワード情報.txt';
+  return sanitizeDownloadName(base) || currentTimestampCompact();
+}
+
+function passwordInfoFileName(titleText) {
+  return passwordInfoFileBase(titleText) + 'パスワード情報.txt';
 }
 
 function updatePasswordInfoButtonState() {
@@ -659,10 +671,11 @@ function downloadPasswordInfo() {
   }
 
   const titleText = extractTitleTag(source);
+  const passwordInfoName = passwordInfoFileName(titleText);
   const urlSuffix = '?key=' + encodeURIComponent(passphrase);
   const infoText = [
     '【ファイル名】',
-    sourceFileName || 'HTMLファイル未添付',
+    passwordInfoName,
     '',
     '【タイトルタグの中身】',
     titleText || '（なし）',
@@ -678,7 +691,7 @@ function downloadPasswordInfo() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = passwordInfoFileName(titleText);
+  link.download = passwordInfoName;
   document.body.appendChild(link);
   link.click();
   link.remove();
@@ -859,6 +872,13 @@ function protectedPage(payload, title, option) {
     opacity: .62;
     cursor: default;
   }
+  button.secondary {
+    margin-top: 10px;
+    color: #172033;
+    background: #eef5ff;
+    border: 1px solid #c7d7eb;
+  }
+  input[type=file] { display: none; }
   .message {
     min-height: 1.4em;
     margin-top: 14px;
@@ -877,12 +897,15 @@ function protectedPage(payload, title, option) {
   <div class="main">
     <input id="unlockKey" type="password" placeholder="パスワードを入力" autocomplete="current-password" autofocus>
     <button id="unlockButton" type="button">開く</button>
+    <button id="openUnlockFileButton" class="secondary" type="button">解除用ファイルを開く</button>
+    <input id="unlockFileInput" type="file" accept=".txt,text/plain">
     <div id="message" class="message"></div>
   </div>
 </div>
 <script>
 const PAGE_TITLE = ${jsonTitle};
 const QUERY_UNLOCK = ${boolText(option.queryUnlock)};
+const REMEMBER_UNLOCK = ${boolText(option.rememberUnlock)};
 const STRICT_VIEW = ${boolText(option.strictView)};
 const CAPACITY_SAVE = ${boolText(option.capacitySave)};
 const LOCKED_SALT = "${payload.salt}";
@@ -891,6 +914,16 @@ const LOCKED_DATA = "${payload.data}";
 
 function fromBase64(value) {
   return Uint8Array.from(atob(value), char => char.charCodeAt(0));
+}
+
+function toBase64(buffer) {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  let binary = '';
+  const chunkSize = 32768;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
 }
 
 function hideQueryKey() {
@@ -972,49 +1005,230 @@ function openHtml(html) {
   document.close();
 }
 
-async function unlock() {
-  const input = document.getElementById('unlockKey');
-  const button = document.getElementById('unlockButton');
-  const message = document.getElementById('message');
-  message.className = 'message';
-  message.textContent = '復号しています...';
-  button.disabled = true;
+const UNLOCK_DB_NAME = 'local-html-locker-unlock-passwords';
+const UNLOCK_DB_VERSION = 1;
+const UNLOCK_STORE_NAME = 'kv';
+const UNLOCK_PASSWORDS_KEY = 'passwords';
+const UNLOCK_PASSWORDS_BLOB_VERSION = 2;
+const UNLOCK_PASSWORDS_FIXED_SECRET = 'LocalHTMLLockerIndexedDbFixedPassword::v1::DoNotUseAsSecurityBoundary';
 
+function openUnlockDb() {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) {
+      reject(new Error('このブラウザはIndexedDBに対応していません。'));
+      return;
+    }
+    const request = indexedDB.open(UNLOCK_DB_NAME, UNLOCK_DB_VERSION);
+    request.onupgradeneeded = event => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(UNLOCK_STORE_NAME)) db.createObjectStore(UNLOCK_STORE_NAME);
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('IndexedDBを開けませんでした。'));
+  });
+}
+
+async function unlockDbGet(key, fallbackValue) {
+  const db = await openUnlockDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(UNLOCK_STORE_NAME, 'readonly');
+    const store = tx.objectStore(UNLOCK_STORE_NAME);
+    const request = store.get(key);
+    request.onsuccess = () => resolve(request.result ?? fallbackValue);
+    request.onerror = () => reject(request.error || new Error('IndexedDBの読込に失敗しました。'));
+    tx.oncomplete = () => db.close();
+    tx.onerror = () => { db.close(); reject(tx.error || new Error('IndexedDBの読込に失敗しました。')); };
+  });
+}
+
+async function unlockDbSet(key, value) {
+  const db = await openUnlockDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(UNLOCK_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(UNLOCK_STORE_NAME);
+    store.put(value, key);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error || new Error('IndexedDBの保存に失敗しました。')); };
+  });
+}
+
+async function deriveUnlockStorageKey(salt) {
+  const seed = await crypto.subtle.importKey('raw', new TextEncoder().encode(UNLOCK_PASSWORDS_FIXED_SECRET), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 210000, hash: 'SHA-256' },
+    seed,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+async function encryptSavedPasswords(passwords) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveUnlockStorageKey(salt);
+  const plain = new TextEncoder().encode(JSON.stringify(passwords));
+  const data = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plain);
+  return {
+    v: UNLOCK_PASSWORDS_BLOB_VERSION,
+    alg: 'AES-GCM/PBKDF2-SHA256',
+    salt: toBase64(salt),
+    iv: toBase64(iv),
+    data: toBase64(data)
+  };
+}
+
+async function decryptSavedPasswordsBlob(blob) {
+  if (!blob || blob.v !== UNLOCK_PASSWORDS_BLOB_VERSION || !blob.salt || !blob.iv || !blob.data) return [];
+  const key = await deriveUnlockStorageKey(fromBase64(blob.salt));
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromBase64(blob.iv) }, key, fromBase64(blob.data));
+  const parsed = JSON.parse(new TextDecoder().decode(plain));
+  return Array.isArray(parsed) ? parsed.filter(item => typeof item === 'string' && item) : [];
+}
+
+async function getSavedPasswords() {
+  if (!REMEMBER_UNLOCK) return [];
   try {
-    const secret = await crypto.subtle.importKey('raw', new TextEncoder().encode(input.value), 'PBKDF2', false, ['deriveKey']);
-    const key = await crypto.subtle.deriveKey(
-      { name: 'PBKDF2', salt: fromBase64(LOCKED_SALT), iterations: 600000, hash: 'SHA-256' },
-      secret,
-      { name: 'AES-GCM', length: 256 },
-      false,
-      ['decrypt']
-    );
-    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromBase64(LOCKED_IV) }, key, fromBase64(LOCKED_DATA));
-    const body = CAPACITY_SAVE ? await gunzip(new Uint8Array(plain)) : plain;
-    openHtml(new TextDecoder().decode(body));
+    const value = await unlockDbGet(UNLOCK_PASSWORDS_KEY, null);
+    if (Array.isArray(value)) {
+      const legacyPasswords = value.filter(item => typeof item === 'string' && item);
+      if (legacyPasswords.length) await unlockDbSet(UNLOCK_PASSWORDS_KEY, await encryptSavedPasswords(legacyPasswords));
+      return legacyPasswords;
+    }
+    return await decryptSavedPasswordsBlob(value);
   } catch (_) {
-    showUnlockScreen();
-    message.className = 'message error';
-    message.textContent = 'パスワードが一致しません';
-  } finally {
-    button.disabled = false;
+    return [];
   }
 }
 
-function boot() {
+async function savePasswordIfNeeded(passphrase) {
+  if (!REMEMBER_UNLOCK || !passphrase) return;
+  try {
+    const passwords = await getSavedPasswords();
+    if (passwords.includes(passphrase)) return;
+    passwords.push(passphrase);
+    await unlockDbSet(UNLOCK_PASSWORDS_KEY, await encryptSavedPasswords(passwords));
+  } catch (_) {}
+}
+
+async function decryptWithPassphrase(passphrase) {
+  const secret = await crypto.subtle.importKey('raw', new TextEncoder().encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: fromBase64(LOCKED_SALT), iterations: 600000, hash: 'SHA-256' },
+    secret,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['decrypt']
+  );
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromBase64(LOCKED_IV) }, key, fromBase64(LOCKED_DATA));
+  const body = CAPACITY_SAVE ? await gunzip(new Uint8Array(plain)) : plain;
+  return new TextDecoder().decode(body);
+}
+
+async function tryUnlockWithPassphrase(passphrase, option) {
+  const showProgress = option && option.showProgress;
+  const showFailure = option && option.showFailure;
+  const saveOnSuccess = !option || option.saveOnSuccess !== false;
+  const button = document.getElementById('unlockButton');
+  const message = document.getElementById('message');
+
+  if (showProgress) {
+    message.className = 'message';
+    message.textContent = '復号しています...';
+    button.disabled = true;
+  }
+
+  try {
+    const html = await decryptWithPassphrase(passphrase);
+    if (saveOnSuccess) await savePasswordIfNeeded(passphrase);
+    openHtml(html);
+    return true;
+  } catch (_) {
+    showUnlockScreen();
+    if (showFailure) {
+      message.className = 'message error';
+      message.textContent = 'パスワードが一致しません';
+    }
+    return false;
+  } finally {
+    if (showProgress) button.disabled = false;
+  }
+}
+
+async function unlock() {
+  const input = document.getElementById('unlockKey');
+  await tryUnlockWithPassphrase(input.value, { showProgress: true, showFailure: true, saveOnSuccess: true });
+}
+
+function extractPasswordFromInfoText(text) {
+  const lines = String(text || '').split(/\\r?\\n/);
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim() === '【パスワード】') {
+      for (let j = i + 1; j < lines.length; j++) {
+        const value = lines[j].trim();
+        if (value) return value;
+      }
+      return '';
+    }
+  }
+  return '';
+}
+
+async function openUnlockFile(file) {
+  const message = document.getElementById('message');
+  try {
+    const text = await file.text();
+    const password = extractPasswordFromInfoText(text);
+    if (!password) {
+      message.className = 'message error';
+      message.textContent = '解除用ファイルからパスワードを読み取れませんでした';
+      return;
+    }
+    document.getElementById('unlockKey').value = password;
+    await tryUnlockWithPassphrase(password, { showProgress: true, showFailure: true, saveOnSuccess: true });
+  } catch (_) {
+    message.className = 'message error';
+    message.textContent = '解除用ファイルを開けませんでした';
+  }
+}
+
+async function trySavedPasswordsSilently() {
+  const passwords = await getSavedPasswords();
+  for (const password of passwords) {
+    const ok = await tryUnlockWithPassphrase(password, { showProgress: false, showFailure: false, saveOnSuccess: false });
+    if (ok) return true;
+  }
+  return false;
+}
+
+async function boot() {
+  let queryTried = false;
   if (QUERY_UNLOCK) {
     const key = new URLSearchParams(window.location.search).get('key');
     if (key) {
+      queryTried = true;
       document.getElementById('unlockKey').value = key;
       hideQueryKey();
-      unlock();
+      const ok = await tryUnlockWithPassphrase(key, { showProgress: true, showFailure: true, saveOnSuccess: true });
+      if (ok) return;
     }
   }
+
+  const savedOk = await trySavedPasswordsSilently();
+  if (!savedOk && !queryTried) showUnlockScreen();
 }
 
 document.getElementById('unlockButton').addEventListener('click', unlock);
 document.getElementById('unlockKey').addEventListener('keydown', event => {
   if (event.key === 'Enter') unlock();
+});
+document.getElementById('openUnlockFileButton').addEventListener('click', () => {
+  document.getElementById('unlockFileInput').click();
+});
+document.getElementById('unlockFileInput').addEventListener('change', event => {
+  const file = event.target.files && event.target.files[0];
+  if (file) openUnlockFile(file);
+  event.target.value = '';
 });
 boot();
 <\/script>
@@ -1064,6 +1278,7 @@ document.getElementById('makeButton').addEventListener('click', async () => {
     const payload = await sealHtml(source, passphrase, capacitySave);
     const output = protectedPage(payload, title, {
       queryUnlock: document.getElementById('queryUnlock').checked,
+      rememberUnlock: document.getElementById('rememberUnlock').checked,
       strictView: document.getElementById('strictView').checked,
       capacitySave
     });
