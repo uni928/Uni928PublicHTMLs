@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; font-src 'none'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none';">
+<title>Local HTML Locker</title>
+<style>
+  :root {
+    --ink: #172033;
+    --sub: #667085;
+    --paper: #fff;
+    --mist: #eef5ff;
+    --line: #d9e4f2;
+    --main: #2563eb;
+    --main2: #0f3ea8;
+    --good: #0f766e;
+    --bad: #b42318;
+    --warn-bg: #fff7ed;
+    --warn-line: #fed7aa;
+    --radius: 22px;
+    --shadow: 0 24px 70px rgba(15, 62, 168, .16);
+  }
+  * { box-sizing: border-box; }
+  html { min-height: 100%; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--ink);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+    background:
+      linear-gradient(120deg, rgba(37,99,235,.11), rgba(20,184,166,.10) 45%, rgba(99,102,241,.10)),
+      radial-gradient(circle at 0% 0%, rgba(37,99,235,.18), transparent 36rem),
+      #f8fbff;
+  }
+  .shell {
+    width: min(1120px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 34px 0 42px;
+  }
+  .top {
+    display: grid;
+    grid-template-columns: 1.15fr .85fr;
+    gap: 18px;
+    align-items: stretch;
+    margin-bottom: 18px;
+  }
+  @media (max-width: 860px) {
+    .top { grid-template-columns: 1fr; }
+  }
+  .brand {
+    background: linear-gradient(135deg, #102a60, #2563eb 60%, #14b8a6);
+    color: #fff;
+    border-radius: 32px;
+    padding: clamp(24px, 5vw, 42px);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    position: relative;
+  }
+  .brand:after {
+    content: "";
+    position: absolute;
+    width: 220px;
+    height: 220px;
+    right: -70px;
+    top: -70px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.16);
+  }
+  .badge {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    padding: 7px 11px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.16);
+    font-size: .82rem;
+    margin-bottom: 18px;
+  }
+  h1 {
+    margin: 0 0 12px;
+    font-size: clamp(2rem, 5vw, 3.6rem);
+    line-height: 1.05;
+    letter-spacing: -.04em;
+  }
+  .lead {
+    margin: 0;
+    color: rgba(255,255,255,.86);
+    line-height: 1.8;
+    max-width: 58em;
+  }
+  .summary {
+    display: grid;
+    gap: 12px;
+  }
+  .mini {
+    background: rgba(255,255,255,.74);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 18px;
+  }
+  .mini b {
+    display: block;
+    margin-bottom: 6px;
+    color: #102a60;
+  }
+  .mini p {
+    margin: 0;
+    color: var(--sub);
+    font-size: .92rem;
+    line-height: 1.65;
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 18px;
+  }
+  @media (max-width: 980px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+  .panel {
+    background: rgba(255,255,255,.88);
+    border: 1px solid var(--line);
+    border-radius: 30px;
+    box-shadow: 0 18px 46px rgba(23,32,51,.08);
+    overflow: hidden;
+  }
+  .panel-head {
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(238,245,255,.72);
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: center;
+  }
+  .panel-head h2 {
+    margin: 0;
+    font-size: 1.05rem;
+  }
+  .panel-head span {
+    color: var(--sub);
+    font-size: .84rem;
+  }
+  .panel-body { padding: 22px; }
+  .drop {
+    border: 2px dashed #a8c7ff;
+    background: #f7fbff;
+    border-radius: 24px;
+    padding: 32px 20px;
+    cursor: pointer;
+    text-align: center;
+    transition: transform .15s ease, background .15s ease, border-color .15s ease;
+  }
+  .drop:hover, .drop.active {
+    background: #edf6ff;
+    border-color: var(--main);
+    transform: translateY(-1px);
+  }
+  .drop .icon {
+    width: 54px;
+    height: 54px;
+    display: grid;
+    place-items: center;
+    margin: 0 auto 12px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(37,99,235,.13), rgba(20,184,166,.18));
+    color: var(--main);
+    font-size: 1.6rem;
+  }
+  .drop strong { display: block; margin-bottom: 5px; }
+  .drop small { color: var(--sub); }
+  input[type=file] { display: none; }
+  .loaded {
+    display: none;
+    margin-top: 12px;
+    padding: 12px 14px;
+    border: 1px solid #99f6e4;
+    background: #f0fdfa;
+    color: #115e59;
+    border-radius: 16px;
+    word-break: break-all;
+    font-size: .9rem;
+  }
+  .loaded.on { display: block; }
+  label {
+    display: block;
+    margin: 18px 0 8px;
+    font-weight: 750;
+    font-size: .92rem;
+  }
+  textarea, input[type=password], input[type=text] {
+    width: 100%;
+    border: 1px solid #c7d7eb;
+    background: #ffffff;
+    color: var(--ink);
+    border-radius: 16px;
+    padding: 13px 14px;
+    font: inherit;
+    outline: none;
+    transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+  }
+  textarea {
+    min-height: 230px;
+    resize: vertical;
+    line-height: 1.62;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .9rem;
+  }
+  textarea:focus, input[type=password]:focus, input[type=text]:focus {
+    border-color: var(--main);
+    box-shadow: 0 0 0 4px rgba(37,99,235,.13);
+    background: #fbfdff;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 680px) {
+    .row { grid-template-columns: 1fr; }
+  }
+  .tip {
+    color: var(--sub);
+    font-size: .82rem;
+    line-height: 1.6;
+    margin-top: 7px;
+  }
+  .choice {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 11px;
+    align-items: start;
+    padding: 14px;
+    background: #f8fbff;
+    border: 1px solid #dbe8f8;
+    border-radius: 18px;
+    margin-top: 12px;
+  }
+  .choice input { margin-top: 4px; }
+  .choice b { display: block; font-size: .92rem; margin-bottom: 3px; }
+  .choice span { color: var(--sub); font-size: .82rem; line-height: 1.55; }
+  .input-action {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .subrun {
+    border: 0;
+    white-space: nowrap;
+    padding: 12px 14px;
+    border-radius: 14px;
+    color: #fff;
+    font-weight: 800;
+    cursor: pointer;
+    background: linear-gradient(135deg, #0f766e, #0f3ea8);
+  }
+  .subrun.secondary {
+    color: var(--ink);
+    background: #eef5ff;
+    border: 1px solid #c7d7eb;
+  }
+  .button-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .status {
+    min-height: 1.4em;
+    color: var(--sub);
+    font-size: .82rem;
+    line-height: 1.6;
+    margin-top: 7px;
+  }
+  .status.error { color: var(--bad); }
+  @media (max-width: 520px) {
+    .input-action { grid-template-columns: 1fr; }
+    .subrun { width: 100%; }
+  }
+  .run {
+    border: 0;
+    width: 100%;
+    margin-top: 20px;
+    padding: 16px 18px;
+    border-radius: 18px;
+    color: #fff;
+    font-weight: 850;
+    font-size: 1rem;
+    cursor: pointer;
+    background: linear-gradient(135deg, var(--main), var(--main2));
+    box-shadow: 0 14px 32px rgba(37,99,235,.24);
+  }
+  .run:disabled {
+    opacity: .62;
+    cursor: default;
+    box-shadow: none;
+  }
+  .side {
+    display: grid;
+    gap: 14px;
+    align-content: start;
+  }
+  .card {
+    background: rgba(255,255,255,.86);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 18px;
+  }
+  .card h3 {
+    margin: 0 0 8px;
+    font-size: .98rem;
+  }
+  .card p {
+    margin: 0;
+    color: var(--sub);
+    font-size: .88rem;
+    line-height: 1.72;
+  }
+  .warn {
+    background: var(--warn-bg);
+    border-color: var(--warn-line);
+  }
+  .warn h3 { color: #9a3412; }
+  .ok h3 { color: var(--good); }
+  code {
+    background: rgba(37,99,235,.08);
+    padding: .1em .32em;
+    border-radius: .4em;
+  }
+  .foot {
+    margin-top: 18px;
+    color: var(--sub);
+    font-size: .8rem;
+    line-height: 1.7;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <section class="top">
+    <header class="brand">
+      <div class="badge">🔐 Local only / no network access</div>
+      <h1>Local HTML Locker</h1>
+      <p class="lead">HTMLをブラウザ内で暗号化し、単体で開ける保護ページとして保存します。外部ライブラリや解析タグを使わず、公開前に扱いやすいシンプルな静的ファイルを生成します。</p>
+    </header>
+    <div class="summary">
+      <div class="mini"><b>入力データは送信しません</b><p>ファイル読込、暗号化、出力ファイル作成はすべて現在のブラウザ内で処理します。</p></div>
+      <div class="mini"><b>生成ページも自己完結</b><p>復号画面にも外部フォント・外部CSS・外部JavaScriptを含めません。</p></div>
+      <div class="mini"><b>共有URLのキー対策</b><p><code>?key=...</code> を使う場合は、読み取り後すぐにURLから削除します。</p></div>
+    </div>
+  </section>
+
+  <main class="layout">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>保護ファイルを作成</h2>
+        <span>AES-GCM / PBKDF2</span>
+      </div>
+      <div class="panel-body">
+        <div id="dropArea" class="drop">
+          <div class="icon">⌁</div>
+          <strong>HTMLファイルをここへドロップ</strong>
+          <small>クリックして選択することもできます（.html / .htm）</small>
+          <input type="file" id="fileInput" accept=".html,.htm,text/html">
+        </div>
+        <div id="loadedText" class="loaded"></div>
+
+        <label for="sourceHtml">HTMLコード</label>
+        <textarea id="sourceHtml" spellcheck="false" placeholder="ここに保護したいHTMLを貼り付けることもできます"></textarea>
+
+        <div class="row">
+          <div>
+            <label for="password">解除パスワード</label>
+            <div class="input-action">
+              <input type="password" id="password" placeholder="8文字以上">
+              <button id="generatePasswordButton" class="subrun" type="button">Base62 60文字を自動設定</button>
+            </div>
+            <div id="passwordStatus" class="status"></div>
+            <div class="tip">公開用途では16文字以上の長い文字列を推奨します。自動設定した文字列はクリップボードにもコピーします。ランダムなBase62であれば40文字でもパスワード強度は十分ですが、パスワードの設定自体を楽にする工夫により、60文字という過剰な文字数を設定しています。</div>
+            <div class="button-row">
+              <button id="downloadPasswordInfoButton" class="subrun secondary" type="button" disabled>解除パスワードをダウンロード</button>
+            </div>
+          </div>
+          <div>
+            <label for="pageTitle">解除画面のタイトル</label>
+            <input type="text" id="pageTitle" value="Private Page" placeholder="例: Member Page">
+          </div>
+        </div>
+
+        <div class="choice">
+          <input type="checkbox" id="queryUnlock" checked>
+          <div>
+            <b><code>?key=パスワード</code> による自動解除を有効にする</b>
+            <span>ページを開いた直後に値を読み取り、URLからkeyを消してから復号します。</span>
+          </div>
+        </div>
+
+        <div class="choice">
+          <input type="checkbox" id="rememberUnlock">
+          <div>
+            <b>ログインに成功した場合のみIndexedDBに保存して、次回からパスワード不要にする</b>
+            <span>生成された保護ページで復号に成功したパスワードだけをブラウザ内に保存します。次回以降は保存済みの候補を自動で試し、失敗してもエラー表示は出しません。共有端末や他人が使う端末ではOFFにしてください。</span>
+          </div>
+        </div>
+
+        <div class="choice">
+          <input type="checkbox" id="saveCapacity" checked>
+          <div>
+            <b>容量を節約する</b>
+            <span>元HTMLの中身は変えずにgzip圧縮し、その圧縮データを暗号化します。復号時に解凍して表示します。</span>
+          </div>
+        </div>
+
+        <div class="choice">
+          <input type="checkbox" id="strictView">
+          <div>
+            <b>復号後HTMLを静的表示モードで開く</b>
+            <span>復号したHTMLから外部URL、スクリプト、イベント属性などを取り除いて表示します。動的なページは一部動かなくなります。</span>
+          </div>
+        </div>
+
+        <label for="forbiddenWords">禁止ワード</label>
+        <textarea id="forbiddenWords" spellcheck="false" placeholder="1行に1つずつ入力してください。元HTMLに含まれる場合は生成を停止します。" style="min-height: 120px;"></textarea>
+        <div class="button-row">
+          <button id="saveForbiddenWordsButton" class="subrun secondary" type="button">禁止ワードを保存</button>
+          <button id="clearForbiddenWordsButton" class="subrun secondary" type="button">禁止ワードをクリア</button>
+        </div>
+        <div id="forbiddenStatus" class="status"></div>
+
+        <button id="makeButton" class="run">保護HTMLを生成する</button>
+      </div>
+    </section>
+
+    <aside class="side">
+      <div class="card ok">
+        <h3>公開前チェック</h3>
+        <p>この作成ページ自体には外部通信先を含めていません。CSPも通信禁止寄りに設定しています。</p>
+      </div>
+      <div class="card">
+        <h3>URLキー利用時</h3>
+        <p>便利ですが、共有URLにパスワードが入る点はリスクです。短期共有や低リスク用途向けとして扱ってください。</p>
+      </div>
+      <div class="card warn">
+        <h3>静的表示モードの注意</h3>
+        <p>安全寄りに表示するため、元HTML内のJavaScriptや外部画像などは削除されます。ページの動作維持を優先する場合はOFFにしてください。</p>
+      </div>
+      <div class="card">
+        <h3>容量節約</h3>
+        <p>ONにすると、元HTMLをgzip圧縮してから暗号化します。元HTML自体は加工しない安全版相当の処理です。</p>
+      </div>
+      <div class="card">
+        <h3>禁止ワード</h3>
+        <p>禁止ワードはこの作成ページのIndexedDBに保存されます。生成時に元HTML内をチェックし、一致した場合は処理を停止します。</p>
+      </div>
+      <div class="card">
+        <h3>解除用パスワード</h3>
+        <p>解除パスワードをダウンロードボタンを押すと、現在のパスワードについてテキストファイルでダウンロードできます。パスワード入力画面でダウンロードしたテキストファイルを指定すると、ログインに使用できます。</p>
+      </div>
+      <div class="card">
+        <h3>保存先</h3>
+        <p>生成されたHTMLは通常の静的ファイルです。任意の静的ホスティングやローカル環境で利用できます。</p>
+      </div>
+    </aside>
+  </main>
+
+  <p class="foot">Web Crypto APIを使用します。古いブラウザや安全でないコンテキストでは動作しない場合があります。</p>
+</div>
+
+<script>
+const dropArea = document.getElementById('dropArea');
+const fileInput = document.getElementById('fileInput');
+const loadedText = document.getElementById('loadedText');
+const sourceHtml = document.getElementById('sourceHtml');
+const passwordInput = document.getElementById('password');
+const passwordStatus = document.getElementById('passwordStatus');
+const downloadPasswordInfoButton = document.getElementById('downloadPasswordInfoButton');
+const forbiddenWordsInput = document.getElementById('forbiddenWords');
+const forbiddenStatus = document.getElementById('forbiddenStatus');
+const FORBIDDEN_DB_NAME = 'local-html-locker-settings';
+const FORBIDDEN_DB_VERSION = 1;
+const FORBIDDEN_STORE_NAME = 'kv';
+const FORBIDDEN_WORDS_KEY = 'forbiddenWords';
+const BASE62_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+let sourceFileName = '';
+
+function setStatus(node, message, isError) {
+  node.textContent = message || '';
+  node.classList.toggle('error', Boolean(isError));
+}
+
+function openSettingsDb() {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) {
+      reject(new Error('このブラウザはIndexedDBに対応していません。'));
+      return;
+    }
+    const request = indexedDB.open(FORBIDDEN_DB_NAME, FORBIDDEN_DB_VERSION);
+    request.onupgradeneeded = event => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(FORBIDDEN_STORE_NAME)) db.createObjectStore(FORBIDDEN_STORE_NAME);
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('IndexedDBを開けませんでした。'));
+  });
+}
+
+async function idbGet(key, fallbackValue) {
+  const db = await openSettingsDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(FORBIDDEN_STORE_NAME, 'readonly');
+    const store = tx.objectStore(FORBIDDEN_STORE_NAME);
+    const request = store.get(key);
+    request.onsuccess = () => resolve(request.result ?? fallbackValue);
+    request.onerror = () => reject(request.error || new Error('IndexedDBの読込に失敗しました。'));
+    tx.oncomplete = () => db.close();
+    tx.onerror = () => { db.close(); reject(tx.error || new Error('IndexedDBの読込に失敗しました。')); };
+  });
+}
+
+async function idbSet(key, value) {
+  const db = await openSettingsDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(FORBIDDEN_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(FORBIDDEN_STORE_NAME);
+    store.put(value, key);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error || new Error('IndexedDBの保存に失敗しました。')); };
+  });
+}
+
+function parseForbiddenWords() {
+  return forbiddenWordsInput.value
+    .split(/\r?\n/)
+    .map(word => word.trim())
+    .filter(Boolean);
+}
+
+function findForbiddenWords(source) {
+  const words = parseForbiddenWords();
+  return words.filter(word => source.includes(word));
+}
+
+async function loadForbiddenWords() {
+  try {
+    forbiddenWordsInput.value = await idbGet(FORBIDDEN_WORDS_KEY, '');
+    setStatus(forbiddenStatus, '保存済みの禁止ワードを読み込みました。', false);
+  } catch (error) {
+    setStatus(forbiddenStatus, error.message, true);
+  }
+}
+
+async function saveForbiddenWords() {
+  try {
+    await idbSet(FORBIDDEN_WORDS_KEY, forbiddenWordsInput.value);
+    setStatus(forbiddenStatus, '禁止ワードをIndexedDBに保存しました。', false);
+  } catch (error) {
+    setStatus(forbiddenStatus, error.message, true);
+  }
+}
+
+function secureRandomString(length, charset) {
+  if (!window.crypto || !crypto.getRandomValues) throw new Error('安全な乱数を生成できません。');
+  const out = [];
+  const max = 256 - (256 % charset.length);
+  while (out.length < length) {
+    const buf = new Uint8Array(Math.ceil((length - out.length) * 1.2) + 8);
+    crypto.getRandomValues(buf);
+    for (const value of buf) {
+      if (value < max) {
+        out.push(charset[value % charset.length]);
+        if (out.length === length) break;
+      }
+    }
+  }
+  return out.join('');
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (_) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    const ok = document.execCommand('copy');
+    textarea.remove();
+    return ok;
+  }
+}
+
+async function generateAndSetPassword() {
+  try {
+    const password = secureRandomString(60, BASE62_CHARS);
+    passwordInput.value = password;
+    const copied = await copyText(password);
+    setStatus(passwordStatus, copied ? 'Base62の60文字パスワードを設定し、コピーしました。' : 'Base62の60文字パスワードを設定しました。コピーはブラウザにブロックされました。', !copied);
+    updatePasswordInfoButtonState();
+  } catch (error) {
+    setStatus(passwordStatus, error.message, true);
+  }
+}
+
+function extractTitleTag(html) {
+  const source = String(html || '');
+  if (!source.trim()) return '';
+  try {
+    const doc = new DOMParser().parseFromString(source, 'text/html');
+    const title = doc.querySelector('title');
+    if (title && title.textContent.trim()) return title.textContent.trim();
+  } catch (_) {}
+  const match = source.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  return match ? match[1].replace(/<[^>]*>/g, '').trim() : '';
+}
+
+function sanitizeDownloadName(name) {
+  return String(name || '')
+    .replace(/[\\/:*?"<>|]/g, '_')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function currentTimestampCompact() {
+  const now = new Date();
+  const pad = value => String(value).padStart(2, '0');
+  return String(now.getFullYear())
+    + pad(now.getMonth() + 1)
+    + pad(now.getDate())
+    + '_'
+    + pad(now.getHours())
+    + pad(now.getMinutes())
+    + pad(now.getSeconds());
+}
+
+function passwordInfoFileBase(titleText) {
+  const base = sourceFileName || titleText || currentTimestampCompact();
+  return sanitizeDownloadName(base) || currentTimestampCompact();
+}
+
+function passwordInfoFileName(titleText) {
+  return passwordInfoFileBase(titleText) + 'パスワード情報.txt';
+}
+
+function updatePasswordInfoButtonState() {
+  if (!downloadPasswordInfoButton) return;
+  downloadPasswordInfoButton.disabled = !(sourceHtml.value.trim() && passwordInput.value.length >= 8);
+}
+
+function downloadPasswordInfo() {
+  const source = sourceHtml.value.trim();
+  const passphrase = passwordInput.value;
+  if (!source) {
+    setStatus(passwordStatus, 'HTMLコードを入力してからダウンロードしてください。', true);
+    updatePasswordInfoButtonState();
+    return;
+  }
+  if (passphrase.length < 8) {
+    setStatus(passwordStatus, 'パスワードは8文字以上にしてください。', true);
+    updatePasswordInfoButtonState();
+    return;
+  }
+
+  const titleText = extractTitleTag(source);
+  const passwordInfoName = passwordInfoFileName(titleText);
+  const urlSuffix = '?key=' + encodeURIComponent(passphrase);
+  const infoText = [
+    '【ファイル名】',
+    passwordInfoName,
+    '',
+    '【タイトルタグの中身】',
+    titleText || '（なし）',
+    '',
+    '【パスワード】',
+    passphrase,
+    '',
+    '【URLの後ろに付けるべき文字】',
+    urlSuffix
+  ].join('\n');
+
+  const blob = new Blob([infoText], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = passwordInfoName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setStatus(passwordStatus, '解除パスワード情報をダウンロードしました。', false);
+}
+
+function setDropState(active) {
+  dropArea.classList.toggle('active', active);
+}
+
+dropArea.addEventListener('click', () => fileInput.click());
+dropArea.addEventListener('dragenter', event => {
+  event.preventDefault();
+  setDropState(true);
+});
+dropArea.addEventListener('dragover', event => {
+  event.preventDefault();
+  setDropState(true);
+});
+dropArea.addEventListener('dragleave', () => setDropState(false));
+dropArea.addEventListener('drop', async event => {
+  event.preventDefault();
+  setDropState(false);
+  const file = event.dataTransfer.files && event.dataTransfer.files[0];
+  if (file) await readSourceFile(file);
+});
+fileInput.addEventListener('change', async event => {
+  const file = event.target.files && event.target.files[0];
+  if (file) await readSourceFile(file);
+});
+
+async function readSourceFile(file) {
+  sourceFileName = file.name || '';
+  sourceHtml.value = await file.text();
+  loadedText.textContent = `${file.name} / ${(file.size / 1024).toFixed(1)} KB`;
+  loadedText.classList.add('on');
+  updatePasswordInfoButtonState();
+}
+
+function toBase64(buffer) {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  let binary = '';
+  const chunkSize = 32768;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+async function gzip(bytes) {
+  if (!window.CompressionStream) throw new Error('このブラウザは圧縮APIに対応していません。');
+  const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+async function sealBytes(bytes, passphrase) {
+  const encoder = new TextEncoder();
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const seed = await crypto.subtle.importKey('raw', encoder.encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 600000, hash: 'SHA-256' },
+    seed,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt']
+  );
+  const locked = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, bytes);
+  return {
+    salt: toBase64(salt),
+    iv: toBase64(iv),
+    data: toBase64(locked)
+  };
+}
+
+async function sealHtml(source, passphrase, capacitySave) {
+  const bytes = new TextEncoder().encode(source);
+  const body = capacitySave ? await gzip(bytes) : bytes;
+  return sealBytes(body, passphrase);
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[char]));
+}
+
+function boolText(value) {
+  return value ? 'true' : 'false';
+}
+
+function protectedPage(payload, title, option) {
+  const safeTitle = escapeHtml(title || 'Private Page');
+  const jsonTitle = JSON.stringify(title || 'Private Page');
+  return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; font-src 'none'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'self' data: blob:;">
+<title>${safeTitle}</title>
+<script>
+(function () {
+  try {
+    if (${boolText(option.queryUnlock)}) {
+      const key = new URLSearchParams(window.location.search).get('key');
+      if (key) document.documentElement.classList.add('auto-unlocking');
+    }
+  } catch (_) {}
+})();
+<\/script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    color: #172033;
+    background:
+      radial-gradient(circle at 20% 0%, rgba(37,99,235,.20), transparent 26rem),
+      linear-gradient(135deg, #f8fbff, #eef5ff);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+  }
+  .box {
+    width: min(430px, 100%);
+    border: 1px solid #d9e4f2;
+    background: #fff;
+    border-radius: 28px;
+    box-shadow: 0 24px 70px rgba(15,62,168,.16);
+    overflow: hidden;
+  }
+  .top {
+    padding: 28px 24px;
+    color: #fff;
+    background: linear-gradient(135deg, #102a60, #2563eb);
+    text-align: center;
+  }
+  .top h1 {
+    margin: 0;
+    font-size: 1.2rem;
+    line-height: 1.45;
+  }
+  .main { padding: 24px; }
+  input {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1px solid #c7d7eb;
+    border-radius: 16px;
+    outline: none;
+    font: inherit;
+    margin-bottom: 12px;
+    background: #fbfdff;
+  }
+  input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37,99,235,.13);
+  }
+  button {
+    width: 100%;
+    border: 0;
+    border-radius: 18px;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, #2563eb, #0f3ea8);
+    color: white;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  button:disabled {
+    opacity: .62;
+    cursor: default;
+  }
+  button.secondary {
+    margin-top: 10px;
+    color: #172033;
+    background: #eef5ff;
+    border: 1px solid #c7d7eb;
+  }
+  input[type=file] { display: none; }
+  .message {
+    min-height: 1.4em;
+    margin-top: 14px;
+    color: #667085;
+    text-align: center;
+    font-size: .9rem;
+    line-height: 1.6;
+  }
+  .error { color: #b42318; }
+  html.auto-unlocking body { visibility: hidden; }
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="top"><h1>🔒 ${safeTitle}</h1></div>
+  <div class="main">
+    <input id="unlockKey" type="password" placeholder="パスワードを入力" autocomplete="current-password" autofocus>
+    <button id="unlockButton" type="button">開く</button>
+    <button id="openUnlockFileButton" class="secondary" type="button">解除用ファイルを開く</button>
+    <input id="unlockFileInput" type="file" accept=".txt,text/plain">
+    <div id="message" class="message"></div>
+  </div>
+</div>
+<script>
+const PAGE_TITLE = ${jsonTitle};
+const QUERY_UNLOCK = ${boolText(option.queryUnlock)};
+const REMEMBER_UNLOCK = ${boolText(option.rememberUnlock)};
+const STRICT_VIEW = ${boolText(option.strictView)};
+const CAPACITY_SAVE = ${boolText(option.capacitySave)};
+const LOCKED_SALT = "${payload.salt}";
+const LOCKED_IV = "${payload.iv}";
+const LOCKED_DATA = "${payload.data}";
+
+function fromBase64(value) {
+  return Uint8Array.from(atob(value), char => char.charCodeAt(0));
+}
+
+function toBase64(buffer) {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  let binary = '';
+  const chunkSize = 32768;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+function hideQueryKey() {
+  try {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has('key')) return;
+    url.searchParams.delete('key');
+    window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+  } catch (_) {}
+}
+
+function showUnlockScreen() {
+  document.documentElement.classList.remove('auto-unlocking');
+}
+
+function riskyUrl(value) {
+  const text = String(value || '').trim();
+  if (!text) return false;
+  if (/^(javascript|vbscript|data:text\\\/html)/i.test(text)) return true;
+  try {
+    const url = new URL(text, window.location.href);
+    return ['http:', 'https:', 'ftp:', 'ws:', 'wss:'].includes(url.protocol);
+  } catch (_) {
+    return false;
+  }
+}
+
+function cleanCss(text) {
+  return String(text || '')
+    .replace(/@import[^;]+;/gi, '')
+    .replace(/url\\s*\\(([^)]*)\\)/gi, (all, raw) => {
+      const value = raw.trim().replace(/^['"]|['"]$/g, '');
+      return riskyUrl(value) ? 'none' : all;
+    });
+}
+
+function staticOnly(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  doc.querySelectorAll('script, iframe, frame, object, embed, meta[http-equiv="refresh"], link[rel="preload"], link[rel="prefetch"], link[rel="preconnect"], link[rel="dns-prefetch"], link[rel="modulepreload"]').forEach(node => node.remove());
+
+  doc.querySelectorAll('link').forEach(node => {
+    const rel = (node.getAttribute('rel') || '').toLowerCase();
+    const href = node.getAttribute('href') || '';
+    if (rel.includes('stylesheet') || riskyUrl(href)) node.remove();
+  });
+
+  doc.querySelectorAll('style').forEach(node => {
+    node.textContent = cleanCss(node.textContent);
+  });
+
+  const urlAttributes = new Set(['src', 'srcset', 'href', 'poster', 'action', 'formaction', 'data', 'background']);
+  doc.querySelectorAll('*').forEach(node => {
+    for (const attr of Array.from(node.attributes)) {
+      const name = attr.name.toLowerCase();
+      if (name.startsWith('on')) node.removeAttribute(attr.name);
+      else if (name === 'style') node.setAttribute('style', cleanCss(attr.value));
+      else if (urlAttributes.has(name) && riskyUrl(attr.value)) node.removeAttribute(attr.name);
+    }
+  });
+
+  const meta = doc.createElement('meta');
+  meta.setAttribute('name', 'referrer');
+  meta.setAttribute('content', 'no-referrer');
+  doc.head.prepend(meta);
+
+  return '<!DOCTYPE html>' + doc.documentElement.outerHTML;
+}
+
+async function gunzip(bytes) {
+  if (!window.DecompressionStream) throw new Error('このブラウザは解凍APIに対応していません。');
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return await new Response(stream).arrayBuffer();
+}
+
+function openHtml(html) {
+  const output = STRICT_VIEW ? staticOnly(html) : html;
+  document.open();
+  document.write(output);
+  document.close();
+}
+
+const UNLOCK_DB_NAME = 'local-html-locker-unlock-passwords';
+const UNLOCK_DB_VERSION = 1;
+const UNLOCK_STORE_NAME = 'kv';
+const UNLOCK_PASSWORDS_KEY = 'passwords';
+const UNLOCK_PASSWORDS_BLOB_VERSION = 2;
+const UNLOCK_PASSWORDS_FIXED_SECRET = 'LocalHTMLLockerIndexedDbFixedPassword::v1::DoNotUseAsSecurityBoundary';
+
+function openUnlockDb() {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) {
+      reject(new Error('このブラウザはIndexedDBに対応していません。'));
+      return;
+    }
+    const request = indexedDB.open(UNLOCK_DB_NAME, UNLOCK_DB_VERSION);
+    request.onupgradeneeded = event => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(UNLOCK_STORE_NAME)) db.createObjectStore(UNLOCK_STORE_NAME);
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('IndexedDBを開けませんでした。'));
+  });
+}
+
+async function unlockDbGet(key, fallbackValue) {
+  const db = await openUnlockDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(UNLOCK_STORE_NAME, 'readonly');
+    const store = tx.objectStore(UNLOCK_STORE_NAME);
+    const request = store.get(key);
+    request.onsuccess = () => resolve(request.result ?? fallbackValue);
+    request.onerror = () => reject(request.error || new Error('IndexedDBの読込に失敗しました。'));
+    tx.oncomplete = () => db.close();
+    tx.onerror = () => { db.close(); reject(tx.error || new Error('IndexedDBの読込に失敗しました。')); };
+  });
+}
+
+async function unlockDbSet(key, value) {
+  const db = await openUnlockDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(UNLOCK_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(UNLOCK_STORE_NAME);
+    store.put(value, key);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error || new Error('IndexedDBの保存に失敗しました。')); };
+  });
+}
+
+async function deriveUnlockStorageKey(salt) {
+  const seed = await crypto.subtle.importKey('raw', new TextEncoder().encode(UNLOCK_PASSWORDS_FIXED_SECRET), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 210000, hash: 'SHA-256' },
+    seed,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+async function encryptSavedPasswords(passwords) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveUnlockStorageKey(salt);
+  const plain = new TextEncoder().encode(JSON.stringify(passwords));
+  const data = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plain);
+  return {
+    v: UNLOCK_PASSWORDS_BLOB_VERSION,
+    alg: 'AES-GCM/PBKDF2-SHA256',
+    salt: toBase64(salt),
+    iv: toBase64(iv),
+    data: toBase64(data)
+  };
+}
+
+async function decryptSavedPasswordsBlob(blob) {
+  if (!blob || blob.v !== UNLOCK_PASSWORDS_BLOB_VERSION || !blob.salt || !blob.iv || !blob.data) return [];
+  const key = await deriveUnlockStorageKey(fromBase64(blob.salt));
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromBase64(blob.iv) }, key, fromBase64(blob.data));
+  const parsed = JSON.parse(new TextDecoder().decode(plain));
+  return Array.isArray(parsed) ? parsed.filter(item => typeof item === 'string' && item) : [];
+}
+
+async function getSavedPasswords() {
+  if (!REMEMBER_UNLOCK) return [];
+  try {
+    const value = await unlockDbGet(UNLOCK_PASSWORDS_KEY, null);
+    if (Array.isArray(value)) {
+      const legacyPasswords = value.filter(item => typeof item === 'string' && item);
+      if (legacyPasswords.length) await unlockDbSet(UNLOCK_PASSWORDS_KEY, await encryptSavedPasswords(legacyPasswords));
+      return legacyPasswords;
+    }
+    return await decryptSavedPasswordsBlob(value);
+  } catch (_) {
+    return [];
+  }
+}
+
+async function savePasswordIfNeeded(passphrase) {
+  if (!REMEMBER_UNLOCK || !passphrase) return;
+  try {
+    const passwords = await getSavedPasswords();
+    if (passwords.includes(passphrase)) return;
+    passwords.push(passphrase);
+    await unlockDbSet(UNLOCK_PASSWORDS_KEY, await encryptSavedPasswords(passwords));
+  } catch (_) {}
+}
+
+async function decryptWithPassphrase(passphrase) {
+  const secret = await crypto.subtle.importKey('raw', new TextEncoder().encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: fromBase64(LOCKED_SALT), iterations: 600000, hash: 'SHA-256' },
+    secret,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['decrypt']
+  );
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromBase64(LOCKED_IV) }, key, fromBase64(LOCKED_DATA));
+  const body = CAPACITY_SAVE ? await gunzip(new Uint8Array(plain)) : plain;
+  return new TextDecoder().decode(body);
+}
+
+async function tryUnlockWithPassphrase(passphrase, option) {
+  const showProgress = option && option.showProgress;
+  const showFailure = option && option.showFailure;
+  const saveOnSuccess = !option || option.saveOnSuccess !== false;
+  const button = document.getElementById('unlockButton');
+  const message = document.getElementById('message');
+
+  if (showProgress) {
+    message.className = 'message';
+    message.textContent = '復号しています...';
+    button.disabled = true;
+  }
+
+  try {
+    const html = await decryptWithPassphrase(passphrase);
+    if (saveOnSuccess) await savePasswordIfNeeded(passphrase);
+    openHtml(html);
+    return true;
+  } catch (_) {
+    showUnlockScreen();
+    if (showFailure) {
+      message.className = 'message error';
+      message.textContent = 'パスワードが一致しません';
+    }
+    return false;
+  } finally {
+    if (showProgress) button.disabled = false;
+  }
+}
+
+async function unlock() {
+  const input = document.getElementById('unlockKey');
+  await tryUnlockWithPassphrase(input.value, { showProgress: true, showFailure: true, saveOnSuccess: true });
+}
+
+function extractPasswordFromInfoText(text) {
+  const lines = String(text || '').split(/\\r?\\n/);
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim() === '【パスワード】') {
+      for (let j = i + 1; j < lines.length; j++) {
+        const value = lines[j].trim();
+        if (value) return value;
+      }
+      return '';
+    }
+  }
+  return '';
+}
+
+async function openUnlockFile(file) {
+  const message = document.getElementById('message');
+  try {
+    const text = await file.text();
+    const password = extractPasswordFromInfoText(text);
+    if (!password) {
+      message.className = 'message error';
+      message.textContent = '解除用ファイルからパスワードを読み取れませんでした';
+      return;
+    }
+    document.getElementById('unlockKey').value = password;
+    await tryUnlockWithPassphrase(password, { showProgress: true, showFailure: true, saveOnSuccess: true });
+  } catch (_) {
+    message.className = 'message error';
+    message.textContent = '解除用ファイルを開けませんでした';
+  }
+}
+
+async function trySavedPasswordsSilently() {
+  const passwords = await getSavedPasswords();
+  for (const password of passwords) {
+    const ok = await tryUnlockWithPassphrase(password, { showProgress: false, showFailure: false, saveOnSuccess: false });
+    if (ok) return true;
+  }
+  return false;
+}
+
+async function boot() {
+  let queryTried = false;
+  if (QUERY_UNLOCK) {
+    const key = new URLSearchParams(window.location.search).get('key');
+    if (key) {
+      queryTried = true;
+      document.getElementById('unlockKey').value = key;
+      hideQueryKey();
+      const ok = await tryUnlockWithPassphrase(key, { showProgress: true, showFailure: true, saveOnSuccess: true });
+      if (ok) return;
+    }
+  }
+
+  const savedOk = await trySavedPasswordsSilently();
+  if (!savedOk && !queryTried) showUnlockScreen();
+}
+
+document.getElementById('unlockButton').addEventListener('click', unlock);
+document.getElementById('unlockKey').addEventListener('keydown', event => {
+  if (event.key === 'Enter') unlock();
+});
+document.getElementById('openUnlockFileButton').addEventListener('click', () => {
+  document.getElementById('unlockFileInput').click();
+});
+document.getElementById('unlockFileInput').addEventListener('change', event => {
+  const file = event.target.files && event.target.files[0];
+  if (file) openUnlockFile(file);
+  event.target.value = '';
+});
+boot();
+<\/script>
+</body>
+</html>`;
+}
+
+document.getElementById('generatePasswordButton').addEventListener('click', generateAndSetPassword);
+downloadPasswordInfoButton.addEventListener('click', downloadPasswordInfo);
+sourceHtml.addEventListener('input', updatePasswordInfoButtonState);
+passwordInput.addEventListener('input', updatePasswordInfoButtonState);
+document.getElementById('saveForbiddenWordsButton').addEventListener('click', saveForbiddenWords);
+document.getElementById('clearForbiddenWordsButton').addEventListener('click', async () => {
+  forbiddenWordsInput.value = '';
+  await saveForbiddenWords();
+});
+forbiddenWordsInput.addEventListener('change', saveForbiddenWords);
+loadForbiddenWords();
+updatePasswordInfoButtonState();
+
+document.getElementById('makeButton').addEventListener('click', async () => {
+  const source = sourceHtml.value.trim();
+  const passphrase = passwordInput.value;
+  const title = document.getElementById('pageTitle').value.trim() || 'Private Page';
+  const button = document.getElementById('makeButton');
+
+  if (!source) {
+    alert('保護するHTMLを入力してください。');
+    return;
+  }
+  if (passphrase.length < 8) {
+    alert('パスワードは8文字以上にしてください。');
+    return;
+  }
+
+  const hits = findForbiddenWords(source);
+  if (hits.length) {
+    alert('禁止ワードが含まれているため、処理を停止しました。\n該当: ' + hits.slice(0, 20).join(' / ') + (hits.length > 20 ? ' ほか' : ''));
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = document.getElementById('saveCapacity').checked ? '圧縮・暗号化中...' : '生成中...';
+
+  try {
+    const capacitySave = document.getElementById('saveCapacity').checked;
+    const payload = await sealHtml(source, passphrase, capacitySave);
+    const output = protectedPage(payload, title, {
+      queryUnlock: document.getElementById('queryUnlock').checked,
+      rememberUnlock: document.getElementById('rememberUnlock').checked,
+      strictView: document.getElementById('strictView').checked,
+      capacitySave
+    });
+
+    const blob = new Blob([output], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'locked-page.html';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (error) {
+    alert('生成に失敗しました: ' + error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = '保護HTMLを生成する';
+  }
+});
+</script>
+</body>
+</html>
