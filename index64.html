@@ -791,6 +791,7 @@ function boolText(value) {
 function protectedPage(payload, title, option) {
   const safeTitle = escapeHtml(title || 'Private Page');
   const jsonTitle = JSON.stringify(title || 'Private Page');
+  const unlockStorageSecret = String(option && option.unlockStorageSecret || '');
   return `<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -911,6 +912,7 @@ const CAPACITY_SAVE = ${boolText(option.capacitySave)};
 const LOCKED_SALT = "${payload.salt}";
 const LOCKED_IV = "${payload.iv}";
 const LOCKED_DATA = "${payload.data}";
+const UNLOCK_STORAGE_SECRET = ${JSON.stringify(unlockStorageSecret)};
 
 function fromBase64(value) {
   return Uint8Array.from(atob(value), char => char.charCodeAt(0));
@@ -1008,9 +1010,12 @@ function openHtml(html) {
 const UNLOCK_DB_NAME = 'local-html-locker-unlock-passwords';
 const UNLOCK_DB_VERSION = 1;
 const UNLOCK_STORE_NAME = 'kv';
-const UNLOCK_PASSWORDS_KEY = 'passwords';
-const UNLOCK_PASSWORDS_BLOB_VERSION = 2;
-const UNLOCK_PASSWORDS_FIXED_SECRET = 'LocalHTMLLockerIndexedDbFixedPassword::v1::DoNotUseAsSecurityBoundary';
+const UNLOCK_PASSWORDS_KEY = 'passwords:' + UNLOCK_STORAGE_SECRET;
+const UNLOCK_PASSWORDS_BLOB_VERSION = 3;
+
+function canUseUnlockStorage() {
+  return REMEMBER_UNLOCK && /^[A-Za-z0-9]{100}$/.test(UNLOCK_STORAGE_SECRET);
+}
 
 function openUnlockDb() {
   return new Promise((resolve, reject) => {
@@ -1053,7 +1058,7 @@ async function unlockDbSet(key, value) {
 }
 
 async function deriveUnlockStorageKey(salt) {
-  const seed = await crypto.subtle.importKey('raw', new TextEncoder().encode(UNLOCK_PASSWORDS_FIXED_SECRET), 'PBKDF2', false, ['deriveKey']);
+  const seed = await crypto.subtle.importKey('raw', new TextEncoder().encode(UNLOCK_STORAGE_SECRET), 'PBKDF2', false, ['deriveKey']);
   return crypto.subtle.deriveKey(
     { name: 'PBKDF2', salt, iterations: 210000, hash: 'SHA-256' },
     seed,
@@ -1067,11 +1072,13 @@ async function encryptSavedPasswords(passwords) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await deriveUnlockStorageKey(salt);
-  const plain = new TextEncoder().encode(JSON.stringify(passwords));
+  const cleanPasswords = Array.from(new Set(passwords.filter(item => typeof item === 'string' && item)));
+  const plain = new TextEncoder().encode(JSON.stringify(cleanPasswords));
   const data = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plain);
   return {
     v: UNLOCK_PASSWORDS_BLOB_VERSION,
     alg: 'AES-GCM/PBKDF2-SHA256',
+    marker: UNLOCK_STORAGE_SECRET,
     salt: toBase64(salt),
     iv: toBase64(iv),
     data: toBase64(data)
@@ -1079,7 +1086,8 @@ async function encryptSavedPasswords(passwords) {
 }
 
 async function decryptSavedPasswordsBlob(blob) {
-  if (!blob || blob.v !== UNLOCK_PASSWORDS_BLOB_VERSION || !blob.salt || !blob.iv || !blob.data) return [];
+  if (!canUseUnlockStorage()) return [];
+  if (!blob || blob.v !== UNLOCK_PASSWORDS_BLOB_VERSION || blob.marker !== UNLOCK_STORAGE_SECRET || !blob.salt || !blob.iv || !blob.data) return [];
   const key = await deriveUnlockStorageKey(fromBase64(blob.salt));
   const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromBase64(blob.iv) }, key, fromBase64(blob.data));
   const parsed = JSON.parse(new TextDecoder().decode(plain));
@@ -1087,14 +1095,9 @@ async function decryptSavedPasswordsBlob(blob) {
 }
 
 async function getSavedPasswords() {
-  if (!REMEMBER_UNLOCK) return [];
+  if (!canUseUnlockStorage()) return [];
   try {
     const value = await unlockDbGet(UNLOCK_PASSWORDS_KEY, null);
-    if (Array.isArray(value)) {
-      const legacyPasswords = value.filter(item => typeof item === 'string' && item);
-      if (legacyPasswords.length) await unlockDbSet(UNLOCK_PASSWORDS_KEY, await encryptSavedPasswords(legacyPasswords));
-      return legacyPasswords;
-    }
     return await decryptSavedPasswordsBlob(value);
   } catch (_) {
     return [];
@@ -1102,7 +1105,7 @@ async function getSavedPasswords() {
 }
 
 async function savePasswordIfNeeded(passphrase) {
-  if (!REMEMBER_UNLOCK || !passphrase) return;
+  if (!canUseUnlockStorage() || !passphrase) return;
   try {
     const passwords = await getSavedPasswords();
     if (passwords.includes(passphrase)) return;
@@ -1276,11 +1279,13 @@ document.getElementById('makeButton').addEventListener('click', async () => {
   try {
     const capacitySave = document.getElementById('saveCapacity').checked;
     const payload = await sealHtml(source, passphrase, capacitySave);
+    const unlockStorageSecret = secureRandomString(100, BASE62_CHARS);
     const output = protectedPage(payload, title, {
       queryUnlock: document.getElementById('queryUnlock').checked,
       rememberUnlock: document.getElementById('rememberUnlock').checked,
       strictView: document.getElementById('strictView').checked,
-      capacitySave
+      capacitySave,
+      unlockStorageSecret
     });
 
     const blob = new Blob([output], { type: 'text/html' });
