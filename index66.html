@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; font-src 'none'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; font-src 'none'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none';">
 <title>Local HTML Locker</title>
 <style>
   :root {
@@ -875,7 +875,7 @@ function protectedPage(payload, title, option) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="referrer" content="no-referrer">${cacheControlMeta}
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; font-src 'none'; connect-src 'self' https:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'self' data: blob:;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; font-src 'none'; connect-src 'self' https:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'self' data: blob:;">
 <title>${safeTitle}</title>
 <script>
 (function () {
@@ -1119,27 +1119,26 @@ function Ab5Kx9Rt(record) {
   return new Promise(resolve => {
     const attrs = record.attrs || {};
     const script = document.createElement('script');
-    let blobUrl = '';
     let done = false;
     const finish = () => {
       if (done) return;
       done = true;
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
       try { script.remove(); } catch (_) {}
       resolve();
     };
     setScriptAttributes(script, attrs);
-    script.onload = finish;
-    script.onerror = finish;
 
     if (attrs.src) {
+      script.onload = finish;
+      script.onerror = finish;
       script.src = attrs.src;
-    } else {
-      blobUrl = URL.createObjectURL(new Blob([record.text || ''], { type: 'text/javascript' }));
-      script.src = blobUrl;
+      (document.body || document.documentElement).appendChild(script);
+      return;
     }
 
+    script.textContent = record.text || '';
     (document.body || document.documentElement).appendChild(script);
+    finish();
   });
 }
 
@@ -1189,25 +1188,24 @@ function stage2LoaderScript() {
       return new Promise(function(resolve) {
         const script = document.createElement('script');
         const attrs = record.attrs || {};
-        let blobUrl = '';
         let done = false;
         function finish() {
           if (done) return;
           done = true;
-          if (blobUrl) URL.revokeObjectURL(blobUrl);
           try { script.remove(); } catch (_) {}
           resolve();
         }
         setScriptAttributes(script, attrs);
-        script.onload = finish;
-        script.onerror = finish;
         if (attrs.src) {
+          script.onload = finish;
+          script.onerror = finish;
           script.src = attrs.src;
-        } else {
-          blobUrl = URL.createObjectURL(new Blob([record.text || ''], { type: 'text/javascript' }));
-          script.src = blobUrl;
+          (document.body || document.documentElement).appendChild(script);
+          return;
         }
+        script.textContent = record.text || '';
         (document.body || document.documentElement).appendChild(script);
+        finish();
       });
     }
     async function main() {
