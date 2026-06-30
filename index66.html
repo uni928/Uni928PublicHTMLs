@@ -427,8 +427,8 @@
         <div class="choice">
           <input type="checkbox" id="noEncryptionMode">
           <div>
-            <b>暗号化なしで生成する（JavaScript分離のみ）</b>
-            <span>パスワード解除画面を使わず、HTML本体はBase64で保持します。scriptタグだけ分離してBlob URLで実行するため、普通に保存したHTMLへJavaScript本文が残りにくくなります。</span>
+            <b>暗号化なしで生成する</b>
+            <span>パスワード解除画面を使わずに生成します。「2段階解凍でJavaScriptをHTMLに埋め込まない」がONの場合のみ、CSSとJavaScriptを分離して保存後HTMLに残りにくくします。OFFの場合は元HTMLをそのまま出力します。</span>
           </div>
         </div>
 
@@ -818,6 +818,78 @@ function serializeDocumentWithDoctype(doc) {
   return doctype + doc.documentElement.outerHTML;
 }
 
+
+
+function makeScriptRecordFromNode(node, index) {
+  const attrs = {};
+  for (const attr of Array.from(node.attributes || [])) attrs[attr.name] = attr.value;
+  return {
+    index,
+    attrs,
+    text: node.textContent || ''
+  };
+}
+
+function cssRecordFromNode(node, index) {
+  const attrs = {};
+  for (const attr of Array.from(node.attributes || [])) attrs[attr.name] = attr.value;
+  return {
+    index,
+    tag: String(node.tagName || '').toLowerCase(),
+    attrs,
+    text: node.textContent || ''
+  };
+}
+
+function extractOriginalHeadHtmlFromDoc(doc) {
+  const headHtml = doc.head ? doc.head.outerHTML : '<head><meta charset="UTF-8"><title>Private Page</title></head>';
+  const doctype = doc.doctype
+    ? '<!DOCTYPE ' + doc.doctype.name
+      + (doc.doctype.publicId ? ' PUBLIC "' + doc.doctype.publicId + '"' : '')
+      + (doc.doctype.systemId ? ' "' + doc.doctype.systemId + '"' : '')
+      + '>'
+    : '<!DOCTYPE html>';
+  const htmlAttrs = doc.documentElement
+    ? Array.from(doc.documentElement.attributes || []).map(attr => ' ' + attr.name + '="' + escapeHtml(attr.value) + '"').join('')
+    : ' lang="ja"';
+  return doctype + '\n<html' + htmlAttrs + '>\n' + headHtml;
+}
+
+function splitBodyForOriginalHead(source) {
+  const doc = new DOMParser().parseFromString(String(source || ''), 'text/html');
+  const body = doc.body || doc.createElement('body');
+  const bodyAttrs = {};
+  for (const attr of Array.from(body.attributes || [])) bodyAttrs[attr.name] = attr.value;
+
+  const scripts = [];
+  doc.querySelectorAll('script').forEach((node, index) => {
+    scripts.push(makeScriptRecordFromNode(node, index));
+    node.remove();
+  });
+
+  const styles = [];
+  doc.querySelectorAll('style, link[rel~="stylesheet"]').forEach((node, index) => {
+    styles.push(cssRecordFromNode(node, index));
+    node.remove();
+  });
+
+  return {
+    originalHeadHtml: extractOriginalHeadHtmlFromDoc(doc),
+    bodyPackage: {
+      attrs: bodyAttrs,
+      html: body.innerHTML,
+      styles,
+      scripts
+    }
+  };
+}
+
+async function packJson(value, capacitySave) {
+  const bytes = new TextEncoder().encode(JSON.stringify(value));
+  const body = capacitySave ? await gzip(bytes) : bytes;
+  return toBase64(body);
+}
+
 function splitScriptsForTwoStage(source) {
   const doc = new DOMParser().parseFromString(source, 'text/html');
   const scripts = [];
@@ -857,6 +929,150 @@ function boolText(value) {
   return value ? 'true' : 'false';
 }
 
+
+function noEncryptionBodyOnlyPage(originalHeadHtml, bodyPackageData, capacitySave) {
+  const runtime = `
+<script>
+(function () {
+  const BODY_PACKAGE_DATA = ${JSON.stringify(bodyPackageData || '')};
+  const CAPACITY_SAVE = ${boolText(capacitySave)};
+
+  function fromBase64(value) {
+    return Uint8Array.from(atob(value), function(char) { return char.charCodeAt(0); });
+  }
+
+  async function gunzip(bytes) {
+    if (!window.DecompressionStream) throw new Error('このブラウザは解凍APIに対応していません。');
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+    return await new Response(stream).arrayBuffer();
+  }
+
+  function setScriptAttributes(target, attrs) {
+    Object.entries(attrs || {}).forEach(function(entry) {
+      const name = entry[0];
+      const value = entry[1];
+      if (String(name).toLowerCase() === 'src') return;
+      try { target.setAttribute(name, value); } catch (_) {}
+    });
+  }
+
+
+  function applyBodyAttributes(attrs) {
+    if (!document.body) return;
+    for (const attr of Array.from(document.body.attributes || [])) document.body.removeAttribute(attr.name);
+    Object.entries(attrs || {}).forEach(function(entry) {
+      try { document.body.setAttribute(entry[0], entry[1]); } catch (_) {}
+    });
+  }
+
+  function appendCssLink(attrs) {
+    const link = document.createElement('link');
+    Object.entries(attrs || {}).forEach(function(entry) {
+      try { link.setAttribute(entry[0], entry[1]); } catch (_) {}
+    });
+    if (!link.getAttribute('rel')) link.setAttribute('rel', 'stylesheet');
+    document.head.appendChild(link);
+  }
+
+  async function applyStyleRecord(record) {
+    const attrs = record.attrs || {};
+    if (record.tag === 'link') {
+      const href = attrs.href || '';
+      if (href && window.CSSStyleSheet && document.adoptedStyleSheets) {
+        try {
+          const response = await fetch(href, { credentials: 'same-origin' });
+          if (response.ok) {
+            const sheet = new CSSStyleSheet();
+            await sheet.replace(await response.text());
+            document.adoptedStyleSheets = Array.from(document.adoptedStyleSheets || []).concat(sheet);
+            return;
+          }
+        } catch (_) {}
+      }
+      appendCssLink(attrs);
+      return;
+    }
+
+    const cssText = record.text || '';
+    if (!cssText) return;
+    if (window.CSSStyleSheet && document.adoptedStyleSheets) {
+      try {
+        const sheet = new CSSStyleSheet();
+        await sheet.replace(cssText);
+        document.adoptedStyleSheets = Array.from(document.adoptedStyleSheets || []).concat(sheet);
+        return;
+      } catch (_) {}
+    }
+    const style = document.createElement('style');
+    Object.entries(attrs).forEach(function(entry) {
+      try { style.setAttribute(entry[0], entry[1]); } catch (_) {}
+    });
+    style.textContent = cssText;
+    document.head.appendChild(style);
+  }
+
+  async function applyStyleRecords(records) {
+    const styles = Array.isArray(records) ? records : [];
+    for (const record of styles) await applyStyleRecord(record);
+  }
+
+  function runScriptRecord(record) {
+    return new Promise(function(resolve) {
+      const script = document.createElement('script');
+      const attrs = record.attrs || {};
+      let done = false;
+      function finish() {
+        if (done) return;
+        done = true;
+        try { script.remove(); } catch (_) {}
+        resolve();
+      }
+      setScriptAttributes(script, attrs);
+      if (attrs.src) {
+        script.onload = finish;
+        script.onerror = finish;
+        script.src = attrs.src;
+        (document.body || document.documentElement).appendChild(script);
+        return;
+      }
+      script.textContent = record.text || '';
+      (document.body || document.documentElement).appendChild(script);
+      finish();
+    });
+  }
+
+  async function decodePackage() {
+    const bytes = fromBase64(BODY_PACKAGE_DATA);
+    const body = CAPACITY_SAVE ? await gunzip(bytes) : bytes;
+    return JSON.parse(new TextDecoder().decode(body));
+  }
+
+  async function main() {
+    try {
+      const pack = await decodePackage();
+      const body = pack.html || '';
+      document.open();
+      document.write(body);
+      document.close();
+      applyBodyAttributes(pack.attrs || {});
+      await applyStyleRecords(pack.styles || []);
+      const scripts = Array.isArray(pack.scripts) ? pack.scripts : [];
+      for (const record of scripts) await runScriptRecord(record);
+    } catch (error) {
+      console.error('Body restore failed:', error);
+      document.body.innerHTML = '<pre style="white-space:pre-wrap;color:#b42318;padding:16px;">Body restore failed: ' + String(error && error.message || error).replace(/[&<>"']/g, function(ch) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch]; }) + '</pre>';
+    }
+  }
+
+  main();
+})();
+<\/script>`;
+  return String(originalHeadHtml || '<!DOCTYPE html>\n<html lang="ja">\n<head><meta charset="UTF-8"><title>Private Page</title></head>')
+    + '\n<body>\n<noscript>このページを表示するにはJavaScriptが必要です。</noscript>\n'
+    + runtime
+    + '\n</body>\n</html>';
+}
+
 function protectedPage(payload, title, option) {
   const safeTitle = escapeHtml(title || 'Private Page');
   const jsonTitle = JSON.stringify(title || 'Private Page');
@@ -864,7 +1080,12 @@ function protectedPage(payload, title, option) {
   const stage2Payload = option && option.stage2Payload ? option.stage2Payload : null;
   const stage2Key = option && option.stage2Key ? option.stage2Key : '';
   const plainHtmlData = option && option.plainHtmlData ? option.plainHtmlData : '';
+  const bodyPackageData = option && option.bodyPackageData ? option.bodyPackageData : '';
+  const originalHeadHtml = option && option.originalHeadHtml ? option.originalHeadHtml : '';
   const noEncryptionMode = Boolean(option && option.noEncryptionMode);
+  if (noEncryptionMode && originalHeadHtml && bodyPackageData) {
+    return noEncryptionBodyOnlyPage(originalHeadHtml, bodyPackageData, Boolean(option && option.capacitySave));
+  }
   const cacheControlMeta = option && option.disableCache ? `
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
 <meta http-equiv="Pragma" content="no-cache">
@@ -1237,15 +1458,57 @@ function injectStage2Loader(html) {
   return html + loader;
 }
 
+function scriptRecordFromNode(node, index) {
+  const attrs = {};
+  for (const attr of Array.from(node.attributes || [])) attrs[attr.name] = attr.value;
+  return {
+    index,
+    attrs,
+    text: node.textContent || ''
+  };
+}
+
+function bodyOnlyParts(source) {
+  const html = String(source || '');
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const title = doc.querySelector('title');
+  if (title && title.textContent) document.title = title.textContent;
+
+  const scripts = [];
+  doc.querySelectorAll('script').forEach((node, index) => {
+    scripts.push(scriptRecordFromNode(node, index));
+    node.remove();
+  });
+
+  doc.body.querySelectorAll('style, link[rel~="stylesheet"]').forEach(node => {
+    node.remove();
+  });
+
+  return {
+    html: doc.body.innerHTML,
+    scripts
+  };
+}
+
 async function openHtml(html) {
-  const scripts = (!STRICT_VIEW && TWO_STAGE_JAVASCRIPT) ? await A7qM2zLp() : [];
   const output = STRICT_VIEW ? staticOnly(html) : html;
-  document.open();
-  document.write(output);
-  document.close();
-  if (scripts.length) {
-    for (const record of scripts) await Ab5Kx9Rt(record);
+
+  if (!TWO_STAGE_JAVASCRIPT || STRICT_VIEW) {
+    document.open();
+    document.write(output);
+    document.close();
+    document.documentElement.classList.remove('auto-unlocking');
+    if (document.body) document.body.style.visibility = '';
+    return;
   }
+
+  // 暗号化ありの場合は、元HTML全体を書き込む旧方式に戻します。
+  // これにより、元HTMLのhead内CSSや通常の読み込み順を維持しやすくします。
+  document.open();
+  document.write(injectStage2Loader(output));
+  document.close();
+  document.documentElement.classList.remove('auto-unlocking');
+  if (document.body) document.body.style.visibility = '';
 }
 
 const UNLOCK_DB_NAME = 'local-html-locker-unlock-passwords';
@@ -1526,31 +1789,51 @@ document.getElementById('makeButton').addEventListener('click', async () => {
   }
 
   button.disabled = true;
+  const twoStageJavascriptForStatus = document.getElementById('twoStageJavascript').checked;
   button.textContent = document.getElementById('noEncryptionMode').checked
-    ? 'JavaScript分離中...'
+    ? (twoStageJavascriptForStatus ? 'CSS・JavaScript分離中...' : '生成中...')
     : (document.getElementById('saveCapacity').checked ? '圧縮・暗号化中...' : '生成中...');
 
   try {
     const capacitySave = document.getElementById('saveCapacity').checked;
-    const twoStageJavascript = noEncryptionMode || document.getElementById('twoStageJavascript').checked;
-    const splitResult = twoStageJavascript ? splitScriptsForTwoStage(source) : { html: source, scripts: [] };
-    const payload = noEncryptionMode ? null : await sealHtml(splitResult.html, passphrase, capacitySave);
-    const plainHtmlData = noEncryptionMode ? await packPlainHtml(splitResult.html, capacitySave) : '';
-    const stage2Key = twoStageJavascript && splitResult.scripts.length ? secureRandomString(100, BASE62_CHARS) : '';
-    const stage2Payload = stage2Key ? await sealScriptBundle(splitResult.scripts, stage2Key, capacitySave) : null;
-    const unlockStorageSecret = noEncryptionMode ? '' : secureRandomString(100, BASE62_CHARS);
-    const output = protectedPage(payload, title, {
-      queryUnlock: noEncryptionMode ? false : document.getElementById('queryUnlock').checked,
-      rememberUnlock: noEncryptionMode ? false : document.getElementById('rememberUnlock').checked,
-      disableCache: document.getElementById('disableCache').checked,
-      strictView: document.getElementById('strictView').checked,
-      capacitySave,
-      noEncryptionMode,
-      plainHtmlData,
-      stage2Key,
-      stage2Payload,
-      unlockStorageSecret
-    });
+    let output = '';
+
+    if (noEncryptionMode) {
+      const twoStageJavascript = document.getElementById('twoStageJavascript').checked;
+      if (twoStageJavascript) {
+        const bodySplit = splitBodyForOriginalHead(source);
+        const bodyPackageData = await packJson(bodySplit.bodyPackage, capacitySave);
+        output = protectedPage(null, title, {
+          disableCache: document.getElementById('disableCache').checked,
+          strictView: false,
+          capacitySave,
+          noEncryptionMode: true,
+          originalHeadHtml: bodySplit.originalHeadHtml,
+          bodyPackageData
+        });
+      } else {
+        output = source;
+      }
+    } else {
+      const twoStageJavascript = document.getElementById('twoStageJavascript').checked;
+      const splitResult = twoStageJavascript ? splitScriptsForTwoStage(source) : { html: source, scripts: [] };
+      const payload = await sealHtml(splitResult.html, passphrase, capacitySave);
+      const stage2Key = twoStageJavascript && splitResult.scripts.length ? secureRandomString(100, BASE62_CHARS) : '';
+      const stage2Payload = stage2Key ? await sealScriptBundle(splitResult.scripts, stage2Key, capacitySave) : null;
+      const unlockStorageSecret = secureRandomString(100, BASE62_CHARS);
+      output = protectedPage(payload, title, {
+        queryUnlock: document.getElementById('queryUnlock').checked,
+        rememberUnlock: document.getElementById('rememberUnlock').checked,
+        disableCache: document.getElementById('disableCache').checked,
+        strictView: document.getElementById('strictView').checked,
+        capacitySave,
+        noEncryptionMode: false,
+        plainHtmlData: '',
+        stage2Key,
+        stage2Payload,
+        unlockStorageSecret
+      });
+    }
 
     const blob = new Blob([output], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
