@@ -975,22 +975,34 @@ function noEncryptionBodyOnlyPage(originalHeadHtml, bodyPackageData, capacitySav
     const begin = new TextEncoder().encode('A9TAIL_BEGIN');
     const end = new TextEncoder().encode('A9TAIL_END');
     let bytes = null;
+    let keyBytes = null;
     try {
       const res = await fetch(location.href, { cache: 'no-store' });
+      if (!res.ok && res.status !== 0) return '';
       bytes = new Uint8Array(await res.arrayBuffer());
-      const start = byteIndexOf(bytes, begin);
-      if (start < 0) return '';
-      const keyStart = start + begin.length;
-      const tail = bytes.subarray(keyStart);
-      const endAt = byteIndexOf(tail, end);
-      if (endAt < 0) return '';
-      const keyBytes = tail.subarray(0, endAt);
-      const key = new TextDecoder('latin1').decode(keyBytes);
-      return /^[A-Za-z0-9]{60}$/.test(key) ? key : '';
+      for (let start = bytes.length - begin.length; start >= 0; start--) {
+        let hit = true;
+        for (let j = 0; j < begin.length; j++) {
+          if (bytes[start + j] !== begin[j]) { hit = false; break; }
+        }
+        if (!hit) continue;
+        const keyStart = start + begin.length;
+        const tail = bytes.subarray(keyStart);
+        const endAt = byteIndexOf(tail, end);
+        if (endAt < 0) continue;
+        keyBytes = tail.subarray(0, endAt);
+        if (keyBytes.length !== 60) continue;
+        let key = '';
+        for (let i = 0; i < keyBytes.length; i++) key += String.fromCharCode(keyBytes[i]);
+        if (/^[A-Za-z0-9]{60}$/.test(key)) return key;
+      }
+      return '';
     } catch (_) {
       return '';
     } finally {
+      if (keyBytes && keyBytes.fill) keyBytes.fill(0);
       bytes = null;
+      keyBytes = null;
     }
   }
 
@@ -1309,22 +1321,34 @@ async function readTailKey() {
   const begin = new TextEncoder().encode('A9TAIL_BEGIN');
   const end = new TextEncoder().encode('A9TAIL_END');
   let bytes = null;
+  let keyBytes = null;
   try {
     const res = await fetch(location.href, { cache: 'no-store' });
+    if (!res.ok && res.status !== 0) return '';
     bytes = new Uint8Array(await res.arrayBuffer());
-    const start = byteIndexOf(bytes, begin);
-    if (start < 0) return '';
-    const keyStart = start + begin.length;
-    const tail = bytes.subarray(keyStart);
-    const endAt = byteIndexOf(tail, end);
-    if (endAt < 0) return '';
-    const keyBytes = tail.subarray(0, endAt);
-    const key = new TextDecoder('latin1').decode(keyBytes);
-    return /^[A-Za-z0-9]{60}$/.test(key) ? key : '';
+    for (let start = bytes.length - begin.length; start >= 0; start--) {
+      let hit = true;
+      for (let j = 0; j < begin.length; j++) {
+        if (bytes[start + j] !== begin[j]) { hit = false; break; }
+      }
+      if (!hit) continue;
+      const keyStart = start + begin.length;
+      const tail = bytes.subarray(keyStart);
+      const endAt = byteIndexOf(tail, end);
+      if (endAt < 0) continue;
+      keyBytes = tail.subarray(0, endAt);
+      if (keyBytes.length !== 60) continue;
+      let key = '';
+      for (let i = 0; i < keyBytes.length; i++) key += String.fromCharCode(keyBytes[i]);
+      if (/^[A-Za-z0-9]{60}$/.test(key)) return key;
+    }
+    return '';
   } catch (_) {
     return '';
   } finally {
+    if (keyBytes && keyBytes.fill) keyBytes.fill(0);
     bytes = null;
+    keyBytes = null;
   }
 }
 
