@@ -420,7 +420,15 @@
           <input type="checkbox" id="twoStageJavascript" checked>
           <div>
             <b>2段階解凍でJavaScriptをHTMLに埋め込まない</b>
-            <span>解析対策を少しだけ行います。名前を付けて保存だけが困難になる程度の認識でお願いします。</span>
+            <span>元HTMLからscriptタグを抜き、HTML本体は通常パスワード、JavaScriptは生成時ランダムキーで別暗号化します。復号後HTMLの中には元scriptタグを書き込みません。</span>
+          </div>
+        </div>
+
+        <div class="choice">
+          <input type="checkbox" id="noEncryptionMode">
+          <div>
+            <b>暗号化なしで生成する（JavaScript分離のみ）</b>
+            <span>パスワード解除画面を使わず、HTML本体はBase64で保持します。scriptタグだけ分離してBlob URLで実行するため、普通に保存したHTMLへJavaScript本文が残りにくくなります。</span>
           </div>
         </div>
 
@@ -794,6 +802,12 @@ async function sealHtml(source, passphrase, capacitySave) {
   return sealBytes(body, passphrase);
 }
 
+async function packPlainHtml(source, capacitySave) {
+  const bytes = new TextEncoder().encode(source);
+  const body = capacitySave ? await gzip(bytes) : bytes;
+  return toBase64(body);
+}
+
 function serializeDocumentWithDoctype(doc) {
   const doctype = doc.doctype
     ? '<!DOCTYPE ' + doc.doctype.name
@@ -849,6 +863,8 @@ function protectedPage(payload, title, option) {
   const unlockStorageSecret = String(option && option.unlockStorageSecret || '');
   const stage2Payload = option && option.stage2Payload ? option.stage2Payload : null;
   const stage2Key = option && option.stage2Key ? option.stage2Key : '';
+  const plainHtmlData = option && option.plainHtmlData ? option.plainHtmlData : '';
+  const noEncryptionMode = Boolean(option && option.noEncryptionMode);
   const cacheControlMeta = option && option.disableCache ? `
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
 <meta http-equiv="Pragma" content="no-cache">
@@ -864,7 +880,9 @@ function protectedPage(payload, title, option) {
 <script>
 (function () {
   try {
-    if (${boolText(option.queryUnlock)}) {
+    if (${boolText(noEncryptionMode)}) {
+      document.documentElement.classList.add('auto-unlocking');
+    } else if (${boolText(option.queryUnlock)}) {
       const key = new URLSearchParams(window.location.search).get('key');
       if (key) document.documentElement.classList.add('auto-unlocking');
     }
@@ -970,14 +988,16 @@ const QUERY_UNLOCK = ${boolText(option.queryUnlock)};
 const REMEMBER_UNLOCK = ${boolText(option.rememberUnlock)};
 const STRICT_VIEW = ${boolText(option.strictView)};
 const CAPACITY_SAVE = ${boolText(option.capacitySave)};
+const NO_ENCRYPTION_MODE = ${boolText(noEncryptionMode)};
+const PLAIN_HTML_DATA = ${JSON.stringify(plainHtmlData)};
 const TWO_STAGE_JAVASCRIPT = ${boolText(Boolean(stage2Payload))};
 const STAGE2_KEY = ${JSON.stringify(stage2Key)};
 const STAGE2_SALT = ${JSON.stringify(stage2Payload ? stage2Payload.salt : '')};
 const STAGE2_IV = ${JSON.stringify(stage2Payload ? stage2Payload.iv : '')};
 const STAGE2_DATA = ${JSON.stringify(stage2Payload ? stage2Payload.data : '')};
-const LOCKED_SALT = "${payload.salt}";
-const LOCKED_IV = "${payload.iv}";
-const LOCKED_DATA = "${payload.data}";
+const LOCKED_SALT = ${JSON.stringify(payload ? payload.salt : '')};
+const LOCKED_IV = ${JSON.stringify(payload ? payload.iv : '')};
+const LOCKED_DATA = ${JSON.stringify(payload ? payload.data : '')};
 const UNLOCK_STORAGE_SECRET = ${JSON.stringify(unlockStorageSecret)};
 
 function fromBase64(value) {
@@ -1064,6 +1084,12 @@ async function gunzip(bytes) {
   if (!window.DecompressionStream) throw new Error('このブラウザは解凍APIに対応していません。');
   const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
   return await new Response(stream).arrayBuffer();
+}
+
+async function decodePlainHtml() {
+  const bytes = fromBase64(PLAIN_HTML_DATA);
+  const body = CAPACITY_SAVE ? await gunzip(bytes) : bytes;
+  return new TextDecoder().decode(body);
 }
 
 async function A7qM2zLp() {
@@ -1422,6 +1448,16 @@ async function trySavedPasswordsSilently() {
 }
 
 async function boot() {
+  if (NO_ENCRYPTION_MODE) {
+    try {
+      await openHtml(await decodePlainHtml());
+      return;
+    } catch (error) {
+      console.error('Plain HTML open failed:', error);
+      showUnlockScreen();
+    }
+  }
+
   let queryTried = false;
   if (QUERY_UNLOCK) {
     const key = new URLSearchParams(window.location.search).get('key');
@@ -1474,12 +1510,13 @@ document.getElementById('makeButton').addEventListener('click', async () => {
   const passphrase = passwordInput.value;
   const title = document.getElementById('pageTitle').value.trim() || 'Private Page';
   const button = document.getElementById('makeButton');
+  const noEncryptionMode = document.getElementById('noEncryptionMode').checked;
 
   if (!source) {
     alert('保護するHTMLを入力してください。');
     return;
   }
-  if (passphrase.length < 8) {
+  if (!noEncryptionMode && passphrase.length < 8) {
     alert('パスワードは8文字以上にしてください。');
     return;
   }
@@ -1491,22 +1528,27 @@ document.getElementById('makeButton').addEventListener('click', async () => {
   }
 
   button.disabled = true;
-  button.textContent = document.getElementById('saveCapacity').checked ? '圧縮・暗号化中...' : '生成中...';
+  button.textContent = document.getElementById('noEncryptionMode').checked
+    ? 'JavaScript分離中...'
+    : (document.getElementById('saveCapacity').checked ? '圧縮・暗号化中...' : '生成中...');
 
   try {
     const capacitySave = document.getElementById('saveCapacity').checked;
-    const twoStageJavascript = document.getElementById('twoStageJavascript').checked;
+    const twoStageJavascript = noEncryptionMode || document.getElementById('twoStageJavascript').checked;
     const splitResult = twoStageJavascript ? splitScriptsForTwoStage(source) : { html: source, scripts: [] };
-    const payload = await sealHtml(splitResult.html, passphrase, capacitySave);
+    const payload = noEncryptionMode ? null : await sealHtml(splitResult.html, passphrase, capacitySave);
+    const plainHtmlData = noEncryptionMode ? await packPlainHtml(splitResult.html, capacitySave) : '';
     const stage2Key = twoStageJavascript && splitResult.scripts.length ? secureRandomString(100, BASE62_CHARS) : '';
     const stage2Payload = stage2Key ? await sealScriptBundle(splitResult.scripts, stage2Key, capacitySave) : null;
-    const unlockStorageSecret = secureRandomString(100, BASE62_CHARS);
+    const unlockStorageSecret = noEncryptionMode ? '' : secureRandomString(100, BASE62_CHARS);
     const output = protectedPage(payload, title, {
-      queryUnlock: document.getElementById('queryUnlock').checked,
-      rememberUnlock: document.getElementById('rememberUnlock').checked,
+      queryUnlock: noEncryptionMode ? false : document.getElementById('queryUnlock').checked,
+      rememberUnlock: noEncryptionMode ? false : document.getElementById('rememberUnlock').checked,
       disableCache: document.getElementById('disableCache').checked,
       strictView: document.getElementById('strictView').checked,
       capacitySave,
+      noEncryptionMode,
+      plainHtmlData,
       stage2Key,
       stage2Payload,
       unlockStorageSecret
