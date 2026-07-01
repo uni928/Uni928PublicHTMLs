@@ -916,6 +916,7 @@ const btnCopyUrl = $("btnCopyUrl");
 applyQueryParams();
     render(); // 初期値で即表示
   </script>
+body タグを閉じる直前に挿入するコード
 <script data-rewrite-helper="true">
 (function () {
   "use strict";
@@ -1008,18 +1009,30 @@ applyQueryParams();
       } else {
         next.textContent = record.text;
       }
+if (!document.body) return;
 
-      try {
-  document.body.appendChild(next);
-} catch (error) {
-  try {
-    if (next.parentNode) {
-      next.parentNode.removeChild(next);
-    }
-  } catch (_) {}
-
-  document.body.appendChild(next);
+// インラインscriptは再実行すると const / let の再宣言エラーになりやすいので除外
+if (!record.src) {
+  return;
 }
+
+// 既に同じsrcを再実行済みなら除外
+window.__rewrittenScriptSrcSet = window.__rewrittenScriptSrcSet || new Set();
+
+if (window.__rewrittenScriptSrcSet.has(record.src)) {
+  return;
+}
+
+window.__rewrittenScriptSrcSet.add(record.src);
+
+// 念のため、既にDOM上にある同一srcのscriptも除去
+document.querySelectorAll("script[src]").forEach(function (script) {
+  if (script.src === next.src) {
+    script.remove();
+  }
+});
+
+document.body.appendChild(next);
 
       // DOM上に残したくない場合は実行後に削除
       if (!record.src) {
