@@ -971,6 +971,61 @@ applyQueryParams();
       if (node.getAttribute("data-rewrite-helper") === "true") return;
       node.remove();
     });
+
+    const helperScript = document.currentScript;
+
+    // 1. 今回追加したscript以外を退避
+    const scripts = Array.from(document.querySelectorAll("script"))
+      .filter(function (script) {
+        return script !== helperScript &&
+          script.getAttribute("data-rewrite-helper") !== "true";
+      })
+      .map(function (script) {
+        return {
+          src: script.getAttribute("src"),
+          text: script.textContent || "",
+          attrs: Array.from(script.attributes).map(function (attr) {
+            return { name: attr.name, value: attr.value };
+          })
+        };
+      });
+
+    // 2. 今回追加したscript以外をDOMから削除
+    document.querySelectorAll("script").forEach(function (script) {
+      if (script === helperScript) return;
+      if (script.getAttribute("data-rewrite-helper") === "true") return;
+      script.remove();
+    });
+
+    // 3. 退避したscriptを再定義・再実行
+    scripts.forEach(function (record) {
+      const next = document.createElement("script");
+
+      record.attrs.forEach(function (attr) {
+        if (attr.name.toLowerCase() === "src") return;
+        next.setAttribute(attr.name, attr.value);
+      });
+
+      if (record.src) {
+        next.src = record.src;
+      } else {
+        next.textContent = record.text;
+      }
+
+      document.body.appendChild(next);
+
+      // DOM上に残したくない場合は実行後に削除
+      if (!record.src) {
+        next.remove();
+      } else {
+        next.addEventListener("load", function () {
+          next.remove();
+        });
+        next.addEventListener("error", function () {
+          next.remove();
+        });
+      }
+    });
   }
 
   window.addEventListener("load", function () {
