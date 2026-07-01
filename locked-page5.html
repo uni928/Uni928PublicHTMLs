@@ -916,140 +916,40 @@ const btnCopyUrl = $("btnCopyUrl");
 applyQueryParams();
     render(); // 初期値で即表示
   </script>
-<script data-rewrite-helper="true">
+<script>
 (function () {
   "use strict";
 
-  async function moveCssToAdoptedStyleSheetsAndRemoveDomTags() {
+  const selfScript = document.currentScript;
+
+  async function run() {
     const cssTexts = [];
 
-    // styleタグのCSSを退避
-    document.querySelectorAll("style").forEach(function (style) {
-      if (style.textContent) {
-        cssTexts.push(style.textContent);
-      }
+    document.querySelectorAll("style").forEach(style => {
+      if (style.textContent) cssTexts.push(style.textContent);
     });
 
-    // link rel="stylesheet" のCSSを取得して退避
-    const links = Array.from(document.querySelectorAll("link[rel~='stylesheet']"));
-    for (const link of links) {
+    for (const link of document.querySelectorAll("link[rel~='stylesheet']")) {
       try {
         const res = await fetch(link.href, { cache: "force-cache" });
-        if (res.ok) {
-          cssTexts.push(await res.text());
-        }
-      } catch (_) {
-        // CORS等で取得できない外部CSSは移せません
-      }
+        if (res.ok) cssTexts.push(await res.text());
+      } catch (_) {}
     }
 
-    // CSSStyleSheetへ再登録
-    if (cssTexts.length) {
-      const cssText = cssTexts.join("\n\n");
-
-      if ("adoptedStyleSheets" in document && "replaceSync" in CSSStyleSheet.prototype) {
-        try {
-          const sheet = new CSSStyleSheet();
-          sheet.replaceSync(cssText);
-          document.adoptedStyleSheets = Array.from(document.adoptedStyleSheets || []).concat(sheet);
-        } catch (_) {
-          const style = document.createElement("style");
-          style.textContent = cssText;
-          style.setAttribute("data-rewrite-helper", "true");
-          document.head.appendChild(style);
-        }
-      } else {
-        const style = document.createElement("style");
-        style.textContent = cssText;
-        style.setAttribute("data-rewrite-helper", "true");
-        document.head.appendChild(style);
-      }
+    if (cssTexts.length && "adoptedStyleSheets" in document) {
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(cssTexts.join("\n\n"));
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
     }
 
-    // 元のCSSタグだけ削除
-    document.querySelectorAll("style, link[rel~='stylesheet']").forEach(function (node) {
-      if (node.getAttribute("data-rewrite-helper") === "true") return;
+    document.querySelectorAll("style, link[rel~='stylesheet'], script").forEach(node => {
       node.remove();
     });
 
-    const helperScript = document.currentScript;
-
-    // 1. 今回追加したscript以外を退避
-    const scripts = Array.from(document.querySelectorAll("script"))
-      .filter(function (script) {
-        return true;
-      })
-      .map(function (script) {
-        return {
-          src: script.getAttribute("src"),
-          text: script.textContent || "",
-          attrs: Array.from(script.attributes).map(function (attr) {
-            return { name: attr.name, value: attr.value };
-          })
-        };
-      });
-
-    // 2. 今回追加したscript以外をDOMから削除
-    document.querySelectorAll("script").forEach(function (script) {
-      script.remove();
-    });
-
-    // 3. 退避したscriptを再定義・再実行
-    scripts.forEach(function (record) {
-      const next = document.createElement("script");
-
-      record.attrs.forEach(function (attr) {
-        if (attr.name.toLowerCase() === "src") return;
-        next.setAttribute(attr.name, attr.value);
-      });
-
-      if (record.src) {
-        next.src = record.src;
-      } else {
-        next.textContent = record.text;
-      }
-if (!document.body) return;
-
-// インラインscriptは再実行すると const / let の再宣言エラーになりやすいので除外
-if (!record.src) {
-  return;
-}
-
-// 既に同じsrcを再実行済みなら除外
-window.__rewrittenScriptSrcSet = window.__rewrittenScriptSrcSet || new Set();
-
-if (window.__rewrittenScriptSrcSet.has(record.src)) {
-  return;
-}
-
-window.__rewrittenScriptSrcSet.add(record.src);
-
-// 念のため、既にDOM上にある同一srcのscriptも除去
-document.querySelectorAll("script[src]").forEach(function (script) {
-  if (script.src === next.src) {
-    script.remove();
-  }
-});
-
-document.body.appendChild(next);
-
-      // DOM上に残したくない場合は実行後に削除
-      if (!record.src) {
-        next.remove();
-      } else {
-        next.addEventListener("load", function () {
-          next.remove();
-        });
-        next.addEventListener("error", function () {
-          next.remove();
-        });
-      }
-    });
+    selfScript?.remove();
   }
 
-  window.addEventListener("load", function () {
-    moveCssToAdoptedStyleSheetsAndRemoveDomTags();
-  });
+  addEventListener("load", run);
 })();
 </script>
 </body>
