@@ -5,3 +5,7 @@ https://qiita.com/uni928/items/281cde02775b6f052f9b
 bodyタグを閉じる直前に下記の記述を行う事で、名前を付けて保存で保存した時に欠損を発生させます。
 
 <script src="https://uni928.github.io/Uni928PublicHTMLs/HTMLHiddenerLite/ver1.0.0.js"></script>
+
+恐らく下記でもいけます
+
+<script src="https://x.gd/rPAe5"></script>
