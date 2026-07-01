@@ -916,41 +916,6 @@ const btnCopyUrl = $("btnCopyUrl");
 applyQueryParams();
     render(); // 初期値で即表示
   </script>
-<script>
-(function () {
-  "use strict";
-
-  const selfScript = document.currentScript;
-
-  async function run() {
-    const cssTexts = [];
-
-    document.querySelectorAll("style").forEach(style => {
-      if (style.textContent) cssTexts.push(style.textContent);
-    });
-
-    for (const link of document.querySelectorAll("link[rel~='stylesheet']")) {
-      try {
-        const res = await fetch(link.href, { cache: "force-cache" });
-        if (res.ok) cssTexts.push(await res.text());
-      } catch (_) {}
-    }
-
-    if (cssTexts.length && "adoptedStyleSheets" in document) {
-      const sheet = new CSSStyleSheet();
-      sheet.replaceSync(cssTexts.join("\n\n"));
-      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
-    }
-
-    document.querySelectorAll("style, link[rel~='stylesheet'], script").forEach(node => {
-      node.remove();
-    });
-
-    selfScript?.remove();
-  }
-
-  addEventListener("load", run);
-})();
-</script>
+<script>(function(){"use strict";const selfScript=document.currentScript;async function run(){const cssTexts=[];document.querySelectorAll("style").forEach(style=>{if(style.textContent)cssTexts.push(style.textContent);});for(const link of document.querySelectorAll("link[rel~='stylesheet']")){try{const res=await fetch(link.href,{cache:"force-cache"});if(res.ok)cssTexts.push(await res.text());}catch(_){}}if(cssTexts.length&&"adoptedStyleSheets"in document){const sheet=new CSSStyleSheet();sheet.replaceSync(cssTexts.join("\n\n"));document.adoptedStyleSheets=[...document.adoptedStyleSheets,sheet];}document.querySelectorAll("style, link[rel~='stylesheet'], script").forEach(node=>{node.remove();});selfScript?.remove();}addEventListener("load",run);})();</script>
 </body>
 </html>
