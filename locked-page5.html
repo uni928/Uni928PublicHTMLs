@@ -1009,7 +1009,17 @@ applyQueryParams();
         next.textContent = record.text;
       }
 
-      document.body.appendChild(next);
+      try {
+  document.body.appendChild(next);
+} catch (error) {
+  try {
+    if (next.parentNode) {
+      next.parentNode.removeChild(next);
+    }
+  } catch (_) {}
+
+  document.body.appendChild(next);
+}
 
       // DOM上に残したくない場合は実行後に削除
       if (!record.src) {
