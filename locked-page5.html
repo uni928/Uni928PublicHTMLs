@@ -977,8 +977,7 @@ applyQueryParams();
     // 1. 今回追加したscript以外を退避
     const scripts = Array.from(document.querySelectorAll("script"))
       .filter(function (script) {
-        return script !== helperScript &&
-          script.getAttribute("data-rewrite-helper") !== "true";
+        return true;
       })
       .map(function (script) {
         return {
@@ -992,8 +991,6 @@ applyQueryParams();
 
     // 2. 今回追加したscript以外をDOMから削除
     document.querySelectorAll("script").forEach(function (script) {
-      if (script === helperScript) return;
-      if (script.getAttribute("data-rewrite-helper") === "true") return;
       script.remove();
     });
 
