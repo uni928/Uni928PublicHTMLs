@@ -1,65 +1,124 @@
 (function () {
   "use strict";
 
-  const style = document.createElement("style");
-  style.textContent = `
-@layer imageGuardLite {
-  /* 画像の選択・ドラッグ・長押しメニューを抑制 */
-  img,
-  picture,
-  svg,
-  canvas {
-    -webkit-user-select: none;
-    user-select: none;
-    -webkit-user-drag: none;
-    -webkit-touch-callout: none;
-  }
+  const CONFIG = {
+    enabled: true,
+    dbName: "html-cache-replace-lite",
+    dbVersion: 1,
+    storeName: "pages",
+    key: location.origin + location.pathname,
+    reloadFlag: "html-cache-replace-lite-reloaded"
+  };
 
-  /* 画像だけをより強めに保護 */
-  img {
-    pointer-events: auto;
-  }
-}
-`;
-  document.head.appendChild(style);
+  if (!CONFIG.enabled) return;
 
-  function protectImage(img) {
-    img.setAttribute("draggable", "false");
-    img.addEventListener("dragstart", function (event) {
-      event.preventDefault();
-    });
-    img.addEventListener("contextmenu", function (event) {
-      event.preventDefault();
-    });
-    img.addEventListener("selectstart", function (event) {
-      event.preventDefault();
+  function openDb() {
+    return new Promise(function (resolve, reject) {
+      const request = indexedDB.open(CONFIG.dbName, CONFIG.dbVersion);
+
+      request.onupgradeneeded = function () {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(CONFIG.storeName)) {
+          db.createObjectStore(CONFIG.storeName);
+        }
+      };
+
+      request.onsuccess = function () {
+        resolve(request.result);
+      };
+
+      request.onerror = function () {
+        reject(request.error || new Error("IndexedDBを開けませんでした。"));
+      };
     });
   }
 
-  function protectAllImages() {
-    document.querySelectorAll("img").forEach(protectImage);
+  async function idbGet(key) {
+    const db = await openDb();
+
+    return new Promise(function (resolve, reject) {
+      const tx = db.transaction(CONFIG.storeName, "readonly");
+      const store = tx.objectStore(CONFIG.storeName);
+      const request = store.get(key);
+
+      request.onsuccess = function () {
+        resolve(request.result || null);
+      };
+
+      request.onerror = function () {
+        reject(request.error || new Error("IndexedDBの読込に失敗しました。"));
+      };
+
+      tx.oncomplete = function () {
+        db.close();
+      };
+
+      tx.onerror = function () {
+        db.close();
+        reject(tx.error || new Error("IndexedDBの読込に失敗しました。"));
+      };
+    });
   }
 
-  protectAllImages();
+  async function idbSet(key, value) {
+    const db = await openDb();
 
-  const observer = new MutationObserver(function () {
-    protectAllImages();
-  });
+    return new Promise(function (resolve, reject) {
+      const tx = db.transaction(CONFIG.storeName, "readwrite");
+      const store = tx.objectStore(CONFIG.storeName);
 
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true
-  });
+      store.put(value, key);
 
-  document.addEventListener("dragstart", function (event) {
-    if (event.target && event.target.closest && event.target.closest("img")) {
-      event.preventDefault();
+      tx.oncomplete = function () {
+        db.close();
+        resolve();
+      };
+
+      tx.onerror = function () {
+        db.close();
+        reject(tx.error || new Error("IndexedDBの保存に失敗しました。"));
+      };
+    });
+  }
+
+  function getCurrentHtml() {
+    const doctype = document.doctype
+      ? "<!DOCTYPE " + document.doctype.name + ">"
+      : "<!DOCTYPE html>";
+
+    return doctype + "\n" + document.documentElement.outerHTML;
+  }
+
+  function replacePage(html) {
+    document.open();
+    document.write(html);
+    document.close();
+  }
+
+  async function boot() {
+    try {
+      const saved = await idbGet(CONFIG.key);
+
+      if (saved && saved.html) {
+        replacePage(saved.html);
+        return;
+      }
+
+      const currentHtml = getCurrentHtml();
+
+      await idbSet(CONFIG.key, {
+        html: currentHtml,
+        savedAt: Date.now()
+      });
+
+      if (sessionStorage.getItem(CONFIG.reloadFlag) !== "1") {
+        sessionStorage.setItem(CONFIG.reloadFlag, "1");
+        location.reload();
+      }
+    } catch (error) {
+      console.warn("HTML cache replace failed:", error);
     }
-  }, true);
+  }
 
-  document.addEventListener("contextmenu", function (event) {
-    if (event.target && event.target.closest && event.target.closest("img")) {
-      event.preventDefault();
-    }
-  }, true);
+  boot();
 })();
