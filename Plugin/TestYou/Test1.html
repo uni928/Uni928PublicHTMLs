@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>画像右クリック禁止プラグイン テスト</title>
+
+  <style>
+@layer base {
+  body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: #f5f5f5;
+    color: #222;
+  }
+
+  main {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 24px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgb(0 0 0 / 8%);
+  }
+
+  h1 {
+    margin-top: 0;
+    font-size: 24px;
+  }
+
+  .test-area {
+    margin-top: 24px;
+    padding: 20px;
+    border: 2px dashed #aaa;
+    border-radius: 10px;
+    text-align: center;
+    background: #fafafa;
+  }
+
+  .test-image {
+    max-width: 100%;
+    width: 520px;
+    height: auto;
+    border: 1px solid #ccc;
+    background: #fff;
+  }
+
+  .check-list {
+    margin-top: 24px;
+    line-height: 1.8;
+  }
+
+  .normal-area {
+    margin-top: 24px;
+    padding: 16px;
+    border-radius: 8px;
+    background: #eef5ff;
+  }
+
+  code {
+    background: #eee;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+}
+
+@layer make260702 {
+  /* テストサイトとして確認項目を見やすくする */
+  .status {
+    margin-top: 12px;
+    font-size: 14px;
+    color: #555;
+  }
+}
+  </style>
+</head>
+
+<body>
+  <script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin1.js"></script>
+
+  <main>
+    <h1>画像右クリック禁止プラグイン テストページ</h1>
+
+    <p>
+      このページは、画像の右クリック・ドラッグ・保存操作の抑制を確認するためのテスト用ページです。
+    </p>
+
+    <div class="test-area">
+      <img
+        class="test-image"
+        src="Test1.png"
+        alt="右クリック禁止テスト用画像"
+        draggable="true"
+      >
+
+      <div class="status">
+        ↑ この画像の上で右クリック・ドラッグ・長押しなどを試してください。
+      </div>
+    </div>
+
+    <div class="check-list">
+      <h2>確認項目</h2>
+      <ul>
+        <li>画像上で右クリックメニューが出ないか</li>
+        <li>画像をドラッグして保存できないか</li>
+        <li>画像を選択状態にできないか</li>
+        <li>ページ内の通常テキストでは右クリックできるか</li>
+      </ul>
+    </div>
+
+    <div class="normal-area">
+      <p>
+        ここは通常エリアです。画像以外の場所では右クリックできるか確認してください。
+      </p>
+      <p>
+        テスト画像ファイル名：<code>Test1.png</code>
+      </p>
+    </div>
+  </main>
+</body>
+</html>
