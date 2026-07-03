@@ -10,4 +10,4 @@ HTML 内に記述するコード：　<script src="https://uni928.github.io/Uni9
 HTML 内に記述するコード：　<script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin2.js"></script>
 公開先：　https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin2.js
 
-Via 等でスクリプトに登録する使い方を想定しています。公開先URLをスクリプトに登録して下さい。
+Via 等でスクリプトに登録する使い方を想定しています。公開先URLのコードをスクリプトに登録して下さい。
