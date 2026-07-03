@@ -2,3 +2,12 @@
 
 HTML 内に記述するコード：　<script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin1.js"></script>
 テストサイト：　https://uni928.github.io/Uni928PublicHTMLs/Plugin/TestYou/Test1.html
+
+---
+
+2. 小説サイト読み上げ
+
+HTML 内に記述するコード：　<script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin1.js"></script>
+公開先：　https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin1.js
+
+Via 等でスクリプトに登録する使い方を想定しています。公開先URLをスクリプトに登録して下さい。
