@@ -5,13 +5,14 @@ HTML 内に記述するコード：　<script src="https://uni928.github.io/Uni9
 
 ---
 
-2. Viaというスマホブラウザ用 入力作業効率化。テキスト入力欄に入力状態の場合、入力欄の下に「コピー」「削除」を出現させる。
-
-https://raw.githubusercontent.com/uni928/Uni928PublicHTMLs/main/Plugin/plugin3.js
-
----
-
-3. Viaというスマホブラウザ用 サイトを可能性な限り黒とクリーム色の2極化
+2. Viaというスマホブラウザ用 サイトを可能性な限り黒とクリーム色の2極化
 下記のURLで読み込み
 
 https://raw.githubusercontent.com/uni928/Uni928PublicHTMLs/main/Plugin/plugin2.js
+
+---
+
+3. Viaというスマホブラウザ用 入力作業効率化。テキスト入力欄に入力状態の場合、入力欄の下に「コピー」「削除」を出現させる。
+
+https://raw.githubusercontent.com/uni928/Uni928PublicHTMLs/main/Plugin/plugin2.js
+
