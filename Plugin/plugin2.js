@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name Novel Body Auto Reader
+// @name Novel Body Reader for Syosetu
 // @namespace https://uni928.local/
-// @version 1.0.0
-// @description 小説サイトの本文を自動読み上げします。小説名・メニュー・ページ数表記は除外します。
+// @version 1.2.0
+// @description syosetu系ページの本文を右下ボタンから読み上げます。
 // @match http*syosetu*
 // @grant none
 // ==/UserScript==
@@ -13,22 +13,20 @@
   const PLUGIN_NAME = "NovelBodyReader";
 
   const config = {
-    autoStart: false, // true にするとページ読み込み後に自動読み上げ
-    rate: 1.0,
+    autoStart: false,
+    rate: 2.0,
     pitch: 1.0,
     volume: 1.0,
     lang: "ja-JP",
-
-    // 1文ごとに読むと停止・再開が扱いやすい
     chunkMaxLength: 180,
 
-    // タイトル・メニュー・広告などを除外しやすいキーワード
     excludeTextPatterns: [
-      /^第?\s*\d+\s*(話|章|部|節)$/i,
-      /^chapter\s*\d+/i,
-      /^episode\s*\d+/i,
+      /^\d+\s*[\/／]\s*\d+$/,
+      /^\d+\s*-\s*\d+\s*[\/／]\s*\d+$/,
+      /^第?\s*\d+\s*(ページ|頁)$/i,
       /^前へ$/,
       /^次へ$/,
+      /^戻る$/,
       /^目次$/,
       /^しおり$/,
       /^ブックマーク$/,
@@ -40,12 +38,10 @@
       /^作者$/,
       /^小説情報$/,
       /^更新通知$/,
-      /^この作品を/,
       /^広告$/,
       /^PR$/i
     ],
 
-    // タイトル・ナビ・サイドバー系を除外
     excludeSelectors: [
       "script",
       "style",
@@ -81,17 +77,27 @@
       ".comment",
       ".comments",
       ".review",
-      ".title",
+      ".bookmark",
+      ".login",
+      ".signup",
+      ".author",
+      ".writer",
       ".novel_title",
       ".novel-title",
-      ".chapter-title",
-      ".chapter_title"
+      ".novelTitle",
+      ".work-title",
+      ".book-title",
+      ".story-title",
+      ".series-title",
+      ".series_title"
     ],
 
-    // 小説本文でよく使われる候補。見つかれば body 全体より優先
     preferredBodySelectors: [
       "#novel_honbun",
       ".novel_honbun",
+      "#novel_color",
+      "#novel_view",
+      ".novel_view",
       "#novel_content",
       ".novel_content",
       "#novel-body",
@@ -100,10 +106,27 @@
       ".novelBody",
       "#honbun",
       ".honbun",
+      "#main_text",
+      ".main_text",
+      "#episode_body",
+      ".episode_body",
       "#content",
       ".content",
       "article",
       "main"
+    ],
+
+    titleSelectors: [
+      ".novel_subtitle",
+      "#novel_subtitle",
+      ".chapter-title",
+      ".chapter_title",
+      ".episode-title",
+      ".episode_title",
+      ".subtitle",
+      ".sub-title",
+      "h2",
+      "h3"
     ]
   };
 
@@ -113,13 +136,21 @@
   let isPaused = false;
   let currentUtterance = null;
   let panel = null;
+  let novelNameWords = [];
 
   function normalizeText(text) {
     return String(text || "")
       .replace(/\r/g, "\n")
-      .replace(/[ \t]+/g, " ")
+      .replace(/[ \t　]+/g, " ")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
+  }
+
+  function normalizeForCompare(text) {
+    return normalizeText(text)
+      .replace(/[「」『』【】\[\]（）()〈〉《》“”"']/g, "")
+      .replace(/[｜|:：\-―—_＿\s]/g, "")
+      .toLowerCase();
   }
 
   function isVisibleElement(el) {
@@ -134,8 +165,7 @@
       return false;
     }
 
-    const rect = el.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0;
+    return true;
   }
 
   function matchesExcludeSelector(el) {
@@ -150,22 +180,72 @@
     });
   }
 
+  function collectNovelNameWords() {
+    const words = [];
+
+    const titleSelectors = [
+      "h1",
+      ".novel_title",
+      ".novel-title",
+      ".novelTitle",
+      ".work-title",
+      ".book-title",
+      ".story-title",
+      ".series-title",
+      ".series_title"
+    ];
+
+    titleSelectors.forEach(function (selector) {
+      document.querySelectorAll(selector).forEach(function (el) {
+        const text = normalizeText(el.innerText || el.textContent || "");
+        if (text.length >= 3) {
+          words.push(normalizeForCompare(text));
+        }
+      });
+    });
+
+    const titleParts = normalizeText(document.title || "")
+      .split(/\s*[-｜|:：]\s*/g)
+      .map(normalizeText)
+      .filter(function (part) {
+        return part.length >= 3;
+      });
+
+    if (titleParts[0]) {
+      words.push(normalizeForCompare(titleParts[0]));
+    }
+
+    novelNameWords = Array.from(new Set(words.filter(Boolean)));
+  }
+
+  function isNovelNameLike(text) {
+    const t = normalizeForCompare(text);
+    if (!t) return false;
+
+    return novelNameWords.some(function (word) {
+      if (!word) return false;
+      if (t === word) return true;
+      if (t.length <= word.length + 8 && t.includes(word)) return true;
+      if (word.length <= t.length + 8 && word.includes(t)) return true;
+      return false;
+    });
+  }
+
   function looksLikeTitleOrMenuText(text) {
     const t = normalizeText(text);
     if (!t) return true;
 
-    // 短すぎる単独行はタイトル・ボタン・見出しの可能性が高い
+    if (/^\d+\s*[\/／]\s*\d+$/.test(t)) return true;
+    if (/^[\s\-_=＊*・…—―]+$/.test(t)) return true;
+    if (isNovelNameLike(t)) return true;
+
     if (t.length <= 2) return true;
 
-    // リンクやメニューっぽい短文を除外
-    if (t.length <= 20) {
+    if (t.length <= 24) {
       for (const pattern of config.excludeTextPatterns) {
         if (pattern.test(t)) return true;
       }
     }
-
-    // 記号だけ、区切り線だけ
-    if (/^[\s\-_=＊*・…—―]+$/.test(t)) return true;
 
     return false;
   }
@@ -173,13 +253,14 @@
   function scoreReadableContainer(el) {
     if (!el || !isVisibleElement(el) || matchesExcludeSelector(el)) return -1;
 
-    const text = normalizeText(el.innerText || "");
-    if (text.length < 200) return -1;
+    const text = normalizeText(el.innerText || el.textContent || "");
+    if (text.length < 20) return -1;
 
     const pCount = el.querySelectorAll("p, br").length;
+
     const linkTextLength = Array.from(el.querySelectorAll("a"))
       .map(function (a) {
-        return normalizeText(a.innerText || "").length;
+        return normalizeText(a.innerText || a.textContent || "").length;
       })
       .reduce(function (a, b) {
         return a + b;
@@ -187,7 +268,6 @@
 
     const linkRatio = text.length ? linkTextLength / text.length : 1;
 
-    // リンクが多い場所は目次・メニューの可能性が高い
     if (linkRatio > 0.35) return -1;
 
     return text.length + pCount * 80 - linkRatio * 1000;
@@ -206,22 +286,25 @@
       if (candidates[0]) return candidates[0];
     }
 
-    const all = Array.from(document.body.querySelectorAll("article, main, section, div"));
-    const best = all
-      .map(function (el) {
-        return {
-          el: el,
-          score: scoreReadableContainer(el)
-        };
-      })
-      .filter(function (item) {
-        return item.score > 0;
-      })
-      .sort(function (a, b) {
-        return b.score - a.score;
-      })[0];
+    return document.body;
+  }
 
-    return best ? best.el : document.body;
+  function getEpisodeTitle() {
+    for (const selector of config.titleSelectors) {
+      const list = Array.from(document.querySelectorAll(selector));
+
+      for (const el of list) {
+        if (!isVisibleElement(el)) continue;
+        if (matchesExcludeSelector(el)) continue;
+
+        const text = normalizeText(el.innerText || el.textContent || "");
+        if (text.length >= 3 && !looksLikeTitleOrMenuText(text)) {
+          return text;
+        }
+      }
+    }
+
+    return "";
   }
 
   function collectReadableText(root) {
@@ -241,16 +324,13 @@
       if (node.nodeType !== Node.ELEMENT_NODE) return;
 
       const el = node;
+      const tag = el.tagName.toLowerCase();
 
       if (!isVisibleElement(el)) return;
       if (matchesExcludeSelector(el)) return;
 
-      const tag = el.tagName.toLowerCase();
-
-      // 見出しは小説タイトル・章タイトルの可能性が高いため読まない
-      if (/^h[1-6]$/.test(tag)) return;
-
-      // aタグ単体はメニュー・リンクの可能性が高いため読まない
+      if (tag === "h1") return;
+      if (/^h[2-6]$/.test(tag)) return;
       if (tag === "a") return;
 
       if (tag === "br") {
@@ -308,9 +388,21 @@
   }
 
   function prepareChunks() {
+    collectNovelNameWords();
+
     const root = findReadableRoot();
+    const title = getEpisodeTitle();
     const text = collectReadableText(root);
-    chunks = splitIntoChunks(text);
+    const bodyChunks = splitIntoChunks(text);
+
+    chunks = [];
+
+    if (title && !looksLikeTitleOrMenuText(title)) {
+      chunks.push(title);
+    }
+
+    chunks.push(...bodyChunks);
+
     currentIndex = 0;
     updatePanelStatus();
     return chunks;
@@ -322,19 +414,32 @@
       return;
     }
 
+    if (!isReading) return;
+
     if (currentIndex >= chunks.length) {
       stopReading();
       return;
     }
 
-    isReading = true;
+    const text = chunks[currentIndex];
+
+    if (!text) {
+      currentIndex += 1;
+      speakCurrent();
+      return;
+    }
+
     isPaused = false;
 
-    currentUtterance = new SpeechSynthesisUtterance(chunks[currentIndex]);
+    currentUtterance = new SpeechSynthesisUtterance(text);
     currentUtterance.lang = config.lang;
-    currentUtterance.rate = config.rate;
+    currentUtterance.rate = 2.0;
     currentUtterance.pitch = config.pitch;
     currentUtterance.volume = config.volume;
+
+    currentUtterance.onstart = function () {
+      updatePanelStatus();
+    };
 
     currentUtterance.onend = function () {
       if (!isReading || isPaused) return;
@@ -344,40 +449,59 @@
     };
 
     currentUtterance.onerror = function () {
+      if (!isReading || isPaused) return;
       currentIndex += 1;
       updatePanelStatus();
       speakCurrent();
     };
 
     updatePanelStatus();
+
+    // スマホ対策：ユーザー操作中に直接 speak します
     window.speechSynthesis.speak(currentUtterance);
   }
 
   function startReading() {
-    window.speechSynthesis.cancel();
-
-    if (!chunks.length) {
-      prepareChunks();
-    }
-
-    if (!chunks.length) {
-      alert("読み上げ対象の本文が見つかりませんでした。");
+    if (!("speechSynthesis" in window)) {
+      alert("このブラウザは音声読み上げに対応していません。");
       return;
     }
 
+    window.speechSynthesis.cancel();
+
+    prepareChunks();
+
+    if (!chunks.length) {
+      alert("読み上げ対象の本文が見つかりませんでした。");
+      updatePanelStatus();
+      return;
+    }
+
+    currentIndex = 0;
     isReading = true;
     isPaused = false;
+
+    updatePanelStatus();
+
+    // voices 初期化用。失敗しても問題ありません。
+    try {
+      window.speechSynthesis.getVoices();
+    } catch (_) {}
+
     speakCurrent();
   }
 
   function pauseReading() {
     if (!isReading) return;
+
     isPaused = true;
     window.speechSynthesis.pause();
     updatePanelStatus();
   }
 
   function resumeReading() {
+    if (!("speechSynthesis" in window)) return;
+
     if (!isReading) {
       startReading();
       return;
@@ -392,26 +516,22 @@
     isReading = false;
     isPaused = false;
     currentUtterance = null;
-    window.speechSynthesis.cancel();
-    updatePanelStatus();
-  }
 
-  function nextChunk() {
-    if (!chunks.length) prepareChunks();
-    currentIndex = Math.min(currentIndex + 1, chunks.length);
-    window.speechSynthesis.cancel();
-
-    if (isReading && currentIndex < chunks.length) {
-      speakCurrent();
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
     }
 
     updatePanelStatus();
   }
 
-  function prevChunk() {
+  function nextChunk() {
     if (!chunks.length) prepareChunks();
-    currentIndex = Math.max(currentIndex - 1, 0);
-    window.speechSynthesis.cancel();
+
+    currentIndex = Math.min(currentIndex + 1, Math.max(chunks.length - 1, 0));
+
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
 
     if (isReading) {
       speakCurrent();
@@ -420,24 +540,82 @@
     updatePanelStatus();
   }
 
+  function prevChunk() {
+    if (!chunks.length) prepareChunks();
+
+    currentIndex = Math.max(currentIndex - 1, 0);
+
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+
+    if (isReading) {
+      speakCurrent();
+    }
+
+    updatePanelStatus();
+  }
+
+  function speakTest() {
+    if (!("speechSynthesis" in window)) {
+      alert("このブラウザは音声読み上げに対応していません。");
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+
+    const u = new SpeechSynthesisUtterance("音声テストです。");
+    u.lang = config.lang;
+    u.rate = 2.0;
+    u.pitch = config.pitch;
+    u.volume = config.volume;
+
+    window.speechSynthesis.speak(u);
+  }
+
+  function createButton(label, handler) {
+    const button = document.createElement("button");
+    button.textContent = label;
+
+    button.addEventListener("click", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      handler();
+    });
+
+    button.addEventListener(
+      "touchend",
+      function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        handler();
+      },
+      { passive: false }
+    );
+
+    return button;
+  }
+
   function createPanel() {
     if (panel) return panel;
 
     const style = document.createElement("style");
     style.textContent = `
 @layer novelBodyReader {
-  /* 読み上げ操作パネル */
+  /* 右下の読み上げ操作パネル */
   .nbr-panel {
     position: fixed;
-    right: 12px;
-    bottom: 12px;
+    right: 8px;
+    bottom: 8px;
     z-index: 2147483647;
     display: flex;
-    gap: 6px;
+    flex-wrap: wrap;
+    gap: 5px;
     align-items: center;
+    max-width: calc(100vw - 16px);
     padding: 8px;
     border-radius: 12px;
-    background: rgba(20, 20, 20, 0.86);
+    background: rgba(20, 20, 20, 0.88);
     color: #fff;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-size: 12px;
@@ -447,21 +625,20 @@
   .nbr-panel button {
     border: 0;
     border-radius: 8px;
-    padding: 6px 8px;
+    padding: 8px 9px;
     background: #fff;
     color: #111;
     cursor: pointer;
     font-size: 12px;
-  }
-
-  .nbr-panel button:hover {
-    filter: brightness(0.92);
+    line-height: 1;
+    touch-action: manipulation;
   }
 
   .nbr-status {
-    min-width: 72px;
+    min-width: 98px;
     text-align: center;
     opacity: .9;
+    white-space: nowrap;
   }
 }
 `;
@@ -470,29 +647,17 @@
     panel = document.createElement("div");
     panel.className = "nbr-panel";
 
-    const prevButton = document.createElement("button");
-    prevButton.textContent = "前";
-    prevButton.addEventListener("click", prevChunk);
-
-    const playButton = document.createElement("button");
-    playButton.textContent = "再生";
-    playButton.addEventListener("click", startReading);
-
-    const pauseButton = document.createElement("button");
-    pauseButton.textContent = "一時停止";
-    pauseButton.addEventListener("click", pauseReading);
-
-    const resumeButton = document.createElement("button");
-    resumeButton.textContent = "再開";
-    resumeButton.addEventListener("click", resumeReading);
-
-    const nextButton = document.createElement("button");
-    nextButton.textContent = "次";
-    nextButton.addEventListener("click", nextChunk);
-
-    const stopButton = document.createElement("button");
-    stopButton.textContent = "停止";
-    stopButton.addEventListener("click", stopReading);
+    const prevButton = createButton("前", prevChunk);
+    const playButton = createButton("再生", startReading);
+    const pauseButton = createButton("一時停止", pauseReading);
+    const resumeButton = createButton("再開", resumeReading);
+    const nextButton = createButton("次", nextChunk);
+    const stopButton = createButton("停止", stopReading);
+    const reloadButton = createButton("再読込", function () {
+      stopReading();
+      prepareChunks();
+    });
+    const testButton = createButton("テスト", speakTest);
 
     const status = document.createElement("span");
     status.className = "nbr-status";
@@ -504,12 +669,13 @@
     panel.appendChild(resumeButton);
     panel.appendChild(nextButton);
     panel.appendChild(stopButton);
+    panel.appendChild(reloadButton);
+    panel.appendChild(testButton);
     panel.appendChild(status);
 
     document.body.appendChild(panel);
 
     updatePanelStatus();
-
     return panel;
   }
 
@@ -523,20 +689,16 @@
     }
 
     const state = isPaused ? "一時停止" : isReading ? "再生中" : "停止中";
-    status.textContent = state + " " + Math.min(currentIndex + 1, chunks.length) + "/" + chunks.length;
+    status.textContent =
+      state + " " + Math.min(currentIndex + 1, chunks.length) + "/" + chunks.length;
   }
 
   function init() {
     createPanel();
 
-    // 初回に本文候補を解析
     setTimeout(function () {
       prepareChunks();
-
-      if (config.autoStart) {
-        startReading();
-      }
-    }, 500);
+    }, 800);
   }
 
   window[PLUGIN_NAME] = {
@@ -547,6 +709,7 @@
     next: nextChunk,
     prev: prevChunk,
     reload: prepareChunks,
+    test: speakTest,
     config: config
   };
 
