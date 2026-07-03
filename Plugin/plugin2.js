@@ -3,7 +3,7 @@
 // @namespace https://uni928.local/
 // @version 1.0.0
 // @description 小説サイトの本文を自動読み上げします。小説名・メニュー・ページ数表記は除外します。
-// @match https://*syosetu*
+// @match http*syosetu*
 // @grant none
 // ==/UserScript==
 
