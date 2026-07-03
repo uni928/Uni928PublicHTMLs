@@ -1,131 +1,168 @@
+// ==UserScript==
+// @name Novel Body Auto Reader
+// @namespace https://uni928.local/
+// @version 1.0.0
+// @description 小説サイトの本文を自動読み上げします。小説名・メニュー・ページ数表記は除外します。
+// @match https://*syosetu*/*
+// @grant none
+// ==/UserScript==
+
 (function () {
   "use strict";
 
-  const PLUGIN_NAME = "NovelBodyReader";
-
-  const config = {
-    autoStart: false,
-    rate: 2.0, // 2倍固定
+  const CONFIG = {
+    lang: "ja-JP",
+    rate: 2.0,
     pitch: 1.0,
     volume: 1.0,
-    lang: "ja-JP",
     chunkMaxLength: 180,
 
-    excludeTextPatterns: [
-      // 14/1042 のようなページ数・進捗表記
-      /^\d+\s*\/\s*\d+$/,
-      /^\d+\s*／\s*\d+$/,
-      /^\d+\s*-\s*\d+\s*\/\s*\d+$/,
+    // スマホでページ描画後に本文が入るサイト向け
+    startDelayMs: 1200,
 
-      // ページ・話数・章っぽい短い表記
-      /^第?\s*\d+\s*(話|章|部|節|ページ|頁)$/i,
-      /^chapter\s*\d+/i,
-      /^episode\s*\d+/i,
-
-      // ナビ・UI
-      /^前へ$/,
-      /^次へ$/,
-      /^戻る$/,
-      /^目次$/,
-      /^しおり$/,
-      /^ブックマーク$/,
-      /^ログイン$/,
-      /^会員登録$/,
-      /^感想$/,
-      /^レビュー$/,
-      /^ランキング$/,
-      /^作者$/,
-      /^小説情報$/,
-      /^更新通知$/,
-      /^この作品を/,
-      /^広告$/,
-      /^PR$/i
-    ],
-
-    excludeSelectors: [
-      "script",
-      "style",
-      "noscript",
-      "header",
-      "footer",
-      "nav",
-      "aside",
-      "button",
-      "select",
-      "textarea",
-      "input",
-      "form",
-      "iframe",
-      "canvas",
-      "svg",
-      "[role='navigation']",
-      "[role='banner']",
-      "[role='contentinfo']",
-
-      ".nav",
-      ".navbar",
-      ".menu",
-      ".header",
-      ".footer",
-      ".sidebar",
-      ".breadcrumb",
-      ".pager",
-      ".pagination",
-      ".ranking",
-      ".ad",
-      ".ads",
-      ".advertisement",
-      ".comment",
-      ".comments",
-      ".review",
-
-      // タイトル・作品名・作者情報っぽい場所
-      ".title",
-      ".novel_title",
-      ".novel-title",
-      ".novelTitle",
-      ".chapter-title",
-      ".chapter_title",
-      ".subtitle",
-      ".sub-title",
-      ".work-title",
-      ".book-title",
-      ".story-title",
-      ".author",
-      ".writer"
-    ],
-
-    preferredBodySelectors: [
-      "#novel_honbun",
-      ".novel_honbun",
-      "#novel_content",
-      ".novel_content",
-      "#novel-body",
-      ".novel-body",
-      "#novelBody",
-      ".novelBody",
-      "#honbun",
-      ".honbun",
-      "#本文",
-      ".本文",
-      "#main_text",
-      ".main_text",
-      "#episode_body",
-      ".episode_body",
-      "#content",
-      ".content",
-      "article",
-      "main"
-    ]
+    // Via/Androidで自動再生が止められた場合、本文タップで開始する
+    enableTapFallback: true
   };
+
+  const NOVEL_HOST_RULES = [
+    /(^|\.)syosetu\.com$/,
+    /(^|\.)ncode\.syosetu\.com$/,
+    /(^|\.)kakuyomu\.jp$/,
+    /(^|\.)alphapolis\.co\.jp$/,
+    /(^|\.)novelup\.plus$/,
+    /(^|\.)hameln\.sx$/,
+    /(^|\.)estar\.jp$/,
+    /(^|\.)pixiv\.net$/,
+    /(^|\.)novel18\.syosetu\.com$/,
+    /(^|\.)noc\.syosetu\.com$/,
+    /(^|\.)mnlt\.syosetu\.com$/,
+    /(^|\.)mid\.syosetu\.com$/,
+    /(^|\.)yomou\.syosetu\.com$/
+  ];
+
+  const BODY_SELECTORS = [
+    "#novel_honbun",
+    ".novel_honbun",
+    "#novel_content",
+    ".novel_content",
+    "#novel-body",
+    ".novel-body",
+    "#novelBody",
+    ".novelBody",
+    "#honbun",
+    ".honbun",
+    "#本文",
+    ".本文",
+    "#main_text",
+    ".main_text",
+    "#episode_body",
+    ".episode_body",
+    ".episodeBody",
+    ".widget-episodeBody",
+    ".p-novel__body",
+    ".novel-viewer",
+    ".novel_viewer",
+    ".text",
+    ".story",
+    "article",
+    "main"
+  ];
+
+  const TITLE_SELECTORS = [
+    ".chapter-title",
+    ".chapter_title",
+    ".episode-title",
+    ".episode_title",
+    ".subtitle",
+    ".sub-title",
+    ".p-novel__title",
+    ".widget-episodeTitle",
+    "h2",
+    "h3"
+  ];
+
+  const NOVEL_NAME_SELECTORS = [
+    "h1",
+    ".title",
+    ".novel_title",
+    ".novel-title",
+    ".novelTitle",
+    ".work-title",
+    ".book-title",
+    ".story-title",
+    ".series-title",
+    ".series_title"
+  ];
+
+  const EXCLUDE_SELECTORS = [
+    "script",
+    "style",
+    "noscript",
+    "header",
+    "footer",
+    "nav",
+    "aside",
+    "button",
+    "select",
+    "textarea",
+    "input",
+    "form",
+    "iframe",
+    "canvas",
+    "svg",
+    "[role='navigation']",
+    "[role='banner']",
+    "[role='contentinfo']",
+    ".nav",
+    ".navbar",
+    ".menu",
+    ".header",
+    ".footer",
+    ".sidebar",
+    ".breadcrumb",
+    ".pager",
+    ".pagination",
+    ".ranking",
+    ".ad",
+    ".ads",
+    ".advertisement",
+    ".comment",
+    ".comments",
+    ".review",
+    ".bookmark",
+    ".login",
+    ".signup",
+    ".author",
+    ".writer"
+  ];
+
+  const EXCLUDE_TEXT_PATTERNS = [
+    /^\d+\s*[\/／]\s*\d+$/,
+    /^\d+\s*-\s*\d+\s*[\/／]\s*\d+$/,
+    /^第?\s*\d+\s*(ページ|頁)$/,
+    /^前へ$/,
+    /^次へ$/,
+    /^戻る$/,
+    /^目次$/,
+    /^しおり$/,
+    /^ブックマーク$/,
+    /^ログイン$/,
+    /^会員登録$/,
+    /^感想$/,
+    /^レビュー$/,
+    /^ランキング$/,
+    /^作者$/,
+    /^小説情報$/,
+    /^更新通知$/,
+    /^広告$/,
+    /^PR$/i
+  ];
 
   let chunks = [];
   let currentIndex = 0;
   let isReading = false;
-  let isPaused = false;
-  let currentUtterance = null;
-  let panel = null;
-  let pageTitleWords = [];
+  let started = false;
+  let novelNameWords = [];
 
   function normalizeText(text) {
     return String(text || "")
@@ -142,63 +179,10 @@
       .toLowerCase();
   }
 
-  function splitTitleWords(text) {
-    const title = normalizeText(text)
-      .replace(/\s*[-｜|:：]\s*/g, "\n")
-      .replace(/[「」『』【】\[\]（）()]/g, "\n");
-
-    return title
-      .split(/\n+/)
-      .map(normalizeText)
-      .filter(function (word) {
-        return word.length >= 3;
-      })
-      .map(normalizeForCompare)
-      .filter(Boolean);
-  }
-
-  function collectPageTitleWords() {
-    const words = [];
-
-    words.push(...splitTitleWords(document.title || ""));
-
-    const titleSelectors = [
-      "h1",
-      ".title",
-      ".novel_title",
-      ".novel-title",
-      ".novelTitle",
-      ".work-title",
-      ".book-title",
-      ".story-title"
-    ];
-
-    for (const selector of titleSelectors) {
-      document.querySelectorAll(selector).forEach(function (el) {
-        words.push(...splitTitleWords(el.innerText || el.textContent || ""));
-      });
-    }
-
-    pageTitleWords = Array.from(new Set(words));
-  }
-
-  function isSameAsPageTitle(text) {
-    const t = normalizeForCompare(text);
-    if (!t) return false;
-
-    return pageTitleWords.some(function (word) {
-      if (!word) return false;
-
-      // 完全一致
-      if (t === word) return true;
-
-      // 小説名を含む短い見出しを除外
-      if (t.length <= word.length + 8 && t.includes(word)) return true;
-
-      // document.title 側が「小説名 - サイト名」の場合の除外
-      if (word.length <= t.length + 8 && word.includes(t)) return true;
-
-      return false;
+  function isNovelHost() {
+    const host = location.hostname;
+    return NOVEL_HOST_RULES.some(function (rule) {
+      return rule.test(host);
     });
   }
 
@@ -221,7 +205,7 @@
   function matchesExcludeSelector(el) {
     if (!el || el.nodeType !== 1) return true;
 
-    return config.excludeSelectors.some(function (selector) {
+    return EXCLUDE_SELECTORS.some(function (selector) {
       try {
         return el.matches(selector) || el.closest(selector);
       } catch (_) {
@@ -230,30 +214,116 @@
     });
   }
 
-  function looksLikeTitleOrMenuText(text) {
+  function getTextFromSelectorList(selectors) {
+    for (const selector of selectors) {
+      const list = Array.from(document.querySelectorAll(selector));
+
+      for (const el of list) {
+        if (!isVisibleElement(el)) continue;
+        if (matchesExcludeSelector(el)) continue;
+
+        const text = normalizeText(el.innerText || el.textContent || "");
+        if (text.length >= 3) return text;
+      }
+    }
+
+    return "";
+  }
+
+  function collectNovelNameWords() {
+    const words = [];
+
+    for (const selector of NOVEL_NAME_SELECTORS) {
+      document.querySelectorAll(selector).forEach(function (el) {
+        const text = normalizeText(el.innerText || el.textContent || "");
+        if (text.length >= 3) {
+          words.push(normalizeForCompare(text));
+        }
+      });
+    }
+
+    const titleParts = normalizeText(document.title || "")
+      .split(/\s*[-｜|:：]\s*/g)
+      .map(normalizeText)
+      .filter(function (part) {
+        return part.length >= 3;
+      });
+
+    // document.title の先頭や末尾は小説名・サイト名のことが多いので除外候補にする
+    if (titleParts[0]) words.push(normalizeForCompare(titleParts[0]));
+    if (titleParts.length >= 3) words.push(normalizeForCompare(titleParts[titleParts.length - 1]));
+
+    novelNameWords = Array.from(new Set(words.filter(Boolean)));
+  }
+
+  function isNovelNameLike(text) {
+    const t = normalizeForCompare(text);
+    if (!t) return false;
+
+    return novelNameWords.some(function (word) {
+      if (!word) return false;
+      if (t === word) return true;
+      if (t.length <= word.length + 8 && t.includes(word)) return true;
+      if (word.length <= t.length + 8 && word.includes(t)) return true;
+      return false;
+    });
+  }
+
+  function looksLikeExcludedText(text) {
     const t = normalizeText(text);
     if (!t) return true;
 
-    // 14/1042 など
     if (/^\d+\s*[\/／]\s*\d+$/.test(t)) return true;
+    if (/^[\s\-_=＊*・…—―]+$/.test(t)) return true;
+    if (isNovelNameLike(t)) return true;
 
-    // 小説名・ページタイトルっぽいもの
-    if (isSameAsPageTitle(t)) return true;
-
-    // 短すぎる単独行
-    if (t.length <= 2) return true;
-
-    // 短いUI文言
     if (t.length <= 24) {
-      for (const pattern of config.excludeTextPatterns) {
+      for (const pattern of EXCLUDE_TEXT_PATTERNS) {
         if (pattern.test(t)) return true;
       }
     }
 
-    // 記号だけ
-    if (/^[\s\-_=＊*・…—―]+$/.test(t)) return true;
-
     return false;
+  }
+
+  function getEpisodeTitleFromDocumentTitle() {
+    const rawTitle = normalizeText(document.title || "");
+    if (!rawTitle) return "";
+
+    const parts = rawTitle
+      .split(/\s*[-｜|:：]\s*/g)
+      .map(normalizeText)
+      .filter(Boolean);
+
+    const candidates = parts.filter(function (part) {
+      if (part.length < 3) return false;
+      if (looksLikeExcludedText(part)) return false;
+      if (/小説家になろう|カクヨム|アルファポリス|pixiv|ハーメルン|エブリスタ/.test(part)) return false;
+      return true;
+    });
+
+    // 「小説名 - 第14話 タイトル - サイト名」なら真ん中を優先
+    if (candidates.length >= 2) {
+      return candidates[1];
+    }
+
+    return candidates[0] || "";
+  }
+
+  function getEpisodeTitle() {
+    const fromPage = getTextFromSelectorList(TITLE_SELECTORS);
+
+    if (fromPage && !looksLikeExcludedText(fromPage)) {
+      return fromPage;
+    }
+
+    const fromDocumentTitle = getEpisodeTitleFromDocumentTitle();
+
+    if (fromDocumentTitle && !looksLikeExcludedText(fromDocumentTitle)) {
+      return fromDocumentTitle;
+    }
+
+    return "";
   }
 
   function scoreReadableContainer(el) {
@@ -279,7 +349,7 @@
   }
 
   function findReadableRoot() {
-    for (const selector of config.preferredBodySelectors) {
+    for (const selector of BODY_SELECTORS) {
       const candidates = Array.from(document.querySelectorAll(selector))
         .filter(function (el) {
           return scoreReadableContainer(el) > 0;
@@ -291,22 +361,17 @@
       if (candidates[0]) return candidates[0];
     }
 
-    const all = Array.from(document.body.querySelectorAll("article, main, section, div"));
-    const best = all
-      .map(function (el) {
-        return {
-          el: el,
-          score: scoreReadableContainer(el)
-        };
-      })
-      .filter(function (item) {
-        return item.score > 0;
-      })
-      .sort(function (a, b) {
-        return b.score - a.score;
-      })[0];
+    return null;
+  }
 
-    return best ? best.el : document.body;
+  function isNovelPage() {
+    if (!isNovelHost()) return false;
+
+    const root = findReadableRoot();
+    if (!root) return false;
+
+    const text = normalizeText(root.innerText || "");
+    return text.length >= 300;
   }
 
   function collectReadableText(root) {
@@ -317,7 +382,7 @@
 
       if (node.nodeType === Node.TEXT_NODE) {
         const text = normalizeText(node.nodeValue);
-        if (!looksLikeTitleOrMenuText(text)) {
+        if (!looksLikeExcludedText(text)) {
           result.push(text);
         }
         return;
@@ -326,16 +391,18 @@
       if (node.nodeType !== Node.ELEMENT_NODE) return;
 
       const el = node;
+      const tag = el.tagName.toLowerCase();
 
       if (!isVisibleElement(el)) return;
       if (matchesExcludeSelector(el)) return;
 
-      const tag = el.tagName.toLowerCase();
+      // h1は小説名になりやすいので除外
+      if (tag === "h1") return;
 
-      // h1〜h6 は小説名・話タイトルの可能性が高いので除外
-      if (/^h[1-6]$/.test(tag)) return;
+      // h2/h3などは本文側で拾うと重複しやすいので、タイトル抽出側に任せる
+      if (/^h[2-6]$/.test(tag)) return;
 
-      // aタグ単体はメニュー・リンクの可能性が高いので除外
+      // リンク単体はメニュー化しやすいので除外
       if (tag === "a") return;
 
       if (tag === "br") {
@@ -364,26 +431,24 @@
     const rough = normalized
       .replace(/([。！？!?」』）\)])\s*/g, "$1\n")
       .split(/\n+/)
-      .map(function (line) {
-        return normalizeText(line);
-      })
+      .map(normalizeText)
       .filter(Boolean)
       .filter(function (line) {
-        return !looksLikeTitleOrMenuText(line);
+        return !looksLikeExcludedText(line);
       });
 
     const output = [];
 
     for (const line of rough) {
-      if (line.length <= config.chunkMaxLength) {
+      if (line.length <= CONFIG.chunkMaxLength) {
         output.push(line);
         continue;
       }
 
       let rest = line;
-      while (rest.length > config.chunkMaxLength) {
-        output.push(rest.slice(0, config.chunkMaxLength));
-        rest = rest.slice(config.chunkMaxLength);
+      while (rest.length > CONFIG.chunkMaxLength) {
+        output.push(rest.slice(0, CONFIG.chunkMaxLength));
+        rest = rest.slice(CONFIG.chunkMaxLength);
       }
 
       if (rest) output.push(rest);
@@ -393,21 +458,39 @@
   }
 
   function prepareChunks() {
-    collectPageTitleWords();
+    collectNovelNameWords();
+
+    if (!isNovelPage()) {
+      chunks = [];
+      return [];
+    }
 
     const root = findReadableRoot();
-    const text = collectReadableText(root);
+    if (!root) {
+      chunks = [];
+      return [];
+    }
 
-    chunks = splitIntoChunks(text);
+    const title = getEpisodeTitle();
+    const bodyText = collectReadableText(root);
+    const bodyChunks = splitIntoChunks(bodyText);
+
+    chunks = [];
+
+    if (title && !looksLikeExcludedText(title)) {
+      chunks.push(title);
+    }
+
+    chunks.push(...bodyChunks);
+
     currentIndex = 0;
-
-    updatePanelStatus();
     return chunks;
   }
 
   function speakCurrent() {
+    if (!isReading) return;
+
     if (!("speechSynthesis" in window)) {
-      alert("このブラウザは音声読み上げに対応していません。");
       return;
     }
 
@@ -416,233 +499,117 @@
       return;
     }
 
-    isReading = true;
-    isPaused = false;
+    const text = chunks[currentIndex];
+    const utterance = new SpeechSynthesisUtterance(text);
 
-    currentUtterance = new SpeechSynthesisUtterance(chunks[currentIndex]);
-    currentUtterance.lang = config.lang;
-    currentUtterance.rate = 2.0; // 2倍固定
-    currentUtterance.pitch = config.pitch;
-    currentUtterance.volume = config.volume;
+    utterance.lang = CONFIG.lang;
+    utterance.rate = 2.0;
+    utterance.pitch = CONFIG.pitch;
+    utterance.volume = CONFIG.volume;
 
-    currentUtterance.onend = function () {
-      if (!isReading || isPaused) return;
+    utterance.onend = function () {
+      if (!isReading) return;
       currentIndex += 1;
-      updatePanelStatus();
       speakCurrent();
     };
 
-    currentUtterance.onerror = function () {
+    utterance.onerror = function () {
+      if (!isReading) return;
       currentIndex += 1;
-      updatePanelStatus();
       speakCurrent();
     };
 
-    updatePanelStatus();
-    window.speechSynthesis.speak(currentUtterance);
+    window.speechSynthesis.speak(utterance);
   }
 
   function startReading() {
-    window.speechSynthesis.cancel();
+    if (started) return;
+    started = true;
 
     if (!chunks.length) {
       prepareChunks();
     }
 
-    if (!chunks.length) {
-      alert("読み上げ対象の本文が見つかりませんでした。");
-      return;
-    }
+    if (!chunks.length) return;
+    if (!("speechSynthesis" in window)) return;
 
     isReading = true;
-    isPaused = false;
-    speakCurrent();
-  }
+    window.speechSynthesis.cancel();
 
-  function pauseReading() {
-    if (!isReading) return;
-    isPaused = true;
-    window.speechSynthesis.pause();
-    updatePanelStatus();
-  }
-
-  function resumeReading() {
-    if (!isReading) {
-      startReading();
-      return;
-    }
-
-    isPaused = false;
-    window.speechSynthesis.resume();
-    updatePanelStatus();
+    // Android系で voices 初期化が遅い場合の保険
+    setTimeout(function () {
+      speakCurrent();
+    }, 100);
   }
 
   function stopReading() {
     isReading = false;
-    isPaused = false;
-    currentUtterance = null;
-    window.speechSynthesis.cancel();
-    updatePanelStatus();
-  }
 
-  function nextChunk() {
-    if (!chunks.length) prepareChunks();
-
-    currentIndex = Math.min(currentIndex + 1, chunks.length);
-    window.speechSynthesis.cancel();
-
-    if (isReading && currentIndex < chunks.length) {
-      speakCurrent();
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
     }
-
-    updatePanelStatus();
   }
 
-  function prevChunk() {
-    if (!chunks.length) prepareChunks();
+  function installTapFallback() {
+    if (!CONFIG.enableTapFallback) return;
 
-    currentIndex = Math.max(currentIndex - 1, 0);
-    window.speechSynthesis.cancel();
+    let tapped = false;
 
-    if (isReading) {
-      speakCurrent();
-    }
+    document.addEventListener(
+      "touchend",
+      function () {
+        if (tapped) return;
+        tapped = true;
 
-    updatePanelStatus();
+        if (!started && chunks.length) {
+          startReading();
+        } else if ("speechSynthesis" in window && window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+      },
+      { passive: true, once: true }
+    );
+
+    document.addEventListener(
+      "click",
+      function () {
+        if (tapped) return;
+        tapped = true;
+
+        if (!started && chunks.length) {
+          startReading();
+        } else if ("speechSynthesis" in window && window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+      },
+      { passive: true, once: true }
+    );
   }
 
-  function createPanel() {
-    if (panel) return panel;
-
-    const style = document.createElement("style");
-    style.textContent = `
-@layer novelBodyReader {
-  /* 読み上げ操作パネル */
-  .nbr-panel {
-    position: fixed;
-    right: 12px;
-    bottom: 12px;
-    z-index: 2147483647;
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    padding: 8px;
-    border-radius: 12px;
-    background: rgba(20, 20, 20, 0.86);
-    color: #fff;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    font-size: 12px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, .25);
-  }
-
-  .nbr-panel button {
-    border: 0;
-    border-radius: 8px;
-    padding: 6px 8px;
-    background: #fff;
-    color: #111;
-    cursor: pointer;
-    font-size: 12px;
-  }
-
-  .nbr-panel button:hover {
-    filter: brightness(0.92);
-  }
-
-  .nbr-status {
-    min-width: 88px;
-    text-align: center;
-    opacity: .9;
-  }
-}
-`;
-    document.head.appendChild(style);
-
-    panel = document.createElement("div");
-    panel.className = "nbr-panel";
-
-    const prevButton = document.createElement("button");
-    prevButton.textContent = "前";
-    prevButton.addEventListener("click", prevChunk);
-
-    const playButton = document.createElement("button");
-    playButton.textContent = "再生";
-    playButton.addEventListener("click", startReading);
-
-    const pauseButton = document.createElement("button");
-    pauseButton.textContent = "一時停止";
-    pauseButton.addEventListener("click", pauseReading);
-
-    const resumeButton = document.createElement("button");
-    resumeButton.textContent = "再開";
-    resumeButton.addEventListener("click", resumeReading);
-
-    const nextButton = document.createElement("button");
-    nextButton.textContent = "次";
-    nextButton.addEventListener("click", nextChunk);
-
-    const stopButton = document.createElement("button");
-    stopButton.textContent = "停止";
-    stopButton.addEventListener("click", stopReading);
-
-    const status = document.createElement("span");
-    status.className = "nbr-status";
-    status.textContent = "未準備";
-
-    panel.appendChild(prevButton);
-    panel.appendChild(playButton);
-    panel.appendChild(pauseButton);
-    panel.appendChild(resumeButton);
-    panel.appendChild(nextButton);
-    panel.appendChild(stopButton);
-    panel.appendChild(status);
-
-    document.body.appendChild(panel);
-
-    updatePanelStatus();
-
-    return panel;
-  }
-
-  function updatePanelStatus() {
-    const status = panel ? panel.querySelector(".nbr-status") : null;
-    if (!status) return;
-
-    if (!chunks.length) {
-      status.textContent = "未準備";
-      return;
-    }
-
-    const state = isPaused ? "一時停止" : isReading ? "再生中" : "停止中";
-    status.textContent = state + " " + Math.min(currentIndex + 1, chunks.length) + "/" + chunks.length;
-  }
-
-  function init() {
-    createPanel();
+  function boot() {
+    if (!("speechSynthesis" in window)) return;
 
     setTimeout(function () {
       prepareChunks();
 
-      if (config.autoStart) {
-        startReading();
-      }
-    }, 500);
-  }
+      if (!chunks.length) return;
 
-  window[PLUGIN_NAME] = {
-    start: startReading,
-    pause: pauseReading,
-    resume: resumeReading,
-    stop: stopReading,
-    next: nextChunk,
-    prev: prevChunk,
-    reload: prepareChunks,
-    config: config
-  };
+      installTapFallback();
+
+      // 小説サイトの本文ページだけ自動再生
+      startReading();
+    }, CONFIG.startDelayMs);
+  }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
+    document.addEventListener("DOMContentLoaded", boot);
   } else {
-    init();
+    boot();
   }
+
+  window.NovelBodyAutoReader = {
+    start: startReading,
+    stop: stopReading,
+    reload: prepareChunks
+  };
 })();
