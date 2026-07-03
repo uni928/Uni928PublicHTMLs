@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name Via Cream Black Mode
+// @name Via Text Input Helper Buttons
 // @namespace https://uni928.local/
-// @version 1.0.0
-// @description 全サイトをクリーム色背景と黒文字寄りにします。
+// @version 1.3.0
+// @description 入力欄フォーカス中にコピー・削除・前削除・後ろ削除ボタンを表示します。
 // @match http*://*/*
 // @grant none
 // ==/UserScript==
@@ -10,12 +10,37 @@
 (function () {
   "use strict";
 
-  const STYLE_ID = "via-cream-black-mode-style";
+  const PANEL_ID = "via-text-input-helper-panel";
+  const STYLE_ID = "via-text-input-helper-style";
+  const MESSAGE_ID = "via-text-input-helper-message";
 
-  const CREAM = "#f6edcf";
-  const CREAM_2 = "#fff6d8";
-  const BLACK = "#111111";
-  const BORDER = "#2a2418";
+  let activeEl = null;
+  let hideTimer = null;
+  let messageTimer = null;
+
+  function isTextInput(el) {
+    if (!el) return false;
+
+    if (el.tagName === "TEXTAREA") return true;
+
+    if (el.tagName === "INPUT") {
+      const type = String(el.type || "text").toLowerCase();
+
+      return [
+        "text",
+        "search",
+        "url",
+        "tel",
+        "email",
+        "password",
+        "number"
+      ].includes(type);
+    }
+
+    if (el.isContentEditable) return true;
+
+    return false;
+  }
 
   function injectStyle() {
     if (document.getElementById(STYLE_ID)) return;
@@ -23,197 +48,389 @@
     const style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = `
-@layer viaCreamBlackMode {
-  /* 全体の薄い背景をクリーム色へ */
-  html,
-  body {
-    background: ${CREAM} !important;
-    color: ${BLACK} !important;
+@layer viaTextInputHelper {
+  /* 入力欄用の補助ボタンパネル */
+  #${PANEL_ID} {
+    position: fixed;
+    z-index: 2147483647;
+    display: none;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-width: calc(100vw - 12px);
+    padding: 6px;
+    border-radius: 10px;
+    background: rgba(20, 20, 20, 0.88);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, .25);
+    box-sizing: border-box;
   }
 
-  /* 通常要素をクリーム色・黒文字へ寄せる */
-  body,
-  main,
-  article,
-  section,
-  div,
-  p,
-  span,
-  li,
-  ul,
-  ol,
-  dl,
-  dt,
-  dd,
-  table,
-  tbody,
-  thead,
-  tfoot,
-  tr,
-  td,
-  th,
-  blockquote,
-  pre,
-  code {
-    background-color: ${CREAM} !important;
-    color: ${BLACK} !important;
-    border-color: ${BORDER} !important;
-    text-shadow: none !important;
-    box-shadow: none !important;
+  #${PANEL_ID}.is-visible {
+    display: flex;
   }
 
-  /* 見出しも黒寄りに統一 */
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6,
-  strong,
-  b,
-  em,
-  small {
-    color: ${BLACK} !important;
-    background-color: transparent !important;
-    text-shadow: none !important;
+  #${PANEL_ID} button {
+    border: 0;
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: #fff6d8;
+    color: #111;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
   }
 
-  /* リンクは黒寄りのまま、下線で判別 */
-  a,
-  a:visited,
-  a:hover,
-  a:active {
-    color: ${BLACK} !important;
-    background-color: transparent !important;
-    text-decoration: underline !important;
-    text-shadow: none !important;
+  #${PANEL_ID} button:active {
+    transform: translateY(1px);
   }
 
-  /* 入力欄・ボタン */
-  input,
-  textarea,
-  select,
-  button {
-    background-color: ${CREAM_2} !important;
-    color: ${BLACK} !important;
-    border: 1px solid ${BORDER} !important;
-    box-shadow: none !important;
-    text-shadow: none !important;
+  /* 操作結果メッセージ */
+  #${MESSAGE_ID} {
+    position: fixed;
+    left: 50%;
+    bottom: 72px;
+    z-index: 2147483647;
+    display: none;
+    max-width: calc(100vw - 24px);
+    transform: translateX(-50%);
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(20, 20, 20, 0.88);
+    color: #fff6d8;
+    font-size: 13px;
+    line-height: 1.4;
+    box-sizing: border-box;
+    pointer-events: none;
+    white-space: nowrap;
   }
 
-  input::placeholder,
-  textarea::placeholder {
-    color: #4a4030 !important;
-  }
-
-  /* ヘッダー・フッター・ナビもクリーム色へ */
-  header,
-  footer,
-  nav,
-  aside,
-  menu {
-    background-color: ${CREAM} !important;
-    color: ${BLACK} !important;
-    border-color: ${BORDER} !important;
-    box-shadow: none !important;
-  }
-
-  /* 白っぽいカード・記事枠をクリーム色へ */
-  [class*="card"],
-  [class*="Card"],
-  [class*="box"],
-  [class*="Box"],
-  [class*="panel"],
-  [class*="Panel"],
-  [class*="content"],
-  [class*="Content"],
-  [class*="article"],
-  [class*="Article"],
-  [class*="body"],
-  [class*="Body"] {
-    background-color: ${CREAM} !important;
-    color: ${BLACK} !important;
-    border-color: ${BORDER} !important;
-    box-shadow: none !important;
-  }
-
-  /* SVGアイコンは黒寄り */
-  svg,
-  svg * {
-    color: ${BLACK} !important;
-    fill: currentColor !important;
-    stroke: currentColor !important;
-  }
-
-  /* 画像・動画は色を壊さない */
-  img,
-  video,
-  canvas,
-  picture,
-  iframe {
-    background-color: transparent !important;
-    color: initial !important;
-    filter: none !important;
-  }
-
-  /* 選択範囲 */
-  ::selection {
-    background: ${BLACK} !important;
-    color: ${CREAM} !important;
+  #${MESSAGE_ID}.is-visible {
+    display: block;
   }
 }
 `;
     document.documentElement.appendChild(style);
   }
 
-  function repaintLightInlineStyles() {
-    const all = document.querySelectorAll("[style]");
+  function createPanel() {
+    let panel = document.getElementById(PANEL_ID);
+    if (panel) return panel;
 
-    all.forEach(function (el) {
-      const style = window.getComputedStyle(el);
-      const bg = style.backgroundColor;
-      const color = style.color;
+    panel = document.createElement("div");
+    panel.id = PANEL_ID;
 
-      if (isLightColor(bg)) {
-        el.style.setProperty("background-color", CREAM, "important");
-      }
+    panel.appendChild(createButton("コピー", copyAllText));
+    panel.appendChild(createButton("削除", clearText));
+    panel.appendChild(createButton("前を削除", deleteBeforeCursor));
+    panel.appendChild(createButton("後ろを削除", deleteAfterCursor));
 
-      if (isLightColor(color)) {
-        el.style.setProperty("color", BLACK, "important");
-      }
-    });
+    document.documentElement.appendChild(panel);
+    return panel;
   }
 
-  function isLightColor(value) {
-    const match = String(value || "").match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
-    if (!match) return false;
+  function createMessage() {
+    let message = document.getElementById(MESSAGE_ID);
+    if (message) return message;
 
-    const r = Number(match[1]);
-    const g = Number(match[2]);
-    const b = Number(match[3]);
+    message = document.createElement("div");
+    message.id = MESSAGE_ID;
+    document.documentElement.appendChild(message);
 
-    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-
-    return brightness >= 180;
+    return message;
   }
 
-  function startObserver() {
-    const observer = new MutationObserver(function () {
-      repaintLightInlineStyles();
+  function showMessage(text) {
+    const message = createMessage();
+
+    clearTimeout(messageTimer);
+
+    message.textContent = text;
+    message.classList.add("is-visible");
+
+    messageTimer = setTimeout(function () {
+      message.classList.remove("is-visible");
+    }, 1200);
+  }
+
+  function createButton(label, handler) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = label;
+
+    function run(event) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      clearTimeout(hideTimer);
+
+      const el = activeEl;
+      if (!isTextInput(el)) return;
+
+      focusElement(el);
+      handler(el);
+
+      setTimeout(function () {
+        focusElement(el);
+        updatePanelPosition();
+      }, 0);
+    }
+
+    button.addEventListener("pointerdown", run, { passive: false });
+
+    button.addEventListener(
+      "touchend",
+      function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      },
+      { passive: false }
+    );
+
+    button.addEventListener("click", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
     });
 
-    observer.observe(document.documentElement, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["style", "class"]
-    });
+    return button;
+  }
+
+  function focusElement(el) {
+    try {
+      el.focus({ preventScroll: true });
+    } catch (_) {
+      try {
+        el.focus();
+      } catch (_) {}
+    }
+  }
+
+  function getText(el) {
+    if (el.isContentEditable) {
+      return el.innerText || "";
+    }
+
+    return String(el.value || "");
+  }
+
+  function setText(el, text) {
+    if (el.isContentEditable) {
+      el.innerText = text;
+      dispatchInput(el);
+      return;
+    }
+
+    el.value = text;
+    dispatchInput(el);
+  }
+
+  function dispatchInput(el) {
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  function getSelectionRange(el) {
+    if (el.isContentEditable) {
+      const len = getText(el).length;
+      return { start: len, end: len };
+    }
+
+    const len = getText(el).length;
+
+    let start = typeof el.selectionStart === "number" ? el.selectionStart : len;
+    let end = typeof el.selectionEnd === "number" ? el.selectionEnd : start;
+
+    start = Math.max(0, Math.min(start, len));
+    end = Math.max(0, Math.min(end, len));
+
+    return { start, end };
+  }
+
+  function setSelectionRangeSafe(el, start, end) {
+    if (el.isContentEditable) return;
+
+    try {
+      el.setSelectionRange(start, end);
+    } catch (_) {}
+  }
+
+  async function copyAllText(el) {
+    const text = getText(el);
+
+    try {
+      await navigator.clipboard.writeText(text);
+      showMessage("コピーしました");
+    } catch (_) {
+      fallbackCopy(text);
+      showMessage("コピーしました");
+    }
+  }
+
+  function fallbackCopy(text) {
+    const temp = document.createElement("textarea");
+    temp.value = text;
+    temp.style.position = "fixed";
+    temp.style.left = "-9999px";
+    temp.style.top = "0";
+    temp.style.opacity = "0";
+    document.body.appendChild(temp);
+
+    temp.focus();
+    temp.select();
+
+    try {
+      document.execCommand("copy");
+    } catch (_) {}
+
+    temp.remove();
+  }
+
+  function clearText(el) {
+    setText(el, "");
+
+    if (!el.isContentEditable) {
+      setSelectionRangeSafe(el, 0, 0);
+    }
+
+    showMessage("削除しました");
+  }
+
+  function deleteBeforeCursor(el) {
+    if (el.isContentEditable) {
+      document.execCommand("delete", false);
+      dispatchInput(el);
+      showMessage("前を削除しました");
+      return;
+    }
+
+    const text = getText(el);
+    const range = getSelectionRange(el);
+
+    const before = text.slice(0, range.start);
+    const after = text.slice(range.end);
+
+    // 選択範囲がある場合は選択範囲だけ削除
+    if (range.end > range.start) {
+      const next = before + after;
+      setText(el, next);
+      setSelectionRangeSafe(el, range.start, range.start);
+      showMessage("選択範囲を削除しました");
+      return;
+    }
+
+    // 現在位置より前を削除。入力位置は削除した分だけ前、つまり0へ移動
+    setText(el, text.slice(range.start));
+    setSelectionRangeSafe(el, 0, 0);
+    showMessage("前を削除しました");
+  }
+
+  function deleteAfterCursor(el) {
+    if (el.isContentEditable) {
+      document.execCommand("forwardDelete", false);
+      dispatchInput(el);
+      showMessage("後ろを削除しました");
+      return;
+    }
+
+    const text = getText(el);
+    const range = getSelectionRange(el);
+
+    const before = text.slice(0, range.start);
+    const after = text.slice(range.end);
+
+    // 選択範囲がある場合は選択範囲だけ削除
+    if (range.end > range.start) {
+      const next = before + after;
+      setText(el, next);
+      setSelectionRangeSafe(el, range.start, range.start);
+      showMessage("選択範囲を削除しました");
+      return;
+    }
+
+    // 現在位置より後ろを削除。入力位置はそのまま
+    setText(el, before);
+    setSelectionRangeSafe(el, before.length, before.length);
+    showMessage("後ろを削除しました");
+  }
+
+  function showPanelFor(el) {
+    if (!isTextInput(el)) return;
+
+    activeEl = el;
+
+    const panel = createPanel();
+    panel.classList.add("is-visible");
+
+    updatePanelPosition();
+  }
+
+  function hidePanelSoon() {
+    clearTimeout(hideTimer);
+
+    hideTimer = setTimeout(function () {
+      const panel = document.getElementById(PANEL_ID);
+      if (panel) {
+        panel.classList.remove("is-visible");
+      }
+
+      if (!isTextInput(document.activeElement)) {
+        activeEl = null;
+      }
+    }, 180);
+  }
+
+  function updatePanelPosition() {
+    const panel = document.getElementById(PANEL_ID);
+    const el = activeEl;
+
+    if (!panel || !isTextInput(el)) return;
+
+    const rect = el.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+
+    let left = rect.left;
+    let top = rect.bottom + 6;
+
+    const maxLeft = window.innerWidth - panelRect.width - 6;
+
+    if (left > maxLeft) left = maxLeft;
+    if (left < 6) left = 6;
+
+    // 下に出せない場合は上に出す
+    if (top + panelRect.height > window.innerHeight - 6) {
+      top = rect.top - panelRect.height - 6;
+    }
+
+    if (top < 6) top = 6;
+
+    panel.style.left = left + "px";
+    panel.style.top = top + "px";
   }
 
   function init() {
     injectStyle();
-    repaintLightInlineStyles();
-    startObserver();
+    createPanel();
+    createMessage();
+
+    document.addEventListener("focusin", function (event) {
+      if (isTextInput(event.target)) {
+        showPanelFor(event.target);
+      }
+    });
+
+    document.addEventListener("focusout", function () {
+      hidePanelSoon();
+    });
+
+    document.addEventListener("selectionchange", function () {
+      if (isTextInput(document.activeElement)) {
+        activeEl = document.activeElement;
+        updatePanelPosition();
+      }
+    });
+
+    window.addEventListener("scroll", updatePanelPosition, true);
+    window.addEventListener("resize", updatePanelPosition);
   }
 
   if (document.readyState === "loading") {
