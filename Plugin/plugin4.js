@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Click Guard Confirm Full
 // @namespace    uni928-click-guard
-// @version      2.2.2
+// @version      2.2.3
 // @description  広告・外部リンク・後から追加されたボタン・大きなスマホ広告風ボタンを押す前に確認する
 // @match        *://*/*
 // @run-at       document-start
@@ -460,9 +460,11 @@
 
     const widthRatio = rect.width / vw;
 
+    if(heightRatio < 1 / 2) return false;
+
     // 画面の縦幅の1/3を超えるものだけ対象
     const heightRatio = rect.height / vh;
-    if (heightRatio > 1 / 3 && widthRatio < 0.99) return false;
+    if (widthRatio < 0.99) return false;
 
     return true;
   }
