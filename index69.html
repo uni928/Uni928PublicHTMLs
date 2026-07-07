@@ -1,0 +1,1041 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>URL QR共有ツール</title>
+  <meta name="description" content="URLを短くQRコード化して、撮影側から読み取り、専用表示画面で開ける1ファイルHTMLツールです。">
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <style>
+    @layer base, make1, make2, make3;
+
+    @layer base {
+      :root {
+        --bg: #f4f7fb;
+        --panel: #ffffff;
+        --text: #1e2a36;
+        --muted: #697888;
+        --line: #d9e2ec;
+        --accent: #1d78d2;
+        --accent2: #e8f2ff;
+        --danger: #d84242;
+        --shadow: 0 14px 30px rgba(31, 49, 73, .10);
+        --radius: 18px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100svh;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, #e7f2ff 0, transparent 34rem),
+          linear-gradient(180deg, #f7fbff, var(--bg));
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      button,
+      input,
+      textarea {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .app {
+        width: min(980px, calc(100% - 24px));
+        margin: 0 auto;
+        padding: 18px 0 32px;
+      }
+
+      header {
+        margin: 8px 0 14px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.45rem, 5vw, 2.2rem);
+        letter-spacing: .02em;
+      }
+
+      .lead {
+        margin: 8px 0 0;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .tabs {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        padding: 10px 0;
+        background: linear-gradient(180deg, rgba(247,251,255,.96), rgba(247,251,255,.78));
+        backdrop-filter: blur(8px);
+      }
+
+      .tab-btn {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--panel);
+        color: var(--muted);
+        padding: 11px 10px;
+        box-shadow: 0 5px 14px rgba(31, 49, 73, .05);
+      }
+
+      .tab-btn[aria-selected="true"] {
+        color: #fff;
+        border-color: var(--accent);
+        background: var(--accent);
+      }
+
+      .panel {
+        display: none;
+      }
+
+      .panel.active {
+        display: block;
+      }
+
+      .card {
+        margin-top: 12px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: rgba(255,255,255,.94);
+        box-shadow: var(--shadow);
+      }
+
+      .grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      @media (min-width: 820px) {
+        .grid.two {
+          grid-template-columns: 1fr 1fr;
+          align-items: start;
+        }
+      }
+
+      label {
+        display: block;
+        margin-bottom: 7px;
+        font-weight: 700;
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        background: #fff;
+        color: var(--text);
+        padding: 12px;
+        outline: none;
+      }
+
+      textarea {
+        min-height: 92px;
+        resize: vertical;
+      }
+
+      input:focus,
+      textarea:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 4px rgba(29,120,210,.12);
+      }
+
+      .row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .btn {
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        background: #fff;
+        color: var(--text);
+        padding: 11px 14px;
+      }
+
+      .btn.primary {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .btn.danger {
+        border-color: #ffd0d0;
+        background: #fff4f4;
+        color: var(--danger);
+      }
+
+      .mini {
+        color: var(--muted);
+        font-size: .9rem;
+        line-height: 1.6;
+      }
+
+      .status {
+        min-height: 1.5em;
+        color: var(--muted);
+      }
+
+      .hidden {
+        display: none;
+      }
+    }
+
+    @layer make1 {
+      /* 生成タブのURLリストをカード化 */
+      .saved-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .item {
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: #fff;
+        padding: 12px;
+        display: grid;
+        gap: 8px;
+      }
+
+      .item-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: start;
+      }
+
+      .item-title {
+        font-weight: 800;
+        word-break: break-all;
+      }
+
+      .item-desc {
+        color: var(--muted);
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .item-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .compact-box {
+        padding: 10px;
+        border-radius: 12px;
+        background: var(--accent2);
+        color: #24537b;
+        word-break: break-all;
+        font-size: .9rem;
+      }
+    }
+
+    @layer make2 {
+      /* QR生成・表示部分 */
+      .qr-wrap {
+        display: grid;
+        place-items: center;
+        min-height: 280px;
+        border: 1px dashed #b7c7d8;
+        border-radius: 18px;
+        background: #fbfdff;
+        padding: 14px;
+      }
+
+      #qrCanvas,
+      #qrImg {
+        width: min(280px, 100%);
+        height: auto;
+      }
+
+      #qrImg {
+        display: block;
+        aspect-ratio: 1 / 1;
+      }
+
+      #qrImg.hidden {
+        display: none;
+      }
+
+      .share-url {
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 12px;
+        background: #f5f8fb;
+        word-break: break-all;
+        color: var(--muted);
+        font-size: .9rem;
+      }
+
+      .display-link {
+        display: block;
+        margin-top: 10px;
+        padding: 16px;
+        border-radius: 16px;
+        border: 1px solid #bdd7ef;
+        background: linear-gradient(180deg, #f8fcff, #edf6ff);
+        text-decoration: none;
+      }
+
+      .display-url {
+        font-size: 1.08rem;
+        font-weight: 800;
+        word-break: break-all;
+      }
+
+      .display-desc {
+        margin-top: 10px;
+        color: var(--muted);
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+    }
+
+    @layer make3 {
+      /* QR撮影タブ */
+      .scanner-box {
+        position: relative;
+        overflow: hidden;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: #101820;
+      }
+
+      video {
+        display: block;
+        width: 100%;
+        max-height: 70svh;
+        object-fit: cover;
+        background: #101820;
+      }
+
+      .scan-guide {
+        position: absolute;
+        inset: 13%;
+        border: 3px solid rgba(255,255,255,.82);
+        border-radius: 20px;
+        box-shadow: 0 0 0 999px rgba(0,0,0,.22);
+        pointer-events: none;
+      }
+
+      .scan-state {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 13px;
+        background: #fff;
+        border: 1px solid var(--line);
+        color: var(--muted);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <h1>URL QR共有ツール</h1>
+      <p class="lead">URLを省略形式でQRコード化し、読み取り後は同じHTMLの表示画面でURLと説明を見やすく表示します。</p>
+    </header>
+
+    <nav class="tabs" aria-label="メインタブ">
+      <button class="tab-btn" data-tab="make" aria-selected="true">QR生成</button>
+      <button class="tab-btn" data-tab="scan" aria-selected="false">QR撮影</button>
+      <button class="tab-btn" data-tab="view" aria-selected="false">専用表示</button>
+    </nav>
+
+    <section id="make" class="panel active">
+      <div class="grid two">
+        <div class="card grid">
+          <div>
+            <label for="urlInput">URL</label>
+            <input id="urlInput" inputmode="url" placeholder="https://example.com/page">
+          </div>
+
+          <div>
+            <label for="descInput">説明欄（任意）</label>
+            <textarea id="descInput" placeholder="何のURLか分かるメモを入力できます。"></textarea>
+          </div>
+
+          <div class="row">
+            <button class="btn primary" id="addBtn">リストに追加</button>
+            <button class="btn" id="updateBtn" disabled>選択中を更新</button>
+            <button class="btn" id="clearFormBtn">入力欄をクリア</button>
+          </div>
+
+          <div class="mini">
+            保存形式：<code>1example.com</code> のように、先頭1文字で <code>1=https</code> / <code>0=http</code> を判定します。
+          </div>
+
+          <div id="formStatus" class="status" aria-live="polite"></div>
+        </div>
+
+        <div class="card">
+          <label>リスト全体のQRコード</label>
+          <div class="qr-wrap">
+            <canvas id="qrCanvas" width="280" height="280" aria-label="QRコード"></canvas>
+            <img id="qrImg" class="hidden" alt="QRコード">
+            <p id="qrEmpty" class="mini">URLをリストに追加すると、リスト全体を含むQRコードが表示されます。</p>
+          </div>
+          <div id="compactPreview" class="compact-box hidden"></div>
+          <div id="shareUrl" class="share-url hidden"></div>
+          <div class="row" style="margin-top:10px;">
+            <button class="btn" id="copyShareBtn" disabled>リスト共有URLをコピー</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row" style="justify-content:space-between;">
+          <strong>保存済みURL</strong>
+          <button class="btn danger" id="deleteAllBtn">全削除</button>
+        </div>
+        <div id="savedList" class="saved-list"></div>
+      </div>
+    </section>
+
+    <section id="scan" class="panel">
+      <div class="card">
+        <p class="mini">このタブを開くとカメラ撮影を開始します。QRを読み取ると、同じサイトの専用表示へ移動します。</p>
+        <div class="scanner-box">
+          <video id="video" muted playsinline></video>
+          <div class="scan-guide"></div>
+        </div>
+        <canvas id="scanCanvas" class="hidden"></canvas>
+        <div id="scanState" class="scan-state">QR撮影タブを開くと開始します。</div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn" id="restartScanBtn">撮影を再開始</button>
+          <button class="btn danger" id="stopScanBtn">撮影を停止</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="view" class="panel">
+      <div class="card">
+        <strong>クエリパラメータ専用表示</strong>
+        <div id="viewContent"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const DB_NAME = "url_qr_share_db";
+      const STORE = "state";
+      const STATE_KEY = "main";
+      const PROTOCOL_HTTPS = "1";
+      const PROTOCOL_HTTP = "0";
+
+      const state = {
+        items: [],
+        draftUrl: "",
+        draftDesc: "",
+        selectedId: null
+      };
+
+      let db = null;
+      let saveTimer = null;
+      let scanStream = null;
+      let scanRaf = null;
+      let scanning = false;
+
+      const $ = (id) => document.getElementById(id);
+
+      const el = {
+        tabButtons: [...document.querySelectorAll(".tab-btn")],
+        panels: [...document.querySelectorAll(".panel")],
+        urlInput: $("urlInput"),
+        descInput: $("descInput"),
+        addBtn: $("addBtn"),
+        updateBtn: $("updateBtn"),
+        clearFormBtn: $("clearFormBtn"),
+        formStatus: $("formStatus"),
+        qrCanvas: $("qrCanvas"),
+        qrImg: $("qrImg"),
+        qrEmpty: $("qrEmpty"),
+        compactPreview: $("compactPreview"),
+        shareUrl: $("shareUrl"),
+        copyShareBtn: $("copyShareBtn"),
+        savedList: $("savedList"),
+        deleteAllBtn: $("deleteAllBtn"),
+        video: $("video"),
+        scanCanvas: $("scanCanvas"),
+        scanState: $("scanState"),
+        restartScanBtn: $("restartScanBtn"),
+        stopScanBtn: $("stopScanBtn"),
+        viewContent: $("viewContent")
+      };
+
+      function openDB() {
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(DB_NAME, 1);
+          req.onupgradeneeded = () => {
+            req.result.createObjectStore(STORE);
+          };
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      function readState() {
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE, "readonly");
+          const req = tx.objectStore(STORE).get(STATE_KEY);
+          req.onsuccess = () => resolve(req.result || null);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      function writeStateNow() {
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE, "readwrite");
+          tx.objectStore(STORE).put({
+            items: state.items,
+            draftUrl: state.draftUrl,
+            draftDesc: state.draftDesc,
+            selectedId: state.selectedId
+          }, STATE_KEY);
+          tx.oncomplete = resolve;
+          tx.onerror = () => reject(tx.error);
+        });
+      }
+
+      function scheduleSave() {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => {
+          writeStateNow().catch(() => {
+            el.formStatus.textContent = "IndexedDBへの保存に失敗しました。";
+          });
+        }, 120);
+      }
+
+      function normalizeInputUrl(input) {
+        const raw = input.trim();
+        if (!raw) return "";
+        if (/^https?:\/\//i.test(raw)) return raw;
+        return "https://" + raw;
+      }
+
+      function compactUrl(url) {
+        const normalized = normalizeInputUrl(url);
+        if (/^https:\/\//i.test(normalized)) {
+          return PROTOCOL_HTTPS + normalized.replace(/^https:\/\//i, "");
+        }
+        if (/^http:\/\//i.test(normalized)) {
+          return PROTOCOL_HTTP + normalized.replace(/^http:\/\//i, "");
+        }
+        throw new Error("httpまたはhttpsのURLのみ対応しています。");
+      }
+
+      function expandCompact(compact) {
+        const text = String(compact || "");
+        const flag = text.slice(0, 1);
+        const body = text.slice(1);
+        if (!body) return "";
+        if (flag === PROTOCOL_HTTPS) return "https://" + body;
+        if (flag === PROTOCOL_HTTP) return "http://" + body;
+        return "";
+      }
+
+      function encodeListPayload(items) {
+        return JSON.stringify(items.map(item => ({
+          u: compactUrl(item.url),
+          d: item.desc || ""
+        })));
+      }
+
+      function decodeListPayload(payload) {
+        try {
+          const arr = JSON.parse(payload);
+          if (!Array.isArray(arr)) return [];
+          return arr.map(row => ({
+            url: expandCompact(row.u || ""),
+            desc: String(row.d || "")
+          })).filter(row => row.url);
+        } catch (_) {
+          return [];
+        }
+      }
+
+      function buildShareUrl(item) {
+        const base = location.origin + location.pathname;
+        const params = new URLSearchParams();
+        params.set("u", compactUrl(item.url));
+        if (item.desc.trim()) params.set("d", item.desc.trim());
+        return base + "?" + params.toString();
+      }
+
+      function buildListShareUrl() {
+        const base = location.origin + location.pathname;
+        const params = new URLSearchParams();
+        params.set("list", encodeListPayload(state.items));
+        return base + "?" + params.toString();
+      }
+
+      function readParams() {
+        const params = new URLSearchParams(location.search);
+        const listPayload = params.get("list") || "";
+        const list = listPayload ? decodeListPayload(listPayload) : [];
+        const compact = params.get("u") || "";
+        const desc = params.get("d") || "";
+        const url = expandCompact(compact);
+        return { compact, url, desc, list };
+      }
+
+      function uid() {
+        return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      }
+
+      function selectedItem() {
+        return state.items.find(item => item.id === state.selectedId) || null;
+      }
+
+      function setSelected(id) {
+        state.selectedId = id;
+        const item = selectedItem();
+        if (item) {
+          state.draftUrl = item.url;
+          state.draftDesc = item.desc;
+          el.urlInput.value = item.url;
+          el.descInput.value = item.desc;
+        }
+        renderAll();
+        scheduleSave();
+      }
+
+      function addItem() {
+        try {
+          const url = normalizeInputUrl(el.urlInput.value);
+          if (!url) {
+            el.formStatus.textContent = "URLを入力して下さい。";
+            return;
+          }
+
+          const newCompact = compactUrl(url);
+          const item = {
+            id: uid(),
+            url,
+            desc: el.descInput.value.trim(),
+            createdAt: Date.now()
+          };
+
+          // 同じURLは古いものを消してから、最新として先頭に追加します。
+          state.items = state.items.filter(oldItem => {
+            try {
+              return compactUrl(oldItem.url) !== newCompact;
+            } catch (_) {
+              return true;
+            }
+          });
+
+          state.items.unshift(item);
+          state.selectedId = item.id;
+
+          // 追加成功後は、連続追加ミスを防ぐため入力欄だけ空にします。
+          state.draftUrl = "";
+          state.draftDesc = "";
+          el.urlInput.value = "";
+          el.descInput.value = "";
+
+          el.formStatus.textContent = "追加しました。同じURLがあった場合は古い方を削除しています。";
+          renderAll();
+          scheduleSave();
+        } catch (err) {
+          el.formStatus.textContent = err.message;
+        }
+      }
+
+      function updateItem() {
+        const item = selectedItem();
+        if (!item) return;
+        try {
+          const url = normalizeInputUrl(el.urlInput.value);
+          compactUrl(url);
+          item.url = url;
+          item.desc = el.descInput.value.trim();
+          item.updatedAt = Date.now();
+          state.draftUrl = item.url;
+          state.draftDesc = item.desc;
+          el.formStatus.textContent = "更新しました。";
+          renderAll();
+          scheduleSave();
+        } catch (err) {
+          el.formStatus.textContent = err.message;
+        }
+      }
+
+      function deleteItem(id) {
+        state.items = state.items.filter(item => item.id !== id);
+        if (state.selectedId === id) {
+          state.selectedId = state.items[0]?.id || null;
+        }
+        renderAll();
+        scheduleSave();
+      }
+
+      function clearForm() {
+        state.draftUrl = "";
+        state.draftDesc = "";
+        state.selectedId = null;
+        el.urlInput.value = "";
+        el.descInput.value = "";
+        el.formStatus.textContent = "入力欄をクリアしました。";
+        renderAll();
+        scheduleSave();
+      }
+
+      async function renderQR() {
+        const item = selectedItem();
+        const ctx = el.qrCanvas.getContext("2d");
+        ctx.clearRect(0, 0, el.qrCanvas.width, el.qrCanvas.height);
+        el.qrImg.classList.add("hidden");
+        el.qrImg.removeAttribute("src");
+        el.qrCanvas.classList.remove("hidden");
+
+        if (!item) {
+          el.qrEmpty.classList.remove("hidden");
+          el.compactPreview.classList.add("hidden");
+          el.shareUrl.classList.add("hidden");
+          el.copyShareBtn.disabled = true;
+          return;
+        }
+
+        const share = buildShareUrl(item);
+        const compact = compactUrl(item.url);
+        el.qrEmpty.classList.add("hidden");
+        el.compactPreview.classList.remove("hidden");
+        el.compactPreview.textContent = "QR内データ: " + compact;
+        el.shareUrl.classList.remove("hidden");
+        el.shareUrl.textContent = share;
+        el.copyShareBtn.disabled = false;
+
+        try {
+          if (!window.QRCode || typeof QRCode.toCanvas !== "function") {
+            throw new Error("QRライブラリを読み込めませんでした。");
+          }
+
+          await QRCode.toCanvas(el.qrCanvas, share, {
+            width: 280,
+            margin: 2,
+            errorCorrectionLevel: "M"
+          });
+          el.formStatus.textContent = "";
+        } catch (err) {
+          // CDN読み込み失敗・ブラウザ相性対策として、画像QRにフォールバックします。
+          el.qrCanvas.classList.add("hidden");
+          el.qrImg.src = "https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=12&data=" + encodeURIComponent(share);
+          el.qrImg.classList.remove("hidden");
+          el.formStatus.textContent = "QRコードを画像方式で生成しました。";
+        }
+      }
+
+      function renderList() {
+        el.savedList.innerHTML = "";
+        if (!state.items.length) {
+          const p = document.createElement("p");
+          p.className = "mini";
+          p.textContent = "まだ保存済みURLはありません。";
+          el.savedList.appendChild(p);
+          return;
+        }
+
+        for (const item of state.items) {
+          const card = document.createElement("div");
+          card.className = "item";
+          if (item.id === state.selectedId) {
+            card.style.borderColor = "var(--accent)";
+            card.style.background = "#f8fcff";
+          }
+
+          const head = document.createElement("div");
+          head.className = "item-head";
+
+          const title = document.createElement("div");
+          title.className = "item-title";
+          title.textContent = item.url;
+
+          const selectBtn = document.createElement("button");
+          selectBtn.className = "btn primary";
+          selectBtn.textContent = "選択";
+          selectBtn.addEventListener("click", () => setSelected(item.id));
+
+          head.append(title, selectBtn);
+          card.appendChild(head);
+
+          if (item.desc) {
+            const desc = document.createElement("div");
+            desc.className = "item-desc";
+            desc.textContent = item.desc;
+            card.appendChild(desc);
+          }
+
+          const actions = document.createElement("div");
+          actions.className = "item-actions";
+
+          const openBtn = document.createElement("button");
+          openBtn.className = "btn";
+          openBtn.textContent = "開く";
+          openBtn.addEventListener("click", () => window.open(item.url, "_blank", "noopener"));
+
+          const copyBtn = document.createElement("button");
+          copyBtn.className = "btn";
+          copyBtn.textContent = "リスト共有URLコピー";
+          copyBtn.addEventListener("click", async () => {
+            await navigator.clipboard.writeText(buildListShareUrl());
+            el.formStatus.textContent = "リスト共有URLをコピーしました。";
+          });
+
+          const delBtn = document.createElement("button");
+          delBtn.className = "btn danger";
+          delBtn.textContent = "削除";
+          delBtn.addEventListener("click", () => deleteItem(item.id));
+
+          actions.append(openBtn, copyBtn, delBtn);
+          card.appendChild(actions);
+          el.savedList.appendChild(card);
+        }
+      }
+
+      function renderView() {
+        const { compact, url, desc, list } = readParams();
+        el.viewContent.innerHTML = "";
+
+        const rows = list.length ? list : (url ? [{ url, desc }] : []);
+
+        if (!rows.length) {
+          const p = document.createElement("p");
+          p.className = "mini";
+          p.textContent = "URL情報がクエリパラメータにありません。QRを読み取るか、生成側からリスト共有URLを作成して下さい。";
+          el.viewContent.appendChild(p);
+          return;
+        }
+
+        const count = document.createElement("p");
+        count.className = "mini";
+        count.textContent = rows.length + "件のURLを表示しています。カードを押すとURLを開きます。";
+        el.viewContent.appendChild(count);
+
+        rows.forEach((row, index) => {
+          const a = document.createElement("a");
+          a.className = "display-link";
+          a.href = row.url;
+          a.target = "_blank";
+          a.rel = "noopener";
+
+          const num = document.createElement("div");
+          num.className = "mini";
+          num.textContent = "URL " + (index + 1);
+
+          const u = document.createElement("div");
+          u.className = "display-url";
+          u.textContent = row.url;
+
+          a.append(num, u);
+
+          if (row.desc) {
+            const d = document.createElement("div");
+            d.className = "display-desc";
+            d.textContent = row.desc;
+            a.appendChild(d);
+          }
+
+          el.viewContent.appendChild(a);
+        });
+      }
+
+      function renderAll() {
+        el.updateBtn.disabled = !selectedItem();
+        renderList();
+        renderQR().catch(() => {
+          el.formStatus.textContent = "QRコード生成を完了できませんでした。通信状態やURLの長さを確認して下さい。";
+        });
+        renderView();
+      }
+
+      function showTab(name) {
+        el.tabButtons.forEach(btn => {
+          btn.setAttribute("aria-selected", String(btn.dataset.tab === name));
+        });
+        el.panels.forEach(panel => {
+          panel.classList.toggle("active", panel.id === name);
+        });
+
+        if (name === "scan") {
+          startScan();
+        } else {
+          stopScan();
+        }
+
+        if (name === "view") renderView();
+      }
+
+      async function startScan() {
+        stopScan();
+        if (!navigator.mediaDevices?.getUserMedia) {
+          el.scanState.textContent = "このブラウザではカメラ撮影に対応していません。";
+          return;
+        }
+        try {
+          el.scanState.textContent = "カメラを起動しています。";
+          scanStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment" },
+            audio: false
+          });
+          el.video.srcObject = scanStream;
+          await el.video.play();
+          scanning = true;
+          el.scanState.textContent = "QRコードを画面内に入れて下さい。";
+          scanLoop();
+        } catch (err) {
+          el.scanState.textContent = "カメラを起動できませんでした。ブラウザの権限を確認して下さい。";
+        }
+      }
+
+      function stopScan() {
+        scanning = false;
+        if (scanRaf) cancelAnimationFrame(scanRaf);
+        scanRaf = null;
+        if (scanStream) {
+          scanStream.getTracks().forEach(track => track.stop());
+          scanStream = null;
+        }
+        el.video.srcObject = null;
+      }
+
+      function scanLoop() {
+        if (!scanning) return;
+        const video = el.video;
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          const canvas = el.scanCanvas;
+          const w = video.videoWidth;
+          const h = video.videoHeight;
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d", { willReadFrequently: true });
+          ctx.drawImage(video, 0, 0, w, h);
+          const imageData = ctx.getImageData(0, 0, w, h);
+          const code = jsQR(imageData.data, w, h, { inversionAttempts: "dontInvert" });
+          if (code?.data) {
+            handleScanResult(code.data);
+            return;
+          }
+        }
+        scanRaf = requestAnimationFrame(scanLoop);
+      }
+
+      function handleScanResult(data) {
+        stopScan();
+        el.scanState.textContent = "読み取りました。表示画面へ移動します。";
+
+        try {
+          const scanned = new URL(data, location.href);
+          const compact = scanned.searchParams.get("u");
+          const list = scanned.searchParams.get("list");
+          if (compact || list) {
+            location.href = location.origin + location.pathname + scanned.search;
+            return;
+          }
+        } catch (_) {}
+
+        try {
+          const compact = compactUrl(data);
+          const params = new URLSearchParams();
+          params.set("u", compact);
+          location.href = location.origin + location.pathname + "?" + params.toString();
+        } catch (_) {
+          el.scanState.textContent = "URL共有用QRとして読み取れませんでした。";
+          scanning = true;
+          scanLoop();
+        }
+      }
+
+      function bindEvents() {
+        el.tabButtons.forEach(btn => {
+          btn.addEventListener("click", () => showTab(btn.dataset.tab));
+        });
+
+        el.urlInput.addEventListener("input", () => {
+          state.draftUrl = el.urlInput.value;
+          scheduleSave();
+        });
+
+        el.descInput.addEventListener("input", () => {
+          state.draftDesc = el.descInput.value;
+          scheduleSave();
+        });
+
+        el.addBtn.addEventListener("click", addItem);
+        el.updateBtn.addEventListener("click", updateItem);
+        el.clearFormBtn.addEventListener("click", clearForm);
+
+        el.deleteAllBtn.addEventListener("click", () => {
+          if (!state.items.length) return;
+          if (!confirm("保存済みURLをすべて削除しますか？")) return;
+          state.items = [];
+          state.selectedId = null;
+          renderAll();
+          scheduleSave();
+        });
+
+        el.copyShareBtn.addEventListener("click", async () => {
+          if (!state.items.length) return;
+          await navigator.clipboard.writeText(buildListShareUrl());
+          el.formStatus.textContent = "リスト共有URLをコピーしました。";
+        });
+
+        el.restartScanBtn.addEventListener("click", startScan);
+        el.stopScanBtn.addEventListener("click", () => {
+          stopScan();
+          el.scanState.textContent = "撮影を停止しました。";
+        });
+      }
+
+      async function init() {
+        bindEvents();
+        db = await openDB();
+        const saved = await readState();
+        if (saved) {
+          state.items = Array.isArray(saved.items) ? saved.items : [];
+          state.draftUrl = saved.draftUrl || "";
+          state.draftDesc = saved.draftDesc || "";
+          state.selectedId = saved.selectedId || state.items[0]?.id || null;
+          el.urlInput.value = state.draftUrl;
+          el.descInput.value = state.draftDesc;
+        }
+
+        renderAll();
+
+        const params = readParams();
+        if (params.compact || params.list.length) {
+          showTab("view");
+        }
+      }
+
+      window.addEventListener("pagehide", stopScan);
+      init().catch(() => {
+        el.formStatus.textContent = "初期化に失敗しました。";
+      });
+    })();
+  </script>
+</body>
+</html>
