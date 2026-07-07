@@ -403,5 +403,247 @@
   }
 
   scanAfterPageFullyLoaded();
+
+    // 横一杯要素のクリック系メソッドを無効化する
+  function disableFullWidthElementMethods(root) {
+    const scanRoot = root || document;
+
+    const list = [];
+
+    if (scanRoot instanceof HTMLElement) {
+      list.push(scanRoot);
+    }
+
+    if (scanRoot.querySelectorAll) {
+      list.push(
+        ...scanRoot.querySelectorAll(
+          "a, button, div, span, section, article, aside, ins, iframe, [onclick], [role='button'], [tabindex], [style]"
+        )
+      );
+    }
+
+    for (const el of list) {
+      if (!(el instanceof HTMLElement)) continue;
+      if (isExcluded(el)) continue;
+      if (!isFullWidthLikeElement(el)) continue;
+
+      emptyElementClickMethods(el);
+    }
+  }
+
+  // スマホで横一杯に近い要素か判定
+  function isFullWidthLikeElement(el) {
+    if (!el || !(el instanceof HTMLElement)) return false;
+
+    const vw = window.innerWidth || document.documentElement.clientWidth || 0;
+    const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+
+    if (!vw || !vh) return false;
+
+    // スマホ幅以外は対象外
+    if (vw > 768) return false;
+
+    const rect = el.getBoundingClientRect();
+    const style = getComputedStyle(el);
+
+    if (style.display === "none") return false;
+    if (style.visibility === "hidden") return false;
+    if (Number(style.opacity) === 0) return false;
+
+    if (rect.width <= 0 || rect.height <= 0) return false;
+
+    // 画面内にないものは対象外
+    if (rect.bottom <= 0) return false;
+    if (rect.top >= vh) return false;
+    if (rect.right <= 0) return false;
+    if (rect.left >= vw) return false;
+
+    const widthRatio = rect.width / vw;
+
+    // 横一杯、または横ギリギリ
+    if (widthRatio < 0.88) return false;
+
+    // 低すぎる罫線などは除外
+    if (rect.height < 36) return false;
+
+    return true;
+  }
+
+  // 要素に付いているクリック系処理を空にする
+  function emptyElementClickMethods(el) {
+    if (!el || !(el instanceof HTMLElement)) return;
+
+    // 二重処理防止
+    if (el.getAttribute("data-full-width-method-disabled") === "1") {
+      return;
+    }
+
+    el.setAttribute("data-full-width-method-disabled", "1");
+
+    // HTML属性の onclick を削除
+    if (el.hasAttribute("onclick")) {
+      el.removeAttribute("onclick");
+    }
+
+    // DOMプロパティの onclick を空にする
+    try {
+      el.onclick = null;
+    } catch (e) {}
+
+    // aタグの遷移を無効化
+    if (el.tagName.toLowerCase() === "a") {
+      el.setAttribute("data-original-href", el.getAttribute("href") || "");
+      el.removeAttribute("href");
+      el.setAttribute("role", "presentation");
+    }
+
+    // よくあるURL系data属性を無効化
+    const urlAttrs = [
+      "data-href",
+      "data-url",
+      "data-link",
+      "data-target",
+      "data-target-url",
+      "data-click-url",
+      "data-redirect",
+      "data-destination"
+    ];
+
+    for (const attr of urlAttrs) {
+      if (el.hasAttribute(attr)) {
+        el.setAttribute("data-original-" + attr, el.getAttribute(attr) || "");
+        el.removeAttribute(attr);
+      }
+    }
+
+    // button の submit 等を無効化
+    if (el.tagName.toLowerCase() === "button") {
+      el.setAttribute("type", "button");
+    }
+
+    // 見た目上も押せないようにする
+    el.style.setProperty("pointer-events", "none", "important");
+    el.style.setProperty("cursor", "default", "important");
+
+    console.log("横一杯要素のクリック処理を無効化:", el);
+  }
+
+  // クリックイベントをキャプチャ段階で止める
+  function blockFullWidthElementClickEvent(e) {
+    const path = typeof e.composedPath === "function" ? e.composedPath() : [];
+
+    for (const item of path) {
+      if (!(item instanceof HTMLElement)) continue;
+      if (isExcluded(item)) continue;
+
+      if (
+        item.getAttribute("data-full-width-method-disabled") === "1" ||
+        isFullWidthLikeElement(item)
+      ) {
+        emptyElementClickMethods(item);
+
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        console.log("横一杯要素のクリック実行を停止:", item);
+        return false;
+      }
+    }
+  }
+
+  // 今後 addEventListener で横一杯要素に click が登録されるのを防ぐ
+  function patchAddEventListenerForFullWidthElements() {
+    if (window.__fullWidthAddEventListenerPatched) return;
+    window.__fullWidthAddEventListenerPatched = true;
+
+    const originalAddEventListener = EventTarget.prototype.addEventListener;
+
+    EventTarget.prototype.addEventListener = function(type, listener, options) {
+      try {
+        if (
+          type === "click" &&
+          this instanceof HTMLElement &&
+          !isExcluded(this) &&
+          isFullWidthLikeElement(this)
+        ) {
+          emptyElementClickMethods(this);
+          console.log("横一杯要素への click addEventListener 登録を無効化:", this);
+          return;
+        }
+      } catch (e) {}
+
+      return originalAddEventListener.call(this, type, listener, options);
+    };
+  }
+
+  // 後から追加される横一杯要素も無効化する
+  function observeFullWidthMethodDisabler() {
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === "attributes") {
+          const el = mutation.target;
+
+          if (el instanceof HTMLElement) {
+            disableFullWidthElementMethods(el);
+          }
+
+          continue;
+        }
+
+        for (const node of mutation.addedNodes) {
+          if (!(node instanceof HTMLElement)) continue;
+
+          disableFullWidthElementMethods(node);
+        }
+      }
+    });
+
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: [
+        "id",
+        "class",
+        "style",
+        "onclick",
+        "href",
+        "data-href",
+        "data-url",
+        "data-link",
+        "data-target-url"
+      ]
+    });
+  }
+
+  // load後にも広告読み込み想定で複数回かける
+  function runFullWidthMethodDisablerAfterLoad() {
+    const run = () => {
+      disableFullWidthElementMethods(document);
+      console.log("横一杯要素のメソッド無効化を再実行しました。");
+    };
+
+    if (document.readyState === "complete") {
+      run();
+    } else {
+      window.addEventListener("load", run, { once: true });
+    }
+
+    window.addEventListener("load", () => {
+      setTimeout(run, 500);
+      setTimeout(run, 1000);
+      setTimeout(run, 3000);
+      setTimeout(run, 6000);
+      setTimeout(run, 10000);
+    }, { once: true });
+  }
+
+  // 起動
+  patchAddEventListenerForFullWidthElements();
+  document.addEventListener("click", blockFullWidthElementClickEvent, true);
+  disableFullWidthElementMethods(document);
+  observeFullWidthMethodDisabler();
+  runFullWidthMethodDisablerAfterLoad();
   }
 })();
