@@ -7,94 +7,52 @@
 // @run-at       document-start
 // ==/UserScript==
 
-(function () {
+(() => {
   "use strict";
 
-  const STORAGE_KEY_ALLOW_LIST = "uni928_click_guard_allow_list_v1";
+  /*
+    広告・後追加ボタン対策用の確認プラグイン
 
-  const GUARD_STATE = {
-    bypassNext: false,
-    lastConfirmTime: 0,
-    initialScanDone: false
+    方針:
+    - input / textarea / select / option / contenteditable は対象外
+    - スマホ幅のみ判定
+    - 横幅が画面ギリギリ、または横一杯のクリック要素を検出
+    - ページ表示後に追加された要素も MutationObserver で検出
+    - クリック時に確認を出す
+    - 一度「開く」を押したドメインは許可リストに入れる
+    - 許可リストは localStorage に保存
+  */
+
+  const CONFIG = {
+    mobileMaxWidth: 768,
+
+    // 横ギリギリ判定
+    wideRatio: 0.88,
+
+    // かなり横一杯判定
+    veryWideRatio: 0.92,
+
+    // 最低高さ。低すぎる横線などを除外
+    minHeight: 36,
+
+    // 画面の大きな範囲を占める判定
+    veryLargeHeightRatio: 0.22,
+
+    // クリック監視済みマーク
+    markedAttr: "data-large-mobile-click-guard",
+
+    // 後追加要素マーク
+    addedAttr: "data-added-after-load",
+
+    // localStorage キー
+    allowListStorageKey: "largeMobileClickGuardAllowListV1"
   };
-
-  const knownInitialElements = new WeakSet();
-  const dynamicElements = new WeakSet();
-
-  const DANGEROUS_WORDS = [
-    "購入",
-    "注文",
-    "決済",
-    "支払い",
-    "課金",
-    "登録",
-    "送信",
-    "削除",
-    "退会",
-    "解約",
-    "同意",
-    "許可",
-    "申し込む",
-    "今すぐ",
-    "ダウンロード",
-    "インストール",
-    "開く",
-    "移動",
-    "広告",
-    "PR",
-    "スポンサー",
-    "sponsored",
-    "advertisement",
-    "buy",
-    "purchase",
-    "pay",
-    "subscribe",
-    "delete",
-    "send",
-    "submit",
-    "install",
-    "download",
-    "open"
-  ];
-
-  const AD_HINTS = [
-    "adsbygoogle",
-    "advertisement",
-    "advert",
-    "sponsored",
-    "sponsor",
-    "promotion",
-    "promoted",
-    "affiliate",
-    "native-ad",
-    "ad-banner",
-    "ad-container",
-    "ad-wrapper",
-    "ad-slot",
-    "googleads",
-    "doubleclick",
-    "googlesyndication",
-    "adservice",
-    "googletagservices",
-    "taboola",
-    "outbrain",
-    "popin",
-    "microad",
-    "fluct"
-  ];
-
-  function normalizeText(text) {
-    return String(text || "")
-      .replace(/\s+/g, " ")
-      .trim()
-      .toLowerCase();
-  }
 
   function loadAllowList() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY_ALLOW_LIST);
-      const list = JSON.parse(raw || "[]");
-      return Array.isArray(list) ? list.filter(Boolean) : [];
+      const raw = localStorage.getItem(CONFIG.allowListStorageKey);
+      const parsed = JSON.parse(raw || "[]");
+      return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
       return [];
     }
@@ -102,19 +60,15 @@
 
   function saveAllowList(list) {
     try {
-      const unique = Array.from(new Set(list.filter(Boolean)));
-      localStorage.setItem(STORAGE_KEY_ALLOW_LIST, JSON.stringify(unique));
+      localStorage.setItem(CONFIG.allowListStorageKey, JSON.stringify(list));
     } catch (e) {
-      // localStorage が使えない場合は保存しない
+      // localStorage が使えない環境では無視
     }
   }
 
-  function getAllowKeyFromUrl(url) {
+  function getOriginLike(url) {
     try {
       const u = new URL(url, location.href);
-
-      // 「https://」から次の「/」までを登録する想定
-      // 例: https://example.com/path -> https://example.com
       return u.protocol + "//" + u.host;
     } catch (e) {
       return "";
@@ -122,632 +76,414 @@
   }
 
   function isAllowedUrl(url) {
-    const key = getAllowKeyFromUrl(url);
-    if (!key) return false;
+    const origin = getOriginLike(url);
+    if (!origin) return false;
 
-    const allowList = loadAllowList();
+    const list = loadAllowList();
 
-    return allowList.some(allowed => {
-      // 実質的に https://example.com* のように扱う
-      return key === allowed || key.startsWith(allowed);
+    return list.some((allowed) => {
+      return origin === allowed || url.startsWith(allowed + "/");
     });
   }
 
-  //封印中
-  function addAllowUrl(url) {
-    if(false) {
-    const key = getAllowKeyFromUrl(url);
-    if (!key) return;
+  function addAllowedUrl(url) {
+    const origin = getOriginLike(url);
+    if (!origin) return;
 
-    const allowList = loadAllowList();
+    const list = loadAllowList();
 
-    if (!allowList.includes(key)) {
-      allowList.push(key);
-      saveAllowList(allowList);
-    }
+    if (!list.includes(origin)) {
+      list.push(origin);
+      saveAllowList(list);
     }
   }
 
-  function getComputedStyleSafe(el, prop) {
-    try {
-      return window.getComputedStyle(el)[prop] || "";
-    } catch (e) {
-      return "";
-    }
-  }
+  function isExcludedInteractive(el) {
+    if (!el || !(el instanceof HTMLElement)) return true;
 
-  function isClickableElement(el) {
-    if (!el || !el.tagName) return false;
+    const tag = el.tagName.toLowerCase();
 
-    const tag = el.tagName;
-
-    if (tag === "A" && el.hasAttribute("href")) return true;
-    if (tag === "BUTTON") return true;
-    if (tag === "INPUT") return true;
-    if (tag === "SUMMARY") return true;
-    if (tag === "LABEL") return true;
-
-    const role = el.getAttribute("role");
-    if (role === "button" || role === "link" || role === "menuitem") return true;
-
-    if (typeof el.onclick === "function") return true;
-
-    const tabindex = el.getAttribute("tabindex");
-    if (tabindex !== null && tabindex !== "-1") {
-      const cursor = getComputedStyleSafe(el, "cursor");
-      if (cursor === "pointer") return true;
+    // 入力系は対象外
+    if (
+      tag === "input" ||
+      tag === "textarea" ||
+      tag === "select" ||
+      tag === "option"
+    ) {
+      return true;
     }
 
-    const styleCursor = getComputedStyleSafe(el, "cursor");
-    if (styleCursor === "pointer") return true;
+    // 入力系の内部も対象外
+    if (el.closest("input, textarea, select, option")) {
+      return true;
+    }
+
+    // 編集可能領域は対象外
+    if (el.closest('[contenteditable="true"], [contenteditable="plaintext-only"]')) {
+      return true;
+    }
 
     return false;
   }
 
-  function getClickableElement(start) {
-    let el = start;
+  function isVisibleElement(el) {
+    if (!el || !(el instanceof HTMLElement)) return false;
 
-    while (el && el !== document && el !== document.documentElement) {
-      if (isClickableElement(el)) {
-        return el;
-      }
+    const rect = el.getBoundingClientRect();
+    const style = getComputedStyle(el);
 
-      el = el.parentElement;
+    if (style.display === "none") return false;
+    if (style.visibility === "hidden") return false;
+    if (Number(style.opacity) === 0) return false;
+
+    if (rect.width <= 0 || rect.height <= 0) return false;
+
+    // 現在画面に全く入っていないものは除外
+    if (rect.bottom <= 0) return false;
+    if (rect.top >= window.innerHeight) return false;
+    if (rect.right <= 0) return false;
+    if (rect.left >= window.innerWidth) return false;
+
+    return true;
+  }
+
+  function isMobileWidth() {
+    const vw = window.innerWidth || document.documentElement.clientWidth || 0;
+    return vw > 0 && vw <= CONFIG.mobileMaxWidth;
+  }
+
+  function isClickableCandidate(el) {
+    if (!el || !(el instanceof HTMLElement)) return false;
+    if (isExcludedInteractive(el)) return false;
+
+    const tag = el.tagName.toLowerCase();
+
+    if (tag === "button") return true;
+    if (tag === "a" && el.href) return true;
+    if (el.getAttribute("role") === "button") return true;
+    if (el.hasAttribute("onclick")) return true;
+    if (typeof el.onclick === "function") return true;
+
+    const style = getComputedStyle(el);
+
+    if (style.cursor === "pointer") return true;
+
+    // tabindex がある疑似ボタンも一応対象
+    if (el.hasAttribute("tabindex")) {
+      const tabindex = Number(el.getAttribute("tabindex"));
+      if (!Number.isNaN(tabindex) && tabindex >= 0) return true;
     }
 
-    return null;
+    return false;
   }
 
-  function queryClickableElements(root) {
-    if (!root || !root.querySelectorAll) return [];
+  function isAlmostFullWidthOnMobile(el) {
+    if (!isMobileWidth()) return false;
+    if (!el || !(el instanceof HTMLElement)) return false;
+    if (isExcludedInteractive(el)) return false;
+    if (!isVisibleElement(el)) return false;
 
-    const selector = [
-      "a[href]",
-      "button",
-      "input",
-      "summary",
-      "label",
-      "[role='button']",
-      "[role='link']",
-      "[role='menuitem']",
-      "[onclick]",
-      "[tabindex]"
-    ].join(",");
+    const rect = el.getBoundingClientRect();
+    const vw = window.innerWidth || document.documentElement.clientWidth || 0;
+    const vh = window.innerHeight || document.documentElement.clientHeight || 0;
 
-    const list = Array.from(root.querySelectorAll(selector));
+    if (!vw || !vh) return false;
 
-    if (root.nodeType === 1 && isClickableElement(root)) {
-      list.unshift(root);
+    const widthRatio = rect.width / vw;
+    const heightRatio = rect.height / vh;
+
+    // 横ギリギリ、または横一杯
+    const isWideEnough = widthRatio >= CONFIG.wideRatio;
+
+    // 小さすぎる要素は除外
+    const isTallEnough = rect.height >= CONFIG.minHeight;
+
+    // 画面のかなり大きな範囲を占める要素
+    const isVeryLarge =
+      widthRatio >= CONFIG.veryWideRatio &&
+      heightRatio >= CONFIG.veryLargeHeightRatio;
+
+    return (isWideEnough && isTallEnough) || isVeryLarge;
+  }
+
+  function getElementUrl(el) {
+    if (!el || !(el instanceof HTMLElement)) return "";
+
+    const anchor = el.closest("a[href]");
+
+    if (anchor && anchor.href) {
+      return anchor.href;
     }
 
-    return list;
-  }
-
-  function markInitialElements() {
-    const elements = queryClickableElements(document);
-
-    elements.forEach(el => {
-      knownInitialElements.add(el);
-    });
-
-    GUARD_STATE.initialScanDone = true;
-  }
-
-  function markDynamicElements(root) {
-    const elements = queryClickableElements(root);
-
-    elements.forEach(el => {
-      if (!knownInitialElements.has(el)) {
-        dynamicElements.add(el);
-      }
-    });
-  }
-
-  function startMutationObserver() {
-    const observer = new MutationObserver(mutations => {
-      mutations.forEach(mutation => {
-        mutation.addedNodes.forEach(node => {
-          if (node && node.nodeType === 1) {
-            markDynamicElements(node);
-          }
-        });
-      });
-    });
-
-    function observeNow() {
-      if (!document.documentElement) {
-        setTimeout(observeNow, 30);
-        return;
-      }
-
-      observer.observe(document.documentElement, {
-        childList: true,
-        subtree: true
-      });
-    }
-
-    observeNow();
-  }
-
-  function getElementText(el) {
-    if (!el) return "";
-
-    const parts = [];
-
-    parts.push(el.innerText);
-    parts.push(el.textContent);
-    parts.push(el.getAttribute("aria-label"));
-    parts.push(el.getAttribute("title"));
-    parts.push(el.getAttribute("alt"));
-    parts.push(el.getAttribute("value"));
-    parts.push(el.getAttribute("name"));
-    parts.push(el.getAttribute("id"));
-
-    try {
-      parts.push(String(el.className || ""));
-    } catch (e) {
-      // SVG 等で className が文字列でない場合の保険
-    }
-
-    return normalizeText(parts.filter(Boolean).join(" "));
-  }
-
-  function getUrlFromElement(el) {
-    if (!el) return "";
-
-    const link = el.closest && el.closest("a[href]");
-    if (link) return link.href || "";
-
-    const form = el.closest && el.closest("form[action]");
-    if (form) {
+    const directHref = el.getAttribute("href");
+    if (directHref) {
       try {
-        return new URL(form.getAttribute("action"), location.href).href;
+        return new URL(directHref, location.href).href;
       } catch (e) {
-        return form.getAttribute("action") || "";
+        return directHref;
       }
     }
 
-    const dataHref = el.getAttribute && (
+    const dataUrl =
       el.getAttribute("data-href") ||
       el.getAttribute("data-url") ||
-      el.getAttribute("data-link")
-    );
+      el.getAttribute("data-link") ||
+      el.getAttribute("data-target-url");
 
-    if (dataHref) {
+    if (dataUrl) {
       try {
-        return new URL(dataHref, location.href).href;
+        return new URL(dataUrl, location.href).href;
       } catch (e) {
-        return dataHref;
+        return dataUrl;
       }
     }
 
     return "";
   }
 
-  function isExternalUrl(url) {
+  function hasExternalUrl(el) {
+    const url = getElementUrl(el);
     if (!url) return false;
 
     try {
       const u = new URL(url, location.href);
-      return u.hostname !== location.hostname;
+      return u.origin !== location.origin;
     } catch (e) {
       return false;
     }
   }
 
-  function hasAdHint(el, url, text) {
-    const parts = [
-      text,
-      url
-    ];
+  function hasAdLikeHint(el) {
+    if (!el || !(el instanceof HTMLElement)) return false;
 
-    let current = el;
-    let depth = 0;
+    const url = getElementUrl(el);
 
-    while (
-      current &&
-      current !== document &&
-      current !== document.documentElement &&
-      depth < 6
-    ) {
-      parts.push(current.id);
+    const text = [
+      el.id || "",
+      typeof el.className === "string" ? el.className : "",
+      el.getAttribute("aria-label") || "",
+      el.getAttribute("title") || "",
+      el.getAttribute("data-ad-client") || "",
+      el.getAttribute("data-ad-slot") || "",
+      el.getAttribute("data-ad-format") || "",
+      url || ""
+    ]
+      .join(" ")
+      .toLowerCase();
 
-      try {
-        parts.push(String(current.className || ""));
-      } catch (e) {
-        // SVG 等の保険
+    return /(^|[\s_-])(ad|ads)([\s_-]|$)|advert|advertisement|sponsor|sponsored|promo|promotion|doubleclick|googlesyndication|googleadservices|googletag|outbrain|taboola|criteo|amazon-adsystem/.test(text);
+  }
+
+  function wasAddedAfterLoad(el) {
+    if (!el || !(el instanceof HTMLElement)) return false;
+    return !!el.closest("[" + CONFIG.addedAttr +='="1"]') || el.getAttribute(CONFIG.addedAttr) === "1";
+  }
+
+  function getCandidateReason(el) {
+    const reasons = [];
+
+    if (isAlmostFullWidthOnMobile(el)) {
+      reasons.push("スマホ画面で横幅が大きいクリック要素");
+    }
+
+    if (wasAddedAfterLoad(el)) {
+      reasons.push("ページ表示後に追加された要素");
+    }
+
+    if (hasExternalUrl(el)) {
+      reasons.push("外部サイトへ移動する可能性");
+    }
+
+    if (hasAdLikeHint(el)) {
+      reasons.push("広告・スポンサー系の記述を含む可能性");
+    }
+
+    return reasons;
+  }
+
+  function shouldGuardElement(el) {
+    if (!el || !(el instanceof HTMLElement)) return false;
+    if (isExcludedInteractive(el)) return false;
+    if (!isClickableCandidate(el)) return false;
+    if (!isAlmostFullWidthOnMobile(el)) return false;
+
+    const url = getElementUrl(el);
+
+    // URL が許可済みなら確認しない
+    if (url && isAllowedUrl(url)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  function showConfirm(el) {
+    const reasons = getCandidateReason(el);
+    const url = getElementUrl(el);
+    const origin = url ? getOriginLike(url) : "";
+
+    let message = "大きなクリック要素が押されました。\n\n";
+
+    if (reasons.length) {
+      message += "検出理由:\n";
+      message += reasons.map((r) => "・" + r).join("\n");
+      message += "\n\n";
+    }
+
+    if (origin) {
+      message += "移動先:\n" + origin + "\n\n";
+    }
+
+    message += "開きますか？\n";
+    message += "OKを押すと、このサイトは許可リストに追加されます。";
+
+    const ok = window.confirm(message);
+
+    if (ok && url) {
+      addAllowedUrl(url);
+    }
+
+    return ok;
+  }
+
+  function guardClickEvent(e) {
+    const path = typeof e.composedPath === "function" ? e.composedPath() : [];
+    let target = null;
+
+    for (const item of path) {
+      if (item instanceof HTMLElement && shouldGuardElement(item)) {
+        target = item;
+        break;
       }
+    }
 
-      if (current.getAttribute) {
-        parts.push(current.getAttribute("data-ad"));
-        parts.push(current.getAttribute("data-testid"));
-        parts.push(current.getAttribute("aria-label"));
-        parts.push(current.getAttribute("title"));
-        parts.push(current.getAttribute("src"));
-        parts.push(current.getAttribute("href"));
+    if (!target && e.target instanceof HTMLElement) {
+      const closest = e.target.closest("a, button, [role='button'], [onclick], [tabindex]");
+      if (closest && shouldGuardElement(closest)) {
+        target = closest;
       }
-
-      current = current.parentElement;
-      depth++;
     }
 
-    const joined = normalizeText(parts.filter(Boolean).join(" "));
+    if (!target) return;
 
-    return AD_HINTS.some(word => joined.includes(String(word).toLowerCase()));
-  }
+    const ok = showConfirm(target);
 
-  function hasDangerousWord(text) {
-    return DANGEROUS_WORDS.some(word => {
-      return text.includes(String(word).toLowerCase());
-    });
-  }
-
-  function isLikelySubmitOrAction(el) {
-    if (!el) return false;
-
-    const tag = el.tagName;
-
-    if (tag === "BUTTON") return true;
-
-    if (tag === "INPUT") {
-      const type = normalizeText(el.getAttribute("type"));
-      return ["submit", "button", "image", "reset"].includes(type);
+    if (!ok) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
     }
-
-    if (el.getAttribute("role") === "button") return true;
-
-    return false;
   }
 
-  function isDynamicElement(el) {
-    if (!el) return false;
+  function markAddedTree(node) {
+    if (!(node instanceof HTMLElement)) return;
 
-    let current = el;
+    node.setAttribute(CONFIG.addedAttr, "1");
 
-    while (current && current !== document && current !== document.documentElement) {
-      if (dynamicElements.has(current)) return true;
-      current = current.parentElement;
+    const children = node.querySelectorAll("*");
+    for (const child of children) {
+      child.setAttribute(CONFIG.addedAttr, "1");
     }
-
-    return false;
   }
 
-  function isMobileLikeViewport() {
-    const innerWidth = window.innerWidth || document.documentElement.clientWidth || 9999;
-    const screenWidth = window.screen && window.screen.width ? window.screen.width : 9999;
+  function scanAndMarkExistingCandidates(root = document) {
+    const selector = "a, button, [role='button'], [onclick], [tabindex]";
 
-    return Math.min(innerWidth, screenWidth) <= 768;
+    const list = root.querySelectorAll ? root.querySelectorAll(selector) : [];
+
+    for (const el of list) {
+      if (!(el instanceof HTMLElement)) continue;
+      if (el.getAttribute(CONFIG.markedAttr) === "1") continue;
+
+      if (shouldGuardElement(el)) {
+        el.setAttribute(CONFIG.markedAttr, "1");
+      }
+    }
   }
 
-  function getVisibleRectRatio(rect) {
-    const vw = window.innerWidth || document.documentElement.clientWidth || 1;
-    const vh = window.innerHeight || document.documentElement.clientHeight || 1;
+  function observeAddedElements() {
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) {
+          if (!(node instanceof HTMLElement)) continue;
 
-    const left = Math.max(0, rect.left);
-    const top = Math.max(0, rect.top);
-    const right = Math.min(vw, rect.right);
-    const bottom = Math.min(vh, rect.bottom);
+          markAddedTree(node);
 
-    const width = Math.max(0, right - left);
-    const height = Math.max(0, bottom - top);
+          if (node.matches && node.matches("a, button, [role='button'], [onclick], [tabindex]")) {
+            if (shouldGuardElement(node)) {
+              node.setAttribute(CONFIG.markedAttr, "1");
+              console.log("大きな後追加クリック要素候補:", node);
+            }
+          }
 
-    const area = width * height;
-    const viewportArea = vw * vh;
+          const candidates = node.querySelectorAll
+            ? node.querySelectorAll("a, button, [role='button'], [onclick], [tabindex]")
+            : [];
 
-    return {
-      widthRatio: width / vw,
-      heightRatio: height / vh,
-      areaRatio: area / viewportArea,
-      visibleWidth: width,
-      visibleHeight: height
-    };
-  }
+          for (const el of candidates) {
+            if (!(el instanceof HTMLElement)) continue;
 
-  function isLargeAdLikeElement(el) {
-    if (!isMobileLikeViewport()) return false;
-    if (!el || !el.getBoundingClientRect) return false;
-
-    let current = el;
-    let depth = 0;
-
-    while (
-      current &&
-      current !== document &&
-      current !== document.documentElement &&
-      depth < 7
-    ) {
-      if (current.getBoundingClientRect) {
-        const rect = current.getBoundingClientRect();
-
-        if (rect.width > 0 && rect.height > 0) {
-          const ratio = getVisibleRectRatio(rect);
-
-          // 横一杯に近い、大きめの帯
-          const isFullWidthBanner =
-            ratio.widthRatio >= 0.9 &&
-            ratio.heightRatio >= 0.14;
-
-          // 画面面積のかなり大きな割合を占める
-          const isLargeArea =
-            ratio.areaRatio >= 0.28;
-
-          // 全画面寄りのオーバーレイ
-          const isOverlayLike =
-            ratio.widthRatio >= 0.75 &&
-            ratio.heightRatio >= 0.45;
-
-          // 下部固定・上部固定の大きめバナー
-          const position = getComputedStyleSafe(current, "position");
-
-          const isFixedLarge =
-            (position === "fixed" || position === "sticky") &&
-            ratio.widthRatio >= 0.75 &&
-            ratio.heightRatio >= 0.10;
-
-          // 横幅いっぱいの大きな画像リンク・カードリンク想定
-          const isWideCard =
-            ratio.widthRatio >= 0.82 &&
-            ratio.heightRatio >= 0.22;
-
-          if (
-            isFullWidthBanner ||
-            isLargeArea ||
-            isOverlayLike ||
-            isFixedLarge ||
-            isWideCard
-          ) {
-            return true;
+            if (shouldGuardElement(el)) {
+              el.setAttribute(CONFIG.markedAttr, "1");
+              console.log("大きな後追加クリック要素候補:", el);
+            }
           }
         }
       }
-
-      current = current.parentElement;
-      depth++;
-    }
-
-    return false;
-  }
-
-  function buildReason(el) {
-    const text = getElementText(el);
-    const url = getUrlFromElement(el);
-
-    if (url && isAllowedUrl(url)) {
-      return null;
-    }
-
-    const reasons = [];
-
-    if (isDynamicElement(el)) {
-      reasons.push("ページを開いた時点では存在せず、後から追加されたボタン・リンクの可能性があります。");
-    }
-
-    if (isLargeAdLikeElement(el)) {
-      reasons.push("スマホ表示で、画面の大きな範囲を占めるボタン・リンク・広告枠の可能性があります。");
-    }
-
-    if (hasAdHint(el, url, text)) {
-      reasons.push("広告・PR・スポンサー枠の可能性があります。");
-    }
-
-    if (url && isExternalUrl(url)) {
-      reasons.push("現在のサイトとは別のサイトへ移動する可能性があります。");
-    }
-
-    if (hasDangerousWord(text)) {
-      reasons.push("購入・送信・登録・削除・ダウンロードなどの操作に見える文言があります。");
-    }
-
-    if (isLikelySubmitOrAction(el)) {
-      reasons.push("ボタン操作により、入力内容の送信や画面変更が起こる可能性があります。");
-    }
-
-    if (!reasons.length) {
-      return null;
-    }
-
-    return {
-      text,
-      url,
-      reasons
-    };
-  }
-
-  function shorten(value, max) {
-    value = String(value || "").trim();
-    if (value.length <= max) return value;
-    return value.slice(0, max) + "…";
-  }
-
-  function showConfirm(info) {
-    const lines = [];
-
-    lines.push("この操作を実行しますか？");
-    lines.push("");
-    lines.push("起こりそうなこと:");
-
-    info.reasons.forEach(reason => {
-      lines.push("・" + reason);
     });
 
-    if (info.url) {
-      lines.push("");
-      lines.push("移動先:");
-      lines.push(shorten(info.url, 180));
-    }
-
-    if (info.text) {
-      lines.push("");
-      lines.push("押された要素:");
-      lines.push(shorten(info.text, 140));
-    }
-
-    lines.push("");
-    lines.push("OK を押すと実行します。");
-    lines.push("外部サイトを開く場合は、そのサイトを許可リストに追加します。");
-    lines.push("キャンセルすると何もしません。");
-
-    return window.confirm(lines.join("\n"));
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true
+    });
   }
 
-  function replayClick(el) {
-    GUARD_STATE.bypassNext = true;
-
-    setTimeout(() => {
-      try {
-        el.click();
-      } catch (e) {
-        const url = getUrlFromElement(el);
-        if (url) {
-          location.href = url;
-        }
-      }
-
-      setTimeout(() => {
-        GUARD_STATE.bypassNext = false;
-      }, 300);
-    }, 0);
-  }
-
-  function handleClick(event) {
-    if (GUARD_STATE.bypassNext) return;
-
-    const el = getClickableElement(event.target);
-    if (!el) return;
-
-    const info = buildReason(el);
-    if (!info) return;
-
-    const now = Date.now();
-
-    // 連打・二重発火の抑制
-    if (now - GUARD_STATE.lastConfirmTime < 300) {
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
-      return;
-    }
-
-    GUARD_STATE.lastConfirmTime = now;
-
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-
-    const ok = showConfirm(info);
-
-    if (ok) {
-      if (info.url && isExternalUrl(info.url)) {
-        addAllowUrl(info.url);
-      }
-
-      replayClick(el);
-    }
-  }
-
-  function handleSubmit(event) {
-    if (GUARD_STATE.bypassNext) return;
-
-    const form = event.target;
-    if (!form || form.tagName !== "FORM") return;
-
-    const url = form.action || "";
-
-    if (url && isAllowedUrl(url)) {
-      return;
-    }
-
-    const reasons = [
-      "フォーム送信により、入力内容が送信される可能性があります。"
-    ];
-
-    if (url && isExternalUrl(url)) {
-      reasons.push("現在のサイトとは別のサイトへ送信される可能性があります。");
-    }
-
-    const info = {
-      text: "フォーム送信",
-      url,
-      reasons
-    };
-
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-
-    const ok = showConfirm(info);
-
-    if (ok) {
-      if (url && isExternalUrl(url)) {
-        addAllowUrl(url);
-      }
-
-      GUARD_STATE.bypassNext = true;
-
-      setTimeout(() => {
-        try {
-          form.submit();
-        } finally {
-          setTimeout(() => {
-            GUARD_STATE.bypassNext = false;
-          }, 300);
-        }
-      }, 0);
-    }
-  }
-
-  function exposeDebugTools() {
-    // Via のコンソール等から確認・削除できるようにする保険
-    window.uni928ClickGuard = {
-      getAllowList: function () {
+  function exposeDebugApi() {
+    window.LargeMobileClickGuard = {
+      getAllowList() {
         return loadAllowList();
       },
-      clearAllowList: function () {
+
+      clearAllowList() {
         saveAllowList([]);
-        return [];
+        console.log("許可リストを空にしました。");
       },
-      removeAllow: function (urlOrKey) {
-        const key = getAllowKeyFromUrl(urlOrKey) || String(urlOrKey || "");
-        const list = loadAllowList().filter(item => item !== key);
-        saveAllowList(list);
-        return list;
+
+      addAllowOrigin(url) {
+        addAllowedUrl(url);
+        console.log("許可リストに追加しました:", getOriginLike(url));
       },
-      addAllow: function (urlOrKey) {
-        const key = getAllowKeyFromUrl(urlOrKey) || String(urlOrKey || "");
-        const list = loadAllowList();
-        if (key && !list.includes(key)) {
-          list.push(key);
-          saveAllowList(list);
-        }
-        return loadAllowList();
+
+      scan() {
+        scanAndMarkExistingCandidates(document);
+        console.log("再スキャンしました。");
+      },
+
+      isTarget(el) {
+        return shouldGuardElement(el);
       }
     };
   }
 
   function init() {
-    startMutationObserver();
+    // キャプチャ段階で先に拾う
+    document.addEventListener("click", guardClickEvent, true);
 
-    document.addEventListener("click", handleClick, true);
-    document.addEventListener("submit", handleSubmit, true);
+    // 初期表示時点のものも一応スキャン
+    scanAndMarkExistingCandidates(document);
 
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", () => {
-        markInitialElements();
-      }, { once: true });
-    } else {
-      markInitialElements();
-    }
+    // 後から追加される広告・ボタンを監視
+    observeAddedElements();
 
-    // DOMContentLoaded 前後のズレ対策
-    setTimeout(() => {
-      if (!GUARD_STATE.initialScanDone) {
-        markInitialElements();
-      }
-    }, 1000);
+    // デバッグ用API
+    exposeDebugApi();
 
-    exposeDebugTools();
+    console.log("LargeMobileClickGuard 起動");
   }
 
-  init();
-
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init, { once: true });
+  } else {
+    init();
+  }
 })();
