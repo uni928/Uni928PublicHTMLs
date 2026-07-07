@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Click Guard Confirm Full
 // @namespace    uni928-click-guard
-// @version      2.0.0
+// @version      2.0.1
 // @description  広告・外部リンク・後から追加されたボタン・大きなスマホ広告風ボタンを押す前に確認する
 // @match        *://*/*
 // @run-at       document-start
@@ -325,4 +325,27 @@
   } else {
     init();
   }
+
+    // 全体読み込み完了後、広告が追加されたであろうタイミングで再スキャンする
+  function scanAfterPageFullyLoaded() {
+    const run = () => {
+      scan(document);
+      console.log("AdLikeIdClassHider: load後に再スキャンしました。");
+    };
+
+    if (document.readyState === "complete") {
+      run();
+    } else {
+      window.addEventListener("load", run, { once: true });
+    }
+
+    // 広告は load 後に遅れて追加されることがあるため、追加で数回再スキャン
+    window.addEventListener("load", () => {
+      setTimeout(run, 1000);
+      setTimeout(run, 3000);
+      setTimeout(run, 6000);
+    }, { once: true });
+  }
+
+  scanAfterPageFullyLoaded();
 })();
