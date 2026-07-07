@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Click Guard Confirm
+// @name         Click Guard Confirm with Dynamic Button Watch
 // @namespace    uni928-click-guard
-// @version      1.0.0
-// @description  意図しない広告・外部リンク・危険操作っぽいクリック前に確認する
+// @version      1.1.0
+// @description  後から追加されたボタン・広告・外部リンク・危険操作っぽいクリック前に確認する
 // @match        *://*/*
 // @run-at       document-start
 // ==/UserScript==
@@ -10,10 +10,16 @@
 (function () {
   "use strict";
 
+  const STORAGE_KEY_ALLOW_LIST = "uni928_click_guard_allow_list_v1";
+
   const GUARD_STATE = {
     bypassNext: false,
-    lastConfirmTime: 0
+    lastConfirmTime: 0,
+    initialScanDone: false
   };
+
+  const knownInitialElements = new WeakSet();
+  const dynamicElements = new WeakSet();
 
   const DANGEROUS_WORDS = [
     "購入",
@@ -78,19 +84,62 @@
       .toLowerCase();
   }
 
+  function loadAllowList() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_ALLOW_LIST);
+      const list = JSON.parse(raw || "[]");
+      return Array.isArray(list) ? list.filter(Boolean) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveAllowList(list) {
+    try {
+      const unique = Array.from(new Set(list.filter(Boolean)));
+      localStorage.setItem(STORAGE_KEY_ALLOW_LIST, JSON.stringify(unique));
+    } catch (e) {
+      // localStorage が使えない場合は何もしない
+    }
+  }
+
+  function getAllowKeyFromUrl(url) {
+    try {
+      const u = new URL(url, location.href);
+      return u.protocol + "//" + u.host;
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function isAllowedUrl(url) {
+    const key = getAllowKeyFromUrl(url);
+    if (!key) return false;
+
+    const allowList = loadAllowList();
+
+    return allowList.some(allowed => {
+      return key === allowed || key.startsWith(allowed);
+    });
+  }
+
+  function addAllowUrl(url) {
+    const key = getAllowKeyFromUrl(url);
+    if (!key) return;
+
+    const allowList = loadAllowList();
+
+    if (!allowList.includes(key)) {
+      allowList.push(key);
+      saveAllowList(allowList);
+    }
+  }
+
   function getClickableElement(start) {
     let el = start;
 
     while (el && el !== document && el !== document.documentElement) {
-      if (
-        el.tagName === "A" ||
-        el.tagName === "BUTTON" ||
-        el.tagName === "INPUT" ||
-        el.tagName === "SUMMARY" ||
-        el.getAttribute("role") === "button" ||
-        el.getAttribute("role") === "link" ||
-        typeof el.onclick === "function"
-      ) {
+      if (isClickableElement(el)) {
         return el;
       }
 
@@ -98,6 +147,103 @@
     }
 
     return null;
+  }
+
+  function isClickableElement(el) {
+    if (!el || !el.tagName) return false;
+
+    const tag = el.tagName;
+
+    if (tag === "A" && el.hasAttribute("href")) return true;
+    if (tag === "BUTTON") return true;
+    if (tag === "INPUT") return true;
+    if (tag === "SUMMARY") return true;
+
+    const role = el.getAttribute("role");
+    if (role === "button" || role === "link") return true;
+
+    if (typeof el.onclick === "function") return true;
+
+    const styleCursor = getComputedStyleSafe(el, "cursor");
+    if (styleCursor === "pointer") return true;
+
+    return false;
+  }
+
+  function getComputedStyleSafe(el, prop) {
+    try {
+      return window.getComputedStyle(el)[prop] || "";
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function queryClickableElements(root) {
+    if (!root || !root.querySelectorAll) return [];
+
+    const selector = [
+      "a[href]",
+      "button",
+      "input",
+      "summary",
+      "[role='button']",
+      "[role='link']",
+      "[onclick]"
+    ].join(",");
+
+    const list = Array.from(root.querySelectorAll(selector));
+
+    if (root.nodeType === 1 && isClickableElement(root)) {
+      list.unshift(root);
+    }
+
+    return list;
+  }
+
+  function markInitialElements() {
+    const elements = queryClickableElements(document);
+
+    elements.forEach(el => {
+      knownInitialElements.add(el);
+    });
+
+    GUARD_STATE.initialScanDone = true;
+  }
+
+  function markDynamicElements(root) {
+    const elements = queryClickableElements(root);
+
+    elements.forEach(el => {
+      if (!knownInitialElements.has(el)) {
+        dynamicElements.add(el);
+      }
+    });
+  }
+
+  function startMutationObserver() {
+    const observer = new MutationObserver(mutations => {
+      mutations.forEach(mutation => {
+        mutation.addedNodes.forEach(node => {
+          if (node && node.nodeType === 1) {
+            markDynamicElements(node);
+          }
+        });
+      });
+    });
+
+    function observeNow() {
+      if (!document.documentElement) {
+        setTimeout(observeNow, 30);
+        return;
+      }
+
+      observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true
+      });
+    }
+
+    observeNow();
   }
 
   function getElementText(el) {
@@ -184,11 +330,32 @@
     return false;
   }
 
+  function isDynamicElement(el) {
+    if (!el) return false;
+
+    let current = el;
+
+    while (current && current !== document && current !== document.documentElement) {
+      if (dynamicElements.has(current)) return true;
+      current = current.parentElement;
+    }
+
+    return false;
+  }
+
   function buildReason(el) {
     const text = getElementText(el);
     const url = getUrlFromElement(el);
 
+    if (url && isAllowedUrl(url)) {
+      return null;
+    }
+
     const reasons = [];
+
+    if (isDynamicElement(el)) {
+      reasons.push("ページを開いた時点では存在せず、後から追加されたボタン・リンクの可能性があります。");
+    }
 
     if (hasAdHint(el, url, text)) {
       reasons.push("広告・PR・スポンサー枠の可能性があります。");
@@ -237,7 +404,7 @@
     if (info.url) {
       lines.push("");
       lines.push("移動先:");
-      lines.push(shorten(info.url, 120));
+      lines.push(shorten(info.url, 160));
     }
 
     if (info.text) {
@@ -247,7 +414,8 @@
     }
 
     lines.push("");
-    lines.push("Yes / OK を押すと実行します。");
+    lines.push("OK を押すと実行します。");
+    lines.push("外部サイトを開く場合は、そのサイトを許可リストに追加します。");
     lines.push("キャンセルすると何もしません。");
 
     return window.confirm(lines.join("\n"));
@@ -283,7 +451,6 @@
 
     const now = Date.now();
 
-    // 連続クリック時の多重確認を少し抑制
     if (now - GUARD_STATE.lastConfirmTime < 300) {
       event.preventDefault();
       event.stopPropagation();
@@ -300,6 +467,10 @@
     const ok = showConfirm(info);
 
     if (ok) {
+      if (info.url && isExternalUrl(info.url)) {
+        addAllowUrl(info.url);
+      }
+
       replayClick(el);
     }
   }
@@ -311,17 +482,24 @@
     if (!form || form.tagName !== "FORM") return;
 
     const url = form.action || "";
+
+    if (url && isAllowedUrl(url)) {
+      return;
+    }
+
+    const reasons = [
+      "フォーム送信により、入力内容が送信される可能性があります。"
+    ];
+
+    if (url && isExternalUrl(url)) {
+      reasons.push("現在のサイトとは別のサイトへ送信される可能性があります。");
+    }
+
     const info = {
       text: "フォーム送信",
       url,
-      reasons: [
-        "フォーム送信により、入力内容が送信される可能性があります。"
-      ]
+      reasons
     };
-
-    if (url && isExternalUrl(url)) {
-      info.reasons.push("現在のサイトとは別のサイトへ送信される可能性があります。");
-    }
 
     event.preventDefault();
     event.stopPropagation();
@@ -330,7 +508,12 @@
     const ok = showConfirm(info);
 
     if (ok) {
+      if (url && isExternalUrl(url)) {
+        addAllowUrl(url);
+      }
+
       GUARD_STATE.bypassNext = true;
+
       setTimeout(() => {
         try {
           form.submit();
@@ -343,7 +526,28 @@
     }
   }
 
-  document.addEventListener("click", handleClick, true);
-  document.addEventListener("submit", handleSubmit, true);
+  function init() {
+    startMutationObserver();
+
+    document.addEventListener("click", handleClick, true);
+    document.addEventListener("submit", handleSubmit, true);
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => {
+        markInitialElements();
+      }, { once: true });
+    } else {
+      markInitialElements();
+    }
+
+    // DOMContentLoaded 前に追加済みのものを拾う保険
+    setTimeout(() => {
+      if (!GUARD_STATE.initialScanDone) {
+        markInitialElements();
+      }
+    }, 1000);
+  }
+
+  init();
 
 })();
