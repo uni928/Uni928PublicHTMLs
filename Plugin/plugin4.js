@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Click Guard Confirm Full
 // @namespace    uni928-click-guard
-// @version      2.2.8
+// @version      2.2.9
 // @description  広告・外部リンク・後から追加されたボタン・大きなスマホ広告風ボタンを押す前に確認する
 // @match        *://*/*
 // @run-at       document-start
@@ -431,7 +431,7 @@
     }
   }
 
- // スマホで横一杯に近く、かつ画面の縦幅の1/3を超える要素か判定
+ // スマホで横一杯に近く、画面の縦幅の1/3を超え、かつ一番手前にある要素か判定
 function isFullWidthLikeElement(el) {
   if (!el || !(el instanceof HTMLElement)) return false;
 
@@ -450,6 +450,7 @@ function isFullWidthLikeElement(el) {
   if (style.display === "none") return false;
   if (style.visibility === "hidden") return false;
   if (Number(style.opacity) === 0) return false;
+  if (style.pointerEvents === "none") return false;
 
   // サイズがない要素は対象外
   if (rect.width <= 0 || rect.height <= 0) return false;
@@ -467,9 +468,51 @@ function isFullWidthLikeElement(el) {
   if (widthRatio < 0.99) return false;
 
   // 画面の縦幅の1/3を超えるものだけ対象
-  if (heightRatio <= 2 / 5) return false;
+  if (heightRatio <= 1 / 3) return false;
+
+  // 一番手前にある要素だけ対象
+  if (!isFrontMostElement(el, rect, vw, vh)) return false;
 
   return true;
+}
+
+// 対象要素が画面上で一番手前にあるか判定
+function isFrontMostElement(el, rect, vw, vh) {
+  if (!el || !(el instanceof HTMLElement)) return false;
+
+  // 要素内の複数点を見る
+  const points = [
+    [rect.left + rect.width / 2, rect.top + rect.height / 2], // 中央
+    [rect.left + rect.width * 0.25, rect.top + rect.height * 0.25], // 左上寄り
+    [rect.left + rect.width * 0.75, rect.top + rect.height * 0.25], // 右上寄り
+    [rect.left + rect.width * 0.25, rect.top + rect.height * 0.75], // 左下寄り
+    [rect.left + rect.width * 0.75, rect.top + rect.height * 0.75]  // 右下寄り
+  ];
+
+  let frontHitCount = 0;
+
+  for (const [xRaw, yRaw] of points) {
+    const x = Math.min(Math.max(xRaw, 0), vw - 1);
+    const y = Math.min(Math.max(yRaw, 0), vh - 1);
+
+    const topEl = document.elementFromPoint(x, y);
+
+    if (!topEl) continue;
+
+    // 自分自身、または自分の子要素が最前面ならOK
+    if (topEl === el || el.contains(topEl)) {
+      frontHitCount++;
+      continue;
+    }
+
+    // topEl の親に対象要素がいる場合もOK
+    if (topEl.closest && topEl.closest("*") && el.contains(topEl)) {
+      frontHitCount++;
+    }
+  }
+
+  // 5点中3点以上が手前なら「一番手前」とみなす
+  return frontHitCount >= 3;
 }
 
   // 要素に付いているクリック系処理を空にする
