@@ -326,10 +326,64 @@
     init();
   }
 
-    // 全体読み込み完了後、広告が追加されたであろうタイミングで再スキャンする
+  {
+      // インラインstyleの display: block !important を削除する
+  function removeDisplayBlockImportant(root) {
+    const scanRoot = root || document;
+
+    const list = [];
+
+    if (scanRoot instanceof HTMLElement) {
+      list.push(scanRoot);
+    }
+
+    if (scanRoot.querySelectorAll) {
+      list.push(...scanRoot.querySelectorAll("[style]"));
+    }
+
+    for (const el of list) {
+      if (!(el instanceof HTMLElement)) continue;
+
+      const displayValue = el.style.getPropertyValue("display");
+      const displayPriority = el.style.getPropertyPriority("display");
+
+      if (
+        displayValue &&
+        displayValue.trim().toLowerCase() === "block" &&
+        displayPriority === "important"
+      ) {
+        el.style.removeProperty("display");
+      }
+    }
+  }
+
+  // 非表示対象に display: none !important を直接付与する
+  function forceHideMarkedElements(root) {
+    const scanRoot = root || document;
+    const selector = "[" + CONFIG.markAttr + '="1"]';
+
+    const list = [];
+
+    if (scanRoot instanceof HTMLElement && scanRoot.matches(selector)) {
+      list.push(scanRoot);
+    }
+
+    if (scanRoot.querySelectorAll) {
+      list.push(...scanRoot.querySelectorAll(selector));
+    }
+
+    for (const el of list) {
+      if (!(el instanceof HTMLElement)) continue;
+      el.style.setProperty("display", "none", "important");
+    }
+  }
+
+  // 全体読み込み完了後、広告が追加されたであろうタイミングで再スキャンする
   function scanAfterPageFullyLoaded() {
     const run = () => {
+      removeDisplayBlockImportant(document);
       scan(document);
+      forceHideMarkedElements(document);
       console.log("AdLikeIdClassHider: load後に再スキャンしました。");
     };
 
@@ -344,8 +398,10 @@
       setTimeout(run, 1000);
       setTimeout(run, 3000);
       setTimeout(run, 6000);
+      setTimeout(run, 10000);
     }, { once: true });
   }
 
   scanAfterPageFullyLoaded();
+  }
 })();
