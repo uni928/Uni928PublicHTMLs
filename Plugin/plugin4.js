@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Click Guard Confirm with Dynamic Button Watch
+// @name         Click Guard Confirm Full
 // @namespace    uni928-click-guard
-// @version      1.1.0
-// @description  後から追加されたボタン・広告・外部リンク・危険操作っぽいクリック前に確認する
+// @version      1.2.0
+// @description  広告・外部リンク・後から追加されたボタン・大きなスマホ広告風ボタンを押す前に確認する
 // @match        *://*/*
 // @run-at       document-start
 // ==/UserScript==
@@ -44,7 +44,7 @@
     "PR",
     "スポンサー",
     "sponsored",
-    "ad",
+    "advertisement",
     "buy",
     "purchase",
     "pay",
@@ -58,23 +58,29 @@
   ];
 
   const AD_HINTS = [
-    "ad",
-    "ads",
-    "advert",
+    "adsbygoogle",
     "advertisement",
-    "sponsor",
+    "advert",
     "sponsored",
+    "sponsor",
     "promotion",
     "promoted",
-    "pr",
-    "banner",
     "affiliate",
+    "native-ad",
+    "ad-banner",
+    "ad-container",
+    "ad-wrapper",
+    "ad-slot",
+    "googleads",
     "doubleclick",
     "googlesyndication",
     "adservice",
-    "adnxs",
+    "googletagservices",
+    "taboola",
     "outbrain",
-    "taboola"
+    "popin",
+    "microad",
+    "fluct"
   ];
 
   function normalizeText(text) {
@@ -99,13 +105,16 @@
       const unique = Array.from(new Set(list.filter(Boolean)));
       localStorage.setItem(STORAGE_KEY_ALLOW_LIST, JSON.stringify(unique));
     } catch (e) {
-      // localStorage が使えない場合は何もしない
+      // localStorage が使えない場合は保存しない
     }
   }
 
   function getAllowKeyFromUrl(url) {
     try {
       const u = new URL(url, location.href);
+
+      // 「https://」から次の「/」までを登録する想定
+      // 例: https://example.com/path -> https://example.com
       return u.protocol + "//" + u.host;
     } catch (e) {
       return "";
@@ -119,6 +128,7 @@
     const allowList = loadAllowList();
 
     return allowList.some(allowed => {
+      // 実質的に https://example.com* のように扱う
       return key === allowed || key.startsWith(allowed);
     });
   }
@@ -135,6 +145,42 @@
     }
   }
 
+  function getComputedStyleSafe(el, prop) {
+    try {
+      return window.getComputedStyle(el)[prop] || "";
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function isClickableElement(el) {
+    if (!el || !el.tagName) return false;
+
+    const tag = el.tagName;
+
+    if (tag === "A" && el.hasAttribute("href")) return true;
+    if (tag === "BUTTON") return true;
+    if (tag === "INPUT") return true;
+    if (tag === "SUMMARY") return true;
+    if (tag === "LABEL") return true;
+
+    const role = el.getAttribute("role");
+    if (role === "button" || role === "link" || role === "menuitem") return true;
+
+    if (typeof el.onclick === "function") return true;
+
+    const tabindex = el.getAttribute("tabindex");
+    if (tabindex !== null && tabindex !== "-1") {
+      const cursor = getComputedStyleSafe(el, "cursor");
+      if (cursor === "pointer") return true;
+    }
+
+    const styleCursor = getComputedStyleSafe(el, "cursor");
+    if (styleCursor === "pointer") return true;
+
+    return false;
+  }
+
   function getClickableElement(start) {
     let el = start;
 
@@ -149,35 +195,6 @@
     return null;
   }
 
-  function isClickableElement(el) {
-    if (!el || !el.tagName) return false;
-
-    const tag = el.tagName;
-
-    if (tag === "A" && el.hasAttribute("href")) return true;
-    if (tag === "BUTTON") return true;
-    if (tag === "INPUT") return true;
-    if (tag === "SUMMARY") return true;
-
-    const role = el.getAttribute("role");
-    if (role === "button" || role === "link") return true;
-
-    if (typeof el.onclick === "function") return true;
-
-    const styleCursor = getComputedStyleSafe(el, "cursor");
-    if (styleCursor === "pointer") return true;
-
-    return false;
-  }
-
-  function getComputedStyleSafe(el, prop) {
-    try {
-      return window.getComputedStyle(el)[prop] || "";
-    } catch (e) {
-      return "";
-    }
-  }
-
   function queryClickableElements(root) {
     if (!root || !root.querySelectorAll) return [];
 
@@ -186,9 +203,12 @@
       "button",
       "input",
       "summary",
+      "label",
       "[role='button']",
       "[role='link']",
-      "[onclick]"
+      "[role='menuitem']",
+      "[onclick]",
+      "[tabindex]"
     ].join(",");
 
     const list = Array.from(root.querySelectorAll(selector));
@@ -259,7 +279,12 @@
     parts.push(el.getAttribute("value"));
     parts.push(el.getAttribute("name"));
     parts.push(el.getAttribute("id"));
-    parts.push(el.className);
+
+    try {
+      parts.push(String(el.className || ""));
+    } catch (e) {
+      // SVG 等で className が文字列でない場合の保険
+    }
 
     return normalizeText(parts.filter(Boolean).join(" "));
   }
@@ -279,6 +304,20 @@
       }
     }
 
+    const dataHref = el.getAttribute && (
+      el.getAttribute("data-href") ||
+      el.getAttribute("data-url") ||
+      el.getAttribute("data-link")
+    );
+
+    if (dataHref) {
+      try {
+        return new URL(dataHref, location.href).href;
+      } catch (e) {
+        return dataHref;
+      }
+    }
+
     return "";
   }
 
@@ -294,17 +333,44 @@
   }
 
   function hasAdHint(el, url, text) {
-    const joined = normalizeText([
+    const parts = [
       text,
-      url,
-      el && el.id,
-      el && el.className,
-      el && el.getAttribute && el.getAttribute("data-ad"),
-      el && el.getAttribute && el.getAttribute("data-testid"),
-      el && el.getAttribute && el.getAttribute("aria-label")
-    ].filter(Boolean).join(" "));
+      url
+    ];
 
-    return AD_HINTS.some(word => joined.includes(word));
+    let current = el;
+    let depth = 0;
+
+    while (
+      current &&
+      current !== document &&
+      current !== document.documentElement &&
+      depth < 6
+    ) {
+      parts.push(current.id);
+
+      try {
+        parts.push(String(current.className || ""));
+      } catch (e) {
+        // SVG 等の保険
+      }
+
+      if (current.getAttribute) {
+        parts.push(current.getAttribute("data-ad"));
+        parts.push(current.getAttribute("data-testid"));
+        parts.push(current.getAttribute("aria-label"));
+        parts.push(current.getAttribute("title"));
+        parts.push(current.getAttribute("src"));
+        parts.push(current.getAttribute("href"));
+      }
+
+      current = current.parentElement;
+      depth++;
+    }
+
+    const joined = normalizeText(parts.filter(Boolean).join(" "));
+
+    return AD_HINTS.some(word => joined.includes(String(word).toLowerCase()));
   }
 
   function hasDangerousWord(text) {
@@ -322,7 +388,7 @@
 
     if (tag === "INPUT") {
       const type = normalizeText(el.getAttribute("type"));
-      return ["submit", "button", "image"].includes(type);
+      return ["submit", "button", "image", "reset"].includes(type);
     }
 
     if (el.getAttribute("role") === "button") return true;
@@ -343,6 +409,102 @@
     return false;
   }
 
+  function isMobileLikeViewport() {
+    const innerWidth = window.innerWidth || document.documentElement.clientWidth || 9999;
+    const screenWidth = window.screen && window.screen.width ? window.screen.width : 9999;
+
+    return Math.min(innerWidth, screenWidth) <= 768;
+  }
+
+  function getVisibleRectRatio(rect) {
+    const vw = window.innerWidth || document.documentElement.clientWidth || 1;
+    const vh = window.innerHeight || document.documentElement.clientHeight || 1;
+
+    const left = Math.max(0, rect.left);
+    const top = Math.max(0, rect.top);
+    const right = Math.min(vw, rect.right);
+    const bottom = Math.min(vh, rect.bottom);
+
+    const width = Math.max(0, right - left);
+    const height = Math.max(0, bottom - top);
+
+    const area = width * height;
+    const viewportArea = vw * vh;
+
+    return {
+      widthRatio: width / vw,
+      heightRatio: height / vh,
+      areaRatio: area / viewportArea,
+      visibleWidth: width,
+      visibleHeight: height
+    };
+  }
+
+  function isLargeAdLikeElement(el) {
+    if (!isMobileLikeViewport()) return false;
+    if (!el || !el.getBoundingClientRect) return false;
+
+    let current = el;
+    let depth = 0;
+
+    while (
+      current &&
+      current !== document &&
+      current !== document.documentElement &&
+      depth < 7
+    ) {
+      if (current.getBoundingClientRect) {
+        const rect = current.getBoundingClientRect();
+
+        if (rect.width > 0 && rect.height > 0) {
+          const ratio = getVisibleRectRatio(rect);
+
+          // 横一杯に近い、大きめの帯
+          const isFullWidthBanner =
+            ratio.widthRatio >= 0.9 &&
+            ratio.heightRatio >= 0.14;
+
+          // 画面面積のかなり大きな割合を占める
+          const isLargeArea =
+            ratio.areaRatio >= 0.28;
+
+          // 全画面寄りのオーバーレイ
+          const isOverlayLike =
+            ratio.widthRatio >= 0.75 &&
+            ratio.heightRatio >= 0.45;
+
+          // 下部固定・上部固定の大きめバナー
+          const position = getComputedStyleSafe(current, "position");
+
+          const isFixedLarge =
+            (position === "fixed" || position === "sticky") &&
+            ratio.widthRatio >= 0.75 &&
+            ratio.heightRatio >= 0.10;
+
+          // 横幅いっぱいの大きな画像リンク・カードリンク想定
+          const isWideCard =
+            ratio.widthRatio >= 0.82 &&
+            ratio.heightRatio >= 0.22;
+
+          if (
+            isFullWidthBanner ||
+            isLargeArea ||
+            isOverlayLike ||
+            isFixedLarge ||
+            isWideCard
+          ) {
+            return true;
+          }
+        }
+      }
+
+      current = current.parentElement;
+      depth++;
+    }
+
+    return false;
+  }
+
   function buildReason(el) {
     const text = getElementText(el);
     const url = getUrlFromElement(el);
@@ -355,6 +517,10 @@
 
     if (isDynamicElement(el)) {
       reasons.push("ページを開いた時点では存在せず、後から追加されたボタン・リンクの可能性があります。");
+    }
+
+    if (isLargeAdLikeElement(el)) {
+      reasons.push("スマホ表示で、画面の大きな範囲を占めるボタン・リンク・広告枠の可能性があります。");
     }
 
     if (hasAdHint(el, url, text)) {
@@ -404,13 +570,13 @@
     if (info.url) {
       lines.push("");
       lines.push("移動先:");
-      lines.push(shorten(info.url, 160));
+      lines.push(shorten(info.url, 180));
     }
 
     if (info.text) {
       lines.push("");
       lines.push("押された要素:");
-      lines.push(shorten(info.text, 120));
+      lines.push(shorten(info.text, 140));
     }
 
     lines.push("");
@@ -451,6 +617,7 @@
 
     const now = Date.now();
 
+    // 連打・二重発火の抑制
     if (now - GUARD_STATE.lastConfirmTime < 300) {
       event.preventDefault();
       event.stopPropagation();
@@ -526,6 +693,34 @@
     }
   }
 
+  function exposeDebugTools() {
+    // Via のコンソール等から確認・削除できるようにする保険
+    window.uni928ClickGuard = {
+      getAllowList: function () {
+        return loadAllowList();
+      },
+      clearAllowList: function () {
+        saveAllowList([]);
+        return [];
+      },
+      removeAllow: function (urlOrKey) {
+        const key = getAllowKeyFromUrl(urlOrKey) || String(urlOrKey || "");
+        const list = loadAllowList().filter(item => item !== key);
+        saveAllowList(list);
+        return list;
+      },
+      addAllow: function (urlOrKey) {
+        const key = getAllowKeyFromUrl(urlOrKey) || String(urlOrKey || "");
+        const list = loadAllowList();
+        if (key && !list.includes(key)) {
+          list.push(key);
+          saveAllowList(list);
+        }
+        return loadAllowList();
+      }
+    };
+  }
+
   function init() {
     startMutationObserver();
 
@@ -540,12 +735,14 @@
       markInitialElements();
     }
 
-    // DOMContentLoaded 前に追加済みのものを拾う保険
+    // DOMContentLoaded 前後のズレ対策
     setTimeout(() => {
       if (!GUARD_STATE.initialScanDone) {
         markInitialElements();
       }
     }, 1000);
+
+    exposeDebugTools();
   }
 
   init();
