@@ -431,34 +431,46 @@
     }
   }
 
-  // スマホで横一杯に近い要素か判定
-  function isFullWidthLikeElement(el) {
-    if (!el || !(el instanceof HTMLElement)) return false;
+ // スマホで横一杯に近く、かつ画面の縦幅の1/3を超える要素か判定
+function isFullWidthLikeElement(el) {
+  if (!el || !(el instanceof HTMLElement)) return false;
 
-    const vw = window.innerWidth || document.documentElement.clientWidth || 0;
-    const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+  const vw = window.innerWidth || document.documentElement.clientWidth || 0;
+  const vh = window.innerHeight || document.documentElement.clientHeight || 0;
 
-    if (!vw || !vh) return false;
+  if (!vw || !vh) return false;
 
-    // スマホ幅以外は対象外
-    if (vw > 768) return false;
+  // スマホ幅以外は対象外
+  if (vw > 768) return false;
 
-    const rect = el.getBoundingClientRect();
-    const style = getComputedStyle(el);
+  const rect = el.getBoundingClientRect();
+  const style = getComputedStyle(el);
 
-    if (rect.width <= 0 || rect.height <= 0) return false
+  // 非表示要素は対象外
+  if (style.display === "none") return false;
+  if (style.visibility === "hidden") return false;
+  if (Number(style.opacity) === 0) return false;
 
-    const widthRatio = rect.width / vw;
+  // サイズがない要素は対象外
+  if (rect.width <= 0 || rect.height <= 0) return false;
 
-   
+  // 画面内にないものは対象外
+  if (rect.bottom <= 0) return false;
+  if (rect.top >= vh) return false;
+  if (rect.right <= 0) return false;
+  if (rect.left >= vw) return false;
 
-    // 画面の縦幅の1/3を超えるものだけ対象
-    const heightRatio = rect.height / vh;
-    if (rect.height * 2 > vh) return false;
- if(rect.width * 1.01 > vw) return false;
-    
-    return true;
-  }
+  const widthRatio = rect.width / vw;
+  const heightRatio = rect.height / vh;
+
+  // 横幅が画面の99%以上、つまりほぼ横一杯のものだけ対象
+  if (widthRatio < 0.99) return false;
+
+  // 画面の縦幅の1/3を超えるものだけ対象
+  if (heightRatio <= 2 / 5) return false;
+
+  return true;
+}
 
   // 要素に付いているクリック系処理を空にする
   function emptyElementClickMethods(el) {
