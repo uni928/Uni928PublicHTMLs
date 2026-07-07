@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Click Guard Confirm Full
 // @namespace    uni928-click-guard
-// @version      2.2.7
+// @version      2.2.8
 // @description  広告・外部リンク・後から追加されたボタン・大きなスマホ広告風ボタンを押す前に確認する
 // @match        *://*/*
 // @run-at       document-start
