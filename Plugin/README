@@ -22,4 +22,6 @@ https://raw.githubusercontent.com/uni928/Uni928PublicHTMLs/main/Plugin/plugin3.j
 
 ブロック判定される事は増えると思います。 仕様に大きく影響するため、動作しない可能性の方が高いです。
 
+Via は CSS で Javascript を実行するのは困難と言って良いと思うため、「念のため入れて」「いざとなったら保険になるかも」程度でお願いします。
+
 https://raw.githubusercontent.com/uni928/Uni928PublicHTMLs/main/Plugin/plugin4.js
