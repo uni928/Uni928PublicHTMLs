@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name Via Text Input Helper Buttons
 // @namespace https://uni928.local/
-// @version 2.2.0
+// @version 2.3.0
 // @description 入力欄フォーカス中にコピー・削除・範囲選択指定・ブロック選択ボタンを表示します。
 // @match http*://*/*
 // @grant none
@@ -20,8 +20,6 @@
 
   let rangeAnchorEl = null;
   let rangeAnchorPos = null;
-
-  let isVisible = true;
 
   function isTextInput(el) {
     if (!el) return false;
@@ -78,6 +76,11 @@
     transform: translateY(1px);
   }
 
+  /* 閉じるボタン */
+  #${PANEL_ID} .via-helper-close-btn {
+    background: #ffd8d8;
+  }
+
   /* 操作結果メッセージ */
   #${MESSAGE_ID} {
     position: fixed;
@@ -107,7 +110,6 @@
   }
 
   function createPanel() {
-    if(!isVisible) return null;
     let panel = document.getElementById(PANEL_ID);
     if (panel) return panel;
 
@@ -118,14 +120,16 @@
     panel.appendChild(createButton("削除", clearText));
     panel.appendChild(createButton("範囲選択指定", markOrSelectRange));
     panel.appendChild(createButton("ブロック選択", selectCurrentBlock));
-    panel.appendChild(createButton("この画面中は閉じる", setVisible));
+
+    const closeBtn = createButton("閉じる", function () {
+      hidePanel();
+      clearRangeAnchor();
+    });
+    closeBtn.classList.add("via-helper-close-btn");
+    panel.appendChild(closeBtn);
 
     document.documentElement.appendChild(panel);
     return panel;
-  }
-
-  function setVisible() {
-    isVisible = false;
   }
 
   function createMessage() {
@@ -168,16 +172,18 @@
       handler(el);
 
       setTimeout(function () {
-        focusElement(el);
+        if (isTextInput(el)) focusElement(el);
         updatePanelPosition();
       }, 0);
     }
 
     button.addEventListener("pointerdown", run, { passive: false });
+
     button.addEventListener("touchend", function (event) {
       event.preventDefault();
       event.stopPropagation();
     }, { passive: false });
+
     button.addEventListener("click", function (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -401,24 +407,84 @@
     const range = getSelectionRange(el);
     const pos = range.start;
 
-    const start = findParagraphStart(text, pos);
-    const end = findParagraphEnd(text, pos);
+    const block = findParagraphBlock(text, pos);
 
-    setSelectionRangeSafe(el, start, end);
+    setSelectionRangeSafe(el, block.start, block.end);
     clearRangeAnchor();
 
     showMessage("ブロック選択しました");
   }
 
-  function findParagraphStart(text, pos) {
-    const before = text.slice(0, pos);
-    const index = before.lastIndexOf("\n\n");
-    return index === -1 ? 0 : index + 2;
+  function findParagraphBlock(text, pos) {
+    const len = text.length;
+    pos = Math.max(0, Math.min(pos, len));
+
+    const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    const normalizedPos = originalIndexToNormalizedIndex(text, pos);
+
+    let start = 0;
+    let end = normalized.length;
+
+    const before = normalized.slice(0, normalizedPos);
+    const after = normalized.slice(normalizedPos);
+
+    const beforeMatchIndex = before.lastIndexOf("\n\n");
+    if (beforeMatchIndex !== -1) {
+      start = beforeMatchIndex + 2;
+    }
+
+    const afterMatchIndex = after.indexOf("\n\n");
+    if (afterMatchIndex !== -1) {
+      end = normalizedPos + afterMatchIndex;
+    }
+
+    while (start < end && normalized[start] === "\n") start++;
+    while (end > start && normalized[end - 1] === "\n") end--;
+
+    return {
+      start: normalizedIndexToOriginalIndex(text, start),
+      end: normalizedIndexToOriginalIndex(text, end)
+    };
   }
 
-  function findParagraphEnd(text, pos) {
-    const index = text.indexOf("\n\n", pos);
-    return index === -1 ? text.length : index;
+  function originalIndexToNormalizedIndex(text, originalIndex) {
+    let normalizedIndex = 0;
+
+    for (let i = 0; i < originalIndex && i < text.length; i++) {
+      if (text[i] === "\r") {
+        if (text[i + 1] === "\n") {
+          normalizedIndex++;
+          i++;
+        } else {
+          normalizedIndex++;
+        }
+      } else {
+        normalizedIndex++;
+      }
+    }
+
+    return normalizedIndex;
+  }
+
+  function normalizedIndexToOriginalIndex(text, normalizedTarget) {
+    let normalizedIndex = 0;
+
+    for (let i = 0; i < text.length; i++) {
+      if (normalizedIndex >= normalizedTarget) return i;
+
+      if (text[i] === "\r") {
+        if (text[i + 1] === "\n") {
+          normalizedIndex++;
+          i++;
+        } else {
+          normalizedIndex++;
+        }
+      } else {
+        normalizedIndex++;
+      }
+    }
+
+    return text.length;
   }
 
   function showPanelFor(el) {
