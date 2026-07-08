@@ -46,3 +46,19 @@ body に書く内容：　これは<span class="copy-text">コピー対象</span
 </body> の直前に記述するコード：　<script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin6.js"></script>
 
 紹介サイト：　https://uni928.github.io/Uni928PublicHTMLs/Plugin/TestYou/Test6.html
+
+---
+
+7 html で要素に特定の class を付ける事で対象要素にスクロールできる(ジャンプ元の見た目は変わりません。ジャンプ先は押すまで見た目が変わりません)
+
+</body> の直前に記述するコード：　<script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin7.js"></script>
+
+Jump source:
+<span class="jump-marker jm-to-setup">設定方法へ</span>
+ 
+Jump target:
+ <h2 id="setup">設定方法</h2>
+ or
+ <h2 class="setup">設定方法</h2>
+
+
