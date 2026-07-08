@@ -45,6 +45,4 @@ body に書く内容：　これは<span class="copy-text">コピー対象</span
 
 </body> の直前に記述するコード：　<script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin6.js"></script>
 
-body に書く内容(この間がマークダウンで表示されます。)：　<div class="md-box"></div>
-
-テストサイト：　https://uni928.github.io/Uni928PublicHTMLs/Plugin/TestYou/Test6.html
+紹介サイト：　https://uni928.github.io/Uni928PublicHTMLs/Plugin/TestYou/Test6.html
