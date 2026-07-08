@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name Via Text Input Helper Buttons
 // @namespace https://uni928.local/
-// @version 2.1.0
+// @version 2.2.0
 // @description 入力欄フォーカス中にコピー・削除・範囲選択指定・ブロック選択ボタンを表示します。
 // @match http*://*/*
 // @grant none
@@ -20,6 +20,8 @@
 
   let rangeAnchorEl = null;
   let rangeAnchorPos = null;
+
+  let isVisible = true;
 
   function isTextInput(el) {
     if (!el) return false;
@@ -105,6 +107,7 @@
   }
 
   function createPanel() {
+    if(!isVisible) return null;
     let panel = document.getElementById(PANEL_ID);
     if (panel) return panel;
 
@@ -115,9 +118,14 @@
     panel.appendChild(createButton("削除", clearText));
     panel.appendChild(createButton("範囲選択指定", markOrSelectRange));
     panel.appendChild(createButton("ブロック選択", selectCurrentBlock));
+    panel.appendChild(createButton("この画面中は閉じる", setVisible));
 
     document.documentElement.appendChild(panel);
     return panel;
+  }
+
+  function setVisible() {
+    isVisible = false;
   }
 
   function createMessage() {
