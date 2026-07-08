@@ -24,33 +24,36 @@
     return "#";
   }
 
-  function renderInline(markdown) {
-    let text = escapeHtml(markdown);
+function renderInline(markdown) {
+  let text = escapeHtml(markdown);
 
-    const codeStore = [];
-    text = text.replace(/`([^`\n]+)`/g, function (_, code) {
-      const index = codeStore.length;
-      codeStore.push(code);
-      return `@@CODE_${index}@@`;
-    });
+  const codeStore = [];
 
-    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function (_, label, url) {
-      const safeUrl = sanitizeUrl(url);
-      return `<a class="md-box-link" href="${escapeAttr(safeUrl)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
-    });
+  text = text.replace(/`([^`\n]+)`/g, function (_, code) {
+    const index = codeStore.length;
+    codeStore.push(code);
 
-    text = text.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-    text = text.replace(/__([^_]+)__/g, "<strong>$1</strong>");
-    text = text.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
-    text = text.replace(/(^|[^_])_([^_\n]+)_/g, "$1<em>$2</em>");
+    // 通常の文章に出にくい退避トークンを使う
+    return "\uE000CODE" + index + "\uE001";
+  });
 
-    text = text.replace(/@@CODE_(\d+)@@/g, function (_, index) {
-      const code = codeStore[Number(index)] || "";
-      return `<code class="md-inline-code" data-md-copy="${escapeAttr(code)}">${escapeHtml(code)}</code>`;
-    });
+  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function (_, label, url) {
+    const safeUrl = sanitizeUrl(url);
+    return `<a class="md-box-link" href="${escapeAttr(safeUrl)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+  });
 
-    return text;
-  }
+  text = text.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  text = text.replace(/__([^_]+)__/g, "<strong>$1</strong>");
+  text = text.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+  text = text.replace(/(^|[^_])_([^_\n]+)_/g, "$1<em>$2</em>");
+
+  text = text.replace(/\uE000CODE(\d+)\uE001/g, function (_, index) {
+    const code = codeStore[Number(index)] || "";
+    return `<code class="md-inline-code" data-md-copy="${escapeAttr(code)}">${escapeHtml(code)}</code>`;
+  });
+
+  return text;
+}
 
   function renderMarkdown(markdown) {
     const lines = String(markdown || "").replace(/\r\n?/g, "\n").split("\n");
