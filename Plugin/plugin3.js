@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name Via Text Input Helper Buttons
 // @namespace https://uni928.local/
-// @version 3.1.1
+// @version 3.1.2
 // @description 入力欄フォーカス中にコピー・削除・範囲選択指定・記憶ボタンを表示し、記憶内容を自動入力します。
 // @match http*://*/*
 // @grant none
@@ -207,7 +207,7 @@ function isSensitiveInput(el) {
 
   function startAutoFillWatcher() {
     let runCount = 0;
-    const maxRunCount = 20;
+    const maxRunCount = 2;
 
     function run() {
       runCount++;
