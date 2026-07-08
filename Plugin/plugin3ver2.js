@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name Via Text Input Helper Buttons
 // @namespace https://uni928.local/
-// @version 2.0.0
+// @version 2.0.1
 // @description 入力欄フォーカス中にコピー・削除・範囲選択指定・ブロック選択ボタンを表示します。
 // @match http*://*/*
 // @grant none
@@ -324,10 +324,10 @@
     const range = getSelectionRange(el);
     const pos = range.start;
 
-    let start = text.lastIndexOf("\n", Math.max(0, pos - 1));
+    let start = text.lastIndexOf("\n\n", Math.max(0, pos - 1));
     start = start === -1 ? 0 : start + 1;
 
-    let end = text.indexOf("\n", pos);
+    let end = text.indexOf("\n\n", pos);
     end = end === -1 ? text.length : end;
 
     setSelectionRangeSafe(el, start, end);
