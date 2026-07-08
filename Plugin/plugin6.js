@@ -156,7 +156,7 @@
 
     const style = document.createElement("style");
     style.id = STYLE_ID;
-    if (el.classList.contains("unsetAllMode")) {
+    if (document.querySelector(".unsetAllMode")) {
       style.textContent = `
 @layer base {
   /* md-box内だけ既存CSSの影響をできるだけ遮断 */
