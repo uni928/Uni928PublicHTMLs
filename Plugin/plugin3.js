@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name Via Text Input Helper Buttons
 // @namespace https://uni928.local/
-// @version 3.1.0
+// @version 3.1.1
 // @description 入力欄フォーカス中にコピー・削除・範囲選択指定・記憶ボタンを表示し、記憶内容を自動入力します。
 // @match http*://*/*
 // @grant none
@@ -218,8 +218,8 @@ function isSensitiveInput(el) {
       }
     }
 
-    // サイトを開いて放置した場合でも、5秒後から自動入力を試します。
-    setTimeout(run, 5000);
+    // サイトを開いて放置した場合でも、0.1秒後から自動入力を試します。
+    setTimeout(run, 100);
 
     // GitHubなど、入力欄が後から追加されるサイト向けです。
     const observer = new MutationObserver(function () {
