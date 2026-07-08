@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <title>plugin6.js テストサイト</title>
+  <style>
+
+  </style>
+</head>
+<body>
+<div class="md-box">
+# 見出し1
+
+これは **太字** と *斜体* のテストです。
+
+## 見出し2
+
+- 箇条書き1
+- 箇条書き2
+- `インラインコード`
+
+1. 番号付きリスト
+2. 番号付きリスト
+
+> 引用文のテストです。
+
+---
+
+[公開先](https://raw.githubusercontent.com/uni928/Uni928PublicHTMLs/main/Plugin/plugin6.js)
+
+```js
+console.log("コードブロックのコピー確認用です");
+```
+
+## 機能一覧
+
+- `.md-box` の中だけMarkdown風に表示
+- `#` / `##` / `###` などの見出し表示
+- `**太字**` と `*斜体*` に対応
+- `- 箇条書き` に対応
+- `1. 番号付きリスト` に対応
+- > 引用 に対応
+- `---` の区切り線に対応
+- `[リンク名](https://example.com)` に対応
+- `で囲うインラインコード はクリックでコピー可能
+- コードブロックにはコピーボタンを自動表示
+- コピー後に「コピーしました」のアナウンスを表示
+- `.unsetAllMode` 付き要素では外側CSSの影響を受けにくい表示に対応
+- GitHub Pagesで外部JSとして読み込み可能
+</div>
+<script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin6.js"></script>
+</body>
+</html>
