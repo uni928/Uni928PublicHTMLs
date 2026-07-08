@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name Via Text Input Helper Buttons
 // @namespace https://uni928.local/
-// @version 2.3.1
-// @description 入力欄フォーカス中にコピー・削除・範囲選択指定・ブロック選択ボタンを表示します。
+// @version 3.0.3
+// @description 入力欄フォーカス中にコピー・削除・範囲選択指定・記憶ボタンを表示し、記憶内容を自動入力します。
 // @match http*://*/*
 // @grant none
 // ==/UserScript==
@@ -14,9 +14,14 @@
   const STYLE_ID = "via-text-input-helper-style";
   const MESSAGE_ID = "via-text-input-helper-message";
 
+  const DB_NAME = "via_text_input_helper_db";
+  const DB_VERSION = 1;
+  const STORE_NAME = "memory";
+
   let activeEl = null;
   let hideTimer = null;
   let messageTimer = null;
+  let panelPausedUntil = 0;
 
   let rangeAnchorEl = null;
   let rangeAnchorPos = null;
@@ -27,10 +32,191 @@
 
     if (el.tagName === "INPUT") {
       const type = String(el.type || "text").toLowerCase();
-      return ["text", "search", "url", "tel", "email", "password", "number"].includes(type);
+
+      return [
+        "text",
+        "search",
+        "url",
+        "tel",
+        "email",
+        "number"
+      ].includes(type);
     }
 
     return !!el.isContentEditable;
+  }
+
+  function isMemoryTarget(el) {
+    if (!isTextInput(el)) return false;
+    if (el.tagName === "INPUT" && String(el.type || "").toLowerCase() === "password") return false;
+    return true;
+  }
+
+  function getPageKey() {
+    return location.origin + location.pathname;
+  }
+
+  function getElementKey(el) {
+    if (el.id) return "id:" + el.id;
+    if (el.name) return "name:" + el.name;
+
+    const tag = String(el.tagName || "").toLowerCase();
+    const all = Array.from(document.querySelectorAll(tag));
+    const index = all.indexOf(el);
+
+    return tag + ":index:" + index;
+  }
+
+  function getMemoryKey(el) {
+    return getPageKey() + "||" + getElementKey(el);
+  }
+
+  function openDb() {
+    return new Promise(function (resolve, reject) {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+
+      req.onupgradeneeded = function () {
+        const db = req.result;
+
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME, { keyPath: "key" });
+        }
+      };
+
+      req.onsuccess = function () {
+        resolve(req.result);
+      };
+
+      req.onerror = function () {
+        reject(req.error);
+      };
+    });
+  }
+
+  async function saveMemory(el) {
+    if (!isMemoryTarget(el)) {
+      showMessage("この入力欄は記憶対象外です");
+      return;
+    }
+
+    const text = getText(el);
+
+    if (!text.trim()) {
+      showMessage("入力内容が空です");
+      return;
+    }
+
+    try {
+      const db = await openDb();
+
+      await new Promise(function (resolve, reject) {
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+
+        store.put({
+          key: getMemoryKey(el),
+          pageKey: getPageKey(),
+          elementKey: getElementKey(el),
+          url: location.href,
+          text,
+          savedAt: Date.now()
+        });
+
+        tx.oncomplete = resolve;
+        tx.onerror = function () {
+          reject(tx.error);
+        };
+      });
+
+      db.close();
+      showMessage("記憶しました");
+    } catch (_) {
+      showMessage("記憶に失敗しました");
+    }
+  }
+
+  async function loadMemoryForElement(el) {
+    if (!isMemoryTarget(el)) return null;
+
+    try {
+      const db = await openDb();
+
+      const data = await new Promise(function (resolve, reject) {
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.get(getMemoryKey(el));
+
+        req.onsuccess = function () {
+          resolve(req.result || null);
+        };
+
+        req.onerror = function () {
+          reject(req.error);
+        };
+      });
+
+      db.close();
+      return data;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function autoFillRememberedInputs() {
+    const targets = Array.from(document.querySelectorAll("textarea, input, [contenteditable='true'], [contenteditable='']"))
+      .filter(isMemoryTarget);
+
+    for (const el of targets) {
+      const current = getText(el);
+
+      if (current.trim()) continue;
+
+      const data = await loadMemoryForElement(el);
+
+      if (data && typeof data.text === "string" && data.text) {
+        setText(el, data.text);
+        markAutoFilled(el);
+      }
+    }
+  }
+
+  function markAutoFilled(el) {
+    try {
+      el.setAttribute("data-via-helper-autofilled", "1");
+    } catch (_) {}
+  }
+
+  function startAutoFillWatcher() {
+    let runCount = 0;
+    const maxRunCount = 20;
+
+    function run() {
+      runCount++;
+      autoFillRememberedInputs();
+
+      if (runCount < maxRunCount) {
+        setTimeout(run, 1000);
+      }
+    }
+
+    // サイトを開いて放置した場合でも、5秒後から自動入力を試します。
+    setTimeout(run, 5000);
+
+    // GitHubなど、入力欄が後から追加されるサイト向けです。
+    const observer = new MutationObserver(function () {
+      autoFillRememberedInputs();
+    });
+
+    try {
+      observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true
+      });
+
+      setTimeout(function () {
+        observer.disconnect();
+      }, 30000);
+    } catch (_) {}
   }
 
   function injectStyle() {
@@ -47,10 +233,10 @@
     display: none;
     flex-wrap: wrap;
     gap: 6px;
-    max-width: calc(100vw - 12px);
+    max-width: calc(100vw - 20px);
     padding: 6px;
     border-radius: 10px;
-    background: rgba(20, 20, 20, 0.88);
+    background: rgba(20, 20, 20, 0.9);
     box-shadow: 0 4px 16px rgba(0, 0, 0, .25);
     box-sizing: border-box;
   }
@@ -59,26 +245,44 @@
     display: flex;
   }
 
+  /* サイト側CSSで文字色が潰れるのを防ぐ */
   #${PANEL_ID} button {
-    border: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    border: 1px solid rgba(0, 0, 0, 0.28);
     border-radius: 8px;
     padding: 8px 10px;
     background: #fff6d8;
-    color: #111;
-    font-size: 13px;
-    line-height: 1;
+    color: #111111;
+    -webkit-text-fill-color: #111111;
+    text-shadow: none;
+    font: 700 13px/1.1 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    letter-spacing: 0.02em;
     cursor: pointer;
     touch-action: manipulation;
     user-select: none;
+    box-sizing: border-box;
+    min-height: 34px;
   }
 
   #${PANEL_ID} button:active {
     transform: translateY(1px);
   }
 
+  /* 記憶ボタン */
+  #${PANEL_ID} .via-helper-memory-btn {
+    background: #d8ffe4;
+    color: #082b13;
+    -webkit-text-fill-color: #082b13;
+    border-color: rgba(8, 43, 19, 0.28);
+  }
+
   /* 閉じるボタン */
   #${PANEL_ID} .via-helper-close-btn {
     background: #ffd8d8;
+    color: #3a0505;
+    -webkit-text-fill-color: #3a0505;
+    border-color: rgba(58, 5, 5, 0.28);
   }
 
   /* 操作結果メッセージ */
@@ -94,6 +298,7 @@
     border-radius: 999px;
     background: rgba(20, 20, 20, 0.88);
     color: #fff6d8;
+    -webkit-text-fill-color: #fff6d8;
     font-size: 13px;
     line-height: 1.4;
     box-sizing: border-box;
@@ -119,11 +324,17 @@
     panel.appendChild(createButton("コピー", copyAllText));
     panel.appendChild(createButton("削除", clearText));
     panel.appendChild(createButton("範囲選択指定", markOrSelectRange));
-    //panel.appendChild(createButton("ブロック選択", selectCurrentBlock));
+    // panel.appendChild(createButton("ブロック選択", selectCurrentBlock));
+
+    const memoryBtn = createButton("記憶", saveMemory);
+    memoryBtn.classList.add("via-helper-memory-btn");
+    panel.appendChild(memoryBtn);
 
     const closeBtn = createButton("閉じる", function () {
+      panelPausedUntil = Date.now() + 10000;
       hidePanel();
       clearRangeAnchor();
+      // showMessage("10秒間閉じます");
     });
     closeBtn.classList.add("via-helper-close-btn");
     panel.appendChild(closeBtn);
@@ -406,12 +617,10 @@
     const text = getText(el);
     const range = getSelectionRange(el);
     const pos = range.start;
-
     const block = findParagraphBlock(text, pos);
 
     setSelectionRangeSafe(el, block.start, block.end);
     clearRangeAnchor();
-
     showMessage("ブロック選択しました");
   }
 
@@ -428,15 +637,11 @@
     const before = normalized.slice(0, normalizedPos);
     const after = normalized.slice(normalizedPos);
 
-    const beforeMatchIndex = before.lastIndexOf("\n\n");
-    if (beforeMatchIndex !== -1) {
-      start = beforeMatchIndex + 2;
-    }
+    const beforeIndex = before.lastIndexOf("\n\n");
+    if (beforeIndex !== -1) start = beforeIndex + 2;
 
-    const afterMatchIndex = after.indexOf("\n\n");
-    if (afterMatchIndex !== -1) {
-      end = normalizedPos + afterMatchIndex;
-    }
+    const afterIndex = after.indexOf("\n\n");
+    if (afterIndex !== -1) end = normalizedPos + afterIndex;
 
     while (start < end && normalized[start] === "\n") start++;
     while (end > start && normalized[end - 1] === "\n") end--;
@@ -452,15 +657,10 @@
 
     for (let i = 0; i < originalIndex && i < text.length; i++) {
       if (text[i] === "\r") {
-        if (text[i + 1] === "\n") {
-          normalizedIndex++;
-          i++;
-        } else {
-          normalizedIndex++;
-        }
-      } else {
-        normalizedIndex++;
+        if (text[i + 1] === "\n") i++;
       }
+
+      normalizedIndex++;
     }
 
     return normalizedIndex;
@@ -472,26 +672,21 @@
     for (let i = 0; i < text.length; i++) {
       if (normalizedIndex >= normalizedTarget) return i;
 
-      if (text[i] === "\r") {
-        if (text[i + 1] === "\n") {
-          normalizedIndex++;
-          i++;
-        } else {
-          normalizedIndex++;
-        }
-      } else {
-        normalizedIndex++;
-      }
+      if (text[i] === "\r" && text[i + 1] === "\n") i++;
+      normalizedIndex++;
     }
 
     return text.length;
   }
 
   function showPanelFor(el) {
+    if (Date.now() < panelPausedUntil) return;
     if (!isTextInput(el)) return;
 
     activeEl = el;
-    createPanel().classList.add("is-visible");
+
+    const panel = createPanel();
+    panel.classList.add("is-visible");
     updatePanelPosition();
   }
 
@@ -521,19 +716,24 @@
     const rect = el.getBoundingClientRect();
     const panelRect = panel.getBoundingClientRect();
 
-    let left = rect.right - panelRect.width;
-    let top = rect.bottom + 6;
+    let left = rect.right + 12;
+    let top = rect.bottom + 12;
 
-    if (left < 6) left = 6;
-    if (left + panelRect.width > window.innerWidth - 6) {
-      left = window.innerWidth - panelRect.width - 6;
+    if (left + panelRect.width > window.innerWidth - 10) {
+      left = rect.left - panelRect.width - 12;
     }
 
-    if (top + panelRect.height > window.innerHeight - 6) {
-      top = rect.top - panelRect.height - 6;
+    if (left < 10) {
+      left = Math.max(10, window.innerWidth - panelRect.width - 10);
     }
 
-    if (top < 6) top = 6;
+    if (top + panelRect.height > window.innerHeight - 10) {
+      top = rect.top - panelRect.height - 12;
+    }
+
+    if (top < 10) {
+      top = 10;
+    }
 
     panel.style.left = left + "px";
     panel.style.top = top + "px";
@@ -575,6 +775,8 @@
     window.addEventListener("resize", function () {
       hidePanel();
     });
+
+    startAutoFillWatcher();
   }
 
   if (document.readyState === "loading") {
