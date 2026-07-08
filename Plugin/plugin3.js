@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name Via Text Input Helper Buttons
 // @namespace https://uni928.local/
-// @version 3.0.3
+// @version 3.1.0
 // @description 入力欄フォーカス中にコピー・削除・範囲選択指定・記憶ボタンを表示し、記憶内容を自動入力します。
 // @match http*://*/*
 // @grant none
@@ -46,11 +46,30 @@
     return !!el.isContentEditable;
   }
 
-  function isMemoryTarget(el) {
-    if (!isTextInput(el)) return false;
-    if (el.tagName === "INPUT" && String(el.type || "").toLowerCase() === "password") return false;
-    return true;
+function isMemoryTarget(el) {
+  if (!isTextInput(el)) return false;
+
+  if (el.tagName === "INPUT") {
+    const type = String(el.type || "").toLowerCase();
+
+    if (type === "password") return false;
+    if (type === "email") return false;
+    if (type === "tel") return false;
   }
+
+  if (isSensitiveInput(el)) return false;
+
+  return true;
+}
+
+  // 危険そうな入力欄は記憶しない
+function isSensitiveInput(el) {
+  const joined = [
+    el.id
+  ].join(" ").toLowerCase();
+
+  return /password|pass|token|api|secret|key|mail|email|tel|phone|address|住所|電話|メール|パスワード|認証|秘密|鍵/.test(joined);
+}
 
   function getPageKey() {
     return location.origin + location.pathname;
