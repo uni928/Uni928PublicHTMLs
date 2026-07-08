@@ -18,6 +18,6 @@ https://raw.githubusercontent.com/uni928/Uni928PublicHTMLs/main/Plugin/plugin3.j
 
 ---
 
-4. Viaというスマホブラウザ用 via_inject_blocker.css の挿入の回避を試みる 仕様に大きく影響するため、動作しない可能性の方が高いです。
+4. Viaというスマホブラウザ用 Via内蔵の広告ブロック機能が、サイト側の広告ブロック検出に引っかかりにくくするための注入CSSだと思われるCSSを念のため回避します。 ブロック判定される事は増えると思います。 via_inject_blocker.css の挿入の回避を試みる 仕様に大きく影響するため、動作しない可能性の方が高いです。
 
 https://raw.githubusercontent.com/uni928/Uni928PublicHTMLs/main/Plugin/plugin4.js
