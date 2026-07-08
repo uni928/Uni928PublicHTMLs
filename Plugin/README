@@ -41,7 +41,7 @@ body に書く内容：　これは<span class="copy-text">コピー対象</span
 
 ---
 
-6. html 中にマークダウン形式の文章を挿入(html 非対応)
+6. html 中にマークダウン形式の文章を挿入
 
 </body> の直前に記述するコード：　<script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin6.js"></script>
 
