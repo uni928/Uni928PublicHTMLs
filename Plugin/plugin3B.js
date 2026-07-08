@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name Via Text Input Helper Buttons
 // @namespace https://uni928.local/
-// @version 3.0.2
-// @description 入力欄フォーカス中にコピー・削除・範囲選択指定・ブロック選択・記憶ボタンを表示します。
+// @version 3.0.3
+// @description 入力欄フォーカス中にコピー・削除・範囲選択指定・記憶ボタンを表示し、記憶内容を自動入力します。
 // @match http*://*/*
 // @grant none
 // ==/UserScript==
@@ -175,8 +175,48 @@
 
       if (data && typeof data.text === "string" && data.text) {
         setText(el, data.text);
+        markAutoFilled(el);
       }
     }
+  }
+
+  function markAutoFilled(el) {
+    try {
+      el.setAttribute("data-via-helper-autofilled", "1");
+    } catch (_) {}
+  }
+
+  function startAutoFillWatcher() {
+    let runCount = 0;
+    const maxRunCount = 20;
+
+    function run() {
+      runCount++;
+      autoFillRememberedInputs();
+
+      if (runCount < maxRunCount) {
+        setTimeout(run, 1000);
+      }
+    }
+
+    // サイトを開いて放置した場合でも、5秒後から自動入力を試します。
+    setTimeout(run, 5000);
+
+    // GitHubなど、入力欄が後から追加されるサイト向けです。
+    const observer = new MutationObserver(function () {
+      autoFillRememberedInputs();
+    });
+
+    try {
+      observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true
+      });
+
+      setTimeout(function () {
+        observer.disconnect();
+      }, 30000);
+    } catch (_) {}
   }
 
   function injectStyle() {
@@ -186,6 +226,7 @@
     style.id = STYLE_ID;
     style.textContent = `
 @layer viaTextInputHelper {
+  /* パネル本体 */
   #${PANEL_ID} {
     position: fixed;
     z-index: 2147483647;
@@ -195,7 +236,7 @@
     max-width: calc(100vw - 20px);
     padding: 6px;
     border-radius: 10px;
-    background: rgba(20, 20, 20, 0.88);
+    background: rgba(20, 20, 20, 0.9);
     box-shadow: 0 4px 16px rgba(0, 0, 0, .25);
     box-sizing: border-box;
   }
@@ -204,31 +245,47 @@
     display: flex;
   }
 
+  /* サイト側CSSで文字色が潰れるのを防ぐ */
   #${PANEL_ID} button {
-    border: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    border: 1px solid rgba(0, 0, 0, 0.28);
     border-radius: 8px;
     padding: 8px 10px;
     background: #fff6d8;
-    color: #111;
-    font-size: 13px;
-    line-height: 1;
+    color: #111111;
+    -webkit-text-fill-color: #111111;
+    text-shadow: none;
+    font: 700 13px/1.1 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    letter-spacing: 0.02em;
     cursor: pointer;
     touch-action: manipulation;
     user-select: none;
+    box-sizing: border-box;
+    min-height: 34px;
   }
 
   #${PANEL_ID} button:active {
     transform: translateY(1px);
   }
 
+  /* 記憶ボタン */
   #${PANEL_ID} .via-helper-memory-btn {
     background: #d8ffe4;
+    color: #082b13;
+    -webkit-text-fill-color: #082b13;
+    border-color: rgba(8, 43, 19, 0.28);
   }
 
+  /* 閉じるボタン */
   #${PANEL_ID} .via-helper-close-btn {
     background: #ffd8d8;
+    color: #3a0505;
+    -webkit-text-fill-color: #3a0505;
+    border-color: rgba(58, 5, 5, 0.28);
   }
 
+  /* 操作結果メッセージ */
   #${MESSAGE_ID} {
     position: fixed;
     left: 50%;
@@ -241,6 +298,7 @@
     border-radius: 999px;
     background: rgba(20, 20, 20, 0.88);
     color: #fff6d8;
+    -webkit-text-fill-color: #fff6d8;
     font-size: 13px;
     line-height: 1.4;
     box-sizing: border-box;
@@ -266,7 +324,7 @@
     panel.appendChild(createButton("コピー", copyAllText));
     panel.appendChild(createButton("削除", clearText));
     panel.appendChild(createButton("範囲選択指定", markOrSelectRange));
-    //panel.appendChild(createButton("ブロック選択", selectCurrentBlock));
+    // panel.appendChild(createButton("ブロック選択", selectCurrentBlock));
 
     const memoryBtn = createButton("記憶", saveMemory);
     memoryBtn.classList.add("via-helper-memory-btn");
@@ -276,7 +334,7 @@
       panelPausedUntil = Date.now() + 10000;
       hidePanel();
       clearRangeAnchor();
-      //showMessage("10秒間閉じます");
+      // showMessage("10秒間閉じます");
     });
     closeBtn.classList.add("via-helper-close-btn");
     panel.appendChild(closeBtn);
@@ -331,10 +389,12 @@
     }
 
     button.addEventListener("pointerdown", run, { passive: false });
+
     button.addEventListener("touchend", function (event) {
       event.preventDefault();
       event.stopPropagation();
     }, { passive: false });
+
     button.addEventListener("click", function (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -716,7 +776,7 @@
       hidePanel();
     });
 
-    setTimeout(autoFillRememberedInputs, 2500);
+    startAutoFillWatcher();
   }
 
   if (document.readyState === "loading") {
