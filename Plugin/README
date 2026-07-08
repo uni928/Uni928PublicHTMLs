@@ -12,7 +12,7 @@ https://raw.githubusercontent.com/uni928/Uni928PublicHTMLs/main/Plugin/plugin2.j
 
 ---
 
-3. Viaというスマホブラウザ用 入力作業効率化。テキスト入力欄に入力状態の場合、入力欄の下に「コピー」「削除」を出現させる。
+3. Viaというスマホブラウザ用 入力作業効率化。テキスト入力欄に入力状態の場合、入力欄の下に「コピー」「削除」「範囲選択指定(2箇所で実行する事で、その間を範囲指定できる)」を出現させる。
 
 https://raw.githubusercontent.com/uni928/Uni928PublicHTMLs/main/Plugin/plugin3.js
 
