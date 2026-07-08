@@ -35,6 +35,6 @@ https://raw.githubusercontent.com/uni928/Uni928PublicHTMLs/main/Plugin/plugin4.j
 
 </body> の直前に記述するコード：　<script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin5.js"></script>
 
-body に書く内容：　あああ<span class="copy-text">いいい</span>ううう
+body に書く内容：　これは<span class="copy-text">コピー対象</span>です。
 
 テストサイト：　https://uni928.github.io/Uni928PublicHTMLs/Plugin/TestYou/Test5.html
