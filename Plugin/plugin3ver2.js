@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name Via Text Input Helper Buttons
 // @namespace https://uni928.local/
-// @version 2.0.1
+// @version 2.1.0
 // @description 入力欄フォーカス中にコピー・削除・範囲選択指定・ブロック選択ボタンを表示します。
 // @match http*://*/*
 // @grant none
@@ -18,7 +18,6 @@
   let hideTimer = null;
   let messageTimer = null;
 
-  // 範囲選択指定用：1回目のカーソル位置を保存
   let rangeAnchorEl = null;
   let rangeAnchorPos = null;
 
@@ -31,8 +30,7 @@
       return ["text", "search", "url", "tel", "email", "password", "number"].includes(type);
     }
 
-    if (el.isContentEditable) return true;
-    return false;
+    return !!el.isContentEditable;
   }
 
   function injectStyle() {
@@ -42,7 +40,7 @@
     style.id = STYLE_ID;
     style.textContent = `
 @layer viaTextInputHelper {
-  /* 入力欄用の補助ボタンパネル */
+  /* パネル本体 */
   #${PANEL_ID} {
     position: fixed;
     z-index: 2147483647;
@@ -129,7 +127,6 @@
     message = document.createElement("div");
     message.id = MESSAGE_ID;
     document.documentElement.appendChild(message);
-
     return message;
   }
 
@@ -169,12 +166,10 @@
     }
 
     button.addEventListener("pointerdown", run, { passive: false });
-
     button.addEventListener("touchend", function (event) {
       event.preventDefault();
       event.stopPropagation();
     }, { passive: false });
-
     button.addEventListener("click", function (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -215,12 +210,11 @@
   }
 
   function getSelectionRange(el) {
-    const len = getText(el).length;
-
     if (el.isContentEditable) {
-      return { start: len, end: len };
+      return getContentEditableSelectionRange(el);
     }
 
+    const len = getText(el).length;
     let start = typeof el.selectionStart === "number" ? el.selectionStart : len;
     let end = typeof el.selectionEnd === "number" ? el.selectionEnd : start;
 
@@ -231,11 +225,104 @@
   }
 
   function setSelectionRangeSafe(el, start, end) {
-    if (el.isContentEditable) return;
+    if (el.isContentEditable) {
+      setContentEditableSelectionRange(el, start, end);
+      return;
+    }
 
     try {
       el.setSelectionRange(start, end);
     } catch (_) {}
+  }
+
+  function getContentEditableSelectionRange(root) {
+    const selection = window.getSelection();
+    const text = getText(root);
+    const len = text.length;
+
+    if (!selection || selection.rangeCount === 0) {
+      return { start: len, end: len };
+    }
+
+    const range = selection.getRangeAt(0);
+
+    if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) {
+      return { start: len, end: len };
+    }
+
+    const start = getTextOffset(root, range.startContainer, range.startOffset);
+    const end = getTextOffset(root, range.endContainer, range.endOffset);
+
+    return {
+      start: Math.max(0, Math.min(start, len)),
+      end: Math.max(0, Math.min(end, len))
+    };
+  }
+
+  function getTextOffset(root, targetNode, targetOffset) {
+    let offset = 0;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+
+      if (node === targetNode) {
+        return offset + targetOffset;
+      }
+
+      offset += node.nodeValue.length;
+    }
+
+    return offset;
+  }
+
+  function setContentEditableSelectionRange(root, start, end) {
+    const startPoint = findTextPoint(root, start);
+    const endPoint = findTextPoint(root, end);
+
+    if (!startPoint || !endPoint) return;
+
+    const range = document.createRange();
+    range.setStart(startPoint.node, startPoint.offset);
+    range.setEnd(endPoint.node, endPoint.offset);
+
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  function findTextPoint(root, targetOffset) {
+    let currentOffset = 0;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let lastTextNode = null;
+
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      const nextOffset = currentOffset + node.nodeValue.length;
+
+      if (targetOffset <= nextOffset) {
+        return {
+          node,
+          offset: Math.max(0, targetOffset - currentOffset)
+        };
+      }
+
+      currentOffset = nextOffset;
+      lastTextNode = node;
+    }
+
+    if (lastTextNode) {
+      return {
+        node: lastTextNode,
+        offset: lastTextNode.nodeValue.length
+      };
+    }
+
+    root.appendChild(document.createTextNode(""));
+    return {
+      node: root.firstChild,
+      offset: 0
+    };
   }
 
   async function copyAllText(el) {
@@ -271,11 +358,7 @@
 
   function clearText(el) {
     setText(el, "");
-
-    if (!el.isContentEditable) {
-      setSelectionRangeSafe(el, 0, 0);
-    }
-
+    setSelectionRangeSafe(el, 0, 0);
     clearRangeAnchor();
     showMessage("削除しました");
   }
@@ -286,11 +369,6 @@
   }
 
   function markOrSelectRange(el) {
-    if (el.isContentEditable) {
-      showMessage("通常入力欄のみ対応です");
-      return;
-    }
-
     const range = getSelectionRange(el);
     const pos = range.end;
 
@@ -307,76 +385,52 @@
     setSelectionRangeSafe(el, start, end);
     clearRangeAnchor();
 
-    if (start === end) {
-      showMessage("同じ位置です");
-    } else {
-      showMessage("範囲選択しました");
-    }
+    showMessage(start === end ? "同じ位置です" : "範囲選択しました");
   }
 
   function selectCurrentBlock(el) {
-    if (el.isContentEditable) {
-      selectContentEditableBlock(el);
-      return;
-    }
-
     const text = getText(el);
     const range = getSelectionRange(el);
     const pos = range.start;
 
-    let start = text.lastIndexOf("\n\n", Math.max(0, pos - 1));
-    start = start === -1 ? 0 : start + 1;
-
-    let end = text.indexOf("\n\n", pos);
-    end = end === -1 ? text.length : end;
+    const start = findParagraphStart(text, pos);
+    const end = findParagraphEnd(text, pos);
 
     setSelectionRangeSafe(el, start, end);
     clearRangeAnchor();
+
     showMessage("ブロック選択しました");
   }
 
-  function selectContentEditableBlock(el) {
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) {
-      showMessage("選択できませんでした");
-      return;
-    }
+  function findParagraphStart(text, pos) {
+    const before = text.slice(0, pos);
+    const index = before.lastIndexOf("\n\n");
+    return index === -1 ? 0 : index + 2;
+  }
 
-    const text = el.innerText || "";
-    if (!text) {
-      showMessage("空です");
-      return;
-    }
-
-    // contentEditableはDOM構造差が大きいため、現在行全体をexecCommandで選ぶのは不安定。
-    // ここではブラウザ標準の行選択に近い操作として現在段落を選択します。
-    try {
-      document.execCommand("selectAll", false);
-      showMessage("ブロック選択しました");
-    } catch (_) {
-      showMessage("選択できませんでした");
-    }
+  function findParagraphEnd(text, pos) {
+    const index = text.indexOf("\n\n", pos);
+    return index === -1 ? text.length : index;
   }
 
   function showPanelFor(el) {
     if (!isTextInput(el)) return;
 
     activeEl = el;
-
-    const panel = createPanel();
-    panel.classList.add("is-visible");
-
+    createPanel().classList.add("is-visible");
     updatePanelPosition();
+  }
+
+  function hidePanel() {
+    const panel = document.getElementById(PANEL_ID);
+    if (panel) panel.classList.remove("is-visible");
   }
 
   function hidePanelSoon() {
     clearTimeout(hideTimer);
 
     hideTimer = setTimeout(function () {
-      const panel = document.getElementById(PANEL_ID);
-      if (panel) {
-        panel.classList.remove("is-visible");
-      }
+      hidePanel();
 
       if (!isTextInput(document.activeElement)) {
         activeEl = null;
@@ -393,13 +447,13 @@
     const rect = el.getBoundingClientRect();
     const panelRect = panel.getBoundingClientRect();
 
-    let left = rect.left;
+    let left = rect.right - panelRect.width;
     let top = rect.bottom + 6;
 
-    const maxLeft = window.innerWidth - panelRect.width - 6;
-
-    if (left > maxLeft) left = maxLeft;
     if (left < 6) left = 6;
+    if (left + panelRect.width > window.innerWidth - 6) {
+      left = window.innerWidth - panelRect.width - 6;
+    }
 
     if (top + panelRect.height > window.innerHeight - 6) {
       top = rect.top - panelRect.height - 6;
@@ -422,6 +476,14 @@
       }
     });
 
+    document.addEventListener("pointerdown", function (event) {
+      const target = event.target;
+
+      if (isTextInput(target)) {
+        showPanelFor(target);
+      }
+    }, true);
+
     document.addEventListener("focusout", function () {
       hidePanelSoon();
     });
@@ -429,12 +491,16 @@
     document.addEventListener("selectionchange", function () {
       if (isTextInput(document.activeElement)) {
         activeEl = document.activeElement;
-        updatePanelPosition();
       }
     });
 
-    window.addEventListener("scroll", updatePanelPosition, true);
-    window.addEventListener("resize", updatePanelPosition);
+    window.addEventListener("scroll", function () {
+      hidePanel();
+    }, true);
+
+    window.addEventListener("resize", function () {
+      hidePanel();
+    });
   }
 
   if (document.readyState === "loading") {
