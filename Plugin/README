@@ -1,6 +1,7 @@
 1. 画像の右クリックを簡易的に禁止する
 
 HTML 内に記述するコード：　<script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin1.js"></script>
+
 テストサイト：　https://uni928.github.io/Uni928PublicHTMLs/Plugin/TestYou/Test1.html
 
 ---
@@ -27,3 +28,13 @@ https://raw.githubusercontent.com/uni928/Uni928PublicHTMLs/main/Plugin/plugin3.j
 「念のため入れて」「いざとなったら保険になるかも」程度でお願いします。
 
 https://raw.githubusercontent.com/uni928/Uni928PublicHTMLs/main/Plugin/plugin4.js
+
+---
+
+5. html 中にコピーできる文字を入れる
+
+</body> の直前に記述するコード：　<script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin5.js"></script>
+
+body に書く内容：　あああ<span class="copy-text">いいい</span>ううう
+
+テストサイト：　https://uni928.github.io/Uni928PublicHTMLs/Plugin/TestYou/Test1.html
