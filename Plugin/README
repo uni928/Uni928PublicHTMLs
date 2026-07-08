@@ -17,6 +17,10 @@ https://raw.githubusercontent.com/uni928/Uni928PublicHTMLs/main/Plugin/plugin2.j
 
 https://raw.githubusercontent.com/uni928/Uni928PublicHTMLs/main/Plugin/plugin3.js
 
+下記は記憶ボタン付きです。入力欄の内容を記憶します。保存内容を全て消す機能が無いため非推奨
+
+https://raw.githubusercontent.com/uni928/Uni928PublicHTMLs/main/Plugin/plugin3B.js
+
 ---
 
 4. Viaというスマホブラウザ用 サイト側の広告ブロック検出に引っかかりにくくするための注入CSSだと思われるCSS(via_inject_blocker.css)を念のため回避します。
