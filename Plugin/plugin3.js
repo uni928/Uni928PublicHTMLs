@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name Via Text Input Helper Buttons
 // @namespace https://uni928.local/
-// @version 1.3.0
-// @description 入力欄フォーカス中にコピー・削除・前削除・後ろ削除ボタンを表示します。
+// @version 2.3.1
+// @description 入力欄フォーカス中にコピー・削除・範囲選択指定・ブロック選択ボタンを表示します。
 // @match http*://*/*
 // @grant none
 // ==/UserScript==
@@ -18,28 +18,19 @@
   let hideTimer = null;
   let messageTimer = null;
 
+  let rangeAnchorEl = null;
+  let rangeAnchorPos = null;
+
   function isTextInput(el) {
     if (!el) return false;
-
     if (el.tagName === "TEXTAREA") return true;
 
     if (el.tagName === "INPUT") {
       const type = String(el.type || "text").toLowerCase();
-
-      return [
-        "text",
-        "search",
-        "url",
-        "tel",
-        "email",
-        "password",
-        "number"
-      ].includes(type);
+      return ["text", "search", "url", "tel", "email", "password", "number"].includes(type);
     }
 
-    if (el.isContentEditable) return true;
-
-    return false;
+    return !!el.isContentEditable;
   }
 
   function injectStyle() {
@@ -49,7 +40,7 @@
     style.id = STYLE_ID;
     style.textContent = `
 @layer viaTextInputHelper {
-  /* 入力欄用の補助ボタンパネル */
+  /* パネル本体 */
   #${PANEL_ID} {
     position: fixed;
     z-index: 2147483647;
@@ -83,6 +74,11 @@
 
   #${PANEL_ID} button:active {
     transform: translateY(1px);
+  }
+
+  /* 閉じるボタン */
+  #${PANEL_ID} .via-helper-close-btn {
+    background: #ffd8d8;
   }
 
   /* 操作結果メッセージ */
@@ -122,8 +118,15 @@
 
     panel.appendChild(createButton("コピー", copyAllText));
     panel.appendChild(createButton("削除", clearText));
-    panel.appendChild(createButton("前を削除", deleteBeforeCursor));
-    panel.appendChild(createButton("後ろを削除", deleteAfterCursor));
+    panel.appendChild(createButton("範囲選択指定", markOrSelectRange));
+    //panel.appendChild(createButton("ブロック選択", selectCurrentBlock));
+
+    const closeBtn = createButton("閉じる", function () {
+      hidePanel();
+      clearRangeAnchor();
+    });
+    closeBtn.classList.add("via-helper-close-btn");
+    panel.appendChild(closeBtn);
 
     document.documentElement.appendChild(panel);
     return panel;
@@ -136,13 +139,11 @@
     message = document.createElement("div");
     message.id = MESSAGE_ID;
     document.documentElement.appendChild(message);
-
     return message;
   }
 
   function showMessage(text) {
     const message = createMessage();
-
     clearTimeout(messageTimer);
 
     message.textContent = text;
@@ -171,21 +172,17 @@
       handler(el);
 
       setTimeout(function () {
-        focusElement(el);
+        if (isTextInput(el)) focusElement(el);
         updatePanelPosition();
       }, 0);
     }
 
     button.addEventListener("pointerdown", run, { passive: false });
 
-    button.addEventListener(
-      "touchend",
-      function (event) {
-        event.preventDefault();
-        event.stopPropagation();
-      },
-      { passive: false }
-    );
+    button.addEventListener("touchend", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }, { passive: false });
 
     button.addEventListener("click", function (event) {
       event.preventDefault();
@@ -206,10 +203,7 @@
   }
 
   function getText(el) {
-    if (el.isContentEditable) {
-      return el.innerText || "";
-    }
-
+    if (el.isContentEditable) return el.innerText || "";
     return String(el.value || "");
   }
 
@@ -231,12 +225,10 @@
 
   function getSelectionRange(el) {
     if (el.isContentEditable) {
-      const len = getText(el).length;
-      return { start: len, end: len };
+      return getContentEditableSelectionRange(el);
     }
 
     const len = getText(el).length;
-
     let start = typeof el.selectionStart === "number" ? el.selectionStart : len;
     let end = typeof el.selectionEnd === "number" ? el.selectionEnd : start;
 
@@ -247,11 +239,104 @@
   }
 
   function setSelectionRangeSafe(el, start, end) {
-    if (el.isContentEditable) return;
+    if (el.isContentEditable) {
+      setContentEditableSelectionRange(el, start, end);
+      return;
+    }
 
     try {
       el.setSelectionRange(start, end);
     } catch (_) {}
+  }
+
+  function getContentEditableSelectionRange(root) {
+    const selection = window.getSelection();
+    const text = getText(root);
+    const len = text.length;
+
+    if (!selection || selection.rangeCount === 0) {
+      return { start: len, end: len };
+    }
+
+    const range = selection.getRangeAt(0);
+
+    if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) {
+      return { start: len, end: len };
+    }
+
+    const start = getTextOffset(root, range.startContainer, range.startOffset);
+    const end = getTextOffset(root, range.endContainer, range.endOffset);
+
+    return {
+      start: Math.max(0, Math.min(start, len)),
+      end: Math.max(0, Math.min(end, len))
+    };
+  }
+
+  function getTextOffset(root, targetNode, targetOffset) {
+    let offset = 0;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+
+      if (node === targetNode) {
+        return offset + targetOffset;
+      }
+
+      offset += node.nodeValue.length;
+    }
+
+    return offset;
+  }
+
+  function setContentEditableSelectionRange(root, start, end) {
+    const startPoint = findTextPoint(root, start);
+    const endPoint = findTextPoint(root, end);
+
+    if (!startPoint || !endPoint) return;
+
+    const range = document.createRange();
+    range.setStart(startPoint.node, startPoint.offset);
+    range.setEnd(endPoint.node, endPoint.offset);
+
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  function findTextPoint(root, targetOffset) {
+    let currentOffset = 0;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let lastTextNode = null;
+
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      const nextOffset = currentOffset + node.nodeValue.length;
+
+      if (targetOffset <= nextOffset) {
+        return {
+          node,
+          offset: Math.max(0, targetOffset - currentOffset)
+        };
+      }
+
+      currentOffset = nextOffset;
+      lastTextNode = node;
+    }
+
+    if (lastTextNode) {
+      return {
+        node: lastTextNode,
+        offset: lastTextNode.nodeValue.length
+      };
+    }
+
+    root.appendChild(document.createTextNode(""));
+    return {
+      node: root.firstChild,
+      offset: 0
+    };
   }
 
   async function copyAllText(el) {
@@ -287,91 +372,139 @@
 
   function clearText(el) {
     setText(el, "");
-
-    if (!el.isContentEditable) {
-      setSelectionRangeSafe(el, 0, 0);
-    }
-
+    setSelectionRangeSafe(el, 0, 0);
+    clearRangeAnchor();
     showMessage("削除しました");
   }
 
-  function deleteBeforeCursor(el) {
-    if (el.isContentEditable) {
-      document.execCommand("delete", false);
-      dispatchInput(el);
-      showMessage("前を削除しました");
-      return;
-    }
-
-    const text = getText(el);
-    const range = getSelectionRange(el);
-
-    const before = text.slice(0, range.start);
-    const after = text.slice(range.end);
-
-    // 選択範囲がある場合は選択範囲だけ削除
-    if (range.end > range.start) {
-      const next = before + after;
-      setText(el, next);
-      setSelectionRangeSafe(el, range.start, range.start);
-      showMessage("選択範囲を削除しました");
-      return;
-    }
-
-    // 現在位置より前を削除。入力位置は削除した分だけ前、つまり0へ移動
-    setText(el, text.slice(range.start));
-    setSelectionRangeSafe(el, 0, 0);
-    showMessage("前を削除しました");
+  function clearRangeAnchor() {
+    rangeAnchorEl = null;
+    rangeAnchorPos = null;
   }
 
-  function deleteAfterCursor(el) {
-    if (el.isContentEditable) {
-      document.execCommand("forwardDelete", false);
-      dispatchInput(el);
-      showMessage("後ろを削除しました");
+  function markOrSelectRange(el) {
+    const range = getSelectionRange(el);
+    const pos = range.end;
+
+    if (rangeAnchorEl !== el || rangeAnchorPos === null) {
+      rangeAnchorEl = el;
+      rangeAnchorPos = pos;
+      showMessage("開始位置を指定しました");
       return;
     }
 
+    const start = Math.min(rangeAnchorPos, pos);
+    const end = Math.max(rangeAnchorPos, pos);
+
+    setSelectionRangeSafe(el, start, end);
+    clearRangeAnchor();
+
+    showMessage(start === end ? "同じ位置です" : "範囲選択しました");
+  }
+
+  function selectCurrentBlock(el) {
     const text = getText(el);
     const range = getSelectionRange(el);
+    const pos = range.start;
 
-    const before = text.slice(0, range.start);
-    const after = text.slice(range.end);
+    const block = findParagraphBlock(text, pos);
 
-    // 選択範囲がある場合は選択範囲だけ削除
-    if (range.end > range.start) {
-      const next = before + after;
-      setText(el, next);
-      setSelectionRangeSafe(el, range.start, range.start);
-      showMessage("選択範囲を削除しました");
-      return;
+    setSelectionRangeSafe(el, block.start, block.end);
+    clearRangeAnchor();
+
+    showMessage("ブロック選択しました");
+  }
+
+  function findParagraphBlock(text, pos) {
+    const len = text.length;
+    pos = Math.max(0, Math.min(pos, len));
+
+    const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    const normalizedPos = originalIndexToNormalizedIndex(text, pos);
+
+    let start = 0;
+    let end = normalized.length;
+
+    const before = normalized.slice(0, normalizedPos);
+    const after = normalized.slice(normalizedPos);
+
+    const beforeMatchIndex = before.lastIndexOf("\n\n");
+    if (beforeMatchIndex !== -1) {
+      start = beforeMatchIndex + 2;
     }
 
-    // 現在位置より後ろを削除。入力位置はそのまま
-    setText(el, before);
-    setSelectionRangeSafe(el, before.length, before.length);
-    showMessage("後ろを削除しました");
+    const afterMatchIndex = after.indexOf("\n\n");
+    if (afterMatchIndex !== -1) {
+      end = normalizedPos + afterMatchIndex;
+    }
+
+    while (start < end && normalized[start] === "\n") start++;
+    while (end > start && normalized[end - 1] === "\n") end--;
+
+    return {
+      start: normalizedIndexToOriginalIndex(text, start),
+      end: normalizedIndexToOriginalIndex(text, end)
+    };
+  }
+
+  function originalIndexToNormalizedIndex(text, originalIndex) {
+    let normalizedIndex = 0;
+
+    for (let i = 0; i < originalIndex && i < text.length; i++) {
+      if (text[i] === "\r") {
+        if (text[i + 1] === "\n") {
+          normalizedIndex++;
+          i++;
+        } else {
+          normalizedIndex++;
+        }
+      } else {
+        normalizedIndex++;
+      }
+    }
+
+    return normalizedIndex;
+  }
+
+  function normalizedIndexToOriginalIndex(text, normalizedTarget) {
+    let normalizedIndex = 0;
+
+    for (let i = 0; i < text.length; i++) {
+      if (normalizedIndex >= normalizedTarget) return i;
+
+      if (text[i] === "\r") {
+        if (text[i + 1] === "\n") {
+          normalizedIndex++;
+          i++;
+        } else {
+          normalizedIndex++;
+        }
+      } else {
+        normalizedIndex++;
+      }
+    }
+
+    return text.length;
   }
 
   function showPanelFor(el) {
     if (!isTextInput(el)) return;
 
     activeEl = el;
-
-    const panel = createPanel();
-    panel.classList.add("is-visible");
-
+    createPanel().classList.add("is-visible");
     updatePanelPosition();
+  }
+
+  function hidePanel() {
+    const panel = document.getElementById(PANEL_ID);
+    if (panel) panel.classList.remove("is-visible");
   }
 
   function hidePanelSoon() {
     clearTimeout(hideTimer);
 
     hideTimer = setTimeout(function () {
-      const panel = document.getElementById(PANEL_ID);
-      if (panel) {
-        panel.classList.remove("is-visible");
-      }
+      hidePanel();
 
       if (!isTextInput(document.activeElement)) {
         activeEl = null;
@@ -388,15 +521,14 @@
     const rect = el.getBoundingClientRect();
     const panelRect = panel.getBoundingClientRect();
 
-    let left = rect.left;
+    let left = rect.right - panelRect.width;
     let top = rect.bottom + 6;
 
-    const maxLeft = window.innerWidth - panelRect.width - 6;
-
-    if (left > maxLeft) left = maxLeft;
     if (left < 6) left = 6;
+    if (left + panelRect.width > window.innerWidth - 6) {
+      left = window.innerWidth - panelRect.width - 6;
+    }
 
-    // 下に出せない場合は上に出す
     if (top + panelRect.height > window.innerHeight - 6) {
       top = rect.top - panelRect.height - 6;
     }
@@ -418,6 +550,14 @@
       }
     });
 
+    document.addEventListener("pointerdown", function (event) {
+      const target = event.target;
+
+      if (isTextInput(target)) {
+        showPanelFor(target);
+      }
+    }, true);
+
     document.addEventListener("focusout", function () {
       hidePanelSoon();
     });
@@ -425,12 +565,16 @@
     document.addEventListener("selectionchange", function () {
       if (isTextInput(document.activeElement)) {
         activeEl = document.activeElement;
-        updatePanelPosition();
       }
     });
 
-    window.addEventListener("scroll", updatePanelPosition, true);
-    window.addEventListener("resize", updatePanelPosition);
+    window.addEventListener("scroll", function () {
+      hidePanel();
+    }, true);
+
+    window.addEventListener("resize", function () {
+      hidePanel();
+    });
   }
 
   if (document.readyState === "loading") {
