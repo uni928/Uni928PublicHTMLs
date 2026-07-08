@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name Via Text Input Helper Buttons
 // @namespace https://uni928.local/
-// @version 3.0.1
+// @version 3.0.2
 // @description 入力欄フォーカス中にコピー・削除・範囲選択指定・ブロック選択・記憶ボタンを表示します。
 // @match http*://*/*
 // @grant none
@@ -276,7 +276,7 @@
       panelPausedUntil = Date.now() + 10000;
       hidePanel();
       clearRangeAnchor();
-      showMessage("10秒間閉じます");
+      //showMessage("10秒間閉じます");
     });
     closeBtn.classList.add("via-helper-close-btn");
     panel.appendChild(closeBtn);
@@ -716,7 +716,7 @@
       hidePanel();
     });
 
-    setTimeout(autoFillRememberedInputs, 5000);
+    setTimeout(autoFillRememberedInputs, 2500);
   }
 
   if (document.readyState === "loading") {
