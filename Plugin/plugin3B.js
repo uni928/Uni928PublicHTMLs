@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name Via Text Input Helper Buttons
 // @namespace https://uni928.local/
-// @version 3.0.0
+// @version 3.0.1
 // @description 入力欄フォーカス中にコピー・削除・範囲選択指定・ブロック選択・記憶ボタンを表示します。
 // @match http*://*/*
 // @grant none
@@ -266,7 +266,7 @@
     panel.appendChild(createButton("コピー", copyAllText));
     panel.appendChild(createButton("削除", clearText));
     panel.appendChild(createButton("範囲選択指定", markOrSelectRange));
-    panel.appendChild(createButton("ブロック選択", selectCurrentBlock));
+    //panel.appendChild(createButton("ブロック選択", selectCurrentBlock));
 
     const memoryBtn = createButton("記憶", saveMemory);
     memoryBtn.classList.add("via-helper-memory-btn");
