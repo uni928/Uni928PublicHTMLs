@@ -1,12 +1,17 @@
 1. 画像の右クリックを簡易的に禁止する
 
-HTML 内に記述するコード：　<script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin1.js"></script>
+HTML 内に記述するコード：
 
-テストサイト：　https://uni928.github.io/Uni928PublicHTMLs/Plugin/TestYou/Test1.html
+<script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin1.js"></script>
+
+テストサイト：
+
+https://uni928.github.io/Uni928PublicHTMLs/Plugin/TestYou/Test1.html
 
 ---
 
 2. Viaというスマホブラウザ用 サイトを可能性な限り黒とクリーム色の2極化
+
 下記のURLで読み込み
 
 https://raw.githubusercontent.com/uni928/Uni928PublicHTMLs/main/Plugin/plugin2.js
@@ -35,32 +40,48 @@ https://raw.githubusercontent.com/uni928/Uni928PublicHTMLs/main/Plugin/plugin4.j
 
 5. html 中にコピーできる文字を入れる
 
-</body> の直前に記述するコード：　<script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin5.js"></script>
+</body> の直前に記述するコード：
 
-body に書く内容：　これは<span class="copy-text">コピー対象</span>です。
+<script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin5.js"></script>
 
-テストサイト：　https://uni928.github.io/Uni928PublicHTMLs/Plugin/TestYou/Test5.html
+body に書く内容：
+
+これは<span class="copy-text">コピー対象</span>です。
+
+テストサイト：
+
+https://uni928.github.io/Uni928PublicHTMLs/Plugin/TestYou/Test5.html
 
 ---
 
 6. html 中にマークダウン形式の文章を挿入
 
-</body> の直前に記述するコード：　<script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin6.js"></script>
+</body> の直前に記述するコード：
 
-紹介サイト：　https://uni928.github.io/Uni928PublicHTMLs/Plugin/TestYou/Test6.html
+<script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin6.js"></script>
+
+紹介サイト：
+
+https://uni928.github.io/Uni928PublicHTMLs/Plugin/TestYou/Test6.html
 
 ---
 
 7 html で要素に特定の class を付ける事で対象要素にスクロールできる(ジャンプ元の見た目は変わりません。ジャンプ先は押すまで見た目が変わりません)
 
-</body> の直前に記述するコード：　<script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin7.js"></script>
+</body> の直前に記述するコード：
+
+<script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin7.js"></script>
 
 Jump source:
+
 <span class="jump-marker jm-to-setup">設定方法へ</span>
  
 Jump target:
+
  <h2 id="setup">設定方法</h2>
- or
- <h2 class="setup">設定方法</h2>
+
+or
+
+<h2 class="setup">設定方法</h2>
 
 
