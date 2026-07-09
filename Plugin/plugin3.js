@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name Via Text Input Helper Buttons
 // @namespace https://uni928.local/
-// @version 3.2.0
+// @version 3.2.1
 // @description 入力欄フォーカス中にコピー・削除・範囲選択指定・記憶ボタンを表示し、記憶内容を自動入力します。
 // @match http*://*/*
 // @grant none
@@ -479,29 +479,45 @@ function isSensitiveInput_TwT_OwO_D(el) {
     } catch (_) {}
   }
 
-  function getContentEditableSelectionRange_TwT_OwO_Z(root) {
-    const selection = window.getSelection();
-    const text = getText_TwT_OwO_U(root);
-    const len = text.length;
+function getContentEditableSelectionRange_TwT_OwO_Z(root) {
+  const selection = window.getSelection();
+  const text = getText_TwT_OwO_U(root);
+  const len = text.length;
 
-    if (!selection || selection.rangeCount === 0) {
-      return { start: len, end: len };
-    }
-
-    const range = selection.getRangeAt(0);
-
-    if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) {
-      return { start: len, end: len };
-    }
-
-    const start = getTextOffset_TwT_OwO_a(root, range.startContainer, range.startOffset);
-    const end = getTextOffset_TwT_OwO_a(root, range.endContainer, range.endOffset);
-
-    return {
-      start: Math.max(0, Math.min(start, len)),
-      end: Math.max(0, Math.min(end, len))
-    };
+  if (!selection || selection.rangeCount === 0) {
+    return { start: len, end: len };
   }
+
+  if (
+    !root.contains(selection.anchorNode) ||
+    !root.contains(selection.focusNode)
+  ) {
+    return { start: len, end: len };
+  }
+
+  let startNode = selection.anchorNode;
+  let startOffset = selection.anchorOffset;
+  let endNode = selection.focusNode;
+  let endOffset = selection.focusOffset;
+
+  // 後ろ→前の選択なら入れ替える
+  const pos = startNode.compareDocumentPosition(endNode);
+  if (
+    (pos & Node.DOCUMENT_POSITION_PRECEDING) ||
+    (startNode === endNode && startOffset > endOffset)
+  ) {
+    [startNode, endNode] = [endNode, startNode];
+    [startOffset, endOffset] = [endOffset, startOffset];
+  }
+
+  const start = getTextOffset_TwT_OwO_a(root, startNode, startOffset);
+  const end = getTextOffset_TwT_OwO_a(root, endNode, endOffset);
+
+  return {
+    start: Math.max(0, Math.min(start, len)),
+    end: Math.max(0, Math.min(end, len))
+  };
+}
 
   function getTextOffset_TwT_OwO_a(root, targetNode, targetOffset) {
     let offset = 0;
