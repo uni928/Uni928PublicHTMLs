@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>WFWorkflowActions</key>
+  <array>
+    <dict>
+      <key>WFWorkflowActionIdentifier</key>
+      <string>is.workflow.actions.runjavascriptonwebpage</string>
+      <key>WFWorkflowActionParameters</key>
+      <dict>
+        <key>WFJavaScript</key>
+        <string>(() =&gt; {
+  const title = document.title || "";
+  const url = location.href || "";
+
+  let text = document.body ? document.body.innerText : "";
+
+  text = text
+    .replace(/\r/g, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  const result = [
+    title ? `# ${title}` : "",
+    url,
+    "",
+    text
+  ].filter((line, index) =&gt; {
+    if (index === 2) return true;
+    return line !== "";
+  }).join("\n");
+
+  completion(result);
+})();</string>
+      </dict>
+    </dict>
+    <dict>
+      <key>WFWorkflowActionIdentifier</key>
+      <string>is.workflow.actions.setclipboard</string>
+      <key>WFWorkflowActionParameters</key>
+      <dict/>
+    </dict>
+    <dict>
+      <key>WFWorkflowActionIdentifier</key>
+      <string>is.workflow.actions.notification</string>
+      <key>WFWorkflowActionParameters</key>
+      <dict>
+        <key>WFNotificationActionBody</key>
+        <string>Safariページ本文をコピーしました</string>
+        <key>WFNotificationActionTitle</key>
+        <string>コピー完了</string>
+      </dict>
+    </dict>
+  </array>
+
+  <key>WFWorkflowClientVersion</key>
+  <string>2600.0</string>
+
+  <key>WFWorkflowIcon</key>
+  <dict>
+    <key>WFWorkflowIconGlyphNumber</key>
+    <integer>59723</integer>
+    <key>WFWorkflowIconStartColor</key>
+    <integer>4251333119</integer>
+  </dict>
+
+  <key>WFWorkflowImportQuestions</key>
+  <array/>
+
+  <key>WFWorkflowInputContentItemClasses</key>
+  <array>
+    <string>WFWebPageContentItem</string>
+  </array>
+
+  <key>WFWorkflowMinimumClientVersion</key>
+  <integer>900</integer>
+
+  <key>WFWorkflowName</key>
+  <string>Safari本文コピー</string>
+
+  <key>WFWorkflowOutputContentItemClasses</key>
+  <array>
+    <string>WFStringContentItem</string>
+  </array>
+
+  <key>WFWorkflowTypes</key>
+  <array>
+    <string>ActionExtension</string>
+  </array>
+</dict>
+</plist>
