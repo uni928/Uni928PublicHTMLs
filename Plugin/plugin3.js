@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name Via Text Input Helper Buttons
 // @namespace https://uni928.local/
-// @version 3.3.0
-// @description 入力欄フォーカス中にコピー・削除・範囲選択指定・その他パネルを表示し、記憶内容を自動入力します。
+// @version 3.4.0
+// @description 入力欄フォーカス中にコピー・削除・範囲選択指定を表示し、旧バージョンの記憶データが残っている場合は自動削除します。
 // @match http*://*/*
 // @grant none
 // ==/UserScript==
@@ -312,6 +312,90 @@
     } catch (_) {}
   }
 
+  // 旧バージョンで保存済みの記憶が存在する場合だけ、自動で全削除します。
+  // indexedDB.databases() が使えない環境では、新規DB作成を避けるため何もしません。
+  async function clearExistingMemoryAutomatically_TwT_OwO_AA() {
+    if (
+      !window.indexedDB ||
+      typeof indexedDB.databases !== "function"
+    ) {
+      return;
+    }
+
+    try {
+      const databases = await indexedDB.databases();
+      const exists = databases.some(function (info) {
+        return info && info.name === DB_NAME;
+      });
+
+      if (!exists) {
+        return;
+      }
+
+      const db = await new Promise(function (resolve, reject) {
+        const req = indexedDB.open(DB_NAME);
+
+        req.onsuccess = function () {
+          resolve(req.result);
+        };
+
+        req.onerror = function () {
+          reject(req.error);
+        };
+
+        req.onupgradeneeded = function () {
+          try {
+            req.transaction.abort();
+          } catch (_) {}
+        };
+      });
+
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.close();
+        return;
+      }
+
+      const count = await new Promise(function (resolve, reject) {
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.count();
+
+        req.onsuccess = function () {
+          resolve(req.result || 0);
+        };
+
+        req.onerror = function () {
+          reject(req.error);
+        };
+      });
+
+      if (count <= 0) {
+        db.close();
+        return;
+      }
+
+      await new Promise(function (resolve, reject) {
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+
+        store.clear();
+
+        tx.oncomplete = resolve;
+        tx.onerror = function () {
+          reject(tx.error);
+        };
+        tx.onabort = function () {
+          reject(tx.error);
+        };
+      });
+
+      db.close();
+      showMessage_TwT_OwO_R("旧バージョンの記憶を全削除しました");
+    } catch (_) {
+      // 削除失敗時も入力補助機能は継続します。
+    }
+  }
+
   function injectStyle_TwT_OwO_P() {
     if (document.getElementById(STYLE_ID)) {
       return;
@@ -500,15 +584,16 @@
     //   )
     // );
 
-    const otherBtn = createPanelButton_TwT_OwO_U(
-      "その他",
-      function () {
-        showOtherPanel_TwT_OwO_s();
-      }
-    );
-
-    otherBtn.classList.add("via-helper-other-btn");
-    panel.appendChild(otherBtn);
+    // 「その他」機能は廃止したため、ボタンをコメントアウトしています。
+    // const otherBtn = createPanelButton_TwT_OwO_U(
+    //   "その他",
+    //   function () {
+    //     showOtherPanel_TwT_OwO_s();
+    //   }
+    // );
+    //
+    // otherBtn.classList.add("via-helper-other-btn");
+    // panel.appendChild(otherBtn);
 
     const closeBtn = createPanelButton_TwT_OwO_U(
       "閉じる",
@@ -1188,7 +1273,7 @@
     activeEl = el;
 
     createPanel_TwT_OwO_Q();
-    createOtherPanel_TwT_OwO_R();
+    // createOtherPanel_TwT_OwO_R();
 
     showMainPanel_TwT_OwO_r();
   }
@@ -1220,9 +1305,9 @@
     }
 
     const mainPanel = createPanel_TwT_OwO_Q();
-    const otherPanel = createOtherPanel_TwT_OwO_R();
+    // const otherPanel = createOtherPanel_TwT_OwO_R();
 
-    otherPanel.classList.remove("is-visible");
+    // otherPanel.classList.remove("is-visible");
     mainPanel.classList.add("is-visible");
 
     updatePanelPosition_TwT_OwO_p();
@@ -1359,7 +1444,7 @@
   function init_TwT_OwO_q() {
     injectStyle_TwT_OwO_P();
     createPanel_TwT_OwO_Q();
-    createOtherPanel_TwT_OwO_R();
+    // createOtherPanel_TwT_OwO_R();
     createMessage_TwT_OwO_S();
 
     document.addEventListener("focusin", function (event) {
@@ -1417,7 +1502,10 @@
       hideAllPanels_TwT_OwO_q();
     });
 
-    startAutoFillWatcher_TwT_OwO_N();
+    // 記憶機能は廃止したため、自動入力は開始しません。
+    // startAutoFillWatcher_TwT_OwO_N();
+
+    clearExistingMemoryAutomatically_TwT_OwO_AA();
   }
 
   if (document.readyState === "loading") {
