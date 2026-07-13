@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>パーティゲーム for ワンナイト人狼</title>
+  <meta name="description" content="端末を回して遊べる、戦績保存対応のパーティゲーム for ワンナイト人狼ゲームです。">
+  <style>
+    @layer base, layout, components, utilities;
+
+    @layer base {
+      :root {
+        color-scheme: light;
+        --bg: #f7f0e5;
+        --surface: #fffdf9;
+        --surface-2: #f1e8da;
+        --text: #2e2924;
+        --muted: #756b61;
+        --line: #ded1c2;
+        --accent: #7b3f2d;
+        --accent-2: #b96f4f;
+        --danger: #a73232;
+        --good: #326a46;
+        --shadow: 0 10px 28px rgba(72, 44, 29, 0.12);
+        --radius: 18px;
+      }
+
+      * { box-sizing: border-box; }
+      html { min-height: 100%; background: var(--bg); }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at top left, rgba(185,111,79,.11), transparent 28%),
+          linear-gradient(180deg, #fbf7f0 0%, var(--bg) 100%);
+        color: var(--text);
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", sans-serif;
+      }
+
+      button, input, select { font: inherit; }
+      button { cursor: pointer; }
+      h1, h2, h3, p { margin-top: 0; }
+      [hidden] { display: none !important; }
+    }
+
+    @layer layout {
+      .app {
+        width: min(100%, 920px);
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 18px 14px 34px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+
+      .screen { display: none; }
+      .screen.is-active { display: block; }
+
+      .grid { display: grid; gap: 14px; }
+      .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stack { display: grid; gap: 12px; }
+      .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+      @media (max-width: 680px) {
+        .grid.two { grid-template-columns: 1fr; }
+        .app { padding-inline: 10px; }
+      }
+    }
+
+    @layer components {
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .brand-mark {
+        width: 42px;
+        height: 42px;
+        display: grid;
+        place-items: center;
+        border-radius: 13px;
+        background: var(--accent);
+        color: #fff;
+        font-size: 22px;
+        box-shadow: var(--shadow);
+      }
+      .brand h1 { margin: 0; font-size: clamp(20px, 4vw, 30px); }
+      .brand small { color: var(--muted); display: block; margin-top: 2px; }
+
+      .card {
+        background: rgba(255,253,249,.96);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 16px;
+        box-shadow: var(--shadow);
+      }
+
+      .hero {
+        padding: 24px 18px;
+        text-align: center;
+      }
+      .hero h2 { font-size: clamp(25px, 6vw, 42px); margin-bottom: 10px; }
+      .hero p { color: var(--muted); line-height: 1.8; }
+
+      .btn {
+        min-height: 46px;
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        padding: 10px 16px;
+        background: #fff;
+        color: var(--text);
+        font-weight: 700;
+        box-shadow: 0 4px 12px rgba(72,44,29,.08);
+      }
+      .btn:hover { transform: translateY(-1px); }
+      .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+      .btn.secondary { background: var(--surface-2); }
+      .btn.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+      .btn.good { background: var(--good); color: #fff; border-color: var(--good); }
+      .btn.wide { width: 100%; }
+      .btn.small { min-height: 36px; padding: 6px 10px; font-size: 13px; }
+      .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+      .menu-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 18px;
+      }
+      .menu-grid .btn { min-height: 88px; font-size: 18px; }
+      @media (max-width: 600px) { .menu-grid { grid-template-columns: 1fr; } }
+
+      .section-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+      .section-title h2, .section-title h3 { margin: 0; }
+
+      .field { display: grid; gap: 7px; }
+      .field label { font-weight: 700; }
+      .field input, .field select {
+        width: 100%;
+        min-height: 44px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+        color: var(--text);
+        padding: 9px 12px;
+      }
+
+      .player-row, .role-row, .stat-row, .vote-row {
+        display: grid;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 10px 12px;
+        background: #fff;
+      }
+      .player-row { grid-template-columns: 1fr auto; }
+      .role-row { grid-template-columns: minmax(120px, 1fr) auto auto; }
+      .stat-row { grid-template-columns: minmax(110px, 1fr) repeat(4, minmax(60px, auto)); }
+      .vote-row { grid-template-columns: auto 1fr; }
+      @media (max-width: 600px) {
+        .stat-row { grid-template-columns: 1fr 1fr; }
+        .stat-row strong { grid-column: 1 / -1; }
+      }
+
+      .role-count {
+        width: 76px;
+        min-height: 40px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        padding: 6px 8px;
+      }
+
+      .info-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        font-weight: 900;
+      }
+
+      .pill-list { display: flex; flex-wrap: wrap; gap: 8px; }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        padding: 7px 11px;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        font-weight: 700;
+      }
+      .pill.wolf { background: #f3dddd; border-color: #d6a4a4; }
+      .pill.village { background: #e0efe5; border-color: #afd0b8; }
+      .pill.other { background: #ece3f5; border-color: #c7b0df; }
+
+      .status-box {
+        border-radius: 15px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        line-height: 1.75;
+      }
+
+      .turn-panel { text-align: center; padding: 28px 18px; }
+      .turn-panel h2 { font-size: clamp(27px, 7vw, 46px); margin-bottom: 18px; }
+      .role-reveal {
+        font-size: clamp(24px, 8vw, 44px);
+        font-weight: 900;
+        margin-bottom: 14px;
+      }
+
+      .timer {
+        text-align: center;
+        font-size: clamp(52px, 15vw, 96px);
+        font-variant-numeric: tabular-nums;
+        font-weight: 900;
+        letter-spacing: .03em;
+        color: var(--accent);
+      }
+
+      .choice-list { display: grid; gap: 10px; }
+      .choice-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        background: #fff;
+      }
+      .choice-item input { width: 20px; height: 20px; }
+
+      dialog {
+        width: min(92vw, 460px);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 0;
+        box-shadow: 0 24px 80px rgba(0,0,0,.3);
+      }
+      dialog::backdrop { background: rgba(37, 29, 24, .58); }
+      .dialog-body { padding: 22px; }
+      .dialog-body p { color: var(--muted); line-height: 1.7; }
+
+      .result-winner {
+        text-align: center;
+        padding: 18px;
+        border-radius: 16px;
+        font-size: clamp(24px, 6vw, 38px);
+        font-weight: 900;
+        background: var(--surface-2);
+      }
+
+      .notice {
+        padding: 10px 12px;
+        border-left: 4px solid var(--accent-2);
+        background: #fff8ee;
+        border-radius: 8px;
+        line-height: 1.65;
+      }
+
+      .empty { text-align: center; color: var(--muted); padding: 24px 10px; }
+    }
+
+    @layer utilities {
+      .muted { color: var(--muted); }
+      .center { text-align: center; }
+      .mt { margin-top: 14px; }
+      .mb { margin-bottom: 14px; }
+      .danger-text { color: var(--danger); }
+      .good-text { color: var(--good); }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">🌙</div>
+        <div>
+          <h1>パーティゲーム for ワンナイト人狼</h1>
+          <small>1台の端末を回して遊べます</small>
+        </div>
+      </div>
+      <button class="btn small" id="homeBtn" hidden>ホーム</button>
+    </header>
+
+    <section class="screen is-active" id="screen-home">
+      <div class="card hero">
+        <h2>夜が明ける前に、正体を見抜け。</h2>
+        <p>プレイヤー名と戦績は端末内のIndexedDBに保存されます。ゲームデータは外部へ送信されません。</p>
+        <div class="menu-grid">
+          <button class="btn primary" data-go="players">プレイヤー名変更</button>
+          <button class="btn secondary" data-go="stats">戦績</button>
+          <button class="btn good" data-go="setup">遊ぶ</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-players">
+      <div class="card">
+        <div class="section-title"><h2>プレイヤー名変更</h2><button class="btn small" id="addPlayerBtn">追加</button></div>
+        <div class="stack" id="playerList"></div>
+        <div class="actions mt">
+          <button class="btn primary" id="savePlayersBtn">保存</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-stats">
+      <div class="card">
+        <div class="section-title"><h2>戦績</h2><button class="btn small danger" id="resetStatsBtn">戦績リセット</button></div>
+        <div id="statsList"></div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-setup">
+      <div class="grid two">
+        <div class="card stack">
+          <div class="field">
+            <label for="playerCount">参加人数</label>
+            <select id="playerCount"></select>
+          </div>
+          <div class="field">
+            <label for="presetSelect">初期デッキ</label>
+            <select id="presetSelect"></select>
+            <small id="deckLabel" class="muted">初期デッキ</small>
+          </div>
+          <div class="field">
+            <label for="discussionSeconds">議論時間（秒）</label>
+            <input id="discussionSeconds" type="number" min="10" max="3600" value="60">
+          </div>
+          <label class="choice-item">
+            <input id="mayorEnabled" type="checkbox">
+            <span><strong>村長あり</strong><br><small class="muted">人狼を含む誰か1人が、秘密の村長になります。</small></span>
+          </label>
+        </div>
+
+        <div class="card">
+          <h2>参加プレイヤー</h2>
+          <div class="choice-list" id="participantList"></div>
+        </div>
+      </div>
+
+      <div class="card mt">
+        <div class="section-title"><h2>役職構成</h2><span class="muted" id="roleTotalText"></span></div>
+        <div class="stack" id="roleConfigList"></div>
+        <div class="notice mt">役職の合計人数は参加人数と同じにしてください。役職カードの中央配置は使わず、全役職をプレイヤーへ配ります。</div>
+        <div class="actions mt">
+          <button class="btn primary wide" id="toRoleOverviewBtn">役職一覧へ</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-role-overview">
+      <div class="card">
+        <h2>今回使用する役職</h2>
+        <div class="pill-list" id="overviewRoles"></div>
+        <div class="status-box mt" id="overviewPlayers"></div>
+        <div class="actions mt">
+          <button class="btn secondary" data-go="setup">戻る</button>
+          <button class="btn primary" id="startGameBtn">ゲーム開始</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-turn">
+      <div class="card turn-panel">
+        <p class="muted">端末を次の人へ渡してください</p>
+        <h2 id="turnTitle">〇〇さんの番です</h2>
+        <button class="btn primary wide" id="revealRoleBtn">役職を見る</button>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-action">
+      <div class="card turn-panel">
+        <div class="role-reveal" id="actionRoleName"></div>
+        <div class="status-box" id="actionDescription"></div>
+        <div class="actions mt">
+          <button class="btn primary wide" id="finishTurnBtn">確認して次の人へ</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-discussion">
+      <div class="card">
+        <h2 class="center">議論タイム</h2>
+        <div class="timer" id="timerDisplay">01:00</div>
+        <div class="pill-list mb" id="discussionRoles"></div>
+        <div class="actions">
+          <button class="btn danger wide" id="finishDiscussionBtn">議論終了・投票へ</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-vote">
+      <div class="card">
+        <h2>処刑する人を選択</h2>
+        <p class="muted">指差し投票で決まった人を選んでください。最多票同数の場合は、複数人を選択できます。</p>
+        <div class="choice-list" id="executionChoices"></div>
+        <div class="actions mt">
+          <button class="btn danger wide" id="executeBtn">選択した人を処刑する</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-retaliation">
+      <div class="card">
+        <h2 id="retaliationTitle">処刑し返す人を選択</h2>
+        <div class="status-box" id="retaliationInfo"></div>
+        <div class="choice-list mt" id="retaliationChoices"></div>
+        <div class="actions mt">
+          <button class="btn danger wide" id="retaliateBtn">再度処刑する</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-result">
+      <div class="card stack">
+        <div class="result-winner" id="winnerText"></div>
+        <div class="status-box" id="resultSummary"></div>
+        <h2>今回の戦績</h2>
+        <div class="stack" id="gameStats"></div>
+        <div class="actions">
+          <button class="btn secondary" id="resultToSetupBtn">条件設定へ</button>
+          <button class="btn primary" id="nextGameBtn">次のゲームへ</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="confirmDialog">
+    <div class="dialog-body">
+      <h2 id="confirmDialogTitle">確認</h2>
+      <p id="confirmDialogText"></p>
+      <div class="actions">
+        <button class="btn secondary" id="confirmCancelBtn">キャンセル</button>
+        <button class="btn primary" id="confirmOkBtn">押しました</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="infoDialog">
+    <div class="dialog-body">
+      <h2 id="infoDialogTitle"></h2>
+      <p id="infoDialogText"></p>
+      <div class="actions"><button class="btn primary wide" id="infoCloseBtn">閉じる</button></div>
+    </div>
+  </dialog>
+
+  <script>
+    const DB_NAME = 'OneNightWerewolfDB';
+    const DB_VERSION = 1;
+    const STORE = 'appData';
+
+    const roleDefs = {
+      villager: { name: '村人', min: 0, max: 20, team: 'village', info: '特殊能力を持たない村人陣営です。会話から人狼を探します。' },
+      werewolf: { name: '人狼', min: 1, max: 6, team: 'wolf', info: '人狼陣営です。処刑を逃れれば勝利に近づきます。他の人狼がいる場合は結果画面で仲間を確認できます。' },
+      seer: { name: '占い師', min: 0, max: 3, team: 'village', info: 'ランダムで選ばれた他プレイヤー1人の、夜終了時点の役職を確認します。' },
+      robber: { name: '怪盗', min: 0, max: 3, team: 'village', info: 'ランダムで選ばれた他プレイヤー1人と役職を交換します。勝敗は交換後の役職で判定します。' },
+      hunter: { name: '狩人', min: 0, max: 3, team: 'village', info: '処刑された場合、未処刑のプレイヤー1人を選んで追加処刑します。' },
+      superHunter: { name: 'スーパー狩人', min: 0, max: 3, team: 'village', info: '処刑された場合、全プレイヤーの最終役職を確認してから、未処刑のプレイヤー1人を追加処刑します。' },
+      magician: { name: '奇術師', min: 0, max: 3, team: 'village', info: '村人陣営が存在する場合、ランダムで選ばれた1人をスーパー狩人に変化させます。' },
+      madman: { name: '狂人', min: 0, max: 3, team: 'wolf', info: '人狼陣営ですが、人狼本人ではありません。人狼陣営の勝利を目指します。' },
+      fox: { name: 'きつね', min: 0, max: 2, team: 'wolf', info: '人狼陣営です。処刑された場合、プレイヤー数÷2を切り上げた人数まで追加処刑します。' }
+    };
+
+    const presets = {
+      balanced: {
+        name: 'バランス',
+        build: n => {
+          const c = blankCounts();
+          c.werewolf = n >= 7 ? 2 : 1;
+          c.seer = 1;
+          c.robber = n >= 5 ? 1 : 0;
+          c.hunter = n >= 6 ? 1 : 0;
+          c.madman = n >= 8 ? 1 : 0;
+          c.villager = n - Object.values(c).reduce((a,b)=>a+b,0);
+          return c;
+        }
+      },
+      simple: {
+        name: '初心者向け',
+        build: n => {
+          const c = blankCounts();
+          c.werewolf = n >= 8 ? 2 : 1;
+          c.seer = 1;
+          c.villager = n - c.werewolf - c.seer;
+          return c;
+        }
+      },
+      chaos: {
+        name: '特殊役職多め',
+        build: n => {
+          const c = blankCounts();
+          c.werewolf = n >= 7 ? 2 : 1;
+          c.seer = 1;
+          c.robber = n >= 5 ? 1 : 0;
+          c.hunter = n >= 6 ? 1 : 0;
+          c.superHunter = n >= 8 ? 1 : 0;
+          c.magician = n >= 7 ? 1 : 0;
+          c.fox = n >= 10 ? 1 : 0;
+          c.madman = n >= 9 ? 1 : 0;
+          c.villager = Math.max(0, n - Object.values(c).reduce((a,b)=>a+b,0));
+          while (Object.values(c).reduce((a,b)=>a+b,0) > n) {
+            for (const key of ['madman','fox','superHunter','magician','hunter','robber']) {
+              if (c[key] > 0 && Object.values(c).reduce((a,b)=>a+b,0) > n) c[key]--;
+            }
+          }
+          c.villager += n - Object.values(c).reduce((a,b)=>a+b,0);
+          return c;
+        }
+      }
+    };
+
+    const state = {
+      players: [],
+      stats: {},
+      setup: null,
+      game: null,
+      db: null,
+      confirmAction: null,
+      timerId: null
+    };
+
+    function blankCounts() {
+      return Object.fromEntries(Object.keys(roleDefs).map(k => [k, 0]));
+    }
+
+    function uid() {
+      return (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(16).slice(2));
+    }
+
+    function shuffle(array) {
+      const a = [...array];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function dbGet(key) {
+      return new Promise((resolve, reject) => {
+        const tx = state.db.transaction(STORE, 'readonly');
+        const req = tx.objectStore(STORE).get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function dbSet(key, value) {
+      return new Promise((resolve, reject) => {
+        const tx = state.db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).put(value, key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    function showScreen(name) {
+      document.querySelectorAll('.screen').forEach(el => el.classList.toggle('is-active', el.id === 'screen-' + name));
+      document.getElementById('homeBtn').hidden = name === 'home';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showInfo(title, text) {
+      document.getElementById('infoDialogTitle').textContent = title;
+      document.getElementById('infoDialogText').textContent = text;
+      document.getElementById('infoDialog').showModal();
+    }
+
+    function askConfirm(title, text, onOk) {
+      state.confirmAction = onOk;
+      document.getElementById('confirmDialogTitle').textContent = title;
+      document.getElementById('confirmDialogText').textContent = text;
+      document.getElementById('confirmDialog').showModal();
+    }
+
+    function ensureDefaultPlayers() {
+      if (!state.players.length) {
+        state.players = Array.from({ length: 5 }, (_, i) => ({ id: uid(), name: `プレイヤー${i + 1}` }));
+      }
+    }
+
+    function ensureStats() {
+      for (const p of state.players) {
+        if (!state.stats[p.id]) state.stats[p.id] = { games: 0, wins: 0, losses: 0, villageWins: 0, wolfWins: 0 };
+      }
+    }
+
+    function renderPlayers() {
+      const wrap = document.getElementById('playerList');
+      wrap.innerHTML = '';
+      state.players.forEach((p, idx) => {
+        const row = document.createElement('div');
+        row.className = 'player-row';
+        row.innerHTML = `<input aria-label="プレイヤー名${idx + 1}" value="${escapeHtml(p.name)}"><button class="btn small danger">削除</button>`;
+        row.querySelector('input').addEventListener('input', e => p.name = e.target.value);
+        row.querySelector('button').addEventListener('click', () => {
+          if (state.players.length <= 3) return showInfo('削除できません', '3人以上のプレイヤーを登録してください。');
+          state.players.splice(idx, 1);
+          renderPlayers();
+        });
+        wrap.append(row);
+      });
+    }
+
+    function renderStats() {
+      ensureStats();
+      const wrap = document.getElementById('statsList');
+      if (!state.players.length) {
+        wrap.innerHTML = '<div class="empty">プレイヤーが登録されていません。</div>';
+        return;
+      }
+      wrap.innerHTML = '<div class="stack"></div>';
+      const stack = wrap.firstElementChild;
+      state.players.forEach(p => {
+        const s = state.stats[p.id] || { games:0,wins:0,losses:0,villageWins:0,wolfWins:0 };
+        const rate = s.games ? Math.round(s.wins / s.games * 100) : 0;
+        const row = document.createElement('div');
+        row.className = 'stat-row';
+        row.innerHTML = `<strong>${escapeHtml(p.name)}</strong><span>対戦 ${s.games}</span><span>勝 ${s.wins}</span><span>負 ${s.losses}</span><span>勝率 ${rate}%</span>`;
+        stack.append(row);
+      });
+    }
+
+    function initSetupUI() {
+      ensureDefaultPlayers();
+      const pc = document.getElementById('playerCount');
+      pc.innerHTML = '';
+      const max = Math.min(20, state.players.length);
+      for (let n = 3; n <= max; n++) pc.add(new Option(`${n}人`, n));
+      if (max < 3) pc.add(new Option('3人', 3));
+      pc.value = String(Math.min(5, max || 3));
+
+      const preset = document.getElementById('presetSelect');
+      preset.innerHTML = '';
+      Object.entries(presets).forEach(([key, def]) => preset.add(new Option(def.name, key)));
+      preset.add(new Option('カスタムデッキ', 'custom'));
+      preset.value = 'balanced';
+
+      const roleWrap = document.getElementById('roleConfigList');
+      roleWrap.innerHTML = '';
+      Object.entries(roleDefs).forEach(([key, def]) => {
+        const row = document.createElement('div');
+        row.className = 'role-row';
+        row.innerHTML = `<strong>${def.name}</strong><input class="role-count" type="number" min="${def.min}" max="${def.max}" value="0" data-role="${key}"><button class="info-btn" aria-label="${def.name}の説明">i</button>`;
+        row.querySelector('input').addEventListener('input', () => {
+          preset.value = 'custom';
+          document.getElementById('deckLabel').textContent = 'カスタムデッキ';
+          updateRoleTotal();
+        });
+        row.querySelector('button').addEventListener('click', () => showInfo(def.name, def.info));
+        roleWrap.append(row);
+      });
+
+      pc.addEventListener('change', () => {
+        renderParticipants();
+        if (preset.value !== 'custom') applyPreset(preset.value);
+        else updateRoleTotal();
+      });
+      preset.addEventListener('change', () => {
+        if (preset.value === 'custom') document.getElementById('deckLabel').textContent = 'カスタムデッキ';
+        else applyPreset(preset.value);
+      });
+      renderParticipants();
+      applyPreset('balanced');
+    }
+
+    function renderParticipants() {
+      const count = Number(document.getElementById('playerCount').value || 3);
+      const wrap = document.getElementById('participantList');
+      wrap.innerHTML = '';
+      state.players.slice(0, count).forEach((p, i) => {
+        const row = document.createElement('div');
+        row.className = 'choice-item';
+        row.innerHTML = `<span>${i + 1}.</span><strong>${escapeHtml(p.name)}</strong>`;
+        wrap.append(row);
+      });
+    }
+
+    function applyPreset(key) {
+      const n = Number(document.getElementById('playerCount').value || 3);
+      const counts = presets[key].build(n);
+      document.querySelectorAll('.role-count').forEach(input => input.value = counts[input.dataset.role] || 0);
+      document.getElementById('deckLabel').textContent = `初期デッキ：${presets[key].name}`;
+      updateRoleTotal();
+    }
+
+    function getRoleCountsFromUI() {
+      const c = blankCounts();
+      document.querySelectorAll('.role-count').forEach(input => c[input.dataset.role] = Math.max(0, Number(input.value) || 0));
+      return c;
+    }
+
+    function updateRoleTotal() {
+      const total = Object.values(getRoleCountsFromUI()).reduce((a,b)=>a+b,0);
+      const need = Number(document.getElementById('playerCount').value || 0);
+      const el = document.getElementById('roleTotalText');
+      el.textContent = `${total} / ${need}人`;
+      el.className = total === need ? 'good-text' : 'danger-text';
+    }
+
+    function prepareSetup() {
+      initSetupUI();
+      showScreen('setup');
+    }
+
+    function buildRoleOverview() {
+      const playerCount = Number(document.getElementById('playerCount').value);
+      const counts = getRoleCountsFromUI();
+      const total = Object.values(counts).reduce((a,b)=>a+b,0);
+      if (total !== playerCount) return showInfo('人数が一致しません', `役職の合計は${playerCount}人にしてください。現在は${total}人です。`);
+      if (counts.werewolf < 1) return showInfo('人狼が必要です', '人狼を1人以上に設定してください。');
+
+      const selectedPlayers = state.players.slice(0, playerCount);
+      state.setup = {
+        playerCount,
+        players: selectedPlayers,
+        counts,
+        discussionSeconds: Math.max(10, Number(document.getElementById('discussionSeconds').value) || 60),
+        mayorEnabled: document.getElementById('mayorEnabled').checked,
+        presetName: document.getElementById('presetSelect').value
+      };
+
+      const roles = document.getElementById('overviewRoles');
+      roles.innerHTML = '';
+      Object.entries(counts).forEach(([key, n]) => {
+        if (!n) return;
+        const p = document.createElement('span');
+        p.className = `pill ${roleDefs[key].team}`;
+        p.textContent = `${roleDefs[key].name} ${n}`;
+        roles.append(p);
+      });
+      document.getElementById('overviewPlayers').innerHTML = `<strong>参加者：</strong>${selectedPlayers.map(p => escapeHtml(p.name)).join('、')}<br><strong>議論時間：</strong>${state.setup.discussionSeconds}秒${state.setup.mayorEnabled ? '<br><strong>村長：</strong>あり（秘密）' : ''}`;
+      showScreen('role-overview');
+    }
+
+    function createGame() {
+      const deck = [];
+      Object.entries(state.setup.counts).forEach(([key, n]) => { for (let i=0;i<n;i++) deck.push(key); });
+      const shuffledRoles = shuffle(deck);
+      const players = state.setup.players.map((p, i) => ({
+        id: p.id,
+        name: p.name,
+        initialRole: shuffledRoles[i],
+        finalRole: shuffledRoles[i],
+        isMayor: false,
+        actionText: '',
+        alive: true
+      }));
+      if (state.setup.mayorEnabled) players[Math.floor(Math.random() * players.length)].isMayor = true;
+
+      const game = {
+        players,
+        turnIndex: 0,
+        executedIds: [],
+        retaliationQueue: [],
+        currentRetaliatorId: null,
+        winnerTeam: null,
+        startedAt: Date.now(),
+        roleSummary: state.setup.counts
+      };
+      state.game = game;
+      resolveNightActions();
+      showCurrentTurn();
+    }
+
+    function resolveNightActions() {
+      const g = state.game;
+      const original = g.players.map(p => ({...p}));
+
+      for (const p of g.players) {
+        if (p.initialRole === 'robber') {
+          const targets = g.players.filter(x => x.id !== p.id);
+          const target = targets[Math.floor(Math.random() * targets.length)];
+          const old = p.finalRole;
+          p.finalRole = target.finalRole;
+          target.finalRole = old;
+          p.actionText = `${target.name}さんと役職を交換しました。あなたの最終役職は「${roleDefs[p.finalRole].name}」です。`;
+        }
+      }
+
+      for (const p of g.players) {
+        if (p.initialRole === 'magician') {
+          const villageTargets = g.players.filter(x => roleDefs[x.finalRole].team === 'village' && x.id !== p.id);
+          if (villageTargets.length) {
+            const target = villageTargets[Math.floor(Math.random() * villageTargets.length)];
+            target.finalRole = 'superHunter';
+            p.actionText = `${target.name}さんをスーパー狩人に変化させました。`;
+          } else {
+            p.actionText = '村人陣営が存在しなかったため、能力は発動しませんでした。';
+          }
+        }
+      }
+
+      for (const p of g.players) {
+        if (p.initialRole === 'seer') {
+          const targets = g.players.filter(x => x.id !== p.id);
+          const target = targets[Math.floor(Math.random() * targets.length)];
+          p.actionText = `${target.name}さんの役職は「${roleDefs[target.finalRole].name}」です。`;
+        }
+      }
+
+      for (const p of g.players) {
+        const role = p.initialRole;
+        if (!p.actionText) {
+          if (role === 'werewolf') {
+            const mates = original.filter(x => x.id !== p.id && x.initialRole === 'werewolf');
+            p.actionText = mates.length ? `人狼の仲間は ${mates.map(x=>x.name+'さん').join('、')} です。` : 'あなたは唯一の人狼です。';
+          } else if (role === 'hunter') {
+            p.actionText = '処刑された場合、未処刑のプレイヤー1人を処刑し返せます。';
+          } else if (role === 'superHunter') {
+            p.actionText = '処刑された場合、全プレイヤーの最終役職を確認してから1人を処刑し返せます。';
+          } else if (role === 'fox') {
+            p.actionText = `処刑された場合、最大${Math.ceil(g.players.length/2)}人を処刑し返せます。`;
+          } else if (role === 'madman') {
+            p.actionText = 'あなたは狂人です。人狼陣営の勝利を目指してください。';
+          } else if (role === 'villager') {
+            p.actionText = '特殊能力はありません。会話から人狼を見つけてください。';
+          } else {
+            p.actionText = roleDefs[role].info;
+          }
+        }
+        if (p.isMayor) p.actionText += '\n\nあなたは秘密の村長です。村長であることを言う必要はありません。';
+      }
+    }
+
+    function showCurrentTurn() {
+      const p = state.game.players[state.game.turnIndex];
+      document.getElementById('turnTitle').textContent = `${p.name}さんの番です`;
+      showScreen('turn');
+    }
+
+    function revealCurrentRole() {
+      const p = state.game.players[state.game.turnIndex];
+      askConfirm('本人確認', `あなたは${p.name}さんですか？ ${p.name}さんが「押しました」を押してください。`, () => {
+        document.getElementById('actionRoleName').textContent = `あなたは「${roleDefs[p.initialRole].name}」です`;
+        document.getElementById('actionDescription').textContent = p.actionText;
+        showScreen('action');
+      });
+    }
+
+    function finishTurn() {
+      state.game.turnIndex++;
+      if (state.game.turnIndex < state.game.players.length) showCurrentTurn();
+      else startDiscussion();
+    }
+
+    function startDiscussion() {
+      const roles = document.getElementById('discussionRoles');
+      roles.innerHTML = '';
+      Object.entries(state.game.roleSummary).forEach(([key,n]) => {
+        if (!n) return;
+        const p = document.createElement('span');
+        p.className = `pill ${roleDefs[key].team}`;
+        p.textContent = `${roleDefs[key].name} ${n}`;
+        roles.append(p);
+      });
+      let remaining = state.setup.discussionSeconds;
+      updateTimer(remaining);
+      clearInterval(state.timerId);
+      state.timerId = setInterval(() => {
+        remaining--;
+        updateTimer(Math.max(0, remaining));
+        if (remaining <= 0) {
+          clearInterval(state.timerId);
+          showInfo('議論時間終了', '議論時間が終了しました。投票へ進んでください。');
+        }
+      }, 1000);
+      showScreen('discussion');
+    }
+
+    function updateTimer(sec) {
+      const m = String(Math.floor(sec / 60)).padStart(2,'0');
+      const s = String(sec % 60).padStart(2,'0');
+      document.getElementById('timerDisplay').textContent = `${m}:${s}`;
+    }
+
+    function goVote() {
+      clearInterval(state.timerId);
+      const wrap = document.getElementById('executionChoices');
+      wrap.innerHTML = '';
+      state.game.players.forEach(p => {
+        const label = document.createElement('label');
+        label.className = 'choice-item';
+        label.innerHTML = `<input type="checkbox" value="${p.id}"><strong>${escapeHtml(p.name)}</strong>`;
+        wrap.append(label);
+      });
+      showScreen('vote');
+    }
+
+    function executeSelected() {
+      const ids = [...document.querySelectorAll('#executionChoices input:checked')].map(x=>x.value);
+      if (!ids.length) return showInfo('選択が必要です', '処刑する人を1人以上選んでください。');
+      ids.forEach(id => markExecuted(id));
+      buildRetaliationQueue(ids);
+      processRetaliationQueue();
+    }
+
+    function markExecuted(id) {
+      if (!state.game.executedIds.includes(id)) state.game.executedIds.push(id);
+      const p = state.game.players.find(x=>x.id===id);
+      if (p) p.alive = false;
+    }
+
+    function buildRetaliationQueue(newIds) {
+      for (const id of newIds) {
+        const p = state.game.players.find(x=>x.id===id);
+        if (!p) continue;
+        if (['hunter','superHunter','fox'].includes(p.finalRole) && !state.game.retaliationQueue.includes(id)) {
+          state.game.retaliationQueue.push(id);
+        }
+      }
+    }
+
+    function processRetaliationQueue() {
+      const next = state.game.retaliationQueue.shift();
+      if (!next) return finishGame();
+      state.game.currentRetaliatorId = next;
+      const p = state.game.players.find(x=>x.id===next);
+      const maxTargets = p.finalRole === 'fox' ? Math.ceil(state.game.players.length / 2) : 1;
+      const roleName = roleDefs[p.finalRole].name;
+      document.getElementById('retaliationTitle').textContent = `${p.name}さんの反撃`;
+      let info = `${roleName}の効果で、未処刑のプレイヤーを${maxTargets === 1 ? '1人' : `最大${maxTargets}人`}処刑できます。`;
+      if (p.finalRole === 'superHunter') {
+        info += '\n\n最終役職：' + state.game.players.map(x=>`${x.name}＝${roleDefs[x.finalRole].name}`).join('、');
+      }
+      document.getElementById('retaliationInfo').textContent = info;
+      const wrap = document.getElementById('retaliationChoices');
+      wrap.innerHTML = '';
+      state.game.players.filter(x=>!state.game.executedIds.includes(x.id)).forEach(x => {
+        const label = document.createElement('label');
+        label.className = 'choice-item';
+        label.innerHTML = `<input type="checkbox" value="${x.id}"><strong>${escapeHtml(x.name)}</strong>`;
+        wrap.append(label);
+      });
+      wrap.dataset.max = String(maxTargets);
+      showScreen('retaliation');
+    }
+
+    function retaliate() {
+      const max = Number(document.getElementById('retaliationChoices').dataset.max || 1);
+      const ids = [...document.querySelectorAll('#retaliationChoices input:checked')].map(x=>x.value);
+      if (!ids.length) return showInfo('選択が必要です', '処刑し返す人を選んでください。');
+      if (ids.length > max) return showInfo('選択数が多すぎます', `選択できるのは最大${max}人です。`);
+      ids.forEach(markExecuted);
+      buildRetaliationQueue(ids);
+      processRetaliationQueue();
+    }
+
+    async function finishGame() {
+      const executed = state.game.players.filter(p => state.game.executedIds.includes(p.id));
+      const executedWerewolf = executed.some(p => p.finalRole === 'werewolf');
+      const livingWerewolf = state.game.players.some(p => p.finalRole === 'werewolf' && !state.game.executedIds.includes(p.id));
+      state.game.winnerTeam = executedWerewolf || !livingWerewolf ? 'village' : 'wolf';
+
+      ensureStats();
+      const gameStatWrap = document.getElementById('gameStats');
+      gameStatWrap.innerHTML = '';
+      for (const p of state.game.players) {
+        const team = roleDefs[p.finalRole].team;
+        const won = team === state.game.winnerTeam;
+        const s = state.stats[p.id] || { games:0,wins:0,losses:0,villageWins:0,wolfWins:0 };
+        s.games++;
+        won ? s.wins++ : s.losses++;
+        if (won && team === 'village') s.villageWins++;
+        if (won && team === 'wolf') s.wolfWins++;
+        state.stats[p.id] = s;
+
+        const row = document.createElement('div');
+        row.className = 'stat-row';
+        row.innerHTML = `<strong>${escapeHtml(p.name)}</strong><span>${roleDefs[p.finalRole].name}</span><span>${team==='village'?'村人陣営':'人狼陣営'}</span><span class="${won?'good-text':'danger-text'}">${won?'勝利':'敗北'}</span>`;
+        gameStatWrap.append(row);
+      }
+      await dbSet('stats', state.stats);
+
+      document.getElementById('winnerText').textContent = state.game.winnerTeam === 'village' ? '村人陣営の勝利' : '人狼陣営の勝利';
+      document.getElementById('resultSummary').innerHTML = `<strong>処刑された人：</strong>${executed.length ? executed.map(p=>`${escapeHtml(p.name)}（${roleDefs[p.finalRole].name}）`).join('、') : 'なし'}<br><strong>村長：</strong>${state.game.players.find(p=>p.isMayor) ? escapeHtml(state.game.players.find(p=>p.isMayor).name) : 'なし'}`;
+      showScreen('result');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+    }
+
+    async function init() {
+      state.db = await openDB();
+      state.players = await dbGet('players') || [];
+      state.stats = await dbGet('stats') || {};
+      ensureDefaultPlayers();
+      ensureStats();
+      await dbSet('players', state.players);
+      await dbSet('stats', state.stats);
+
+      document.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => {
+        const name = btn.dataset.go;
+        if (name === 'players') { renderPlayers(); showScreen('players'); }
+        else if (name === 'stats') { renderStats(); showScreen('stats'); }
+        else if (name === 'setup') prepareSetup();
+        else showScreen(name);
+      }));
+
+      document.getElementById('homeBtn').addEventListener('click', () => { clearInterval(state.timerId); showScreen('home'); });
+      document.getElementById('addPlayerBtn').addEventListener('click', () => {
+        if (state.players.length >= 20) return showInfo('上限です', '登録できるプレイヤーは20人までです。');
+        state.players.push({ id: uid(), name: `プレイヤー${state.players.length + 1}` });
+        renderPlayers();
+      });
+      document.getElementById('savePlayersBtn').addEventListener('click', async () => {
+        const names = state.players.map(p=>p.name.trim());
+        if (names.some(n=>!n)) return showInfo('名前を入力してください', '空欄のプレイヤー名があります。');
+        if (new Set(names).size !== names.length) return showInfo('同じ名前があります', 'プレイヤー名は重複しないようにしてください。');
+        ensureStats();
+        await dbSet('players', state.players);
+        await dbSet('stats', state.stats);
+        showInfo('保存しました', 'プレイヤー名を保存しました。');
+      });
+      document.getElementById('resetStatsBtn').addEventListener('click', () => askConfirm('戦績をリセット', '全プレイヤーの戦績を0に戻します。よろしいですか？', async () => {
+        state.stats = {};
+        ensureStats();
+        await dbSet('stats', state.stats);
+        renderStats();
+      }));
+      document.getElementById('toRoleOverviewBtn').addEventListener('click', buildRoleOverview);
+      document.getElementById('startGameBtn').addEventListener('click', createGame);
+      document.getElementById('revealRoleBtn').addEventListener('click', revealCurrentRole);
+      document.getElementById('finishTurnBtn').addEventListener('click', finishTurn);
+      document.getElementById('finishDiscussionBtn').addEventListener('click', goVote);
+      document.getElementById('executeBtn').addEventListener('click', executeSelected);
+      document.getElementById('retaliateBtn').addEventListener('click', retaliate);
+      document.getElementById('resultToSetupBtn').addEventListener('click', prepareSetup);
+      document.getElementById('nextGameBtn').addEventListener('click', () => { createGame(); });
+
+      document.getElementById('confirmCancelBtn').addEventListener('click', () => document.getElementById('confirmDialog').close());
+      document.getElementById('confirmOkBtn').addEventListener('click', () => {
+        document.getElementById('confirmDialog').close();
+        const fn = state.confirmAction;
+        state.confirmAction = null;
+        if (fn) fn();
+      });
+      document.getElementById('infoCloseBtn').addEventListener('click', () => document.getElementById('infoDialog').close());
+
+      document.getElementById('retaliationChoices').addEventListener('change', e => {
+        const max = Number(e.currentTarget.dataset.max || 1);
+        const checked = [...e.currentTarget.querySelectorAll('input:checked')];
+        if (checked.length > max) e.target.checked = false;
+      });
+    }
+
+    init().catch(err => {
+      console.error(err);
+      alert('初期化に失敗しました。ブラウザのIndexedDBが利用可能か確認してください。');
+    });
+  </script>
+</body>
+</html>
