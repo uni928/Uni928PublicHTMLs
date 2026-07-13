@@ -988,7 +988,7 @@ function startDiscussion() {
       const maxTargets = p.finalRole === 'fox' ? Math.ceil(state.game.players.length / 2) : 1;
       const roleName = roleDefs[p.finalRole].name;
       document.getElementById('retaliationTitle').textContent = `${p.name}さんの反撃`;
-      let info = `${roleName}の効果で、未処刑のプレイヤーを${maxTargets === 1 ? '1人' : `最大${maxTargets}人`}処刑できます。`;
+      let info = `${roleName}の効果で、未処刑のプレイヤーを${maxTargets === 1 ? '1人' : `最大${maxTargets}人`}処刑します。`;
       if (p.finalRole === 'superHunter') {
         info += '\n\n最終役職：' + state.game.players.map(x=>`${x.name}＝${roleDefs[x.finalRole].name}`).join('、');
       }
