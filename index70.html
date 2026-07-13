@@ -724,6 +724,10 @@
         p.textContent = `${roleDefs[key].name} ${n}`;
         roles.append(p);
       });
+      // 議論タイムでも「今回使用する役職」と完全に同じ一覧を表示するため、
+      // この時点の表示内容を保存します。抽選後の使用役職一覧ではありません。
+      state.setup.overviewRolesHtml = roles.innerHTML;
+
       document.getElementById('overviewPlayers').innerHTML = `<strong>参加者：</strong>${selectedPlayers.map(p => escapeHtml(p.name)).join('、')}<br><strong>抽選：</strong>${total}枚の候補から${playerCount}枚を使用（残りは未使用）<br><strong>議論時間：</strong>${state.setup.discussionSeconds}秒${state.setup.mayorEnabled ? '<br><strong>村長：</strong>あり（秘密）' : ''}`;
       showScreen('role-overview');
     }
@@ -879,29 +883,33 @@
       else startDiscussion();
     }
 
-    function startDiscussion() {
-      const roles = document.getElementById('discussionRoles');
-      roles.innerHTML = '';
-      Object.entries(state.game.roleSummary).forEach(([key,n]) => {
-        if (!n) return;
-        const p = document.createElement('span');
-        p.className = `pill ${roleDefs[key].team}`;
-        p.textContent = `${roleDefs[key].name} ${n}`;
-        roles.append(p);
-      });
-      let remaining = state.setup.discussionSeconds;
-      updateTimer(remaining);
+function startDiscussion() {
+  const roles = document.getElementById('discussionRoles');
+
+  // 「今回使用する役職」で表示した内容を、そのまま議論画面へ複製します。
+  // 抽選で実際に配られなかった役職も含まれます。
+  roles.innerHTML = state.setup?.overviewRolesHtml
+    || document.getElementById('overviewRoles').innerHTML;
+
+  let remaining = state.setup.discussionSeconds;
+  updateTimer(remaining);
+  clearInterval(state.timerId);
+
+  state.timerId = setInterval(() => {
+    remaining--;
+    updateTimer(Math.max(0, remaining));
+
+    if (remaining <= 0) {
       clearInterval(state.timerId);
-      state.timerId = setInterval(() => {
-        remaining--;
-        updateTimer(Math.max(0, remaining));
-        if (remaining <= 0) {
-          clearInterval(state.timerId);
-          showInfo('議論時間終了', '議論時間が終了しました。投票へ進んでください。');
-        }
-      }, 1000);
-      showScreen('discussion');
+      showInfo(
+        '議論時間終了',
+        '議論時間が終了しました。投票へ進んでください。'
+      );
     }
+  }, 1000);
+
+  showScreen('discussion');
+}
 
     function updateTimer(sec) {
       const m = String(Math.floor(sec / 60)).padStart(2,'0');
@@ -1094,5 +1102,82 @@
       alert('初期化に失敗しました。ブラウザのIndexedDBが利用可能か確認してください。');
     });
   </script>
+<script>
+/*
+  one_night_werewolf.html 用
+  </body> の直前に追加してください。
+
+  変更内容:
+  1. 各役職説明にフレーバーテキストを追加
+  2. 狂人が占い師・大狼から村人判定になる旨を明記
+*/
+
+(() => {
+  const flavorTexts = {
+    villager:
+      'あなたはこの村で静かに暮らしてきた、ごく普通の村人です。特別な力はありません。しかし、村を守れるかどうかは、最後に誰を信じるかへ委ねられています。',
+
+    werewolf:
+      'あなたは月明かりの下で正体を現す人狼です。村人たちはあなたを恐れています。疑いをかわし、夜明けまで仲間と生き残ってください。',
+
+    direWolf:
+      'あなたは群れの気配を嗅ぎ分ける大狼です。人の姿を借りた者が獣であるかどうかを見抜き、群れを勝利へ導きます。',
+
+    superDireWolf:
+      'あなたは長い夜を生き抜いてきたスーパー大狼です。相手が隠している役職さえ見抜き、すべてを知ったうえで村を欺きます。',
+
+    seer:
+      'あなたは星と月の声を聞く占い師です。夜の静寂の中で一人の運命をのぞき、人狼の影が潜んでいるかを確かめます。',
+
+    superSeer:
+      'あなたは真実そのものを映し出すスーパー占い師です。曖昧な兆しではなく、相手が背負う役職の名まで見通します。',
+
+    robber:
+      'あなたは夜陰に紛れて立場を盗む怪盗です。誰かの運命を奪った瞬間、あなた自身の勝利条件もまた別のものへ変わります。',
+
+    entertainer:
+      'あなたは混乱こそ最高の娯楽だと考える娯楽主義者です。二人の運命を密かに入れ替え、何も知らない村人たちの議論を眺めます。',
+
+    hunter:
+      'あなたは村を守るために武器を手放さない狩人です。たとえ自分が処刑されても、最後の一撃で疑わしい者を道連れにします。',
+
+    superHunter:
+      'あなたは死の間際にすべての正体を見抜くスーパー狩人です。真実を知ったうえで放つ最後の一撃が、村の結末を決めます。',
+
+    magician:
+      'あなたは運命を書き換える奇術師です。夜のうちに一人の役職へ手を加え、本人さえ知らない新たな力を与えます。',
+
+    madman:
+      'あなたは人狼を崇拝する狂人です。人狼の正体を知る力はありませんが、人狼陣営の勝利のためなら、村人として疑われずに混乱を広げることもいといません。',
+
+    fox:
+      'あなたは人狼様を崇めています。人狼様が処刑を逃れられるなら自分の命など惜しくありませんが、あなたが処刑されると多くの人々を呪い殺してしまいます。その中には人狼様も含まれるかもしれません。',
+
+    tanner:
+      'あなたは処刑されることだけを望む、てるてるです。疑われ、裁かれ、村から排除された瞬間こそ、あなた一人の願いが成就します。'
+  };
+
+  if (typeof roleDefs === 'undefined') {
+    console.error('roleDefs が見つかりません。元のゲーム用 script より後ろに追加してください。');
+    return;
+  }
+
+  for (const [roleKey, flavor] of Object.entries(flavorTexts)) {
+    const def = roleDefs[roleKey];
+    if (!def) continue;
+
+    const abilityText = def.info || '';
+    const madmanNote = roleKey === 'madman'
+      ? '\n\n【占い判定】占い師・大狼からは「村人判定」になります。スーパー占い師・スーパー大狼には役職名まで確認されます。'
+      : '';
+
+    def.flavor = flavor;
+    def.info =
+      `【物語】\n${flavor}\n\n` +
+      `【能力・勝利条件】\n${abilityText}` +
+      madmanNote;
+  }
+})();
+</script>
 </body>
 </html>
