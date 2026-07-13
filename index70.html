@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>ワンナイト人狼</title>
-  <meta name="description" content="端末を回して遊べる、戦績保存対応のワンナイト人狼ゲームです。">
+  <title>パーティゲーム for ワンナイト人狼</title>
+  <meta name="description" content="端末を回して遊べる、戦績保存対応のパーティゲーム for ワンナイト人狼ゲームです。">
   <style>
     @layer base, layout, components, utilities;
 
@@ -291,7 +291,7 @@
       <div class="brand">
         <div class="brand-mark">🌙</div>
         <div>
-          <h1>ワンナイト人狼</h1>
+          <h1>パーティゲーム for ワンナイト人狼</h1>
           <small>1台の端末を回して遊べます</small>
         </div>
       </div>
@@ -469,10 +469,10 @@
       seer: { name: '占い師', min: 0, max: 3, team: 'village', info: 'ランダムな他プレイヤー1人が人狼系か、それ以外かを確認します。狂人は村人判定になります。' },
       superSeer: { name: 'スーパー占い師', min: 0, max: 3, team: 'village', info: 'ランダムな他プレイヤー1人の役職を、役職名まで確認します。' },
       robber: { name: '怪盗', min: 0, max: 3, team: 'village', info: 'ランダムな他プレイヤー1人と役職を交換します。勝敗は交換後の役職で判定します。' },
-      entertainer: { name: '娯楽主義者', min: 0, max: 3, team: 'village', info: '自分以外のランダムな2人の役職を入れ替えます。誰と誰を入れ替えたか、役職が何だったかは分かりません。' },
+      entertainer: { name: '娯楽主義者', min: 0, max: 3, team: 'village', info: '自分以外のランダムな2人の役職を入れ替えます。入れ替えた2人のプレイヤー名は分かりますが、役職は分かりません。' },
       hunter: { name: '狩人', min: 0, max: 3, team: 'village', info: '処刑された場合、未処刑のプレイヤー1人を選んで追加処刑します。' },
       superHunter: { name: 'スーパー狩人', min: 0, max: 3, team: 'village', info: '処刑された場合、全プレイヤーの最終役職を確認してから、未処刑のプレイヤー1人を追加処刑します。' },
-      magician: { name: '奇術師', min: 0, max: 3, team: 'village', info: '村人陣営が存在する場合、ランダムで選ばれた1人をスーパー狩人に変化させます。' },
+      magician: { name: '奇術師', min: 0, max: 3, team: 'village', info: '人狼・大狼・スーパー大狼を除くランダムな他プレイヤー1人を、スーパー狩人に変化させます。' },
       madman: { name: '狂人', min: 0, max: 3, team: 'wolf', info: '人狼陣営ですが、人狼系役職ではありません。占い師と大狼からは村人判定になります。' },
       fox: { name: 'きつね', min: 0, max: 2, team: 'wolf', info: '人狼陣営です。処刑された場合、プレイヤー数÷2を切り上げた人数まで追加処刑します。' },
       tanner: { name: 'てるてる', min: 0, max: 3, team: 'other', info: '独立陣営です。てるてるが1人でも処刑されると、処刑されたてるてるだけが勝利し、他の全プレイヤーは敗北します。' }
@@ -482,6 +482,10 @@
       return Boolean(roleDefs[role]?.actualWolf);
     }
 
+    function isVillageSide(role) {
+      return roleDefs[role]?.team === 'village';
+    }
+
     const state = {
       players: [],
       stats: {},
@@ -489,7 +493,8 @@
       game: null,
       db: null,
       confirmAction: null,
-      timerId: null
+      timerId: null,
+      savedSetup: null
     };
 
     function blankCounts() {
@@ -608,30 +613,54 @@
 
     function initSetupUI() {
       ensureDefaultPlayers();
+      const saved = state.savedSetup || {};
       const pc = document.getElementById('playerCount');
       pc.innerHTML = '';
       const max = Math.min(20, state.players.length);
       for (let n = 3; n <= max; n++) pc.add(new Option(`${n}人`, n));
       if (max < 3) pc.add(new Option('3人', 3));
-      pc.value = String(Math.min(5, max || 3));
+      const savedPlayerCount = Math.max(3, Math.min(max || 3, Number(saved.playerCount) || 5));
+      pc.value = String(savedPlayerCount);
 
       const roleWrap = document.getElementById('roleConfigList');
       roleWrap.innerHTML = '';
       Object.entries(roleDefs).forEach(([key, def]) => {
+        const savedCount = Math.max(def.min, Math.min(def.max, Number(saved.counts?.[key]) || 0));
         const row = document.createElement('div');
         row.className = 'role-row';
-        row.innerHTML = `<strong>${def.name}</strong><input class="role-count" type="number" min="${def.min}" max="${def.max}" value="0" data-role="${key}"><button class="info-btn" aria-label="${def.name}の説明">i</button>`;
-        row.querySelector('input').addEventListener('input', updateRoleTotal);
+        row.innerHTML = `<strong>${def.name}</strong><input class="role-count" type="number" min="${def.min}" max="${def.max}" value="${savedCount}" data-role="${key}"><button class="info-btn" aria-label="${def.name}の説明">i</button>`;
+        row.querySelector('input').addEventListener('input', () => {
+          updateRoleTotal();
+          saveSetupConfig();
+        });
         row.querySelector('button').addEventListener('click', () => showInfo(def.name, def.info));
         roleWrap.append(row);
       });
 
-      pc.addEventListener('change', () => {
+      document.getElementById('discussionSeconds').value = Math.max(10, Number(saved.discussionSeconds) || 60);
+      document.getElementById('mayorEnabled').checked = Boolean(saved.mayorEnabled);
+
+      pc.onchange = () => {
         renderParticipants();
         updateRoleTotal();
-      });
+        saveSetupConfig();
+      };
+      document.getElementById('discussionSeconds').oninput = saveSetupConfig;
+      document.getElementById('mayorEnabled').onchange = saveSetupConfig;
       renderParticipants();
       updateRoleTotal();
+    }
+
+    async function saveSetupConfig() {
+      if (!state.db || !document.getElementById('playerCount').options.length) return;
+      const config = {
+        playerCount: Number(document.getElementById('playerCount').value || 3),
+        counts: getRoleCountsFromUI(),
+        discussionSeconds: Math.max(10, Number(document.getElementById('discussionSeconds').value) || 60),
+        mayorEnabled: document.getElementById('mayorEnabled').checked
+      };
+      state.savedSetup = config;
+      await dbSet('setupConfig', config);
     }
 
     function renderParticipants() {
@@ -656,8 +685,8 @@
       const total = Object.values(getRoleCountsFromUI()).reduce((a,b)=>a+b,0);
       const need = Number(document.getElementById('playerCount').value || 0);
       const el = document.getElementById('roleTotalText');
-      el.textContent = `${total} / ${need}人`;
-      el.className = total === need ? 'good-text' : 'danger-text';
+      el.textContent = `${total}枚から${need}人分を抽選`;
+      el.className = total >= need ? 'good-text' : 'danger-text';
     }
 
     function prepareSetup() {
@@ -669,9 +698,11 @@
       const playerCount = Number(document.getElementById('playerCount').value);
       const counts = getRoleCountsFromUI();
       const total = Object.values(counts).reduce((a,b)=>a+b,0);
-      if (total !== playerCount) return showInfo('人数が一致しません', `役職の合計は${playerCount}人にしてください。現在は${total}人です。`);
+      if (total < playerCount) return showInfo('役職が不足しています', `役職の合計を参加人数以上にしてください。参加者は${playerCount}人、役職は${total}枚です。`);
       const actualWolfCount = Object.entries(counts).reduce((sum, [key, n]) => sum + (isActualWolf(key) ? n : 0), 0);
-      if (actualWolfCount < 1) return showInfo('人狼系役職が必要です', '人狼・大狼・スーパー大狼の合計を1人以上に設定してください。');
+      if (actualWolfCount < 1) return showInfo('人狼系役職が必要です', '抽選候補に、人狼・大狼・スーパー大狼を合計1枚以上入れてください。');
+      const villageSideCount = Object.entries(counts).reduce((sum, [key, n]) => sum + (isVillageSide(key) ? n : 0), 0);
+      if (villageSideCount < 1) return showInfo('村人陣営が必要です', '抽選候補に、村人陣営の役職を合計1枚以上入れてください。');
 
       const selectedPlayers = state.players.slice(0, playerCount);
       state.setup = {
@@ -682,6 +713,8 @@
         mayorEnabled: document.getElementById('mayorEnabled').checked
       };
 
+      saveSetupConfig();
+
       const roles = document.getElementById('overviewRoles');
       roles.innerHTML = '';
       Object.entries(counts).forEach(([key, n]) => {
@@ -691,19 +724,40 @@
         p.textContent = `${roleDefs[key].name} ${n}`;
         roles.append(p);
       });
-      document.getElementById('overviewPlayers').innerHTML = `<strong>参加者：</strong>${selectedPlayers.map(p => escapeHtml(p.name)).join('、')}<br><strong>議論時間：</strong>${state.setup.discussionSeconds}秒${state.setup.mayorEnabled ? '<br><strong>村長：</strong>あり（秘密）' : ''}`;
+      document.getElementById('overviewPlayers').innerHTML = `<strong>参加者：</strong>${selectedPlayers.map(p => escapeHtml(p.name)).join('、')}<br><strong>抽選：</strong>${total}枚の候補から${playerCount}枚を使用（残りは未使用）<br><strong>議論時間：</strong>${state.setup.discussionSeconds}秒${state.setup.mayorEnabled ? '<br><strong>村長：</strong>あり（秘密）' : ''}`;
       showScreen('role-overview');
     }
 
     function createGame() {
       const deck = [];
       Object.entries(state.setup.counts).forEach(([key, n]) => { for (let i=0;i<n;i++) deck.push(key); });
-      const shuffledRoles = shuffle(deck);
+
+      // 参加人数分だけ抽選し、人狼系と村人陣営が各1人以上含まれるまで再抽選します。
+      let selectedRoles = [];
+      let attempts = 0;
+      do {
+        selectedRoles = shuffle(deck).slice(0, state.setup.playerCount);
+        attempts++;
+      } while ((!selectedRoles.some(isActualWolf) || !selectedRoles.some(isVillageSide)) && attempts < 2000);
+
+      // 万一再抽選で成立しなかった場合も、両陣営を必ず1人ずつ含めます。
+      if (!selectedRoles.some(isActualWolf) || !selectedRoles.some(isVillageSide)) {
+        const wolfRole = shuffle(deck.filter(isActualWolf))[0];
+        const villageRole = shuffle(deck.filter(isVillageSide))[0];
+        selectedRoles = shuffle(deck).slice(0, state.setup.playerCount);
+        selectedRoles[0] = wolfRole;
+        selectedRoles[1] = villageRole;
+        selectedRoles = shuffle(selectedRoles);
+      }
+
+      const usedRoleSummary = blankCounts();
+      selectedRoles.forEach(role => usedRoleSummary[role]++);
+
       const players = state.setup.players.map((p, i) => ({
         id: p.id,
         name: p.name,
-        initialRole: shuffledRoles[i],
-        finalRole: shuffledRoles[i],
+        initialRole: selectedRoles[i],
+        finalRole: selectedRoles[i],
         isMayor: false,
         actionText: '',
         alive: true
@@ -718,7 +772,7 @@
         currentRetaliatorId: null,
         winnerTeam: null,
         startedAt: Date.now(),
-        roleSummary: state.setup.counts
+        roleSummary: usedRoleSummary
       };
       state.game = game;
       resolveNightActions();
@@ -738,7 +792,7 @@
           const targets = shuffle(g.players.filter(x => x.id !== p.id)).slice(0, 2);
           if (targets.length === 2) {
             [targets[0].finalRole, targets[1].finalRole] = [targets[1].finalRole, targets[0].finalRole];
-            p.actionText = '自分以外のランダムな2人の役職を入れ替えました。対象者と役職は分かりません。';
+            p.actionText = `${targets[0].name}さんと${targets[1].name}さんの役職を入れ替えました。入れ替え前後の役職は分かりません。`;
           } else {
             p.actionText = '入れ替え対象が足りないため、能力は発動しませんでした。';
           }
@@ -757,13 +811,13 @@
 
       for (const p of g.players) {
         if (p.initialRole === 'magician') {
-          const villageTargets = g.players.filter(x => roleDefs[x.finalRole].team === 'village' && x.id !== p.id);
-          if (villageTargets.length) {
-            const target = villageTargets[Math.floor(Math.random() * villageTargets.length)];
+          const eligibleTargets = g.players.filter(x => !isActualWolf(x.finalRole) && x.id !== p.id);
+          if (eligibleTargets.length) {
+            const target = eligibleTargets[Math.floor(Math.random() * eligibleTargets.length)];
             target.finalRole = 'superHunter';
             p.actionText = `${target.name}さんをスーパー狩人に変化させました。`;
           } else {
-            p.actionText = '村人陣営が存在しなかったため、能力は発動しませんでした。';
+            p.actionText = '人狼・大狼・スーパー大狼以外の対象がいなかったため、能力は発動しませんでした。';
           }
         }
       }
@@ -974,6 +1028,7 @@
       state.db = await openDB();
       state.players = await dbGet('players') || [];
       state.stats = await dbGet('stats') || {};
+      state.savedSetup = await dbGet('setupConfig') || null;
       ensureDefaultPlayers();
       ensureStats();
       await dbSet('players', state.players);
