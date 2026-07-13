@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>パーティゲーム for ワンナイト人狼</title>
-  <meta name="description" content="端末を回して遊べる、戦績保存対応のパーティゲーム for ワンナイト人狼ゲームです。">
+  <title>ワンナイト人狼</title>
+  <meta name="description" content="端末を回して遊べる、戦績保存対応のワンナイト人狼ゲームです。">
   <style>
     @layer base, layout, components, utilities;
 
@@ -291,7 +291,7 @@
       <div class="brand">
         <div class="brand-mark">🌙</div>
         <div>
-          <h1>パーティゲーム for ワンナイト人狼</h1>
+          <h1>ワンナイト人狼</h1>
           <small>1台の端末を回して遊べます</small>
         </div>
       </div>
@@ -333,11 +333,6 @@
           <div class="field">
             <label for="playerCount">参加人数</label>
             <select id="playerCount"></select>
-          </div>
-          <div class="field">
-            <label for="presetSelect">初期デッキ</label>
-            <select id="presetSelect"></select>
-            <small id="deckLabel" class="muted">初期デッキ</small>
           </div>
           <div class="field">
             <label for="discussionSeconds">議論時間（秒）</label>
@@ -468,63 +463,24 @@
 
     const roleDefs = {
       villager: { name: '村人', min: 0, max: 20, team: 'village', info: '特殊能力を持たない村人陣営です。会話から人狼を探します。' },
-      werewolf: { name: '人狼', min: 1, max: 6, team: 'wolf', info: '人狼陣営です。処刑を逃れれば勝利に近づきます。他の人狼がいる場合は結果画面で仲間を確認できます。' },
-      seer: { name: '占い師', min: 0, max: 3, team: 'village', info: 'ランダムで選ばれた他プレイヤー1人の、夜終了時点の役職を確認します。' },
-      robber: { name: '怪盗', min: 0, max: 3, team: 'village', info: 'ランダムで選ばれた他プレイヤー1人と役職を交換します。勝敗は交換後の役職で判定します。' },
+      werewolf: { name: '人狼', min: 0, max: 6, team: 'wolf', actualWolf: true, info: '人狼陣営です。村人陣営は、人狼・大狼・スーパー大狼のいずれかを処刑する必要があります。' },
+      direWolf: { name: '大狼', min: 0, max: 3, team: 'wolf', actualWolf: true, info: '人狼です。ランダムな他プレイヤー1人が人狼系か、それ以外かを確認します。狂人は村人判定になります。' },
+      superDireWolf: { name: 'スーパー大狼', min: 0, max: 3, team: 'wolf', actualWolf: true, info: '人狼です。ランダムな他プレイヤー1人の役職を、役職名まで確認します。' },
+      seer: { name: '占い師', min: 0, max: 3, team: 'village', info: 'ランダムな他プレイヤー1人が人狼系か、それ以外かを確認します。狂人は村人判定になります。' },
+      superSeer: { name: 'スーパー占い師', min: 0, max: 3, team: 'village', info: 'ランダムな他プレイヤー1人の役職を、役職名まで確認します。' },
+      robber: { name: '怪盗', min: 0, max: 3, team: 'village', info: 'ランダムな他プレイヤー1人と役職を交換します。勝敗は交換後の役職で判定します。' },
+      entertainer: { name: '娯楽主義者', min: 0, max: 3, team: 'village', info: '自分以外のランダムな2人の役職を入れ替えます。誰と誰を入れ替えたか、役職が何だったかは分かりません。' },
       hunter: { name: '狩人', min: 0, max: 3, team: 'village', info: '処刑された場合、未処刑のプレイヤー1人を選んで追加処刑します。' },
       superHunter: { name: 'スーパー狩人', min: 0, max: 3, team: 'village', info: '処刑された場合、全プレイヤーの最終役職を確認してから、未処刑のプレイヤー1人を追加処刑します。' },
       magician: { name: '奇術師', min: 0, max: 3, team: 'village', info: '村人陣営が存在する場合、ランダムで選ばれた1人をスーパー狩人に変化させます。' },
-      madman: { name: '狂人', min: 0, max: 3, team: 'wolf', info: '人狼陣営ですが、人狼本人ではありません。人狼陣営の勝利を目指します。' },
-      fox: { name: 'きつね', min: 0, max: 2, team: 'wolf', info: '人狼陣営です。処刑された場合、プレイヤー数÷2を切り上げた人数まで追加処刑します。' }
+      madman: { name: '狂人', min: 0, max: 3, team: 'wolf', info: '人狼陣営ですが、人狼系役職ではありません。占い師と大狼からは村人判定になります。' },
+      fox: { name: 'きつね', min: 0, max: 2, team: 'wolf', info: '人狼陣営です。処刑された場合、プレイヤー数÷2を切り上げた人数まで追加処刑します。' },
+      tanner: { name: 'てるてる', min: 0, max: 3, team: 'other', info: '独立陣営です。てるてるが1人でも処刑されると、処刑されたてるてるだけが勝利し、他の全プレイヤーは敗北します。' }
     };
 
-    const presets = {
-      balanced: {
-        name: 'バランス',
-        build: n => {
-          const c = blankCounts();
-          c.werewolf = n >= 7 ? 2 : 1;
-          c.seer = 1;
-          c.robber = n >= 5 ? 1 : 0;
-          c.hunter = n >= 6 ? 1 : 0;
-          c.madman = n >= 8 ? 1 : 0;
-          c.villager = n - Object.values(c).reduce((a,b)=>a+b,0);
-          return c;
-        }
-      },
-      simple: {
-        name: '初心者向け',
-        build: n => {
-          const c = blankCounts();
-          c.werewolf = n >= 8 ? 2 : 1;
-          c.seer = 1;
-          c.villager = n - c.werewolf - c.seer;
-          return c;
-        }
-      },
-      chaos: {
-        name: '特殊役職多め',
-        build: n => {
-          const c = blankCounts();
-          c.werewolf = n >= 7 ? 2 : 1;
-          c.seer = 1;
-          c.robber = n >= 5 ? 1 : 0;
-          c.hunter = n >= 6 ? 1 : 0;
-          c.superHunter = n >= 8 ? 1 : 0;
-          c.magician = n >= 7 ? 1 : 0;
-          c.fox = n >= 10 ? 1 : 0;
-          c.madman = n >= 9 ? 1 : 0;
-          c.villager = Math.max(0, n - Object.values(c).reduce((a,b)=>a+b,0));
-          while (Object.values(c).reduce((a,b)=>a+b,0) > n) {
-            for (const key of ['madman','fox','superHunter','magician','hunter','robber']) {
-              if (c[key] > 0 && Object.values(c).reduce((a,b)=>a+b,0) > n) c[key]--;
-            }
-          }
-          c.villager += n - Object.values(c).reduce((a,b)=>a+b,0);
-          return c;
-        }
-      }
-    };
+    function isActualWolf(role) {
+      return Boolean(roleDefs[role]?.actualWolf);
+    }
 
     const state = {
       players: [],
@@ -659,38 +615,23 @@
       if (max < 3) pc.add(new Option('3人', 3));
       pc.value = String(Math.min(5, max || 3));
 
-      const preset = document.getElementById('presetSelect');
-      preset.innerHTML = '';
-      Object.entries(presets).forEach(([key, def]) => preset.add(new Option(def.name, key)));
-      preset.add(new Option('カスタムデッキ', 'custom'));
-      preset.value = 'balanced';
-
       const roleWrap = document.getElementById('roleConfigList');
       roleWrap.innerHTML = '';
       Object.entries(roleDefs).forEach(([key, def]) => {
         const row = document.createElement('div');
         row.className = 'role-row';
         row.innerHTML = `<strong>${def.name}</strong><input class="role-count" type="number" min="${def.min}" max="${def.max}" value="0" data-role="${key}"><button class="info-btn" aria-label="${def.name}の説明">i</button>`;
-        row.querySelector('input').addEventListener('input', () => {
-          preset.value = 'custom';
-          document.getElementById('deckLabel').textContent = 'カスタムデッキ';
-          updateRoleTotal();
-        });
+        row.querySelector('input').addEventListener('input', updateRoleTotal);
         row.querySelector('button').addEventListener('click', () => showInfo(def.name, def.info));
         roleWrap.append(row);
       });
 
       pc.addEventListener('change', () => {
         renderParticipants();
-        if (preset.value !== 'custom') applyPreset(preset.value);
-        else updateRoleTotal();
-      });
-      preset.addEventListener('change', () => {
-        if (preset.value === 'custom') document.getElementById('deckLabel').textContent = 'カスタムデッキ';
-        else applyPreset(preset.value);
+        updateRoleTotal();
       });
       renderParticipants();
-      applyPreset('balanced');
+      updateRoleTotal();
     }
 
     function renderParticipants() {
@@ -703,14 +644,6 @@
         row.innerHTML = `<span>${i + 1}.</span><strong>${escapeHtml(p.name)}</strong>`;
         wrap.append(row);
       });
-    }
-
-    function applyPreset(key) {
-      const n = Number(document.getElementById('playerCount').value || 3);
-      const counts = presets[key].build(n);
-      document.querySelectorAll('.role-count').forEach(input => input.value = counts[input.dataset.role] || 0);
-      document.getElementById('deckLabel').textContent = `初期デッキ：${presets[key].name}`;
-      updateRoleTotal();
     }
 
     function getRoleCountsFromUI() {
@@ -737,7 +670,8 @@
       const counts = getRoleCountsFromUI();
       const total = Object.values(counts).reduce((a,b)=>a+b,0);
       if (total !== playerCount) return showInfo('人数が一致しません', `役職の合計は${playerCount}人にしてください。現在は${total}人です。`);
-      if (counts.werewolf < 1) return showInfo('人狼が必要です', '人狼を1人以上に設定してください。');
+      const actualWolfCount = Object.entries(counts).reduce((sum, [key, n]) => sum + (isActualWolf(key) ? n : 0), 0);
+      if (actualWolfCount < 1) return showInfo('人狼系役職が必要です', '人狼・大狼・スーパー大狼の合計を1人以上に設定してください。');
 
       const selectedPlayers = state.players.slice(0, playerCount);
       state.setup = {
@@ -745,8 +679,7 @@
         players: selectedPlayers,
         counts,
         discussionSeconds: Math.max(10, Number(document.getElementById('discussionSeconds').value) || 60),
-        mayorEnabled: document.getElementById('mayorEnabled').checked,
-        presetName: document.getElementById('presetSelect').value
+        mayorEnabled: document.getElementById('mayorEnabled').checked
       };
 
       const roles = document.getElementById('overviewRoles');
@@ -795,11 +728,26 @@
     function resolveNightActions() {
       const g = state.game;
       const original = g.players.map(p => ({...p}));
+      const randomOther = p => {
+        const targets = g.players.filter(x => x.id !== p.id);
+        return targets[Math.floor(Math.random() * targets.length)];
+      };
+
+      for (const p of g.players) {
+        if (p.initialRole === 'entertainer') {
+          const targets = shuffle(g.players.filter(x => x.id !== p.id)).slice(0, 2);
+          if (targets.length === 2) {
+            [targets[0].finalRole, targets[1].finalRole] = [targets[1].finalRole, targets[0].finalRole];
+            p.actionText = '自分以外のランダムな2人の役職を入れ替えました。対象者と役職は分かりません。';
+          } else {
+            p.actionText = '入れ替え対象が足りないため、能力は発動しませんでした。';
+          }
+        }
+      }
 
       for (const p of g.players) {
         if (p.initialRole === 'robber') {
-          const targets = g.players.filter(x => x.id !== p.id);
-          const target = targets[Math.floor(Math.random() * targets.length)];
+          const target = randomOther(p);
           const old = p.finalRole;
           p.finalRole = target.finalRole;
           target.finalRole = old;
@@ -821,9 +769,11 @@
       }
 
       for (const p of g.players) {
-        if (p.initialRole === 'seer') {
-          const targets = g.players.filter(x => x.id !== p.id);
-          const target = targets[Math.floor(Math.random() * targets.length)];
+        if (p.initialRole === 'seer' || p.initialRole === 'direWolf') {
+          const target = randomOther(p);
+          p.actionText = `${target.name}さんは「${isActualWolf(target.finalRole) ? '人狼判定' : '村人判定'}」です。`;
+        } else if (p.initialRole === 'superSeer' || p.initialRole === 'superDireWolf') {
+          const target = randomOther(p);
           p.actionText = `${target.name}さんの役職は「${roleDefs[target.finalRole].name}」です。`;
         }
       }
@@ -831,8 +781,8 @@
       for (const p of g.players) {
         const role = p.initialRole;
         if (!p.actionText) {
-          if (role === 'werewolf') {
-            const mates = original.filter(x => x.id !== p.id && x.initialRole === 'werewolf');
+          if (isActualWolf(role)) {
+            const mates = original.filter(x => x.id !== p.id && isActualWolf(x.initialRole));
             p.actionText = mates.length ? `人狼の仲間は ${mates.map(x=>x.name+'さん').join('、')} です。` : 'あなたは唯一の人狼です。';
           } else if (role === 'hunter') {
             p.actionText = '処刑された場合、未処刑のプレイヤー1人を処刑し返せます。';
@@ -841,7 +791,9 @@
           } else if (role === 'fox') {
             p.actionText = `処刑された場合、最大${Math.ceil(g.players.length/2)}人を処刑し返せます。`;
           } else if (role === 'madman') {
-            p.actionText = 'あなたは狂人です。人狼陣営の勝利を目指してください。';
+            p.actionText = 'あなたは狂人です。人狼陣営の勝利を目指してください。占い結果は村人判定になります。';
+          } else if (role === 'tanner') {
+            p.actionText = 'あなたはてるてるです。自分が処刑されると、処刑されたてるてるだけが勝利し、他の全プレイヤーは敗北します。';
           } else if (role === 'villager') {
             p.actionText = '特殊能力はありません。会話から人狼を見つけてください。';
           } else {
@@ -977,16 +929,20 @@
 
     async function finishGame() {
       const executed = state.game.players.filter(p => state.game.executedIds.includes(p.id));
-      const executedWerewolf = executed.some(p => p.finalRole === 'werewolf');
-      const livingWerewolf = state.game.players.some(p => p.finalRole === 'werewolf' && !state.game.executedIds.includes(p.id));
-      state.game.winnerTeam = executedWerewolf || !livingWerewolf ? 'village' : 'wolf';
+      const executedActualWolf = executed.some(p => isActualWolf(p.finalRole));
+      const livingActualWolf = state.game.players.some(p => isActualWolf(p.finalRole) && !state.game.executedIds.includes(p.id));
+      state.game.winnerTeam = executedActualWolf || !livingActualWolf ? 'village' : 'wolf';
+      const tannerWinners = executed.filter(p => p.finalRole === 'tanner');
+      const tannerOverride = tannerWinners.length > 0;
 
       ensureStats();
       const gameStatWrap = document.getElementById('gameStats');
       gameStatWrap.innerHTML = '';
       for (const p of state.game.players) {
         const team = roleDefs[p.finalRole].team;
-        const won = team === state.game.winnerTeam;
+        const won = tannerOverride
+          ? p.finalRole === 'tanner' && state.game.executedIds.includes(p.id)
+          : team !== 'other' && team === state.game.winnerTeam;
         const s = state.stats[p.id] || { games:0,wins:0,losses:0,villageWins:0,wolfWins:0 };
         s.games++;
         won ? s.wins++ : s.losses++;
@@ -994,14 +950,18 @@
         if (won && team === 'wolf') s.wolfWins++;
         state.stats[p.id] = s;
 
+        const teamLabel = team === 'village' ? '村人陣営' : team === 'wolf' ? '人狼陣営' : '独立陣営';
         const row = document.createElement('div');
         row.className = 'stat-row';
-        row.innerHTML = `<strong>${escapeHtml(p.name)}</strong><span>${roleDefs[p.finalRole].name}</span><span>${team==='village'?'村人陣営':'人狼陣営'}</span><span class="${won?'good-text':'danger-text'}">${won?'勝利':'敗北'}</span>`;
+        row.innerHTML = `<strong>${escapeHtml(p.name)}</strong><span>${roleDefs[p.finalRole].name}</span><span>${teamLabel}</span><span class="${won?'good-text':'danger-text'}">${won?'勝利':'敗北'}</span>`;
         gameStatWrap.append(row);
       }
       await dbSet('stats', state.stats);
 
-      document.getElementById('winnerText').textContent = state.game.winnerTeam === 'village' ? '村人陣営の勝利' : '人狼陣営の勝利';
+      const sideWinner = state.game.winnerTeam === 'village' ? '村人陣営の勝利' : '人狼陣営の勝利';
+      document.getElementById('winnerText').textContent = tannerOverride
+        ? `てるてるの単独勝利：${tannerWinners.map(p=>p.name).join('、')}（他の全員は敗北）`
+        : sideWinner;
       document.getElementById('resultSummary').innerHTML = `<strong>処刑された人：</strong>${executed.length ? executed.map(p=>`${escapeHtml(p.name)}（${roleDefs[p.finalRole].name}）`).join('、') : 'なし'}<br><strong>村長：</strong>${state.game.players.find(p=>p.isMayor) ? escapeHtml(state.game.players.find(p=>p.isMayor).name) : 'なし'}`;
       showScreen('result');
     }
