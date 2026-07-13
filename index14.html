@@ -513,6 +513,9 @@
       { name: "gpt-5.2",      inRate: 1.75, outRate: 14.00 },
       { name: "gpt-5.4 (<272K)",      inRate: 2.50, outRate: 15.00 },
       { name: "gpt-5.5 (<272K)",      inRate: 5.00, outRate: 30.00 },
+      { name: "gpt-5.6-luna (<272K)",      inRate: 1.00, outRate: 6.00 },
+      { name: "gpt-5.6-terra (<272K)",      inRate: 2.50, outRate: 15.00 },
+      { name: "gpt-5.6-sol (<272K)",      inRate: 5.00, outRate: 30.00 },
     ];
 
     const FLEX = [
@@ -523,7 +526,10 @@
       { base: "gpt-5.1",    label: "gpt-5.1 Flex",    factor: 0.5 },
       { base: "gpt-5.2",    label: "gpt-5.2 Flex",    factor: 0.5 },
       { base: "gpt-5.4 (<272K)",    label: "gpt-5.4 Flex",    factor: 0.5 },
-      { base: "gpt-5.5 (<272K)",    label: "gpt-5.5 Flex",    factor: 0.5 },
+      { base: "gpt-5.5 (<272K)",    label: "gpt-5. Flex",    factor: 0.5 },
+      { base: "gpt-5.6-luna (<272K)",    label: "gpt-5.6-luna Flex",    factor: 0.5 },
+      { base: "gpt-5.6-terra (<272K)",    label: "gpt-5.6-terra Flex",    factor: 0.5 },
+      { base: "gpt-5.6-sol (<272K)",    label: "gpt-5.6-sol Flex",    factor: 0.5 },
     ];
 
     // ==== DOM ====
@@ -803,7 +809,6 @@ applyQueryParams();
   </script>
 </body>
 </html>
-
 
 
 
