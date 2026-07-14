@@ -336,25 +336,22 @@
         QRコード読み取り用サイトをコピー
       </button>
 
-      <button id="scanQrButton" class="button button--secondary" type="button">
-        QRコードを読み込む
-      </button>
+      <a
+        id="openScannerUrlButton"
+        class="button button--secondary"
+        href="https://x.gd/3gT0S"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        QRコード読み取り用サイトを読み込む
+      </a>
 
       <div class="target-box tiny">
         短縮URL：
         <button id="shortUrlButton" class="link-button" type="button">
-          https://x.gd/mXAxBF
+          https://x.gd/3gT0S
         </button>
       </div>
-
-      <section id="scannerSection" class="scanner" hidden>
-        <div class="divider"></div>
-        <video id="scannerVideo" playsinline muted></video>
-        <button id="stopScanButton" class="button button--danger" type="button">
-          読み取りを停止
-        </button>
-        <p id="scanStatus" class="status tiny" role="status" aria-live="polite"></p>
-      </section>
 
       <p class="helper">
         入力したURLの <code>https://</code> 以降を、現在のサイトの
@@ -413,21 +410,14 @@
     const targetUrlText = document.querySelector("#targetUrlText");
     const openUrlButton = document.querySelector("#openUrlButton");
     const showQrButton = document.querySelector("#showQrButton");
-    const scanQrButton = document.querySelector("#scanQrButton");
     const qrSection = document.querySelector("#qrSection");
     const qrCode = document.querySelector("#qrCode");
-    const scannerSection = document.querySelector("#scannerSection");
-    const scannerVideo = document.querySelector("#scannerVideo");
     const scanCanvas = document.querySelector("#scanCanvas");
     const scanContext = scanCanvas.getContext("2d", { willReadFrequently: true });
-    const stopScanButton = document.querySelector("#stopScanButton");
-    const scanStatus = document.querySelector("#scanStatus");
     const shareStatus = document.querySelector("#shareStatus");
 
-    const scannerShortUrl = "https://x.gd/mXAxBF";
+    const scannerShortUrl = "https://x.gd/3gT0S";
 
-    let scannerStream = null;
-    let scannerFrameId = null;
 
     function setStatus(element, message, kind = "") {
       element.textContent = message;
@@ -533,100 +523,6 @@
       showQrButton.textContent = "QRコードを表示";
     }
 
-    async function startQrScanner() {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        scannerSection.hidden = false;
-        setStatus(scanStatus, "このブラウザではカメラを利用できません。HTTPS環境で開いてください。", "error");
-        return;
-      }
-
-      if (typeof jsQR !== "function") {
-        scannerSection.hidden = false;
-        setStatus(scanStatus, "QRコード読取ライブラリを読み込めませんでした。ページを再読み込みしてください。", "error");
-        return;
-      }
-
-      stopQrScanner();
-      scannerSection.hidden = false;
-      setStatus(scanStatus, "カメラを起動しています…");
-
-      try {
-        scannerStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-          audio: false
-        });
-
-        scannerVideo.srcObject = scannerStream;
-        await scannerVideo.play();
-        setStatus(scanStatus, "QRコードをカメラ中央に映してください。");
-
-        const scanFrame = () => {
-          if (!scannerStream) return;
-
-          if (scannerVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-            const width = scannerVideo.videoWidth;
-            const height = scannerVideo.videoHeight;
-
-            if (width > 0 && height > 0) {
-              scanCanvas.width = width;
-              scanCanvas.height = height;
-              scanContext.drawImage(scannerVideo, 0, 0, width, height);
-
-              const imageData = scanContext.getImageData(0, 0, width, height);
-              const result = jsQR(imageData.data, width, height, {
-                inversionAttempts: "attemptBoth"
-              });
-
-              if (result?.data) {
-                try {
-                  const scannedUrl = normalizeHttpsUrl(result.data);
-                  stopQrScanner();
-                  window.location.assign(createShareUrl(scannedUrl));
-                  return;
-                } catch {
-                  setStatus(scanStatus, "HTTPSのURLを含むQRコードではありません。", "error");
-                }
-              }
-            }
-          }
-
-          scannerFrameId = requestAnimationFrame(scanFrame);
-        };
-
-        scannerFrameId = requestAnimationFrame(scanFrame);
-      } catch (error) {
-        stopQrScanner();
-        scannerSection.hidden = false;
-        setStatus(
-          scanStatus,
-          "カメラを開始できませんでした。HTTPS環境で開き、ブラウザのカメラ権限を許可してください。",
-          "error"
-        );
-      }
-    }
-
-    function stopQrScanner() {
-      if (scannerFrameId) {
-        cancelAnimationFrame(scannerFrameId);
-        scannerFrameId = null;
-      }
-
-      if (scannerStream) {
-        for (const track of scannerStream.getTracks()) {
-          track.stop();
-        }
-        scannerStream = null;
-      }
-
-      scannerVideo.srcObject = null;
-      scannerSection.hidden = true;
-      setStatus(scanStatus, "");
-    }
-
     function initialize() {
       const params = new URLSearchParams(window.location.search);
       const hasUrlParameter = params.has("url");
@@ -674,9 +570,6 @@
       }
     });
 
-    scanQrButton.addEventListener("click", startQrScanner);
-    stopScanButton.addEventListener("click", stopQrScanner);
-    window.addEventListener("pagehide", stopQrScanner);
 
     initialize();
   </script>
