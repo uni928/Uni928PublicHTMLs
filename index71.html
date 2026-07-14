@@ -26,7 +26,7 @@
         --line: #d1d5db;
         --primary: #2563eb;
         --primary-hover: #1d4ed8;
-        --danger: #dc2626;
+        --danger: #7ab5fc;
         --success: #15803d;
         --shadow: 0 16px 40px rgb(15 23 42 / 12%);
         --radius: 18px;
@@ -67,7 +67,7 @@
           --line: #374151;
           --primary: #60a5fa;
           --primary-hover: #93c5fd;
-          --danger: #f87171;
+          --danger: #7ab5fc;
           --success: #4ade80;
           --shadow: 0 16px 40px rgb(0 0 0 / 35%);
         }
@@ -133,7 +133,7 @@
       }
 
       .button-grid--two {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
 
       @media (max-width: 620px) {
@@ -210,9 +210,8 @@
       }
 
       .button--danger {
-        border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
-        background: color-mix(in srgb, var(--danger) 10%, var(--panel));
-        color: var(--danger);
+        background: var(--danger);
+        color: white;
       }
 
       .helper,
@@ -329,10 +328,17 @@
         <div id="targetUrlText" class="target-box"></div>
       </div>
 
-      <div class="button-grid button-grid--two">
+      <div class="button-grid">
         <a id="openUrlButton" class="button button--primary" href="#" target="_blank" rel="noopener noreferrer">
           アクセスする
         </a>
+        <button
+    id="openWithoutCacheButton"
+    class="button button--danger"
+    type="button"
+  >
+    キャッシュ回避アクセス
+  </button>
         <button id="showQrButton" class="button button--secondary" type="button">
           このURLのQRコードを表示
         </button>
@@ -463,6 +469,15 @@
       showQrButton.textContent = "このURLのQRコードを表示";
     }
 
+    function createCacheBustingUrl(targetUrl) {
+  const url = new URL(targetUrl);
+
+  // 既存パラメータを維持したまま、毎回異なる値を追加します。
+  url.searchParams.set("_cache_bust", Date.now().toString());
+
+  return url.href;
+}
+
     function initialize() {
       const params = new URLSearchParams(window.location.search);
       const hasUrlParameter = params.has("url");
@@ -486,6 +501,16 @@
         targetUrlText.textContent = targetUrl;
         openUrlButton.href = targetUrl;
 
+        openWithoutCacheButton.addEventListener("click", () => {
+  const cacheBustingUrl = createCacheBustingUrl(targetUrl);
+
+  window.open(
+    cacheBustingUrl,
+    "_blank",
+    "noopener,noreferrer"
+  );
+});
+
         showQrButton.addEventListener("click", () => {
           if (qrSection.hidden) {
             showQrCode(targetUrl);
@@ -494,10 +519,15 @@
           }
         });
       } catch {
-        targetUrlText.textContent = "共有URLのクエリパラメータが不正です。";
-        openUrlButton.hidden = true;
-        showQrButton.hidden = true;
-        setStatus(shareStatus, "有効なHTTPS URLではありません。", "error");
+  targetUrlText.textContent = "共有URLのクエリパラメータが不正です。";
+  openUrlButton.hidden = true;
+  openWithoutCacheButton.hidden = true;
+  showQrButton.hidden = true;
+  setStatus(
+    shareStatus,
+    "有効なHTTPS URLではありません。",
+    "error"
+  );
       }
     }
 
