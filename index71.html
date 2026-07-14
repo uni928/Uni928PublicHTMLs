@@ -133,6 +133,10 @@
         gap: 12px;
       }
 
+      .button-grid--two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
       @media (max-width: 620px) {
         .page {
           padding-block: 24px;
@@ -239,6 +243,15 @@
         line-height: 1.7;
       }
 
+      .link-button {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--primary);
+        text-decoration: underline;
+        overflow-wrap: anywhere;
+      }
+
       .qr-box {
         display: grid;
         place-items: center;
@@ -319,6 +332,30 @@
         共有用URLをコピー
       </button>
 
+      <button id="copyScannerUrlButton" class="button button--secondary" type="button">
+        QRコード読み取り用サイトをコピー
+      </button>
+
+      <button id="scanQrButton" class="button button--secondary" type="button">
+        QRコードを読み込む
+      </button>
+
+      <div class="target-box tiny">
+        短縮URL：
+        <button id="shortUrlButton" class="link-button" type="button">
+          https://x.gd/mXAxBF
+        </button>
+      </div>
+
+      <section id="scannerSection" class="scanner" hidden>
+        <div class="divider"></div>
+        <video id="scannerVideo" playsinline muted></video>
+        <button id="stopScanButton" class="button button--danger" type="button">
+          読み取りを停止
+        </button>
+        <p id="scanStatus" class="status tiny" role="status" aria-live="polite"></p>
+      </section>
+
       <p class="helper">
         入力したURLの <code>https://</code> 以降を、現在のサイトの
         <code>?url=</code> に格納します。
@@ -334,16 +371,13 @@
         <div id="targetUrlText" class="target-box"></div>
       </div>
 
-      <div class="button-grid">
+      <div class="button-grid button-grid--two">
         <a id="openUrlButton" class="button button--primary" href="#" target="_blank" rel="noopener noreferrer">
           アクセスする
         </a>
         <button id="showQrButton" class="button button--secondary" type="button">
           QRコードを表示
         </button>
-        <div hidden><button id="scanQrButton" class="button button--secondary" type="button">
-          QRコードを読み込む
-        </button></div>
       </div>
 
       <section id="qrSection" class="stack" hidden>
@@ -372,6 +406,8 @@
     const shareView = document.querySelector("#shareView");
     const urlInput = document.querySelector("#urlInput");
     const copyShareUrlButton = document.querySelector("#copyShareUrlButton");
+    const copyScannerUrlButton = document.querySelector("#copyScannerUrlButton");
+    const shortUrlButton = document.querySelector("#shortUrlButton");
     const createStatus = document.querySelector("#createStatus");
 
     const targetUrlText = document.querySelector("#targetUrlText");
@@ -387,6 +423,8 @@
     const stopScanButton = document.querySelector("#stopScanButton");
     const scanStatus = document.querySelector("#scanStatus");
     const shareStatus = document.querySelector("#shareStatus");
+
+    const scannerShortUrl = "https://x.gd/mXAxBF";
 
     let scannerStream = null;
     let scannerFrameId = null;
@@ -454,6 +492,15 @@
         setStatus(createStatus, "共有用URLをコピーしました。", "success");
       } catch (error) {
         setStatus(createStatus, error.message || "処理に失敗しました。", "error");
+      }
+    }
+
+    async function copyScannerShortUrl() {
+      try {
+        await copyText(scannerShortUrl);
+        setStatus(createStatus, "QRコード読み取り用サイトの短縮URLをコピーしました。", "success");
+      } catch (error) {
+        setStatus(createStatus, error.message || "コピーに失敗しました。", "error");
       }
     }
 
@@ -619,6 +666,8 @@
     }
 
     copyShareUrlButton.addEventListener("click", handleCreateShareUrl);
+    copyScannerUrlButton.addEventListener("click", copyScannerShortUrl);
+    shortUrlButton.addEventListener("click", copyScannerShortUrl);
     urlInput.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         handleCreateShareUrl();
