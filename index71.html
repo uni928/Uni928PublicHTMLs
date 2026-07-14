@@ -334,7 +334,7 @@
           アクセスする
         </a>
         <button id="showQrButton" class="button button--secondary" type="button">
-          QRコードを表示
+          このURLのQRコードを表示
         </button>
       </div>
 
@@ -343,11 +343,11 @@
         <div class="qr-box">
           <div id="qrCode" role="img" aria-label="共有URLのQRコード"></div>
         </div>
-      </section>
 
-      <p class="helper tiny">
-        QRコードは <a href="https://x.gd/1JQYm" target="_blank" rel="noopener noreferrer">x.gd/1JQYm</a> にアクセスし、表示された読み取りサイトから読み取れます。環境によっては先頭に <code>https://</code> が必要です。
-      </p>
+        <p class="helper tiny">
+          QRコードは <a href="https://x.gd/1JQYm" target="_blank" rel="noopener noreferrer">x.gd/1JQYm</a> にアクセスし、表示された読み取りサイトから読み取れます。環境によっては先頭に <code>https://</code> が必要です。
+        </p>
+      </section>
 
       <p id="shareStatus" class="status" role="status" aria-live="polite"></p>
     </section>
@@ -460,7 +460,7 @@
 
     function hideQrCode() {
       qrSection.hidden = true;
-      showQrButton.textContent = "QRコードを表示";
+      showQrButton.textContent = "このURLのQRコードを表示";
     }
 
     function initialize() {
