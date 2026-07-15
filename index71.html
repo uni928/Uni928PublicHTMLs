@@ -11,7 +11,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
   <style>
-    @layer base, make1, make2, make3;
+    @layer base, make1, make2, make3, make4;
 
     @layer base {
       :root {
@@ -132,8 +132,10 @@
         gap: 12px;
       }
 
-      .button-grid--two {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+      .button-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
       }
 
       @media (max-width: 620px) {
@@ -141,7 +143,8 @@
           padding-block: 24px;
         }
 
-        .button-grid {
+        .button-grid,
+        .button-row {
           grid-template-columns: 1fr;
         }
       }
@@ -282,6 +285,14 @@
         display: none;
       }
     }
+
+    @layer make4 {
+      /* 共有画面の2段ボタン配置 */
+      .action-rows {
+        display: grid;
+        gap: 12px;
+      }
+    }
   </style>
 </head>
 
@@ -328,20 +339,24 @@
         <div id="targetUrlText" class="target-box"></div>
       </div>
 
-      <div class="button-grid">
-        <a id="openUrlButton" class="button button--primary" href="#" target="_blank" rel="noopener noreferrer">
-          アクセスする
-        </a>
-        <button
-    id="openWithoutCacheButton"
-    class="button button--danger"
-    type="button"
-  >
-    キャッシュ回避アクセス
-  </button>
-        <button id="showQrButton" class="button button--secondary" type="button">
-          このURLのQRコードを表示
-        </button>
+      <div class="action-rows">
+        <div class="button-row">
+          <a id="openUrlButton" class="button button--primary" href="#" target="_blank" rel="noopener noreferrer">
+            アクセスする
+          </a>
+          <button id="openWithoutCacheButton" class="button button--danger" type="button">
+            キャッシュ回避アクセス
+          </button>
+        </div>
+
+        <div class="button-row">
+          <button id="openWaybackButton" class="button button--secondary" type="button">
+            Web Archiveで開く
+          </button>
+          <button id="showQrButton" class="button button--secondary" type="button">
+            このURLのQRコードを表示
+          </button>
+        </div>
       </div>
 
       <section id="qrSection" class="stack" hidden>
@@ -369,6 +384,8 @@
     const targetUrlText = document.querySelector("#targetUrlText");
     const openUrlButton = document.querySelector("#openUrlButton");
     const showQrButton = document.querySelector("#showQrButton");
+    const openWithoutCacheButton = document.querySelector("#openWithoutCacheButton");
+    const openWaybackButton = document.querySelector("#openWaybackButton");
     const qrSection = document.querySelector("#qrSection");
     const qrCode = document.querySelector("#qrCode");
     const shareStatus = document.querySelector("#shareStatus");
@@ -470,13 +487,17 @@
     }
 
     function createCacheBustingUrl(targetUrl) {
-  const url = new URL(targetUrl);
+      const url = new URL(targetUrl);
 
-  // 既存パラメータを維持したまま、毎回異なる値を追加します。
-  url.searchParams.set("_cache_bust", Date.now().toString());
+      // 既存パラメータを維持したまま、毎回異なる値を追加します。
+      url.searchParams.set("_cache_bust", Date.now().toString());
 
-  return url.href;
-}
+      return url.href;
+    }
+
+    function createWaybackUrl(targetUrl) {
+      return `https://web.archive.org/web/*/${targetUrl}`;
+    }
 
     function initialize() {
       const params = new URLSearchParams(window.location.search);
@@ -502,14 +523,13 @@
         openUrlButton.href = targetUrl;
 
         openWithoutCacheButton.addEventListener("click", () => {
-  const cacheBustingUrl = createCacheBustingUrl(targetUrl);
+          const cacheBustingUrl = createCacheBustingUrl(targetUrl);
+          window.open(cacheBustingUrl, "_blank", "noopener,noreferrer");
+        });
 
-  window.open(
-    cacheBustingUrl,
-    "_blank",
-    "noopener,noreferrer"
-  );
-});
+        openWaybackButton.addEventListener("click", () => {
+          window.open(createWaybackUrl(targetUrl), "_blank", "noopener,noreferrer");
+        });
 
         showQrButton.addEventListener("click", () => {
           if (qrSection.hidden) {
@@ -521,8 +541,9 @@
       } catch {
   targetUrlText.textContent = "共有URLのクエリパラメータが不正です。";
   openUrlButton.hidden = true;
-  openWithoutCacheButton.hidden = true;
   showQrButton.hidden = true;
+  openWithoutCacheButton.hidden = true;
+  openWaybackButton.hidden = true;
   setStatus(
     shareStatus,
     "有効なHTTPS URLではありません。",
