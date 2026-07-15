@@ -231,10 +231,15 @@
       return inferred;
     }
 
+    function hasSentencePunctuation(line) {
+      return /[、。！？!?]/.test(line.trim());
+    }
+
     function inferBlockHeadingLines(lines) {
       const inferred = new Set();
+      const blocks = splitBlocks(lines);
 
-      splitBlocks(lines).forEach(function (block) {
+      blocks.forEach(function (block) {
         if (block.lines.length < 2) return;
 
         const first = block.lines[0].trim();
@@ -247,6 +252,51 @@
         }, 0) / rest.length;
 
         if (first.length <= averageLength / 2) inferred.add(block.start);
+      });
+
+      blocks.forEach(function (block) {
+        if (block.lines.length !== 1) return;
+
+        const index = block.start;
+        const line = block.lines[0].trim();
+        if (!line || line.length > 28 || hasSentencePunctuation(line)) return;
+        if (URL_ONLY_PATTERN.test(line) || BULLET_PATTERN.test(line) || /^>\s+/.test(line)) return;
+
+        const previousNonEmptyIndexes = [];
+        for (let cursor = index - 1; cursor >= 0 && previousNonEmptyIndexes.length < 6; cursor--) {
+          if (lines[cursor].trim()) previousNonEmptyIndexes.push(cursor);
+        }
+
+        const hasHeadingAbove = previousNonEmptyIndexes.some(function (previousIndex) {
+          return inferred.has(previousIndex) || /^#{1,6}\s+/.test(lines[previousIndex].trim());
+        });
+
+        if (!hasHeadingAbove) inferred.add(index);
+      });
+
+      return inferred;
+    }
+
+    function inferMiddleBulletLines(lines, headingLines) {
+      const inferred = new Set();
+
+      splitBlocks(lines).forEach(function (block) {
+        if (block.lines.length < 3) return;
+
+        const punctuationIndexes = block.lines.map(function (line, offset) {
+          return hasSentencePunctuation(line) ? offset : -1;
+        }).filter(function (offset) { return offset >= 0; });
+
+        const onlyLastHasPunctuation = punctuationIndexes.length === 1 && punctuationIndexes[0] === block.lines.length - 1;
+        if (!onlyLastHasPunctuation) return;
+
+        const firstIsHeading = headingLines.has(block.start);
+        const startOffset = firstIsHeading ? 1 : 0;
+        for (let offset = startOffset; offset < block.lines.length - 1; offset++) {
+          const line = block.lines[offset].trim();
+          if (!line || URL_ONLY_PATTERN.test(line) || /^>\s+/.test(line)) continue;
+          inferred.add(block.start + offset);
+        }
       });
 
       return inferred;
@@ -294,6 +344,7 @@
       const inferredBullets = inferBulletLines(lines, stats);
       const inferredQuotes = inferQuoteLines(lines);
       const inferredBlockHeadings = inferBlockHeadingLines(lines);
+      const inferredMiddleBullets = inferMiddleBulletLines(lines, inferredBlockHeadings);
       const singleLineBlocks = getSingleLineBlockIndexes(lines);
       const blocks = [];
       let paragraph = [];
@@ -343,12 +394,12 @@
         }
 
         const bullet = trimmed.match(BULLET_PATTERN);
-        if ((bullet || inferredBullets.has(index)) && singleLineBlocks.has(index)) {
+        if ((bullet || inferredBullets.has(index) || inferredMiddleBullets.has(index)) && singleLineBlocks.has(index)) {
           flushParagraph(); flushList(); flushQuotes();
           blocks.push("<h2>" + linkify(bullet ? bullet[1] : trimmed) + "</h2>");
           return;
         }
-        if (bullet || inferredBullets.has(index)) {
+        if (bullet || inferredBullets.has(index) || inferredMiddleBullets.has(index)) {
           flushParagraph(); flushQuotes();
           listItems.push(bullet ? bullet[1] : trimmed);
           return;
@@ -377,6 +428,7 @@
       const inferredBullets = inferBulletLines(lines, stats);
       const inferredQuotes = inferQuoteLines(lines);
       const inferredBlockHeadings = inferBlockHeadingLines(lines);
+      const inferredMiddleBullets = inferMiddleBulletLines(lines, inferredBlockHeadings);
       const singleLineBlocks = getSingleLineBlockIndexes(lines);
       const output = [];
 
@@ -397,11 +449,11 @@
         }
 
         const bullet = trimmed.match(BULLET_PATTERN);
-        if ((bullet || inferredBullets.has(index)) && singleLineBlocks.has(index)) {
+        if ((bullet || inferredBullets.has(index) || inferredMiddleBullets.has(index)) && singleLineBlocks.has(index)) {
           output.push("## " + (bullet ? bullet[1] : trimmed));
           return;
         }
-        if (bullet || inferredBullets.has(index)) {
+        if (bullet || inferredBullets.has(index) || inferredMiddleBullets.has(index)) {
           output.push("- " + (bullet ? bullet[1] : trimmed));
           return;
         }
