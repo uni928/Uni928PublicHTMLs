@@ -138,6 +138,18 @@
         gap: 12px;
       }
 
+      .input-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+
+      .input-heading .label {
+        margin-bottom: 0;
+      }
+
       .option-list {
         display: grid;
         gap: 10px;
@@ -238,6 +250,21 @@
         color: white;
       }
 
+      .settings-button {
+        min-height: 36px;
+        padding: 7px 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel);
+        color: var(--text);
+        font-size: 0.9rem;
+        font-weight: 700;
+      }
+
+      .settings-button:hover {
+        border-color: var(--primary);
+      }
+
       .helper,
       .status {
         margin: 0;
@@ -322,6 +349,76 @@
       .action-rows--compact .button-row {
         display: contents;
       }
+
+      /* 共有画面の表示設定ダイアログ */
+      .settings-dialog {
+        width: min(calc(100% - 32px), 520px);
+        padding: 0;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--panel);
+        color: var(--text);
+        box-shadow: 0 24px 70px rgb(0 0 0 / 35%);
+      }
+
+      .settings-dialog::backdrop {
+        background: rgb(15 23 42 / 62%);
+        backdrop-filter: blur(4px);
+      }
+
+      .settings-dialog__content {
+        display: grid;
+        gap: 18px;
+        padding: 22px;
+      }
+
+      .settings-dialog__header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .settings-dialog__title {
+        margin: 0;
+        font-size: 1.15rem;
+      }
+
+      .settings-dialog__description {
+        margin: 5px 0 0;
+        color: var(--muted);
+        line-height: 1.6;
+        font-size: 0.9rem;
+      }
+
+      .dialog-close-button {
+        display: grid;
+        flex: 0 0 auto;
+        place-items: center;
+        width: 38px;
+        height: 38px;
+        padding: 0;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel);
+        color: var(--text);
+        font-size: 1.25rem;
+      }
+
+      .settings-dialog__footer {
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      @media (max-width: 620px) {
+        .settings-dialog {
+          width: min(calc(100% - 20px), 520px);
+        }
+
+        .settings-dialog__content {
+          padding: 18px;
+        }
+      }
     }
   </style>
 </head>
@@ -339,7 +436,12 @@
     <!-- クエリパラメータなし -->
     <section id="createView" class="panel stack" hidden>
       <div>
-        <label class="label" for="urlInput">共有するURL</label>
+        <div class="input-heading">
+          <label class="label" for="urlInput">共有するURL</label>
+          <button id="openSettingsButton" class="settings-button" type="button" aria-haspopup="dialog">
+            設定
+          </button>
+        </div>
         <input
           id="urlInput"
           class="input"
@@ -349,24 +451,6 @@
           placeholder="https://example.com/path"
         >
       </div>
-
-      <fieldset class="stack">
-        <legend class="label">共有画面から外す項目</legend>
-        <div class="option-list">
-          <label class="option-item">
-            <input id="hideCacheOption" type="checkbox">
-            <span>キャッシュ回避アクセス</span>
-          </label>
-          <label class="option-item">
-            <input id="hideWaybackOption" type="checkbox">
-            <span>Web Archiveで開く</span>
-          </label>
-          <label class="option-item">
-            <input id="hideQrOption" type="checkbox">
-            <span>このURLのQRコードを表示</span>
-          </label>
-        </div>
-      </fieldset>
 
       <button id="copyShareUrlButton" class="button button--primary" type="button">
         共有用URLをコピー
@@ -379,6 +463,37 @@
 
       <p id="createStatus" class="status" role="status" aria-live="polite"></p>
     </section>
+
+    <dialog id="settingsDialog" class="settings-dialog" aria-labelledby="settingsDialogTitle">
+      <div class="settings-dialog__content">
+        <div class="settings-dialog__header">
+          <div>
+            <h2 id="settingsDialogTitle" class="settings-dialog__title">共有画面の表示設定</h2>
+            <p class="settings-dialog__description">共有された画面から外す項目を選択します。設定はこの端末に保存されます。</p>
+          </div>
+          <button id="closeSettingsIconButton" class="dialog-close-button" type="button" aria-label="設定を閉じる">×</button>
+        </div>
+
+        <div class="option-list">
+          <label class="option-item">
+            <input id="hideCacheOption" type="checkbox" checked>
+            <span>キャッシュ回避アクセス</span>
+          </label>
+          <label class="option-item">
+            <input id="hideWaybackOption" type="checkbox" checked>
+            <span>Web Archiveで開く</span>
+          </label>
+          <label class="option-item">
+            <input id="hideQrOption" type="checkbox">
+            <span>このURLのQRコードを表示</span>
+          </label>
+        </div>
+
+        <div class="settings-dialog__footer">
+          <button id="closeSettingsButton" class="button button--primary" type="button">設定を閉じる</button>
+        </div>
+      </div>
+    </dialog>
 
     <!-- クエリパラメータあり -->
     <section id="shareView" class="panel stack" hidden>
@@ -428,6 +543,10 @@
     const urlInput = document.querySelector("#urlInput");
     const copyShareUrlButton = document.querySelector("#copyShareUrlButton");
     const createStatus = document.querySelector("#createStatus");
+    const openSettingsButton = document.querySelector("#openSettingsButton");
+    const settingsDialog = document.querySelector("#settingsDialog");
+    const closeSettingsButton = document.querySelector("#closeSettingsButton");
+    const closeSettingsIconButton = document.querySelector("#closeSettingsIconButton");
     const hideCacheOption = document.querySelector("#hideCacheOption");
     const hideWaybackOption = document.querySelector("#hideWaybackOption");
     const hideQrOption = document.querySelector("#hideQrOption");
@@ -678,6 +797,31 @@
   );
       }
     }
+
+    function openSettingsDialog() {
+      if (typeof settingsDialog.showModal === "function") {
+        settingsDialog.showModal();
+      } else {
+        settingsDialog.setAttribute("open", "");
+      }
+    }
+
+    function closeSettingsDialog() {
+      if (typeof settingsDialog.close === "function") {
+        settingsDialog.close();
+      } else {
+        settingsDialog.removeAttribute("open");
+      }
+    }
+
+    openSettingsButton.addEventListener("click", openSettingsDialog);
+    closeSettingsButton.addEventListener("click", closeSettingsDialog);
+    closeSettingsIconButton.addEventListener("click", closeSettingsDialog);
+    settingsDialog.addEventListener("click", (event) => {
+      if (event.target === settingsDialog) {
+        closeSettingsDialog();
+      }
+    });
 
     [hideCacheOption, hideWaybackOption, hideQrOption].forEach((checkbox) => {
       checkbox.addEventListener("change", () => {
