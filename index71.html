@@ -138,6 +138,27 @@
         gap: 12px;
       }
 
+      .option-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .option-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 11px 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: color-mix(in srgb, var(--bg) 55%, var(--panel));
+      }
+
+      .option-item input {
+        width: 18px;
+        height: 18px;
+        margin: 0;
+      }
+
       @media (max-width: 620px) {
         .page {
           padding-block: 24px;
@@ -292,6 +313,15 @@
         display: grid;
         gap: 12px;
       }
+
+      /* 1項目でも非表示なら、段の区切りをなくして詰めて配置します。 */
+      .action-rows--compact {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      }
+
+      .action-rows--compact .button-row {
+        display: contents;
+      }
     }
   </style>
 </head>
@@ -319,6 +349,24 @@
           placeholder="https://example.com/path"
         >
       </div>
+
+      <fieldset class="stack">
+        <legend class="label">共有画面から外す項目</legend>
+        <div class="option-list">
+          <label class="option-item">
+            <input id="hideCacheOption" type="checkbox">
+            <span>キャッシュ回避アクセス</span>
+          </label>
+          <label class="option-item">
+            <input id="hideWaybackOption" type="checkbox">
+            <span>Web Archiveで開く</span>
+          </label>
+          <label class="option-item">
+            <input id="hideQrOption" type="checkbox">
+            <span>このURLのQRコードを表示</span>
+          </label>
+        </div>
+      </fieldset>
 
       <button id="copyShareUrlButton" class="button button--primary" type="button">
         共有用URLをコピー
@@ -380,6 +428,9 @@
     const urlInput = document.querySelector("#urlInput");
     const copyShareUrlButton = document.querySelector("#copyShareUrlButton");
     const createStatus = document.querySelector("#createStatus");
+    const hideCacheOption = document.querySelector("#hideCacheOption");
+    const hideWaybackOption = document.querySelector("#hideWaybackOption");
+    const hideQrOption = document.querySelector("#hideQrOption");
 
     const targetUrlText = document.querySelector("#targetUrlText");
     const openUrlButton = document.querySelector("#openUrlButton");
@@ -389,7 +440,65 @@
     const qrSection = document.querySelector("#qrSection");
     const qrCode = document.querySelector("#qrCode");
     const shareStatus = document.querySelector("#shareStatus");
+    const actionRows = document.querySelector(".action-rows");
 
+    const SETTINGS_DB_NAME = "url-share-settings";
+    const SETTINGS_STORE_NAME = "preferences";
+    const SETTINGS_KEY = "hidden-actions";
+
+    function openSettingsDb() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(SETTINGS_DB_NAME, 1);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(SETTINGS_STORE_NAME)) {
+            db.createObjectStore(SETTINGS_STORE_NAME);
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function loadHiddenActionSettings() {
+      const db = await openSettingsDb();
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(SETTINGS_STORE_NAME, "readonly");
+        const request = transaction.objectStore(SETTINGS_STORE_NAME).get(SETTINGS_KEY);
+        request.onsuccess = () => resolve(request.result || {});
+        request.onerror = () => reject(request.error);
+        transaction.oncomplete = () => db.close();
+      });
+    }
+
+    async function saveHiddenActionSettings() {
+      const settings = {
+        cache: hideCacheOption.checked,
+        wayback: hideWaybackOption.checked,
+        qr: hideQrOption.checked
+      };
+      const db = await openSettingsDb();
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(SETTINGS_STORE_NAME, "readwrite");
+        transaction.objectStore(SETTINGS_STORE_NAME).put(settings, SETTINGS_KEY);
+        transaction.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        transaction.onerror = () => reject(transaction.error);
+      });
+    }
+
+    async function restoreHiddenActionSettings() {
+      try {
+        const settings = await loadHiddenActionSettings();
+        hideCacheOption.checked = Boolean(settings.cache);
+        hideWaybackOption.checked = Boolean(settings.wayback);
+        hideQrOption.checked = Boolean(settings.qr);
+      } catch {
+        // IndexedDBを利用できない環境では、既定値のまま続行します。
+      }
+    }
 
     function setStatus(element, message, kind = "") {
       element.textContent = message;
@@ -422,6 +531,11 @@
       shareUrl.search = "";
       shareUrl.hash = "";
       shareUrl.searchParams.set("url", payload);
+
+      if (hideCacheOption.checked) shareUrl.searchParams.set("hideCache", "1");
+      if (hideWaybackOption.checked) shareUrl.searchParams.set("hideArchive", "1");
+      if (hideQrOption.checked) shareUrl.searchParams.set("hideQr", "1");
+
       return shareUrl.href;
     }
 
@@ -449,6 +563,7 @@
     async function handleCreateShareUrl() {
       try {
         const targetUrl = normalizeHttpsUrl(urlInput.value);
+        await saveHiddenActionSettings().catch(() => {});
         const shareUrl = createShareUrl(targetUrl);
         await copyText(shareUrl);
         setStatus(createStatus, "共有用URLをコピーしました。", "success");
@@ -499,16 +614,20 @@
       return `https://web.archive.org/web/*/${targetUrl}`;
     }
 
-    function initialize() {
+    async function initialize() {
       const params = new URLSearchParams(window.location.search);
       const hasUrlParameter = params.has("url");
       const payload = params.get("url");
+      const hideCache = params.get("hideCache") === "1";
+      const hideArchive = params.get("hideArchive") === "1";
+      const hideQr = params.get("hideQr") === "1";
 
       // クエリパラメータなし:
       // 「共有するURL」パネルのみ表示します。
       if (!hasUrlParameter) {
         createView.hidden = false;
         shareView.hidden = true;
+        await restoreHiddenActionSettings();
         return;
       }
 
@@ -521,6 +640,14 @@
         const targetUrl = normalizeHttpsUrl(payload ?? "");
         targetUrlText.textContent = targetUrl;
         openUrlButton.href = targetUrl;
+
+        openWithoutCacheButton.hidden = hideCache;
+        openWaybackButton.hidden = hideArchive;
+        showQrButton.hidden = hideQr;
+
+        if (hideCache || hideArchive || hideQr) {
+          actionRows.classList.add("action-rows--compact");
+        }
 
         openWithoutCacheButton.addEventListener("click", () => {
           const cacheBustingUrl = createCacheBustingUrl(targetUrl);
@@ -551,6 +678,12 @@
   );
       }
     }
+
+    [hideCacheOption, hideWaybackOption, hideQrOption].forEach((checkbox) => {
+      checkbox.addEventListener("change", () => {
+        saveHiddenActionSettings().catch(() => {});
+      });
+    });
 
     copyShareUrlButton.addEventListener("click", handleCreateShareUrl);
     urlInput.addEventListener("keydown", (event) => {
