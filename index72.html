@@ -246,7 +246,7 @@
           return total + line.length;
         }, 0) / rest.length;
 
-        if (first.length <= averageLength / 3) inferred.add(block.start);
+        if (first.length <= averageLength / 2) inferred.add(block.start);
       });
 
       return inferred;
