@@ -1,0 +1,4377 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111827">
+  <title>消えた招待客</title>
+  <meta name="description" content="スマホ1台を順番に回して遊ぶ、招待隠匿系パーティーゲームです。">
+  <style>
+    @layer base, make1, make2, make3, make4, make5, make6, make7, make8;
+
+    @layer base {
+      :root {
+        color-scheme: light dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", sans-serif;
+        --bg: #f3f4f6;
+        --panel: #ffffff;
+        --text: #111827;
+        --muted: #6b7280;
+        --line: #d1d5db;
+        --primary: #2563eb;
+        --primary-hover: #1d4ed8;
+        --danger: #dc2626;
+        --success: #15803d;
+        --warning: #b45309;
+        --soft: #eff6ff;
+        --shadow: 0 16px 40px rgb(15 23 42 / 12%);
+        --radius: 18px;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100svh;
+        background: radial-gradient(circle at top left, rgb(37 99 235 / 12%), transparent 32rem), var(--bg);
+        color: var(--text);
+      }
+      button, input, select { font: inherit; }
+      button { cursor: pointer; }
+      [hidden] { display: none; }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0f172a;
+          --panel: #111827;
+          --text: #f9fafb;
+          --muted: #9ca3af;
+          --line: #374151;
+          --primary: #60a5fa;
+          --primary-hover: #93c5fd;
+          --danger: #f87171;
+          --success: #4ade80;
+          --warning: #fbbf24;
+          --soft: #172554;
+          --shadow: 0 16px 40px rgb(0 0 0 / 35%);
+        }
+      }
+    }
+
+    @layer make1 {
+      /* 添付画面を踏襲したページ・パネル構成 */
+      .page { width: min(100% - 32px, 720px); margin-inline: auto; padding-block: 40px; }
+      .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+      .brand__mark { display: grid; place-items: center; width: 44px; aspect-ratio: 1; border-radius: 14px; background: var(--primary); color: white; font-size: 22px; box-shadow: var(--shadow); }
+      .brand h1 { margin: 0; font-size: clamp(1.4rem, 4vw, 2rem); }
+      .brand p { margin: 4px 0 0; color: var(--muted); font-size: .92rem; }
+      .panel { padding: clamp(20px, 5vw, 32px); border: 1px solid var(--line); border-radius: var(--radius); background: color-mix(in srgb, var(--panel) 94%, transparent); box-shadow: var(--shadow); backdrop-filter: blur(16px); }
+      .stack { display: grid; gap: 16px; }
+      .button-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      .section-title { margin: 0; font-size: 1.15rem; }
+      .helper, .status { margin: 0; color: var(--muted); line-height: 1.7; }
+      .status[data-kind="error"] { color: var(--danger); }
+      .status[data-kind="success"] { color: var(--success); }
+      @media (max-width: 620px) {
+        .page { padding-block: 24px; }
+        .button-row { grid-template-columns: 1fr; }
+      }
+    }
+
+    @layer make2 {
+      /* 入力・ボタン */
+      .label { display: block; margin-bottom: 8px; font-weight: 700; }
+      .input, .select { width: 100%; min-height: 52px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--text); outline: none; }
+      .input:focus, .select:focus { border-color: var(--primary); box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 18%, transparent); }
+      .button { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; gap: 8px; padding: 11px 16px; border: 1px solid transparent; border-radius: 12px; font-weight: 750; transition: transform .15s, background .2s, border-color .2s; }
+      .button:active { transform: translateY(1px); }
+      .button--primary { background: var(--primary); color: white; }
+      .button--primary:hover { background: var(--primary-hover); }
+      .button--secondary { border-color: var(--line); background: var(--panel); color: var(--text); }
+      .button--secondary:hover { border-color: var(--primary); }
+      .button--danger { background: var(--danger); color: white; }
+      .button:disabled { cursor: not-allowed; opacity: .55; }
+    }
+
+    @layer make3 {
+      /* 設定画面 */
+      .player-list { display: grid; gap: 10px; }
+      .player-item { display: grid; grid-template-columns: 42px 1fr; align-items: center; gap: 10px; }
+      .player-number { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--soft); color: var(--primary); font-weight: 800; }
+      .settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      .summary-box { padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--bg) 65%, var(--panel)); line-height: 1.7; }
+      @media (max-width: 620px) { .settings-grid { grid-template-columns: 1fr; } }
+    }
+
+    @layer make4 {
+      /* 端末受け渡し・役職確認 */
+      .pass-card { display: grid; gap: 18px; text-align: center; padding: 24px 16px; border: 1px dashed var(--line); border-radius: 16px; background: color-mix(in srgb, var(--bg) 70%, var(--panel)); }
+      .pass-name { margin: 0; font-size: clamp(1.8rem, 8vw, 3rem); overflow-wrap: anywhere; }
+      .role-card { display: grid; gap: 14px; min-height: 330px; align-content: center; padding: 26px 20px; border: 1px solid var(--line); border-radius: 18px; text-align: center; background: linear-gradient(145deg, color-mix(in srgb, var(--soft) 85%, var(--panel)), var(--panel)); }
+      .role-name { margin: 0; font-size: clamp(1.9rem, 8vw, 3.2rem); }
+      .role-team { margin: 0; font-weight: 800; color: var(--primary); }
+      .role-info { margin: 0; line-height: 1.85; white-space: pre-line; }
+      .hold-button { position: relative; overflow: hidden; user-select: none; touch-action: none; }
+      .hold-button::before { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--hold-progress, 0%); background: rgb(255 255 255 / 24%); }
+      .privacy-note { padding: 12px; border-radius: 12px; background: color-mix(in srgb, var(--warning) 10%, transparent); color: var(--warning); line-height: 1.6; }
+    }
+
+    @layer make5 {
+      /* 議論・投票・結果 */
+      .topic-box { padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--soft); text-align: center; }
+      .topic-box strong { display: block; margin-top: 6px; font-size: 1.45rem; }
+      .timer { display: grid; place-items: center; min-height: 130px; border: 1px solid var(--line); border-radius: 16px; background: color-mix(in srgb, var(--bg) 70%, var(--panel)); font-variant-numeric: tabular-nums; font-size: clamp(2.7rem, 13vw, 5rem); font-weight: 850; }
+      .vote-list { display: grid; gap: 10px; }
+      .vote-button { justify-content: flex-start; text-align: left; }
+      .vote-button[data-selected="true"] { border-color: var(--primary); background: var(--soft); }
+      .result-list { display: grid; gap: 10px; }
+      .result-item { padding: 13px 14px; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--bg) 62%, var(--panel)); line-height: 1.6; }
+      .result-item strong { display: block; }
+      .winner { padding: 16px; border-radius: 14px; background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--success); font-weight: 800; text-align: center; line-height: 1.7; }
+      .tiny { font-size: .85rem; }
+    }
+
+    @layer make6 {
+      /* 現在の画面以外を確実に非表示にします。 */
+      [hidden] { display: none; }
+    }
+
+    @layer make7 {
+      /* 役職内訳と説明 */
+      .role-settings { display: grid; gap: 10px; }
+      .role-setting { display: grid; grid-template-columns: minmax(0, 1fr) 108px; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--bg) 58%, var(--panel)); }
+      .role-setting strong { display: block; }
+      .role-setting small { display: block; margin-top: 3px; color: var(--muted); line-height: 1.5; }
+      .role-count { min-height: 44px; text-align: center; }
+      .role-guide { border: 1px solid var(--line); border-radius: 14px; background: color-mix(in srgb, var(--bg) 58%, var(--panel)); }
+      .role-guide summary { padding: 14px; cursor: pointer; font-weight: 800; }
+      .role-guide-list { display: grid; gap: 12px; padding: 0 14px 14px; }
+      .role-guide-card { padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); line-height: 1.75; }
+      .role-guide-card h3 { margin: 0 0 8px; font-size: 1rem; }
+      .role-guide-card p { margin: 6px 0 0; white-space: pre-line; }
+      .role-story-label, .role-ability-label { font-weight: 800; color: var(--primary); }
+      @media (max-width: 520px) { .role-setting { grid-template-columns: 1fr 92px; } }
+    }
+
+    @layer make8 {
+      /* 最初の画面のルール説明ボタンとダイアログ */
+      .setup-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+      .rule-button { flex: 0 0 auto; min-height: 38px; padding: 8px 12px; font-size: .9rem; }
+      .rules-dialog { width: min(calc(100% - 28px), 640px); max-height: min(86svh, 760px); padding: 0; border: 1px solid var(--line); border-radius: 18px; background: var(--panel); color: var(--text); box-shadow: 0 24px 70px rgb(0 0 0 / 38%); }
+      .rules-dialog::backdrop { background: rgb(15 23 42 / 65%); backdrop-filter: blur(4px); }
+      .rules-dialog__content { display: grid; gap: 16px; padding: clamp(18px, 5vw, 26px); }
+      .rules-dialog__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+      .rules-dialog__title { margin: 0; font-size: 1.25rem; }
+      .rules-dialog__close { display: grid; place-items: center; flex: 0 0 auto; width: 38px; height: 38px; padding: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--text); font-size: 1.25rem; }
+      .rules-section { padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--bg) 58%, var(--panel)); line-height: 1.75; }
+      .rules-section h3 { margin: 0 0 8px; font-size: 1rem; }
+      .rules-section p, .rules-section ol, .rules-section ul { margin: 0; }
+      .rules-section ol, .rules-section ul { padding-left: 1.35rem; }
+      .rules-dialog__footer { display: flex; justify-content: flex-end; }
+      @media (max-width: 520px) {
+        .setup-heading { align-items: center; }
+        .rule-button { padding-inline: 10px; }
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="brand">
+      <div class="brand__mark" aria-hidden="true">✉</div>
+      <div>
+        <h1>消えた招待客</h1>
+        <p>スマホ1台を順番に回して遊ぶ正体隠匿ゲーム</p>
+      </div>
+    </header>
+
+    <section id="setupView" class="panel stack">
+      <div class="setup-heading">
+        <div>
+          <h2 class="section-title">ゲーム設定</h2>
+          <p class="helper">4〜20人で遊べます。人数を選ぶと初期配役が入り、その後で役職の内訳を変更できます。</p>
+        </div>
+        <button id="openRulesButton" class="button button--secondary rule-button" type="button" aria-haspopup="dialog">ルール説明</button>
+      </div>
+      <div class="settings-grid">
+        <div>
+          <label class="label" for="playerCount">参加人数</label>
+          <select id="playerCount" class="select"></select>
+        </div>
+        <div>
+          <label class="label" for="discussionMinutes">議論時間</label>
+          <select id="discussionMinutes" class="select">
+            <option value="180">3分</option>
+            <option value="240" selected>4分</option>
+            <option value="300">5分</option>
+            <option value="420">7分</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <span class="label">プレイヤー名</span>
+        <div id="playerList" class="player-list"></div>
+      </div>
+      <div>
+        <span class="label">役職の内訳</span>
+        <div id="roleSettings" class="role-settings"></div>
+      </div>
+      <div id="roleSummary" class="summary-box"></div>
+      <details class="role-guide">
+        <summary>役職の説明を見る</summary>
+        <div id="roleGuideList" class="role-guide-list"></div>
+      </details>
+      <button id="startButton" class="button button--primary" type="button">役職を配る</button>
+      <p id="setupStatus" class="status" role="status" aria-live="polite"></p>
+    </section>
+
+
+
+    <dialog id="rulesDialog" class="rules-dialog" aria-labelledby="rulesDialogTitle">
+      <div class="rules-dialog__content">
+        <div class="rules-dialog__header">
+          <div>
+            <h2 id="rulesDialogTitle" class="rules-dialog__title">消えた招待客のルール</h2>
+            <p class="helper">スマホ1台を順番に回して遊ぶ正体隠匿ゲームです。</p>
+          </div>
+          <button id="closeRulesIconButton" class="rules-dialog__close" type="button" aria-label="ルール説明を閉じる">×</button>
+        </div>
+
+        <section class="rules-section">
+          <h3>ゲームの目的</h3>
+          <p>招待客陣営は、会話の中に紛れ込んだ潜入スパイを探します。スパイ陣営は正体を隠し、潜入スパイが追放されないようにします。</p>
+        </section>
+
+        <section class="rules-section">
+          <h3>ゲームの流れ</h3>
+          <ol>
+            <li>参加人数、名前、役職候補を設定します。</li>
+            <li>スマホを順番に回し、各自が自分の役職と情報を確認します。</li>
+            <li>表示された質問を使って議論します。</li>
+            <li>一人1回全員に追加の質問をします</li>
+            <li>一人1回特定のプレイヤーに特定の質問をします</li>
+            <li>全員が秘密投票を行い、最多票のプレイヤーを追放します。</li>
+            <li>役職と本当のお題を公開し、勝敗を確認します。</li>
+          </ol>
+        </section>
+
+        <section class="rules-section">
+          <h3>勝利条件</h3>
+          <ul>
+            <li><strong>招待客陣営：</strong>潜入スパイだけをすべて追放し、最後のお題当ても失敗させます。</li>
+            <li><strong>スパイ陣営：</strong>潜入スパイが1人でも追放を逃れるか、追放後に本当のお題を当てます。</li>
+          </ul>
+        </section>
+
+        <section class="rules-section">
+          <h3>重要な注意</h3>
+          <ul>
+            <li>お題を直接言わず、遠回しな質問と回答で確認してください。</li>
+            <li>迷子本人には「招待客」と表示され、似ている別のお題が渡されます。</li>
+            <li>役職候補が参加人数を超える場合は、参加人数分だけ抽選されます。</li>
+            <li>抽選結果に潜入スパイがいない場合は、自動的に再抽選されます。</li>
+          </ul>
+        </section>
+
+        <div class="rules-dialog__footer">
+          <button id="closeRulesButton" class="button button--primary" type="button">閉じる</button>
+        </div>
+      </div>
+    </dialog>
+
+    <section id="passView" class="panel stack" hidden>
+      <div class="pass-card">
+        <p class="helper">周囲に画面が見えないことを確認してください</p>
+        <h2 id="passPlayerName" class="pass-name"></h2>
+        <p class="helper">本人だけが下のボタンを長押しします。</p>
+        <button id="revealButton" class="button button--primary hold-button" type="button">長押しして役職を見る</button>
+      </div>
+      <p class="privacy-note">役職ごとの操作時間から推測されにくいよう、確認後は必ず「役職を隠す」を押してから渡してください。</p>
+    </section>
+
+    <section id="roleView" class="panel stack" hidden>
+      <div class="role-card">
+        <p id="roleTeam" class="role-team"></p>
+        <h2 id="roleName" class="role-name"></h2>
+        <p id="roleInfo" class="role-info"></p>
+      </div>
+      <button id="hideRoleButton" class="button button--danger" type="button">役職を隠して次の人へ</button>
+    </section>
+
+    <section id="discussionView" class="panel stack" hidden>
+      <div>
+        <h2 class="section-title">議論タイム</h2>
+        <p class="helper">直接お題を言わず、質問と回答から潜入スパイを探してください。</p>
+      </div>
+      <div class="topic-box">
+        <span id="questionLabel">最初の質問</span>
+        <strong id="questionText"></strong>
+      </div>
+      <button id="nextQuestionButton" class="button button--secondary" type="button">次の質問を表示</button>
+      <div id="timer" class="timer">04:00</div>
+      <div class="button-row">
+        <button id="timerButton" class="button button--primary" type="button">タイマー開始</button>
+        <button id="resetTimerButton" class="button button--secondary" type="button">時間を戻す</button>
+      </div>
+      <button id="goVoteButton" class="button button--danger" type="button">議論を終了して投票へ</button>
+      <p class="helper tiny">投票はこの端末上で順番に行います。自分への投票はできません。</p>
+    </section>
+
+    <section id="voteView" class="panel stack" hidden>
+      <div>
+        <h2 class="section-title">秘密投票</h2>
+        <p id="voteGuide" class="helper"></p>
+      </div>
+      <div id="voteList" class="vote-list"></div>
+      <button id="confirmVoteButton" class="button button--primary" type="button" disabled>この人に投票する</button>
+    </section>
+
+    <section id="resultView" class="panel stack" hidden>
+      <div>
+        <h2 class="section-title">結果発表</h2>
+        <p id="executionText" class="helper"></p>
+      </div>
+      <div id="winnerText" class="winner"></div>
+      <div id="resultList" class="result-list"></div>
+      <div class="topic-box">
+        本当のお題
+        <strong id="answerText"></strong>
+      </div>
+      <button id="restartButton" class="button button--primary" type="button">同じメンバーでもう一度</button>
+    </section>
+  </main>
+
+  <script>
+    const $ = (selector) => document.querySelector(selector);
+    const views = ["#setupView", "#passView", "#roleView", "#discussionView", "#voteView", "#resultView"].map($);
+    const playerCount = $("#playerCount");
+    const playerList = $("#playerList");
+    const discussionMinutes = $("#discussionMinutes");
+    const roleSummary = $("#roleSummary");
+    const roleSettings = $("#roleSettings");
+    const roleGuideList = $("#roleGuideList");
+    const setupStatus = $("#setupStatus");
+    const rulesDialog = $("#rulesDialog");
+
+const topics = [
+  {
+    word: "遊園地",
+    near: "動物園",
+    questions: [
+      "朝と夜なら、どちらに行きたいですか？",
+      "一人でも楽しめますか？",
+      "服装で気を付けることはありますか？",
+      "子どもと大人なら、どちらが楽しみやすいですか？",
+      "滞在時間は長くなりやすいですか？"
+    ]
+  },
+  {
+    word: "温泉",
+    near: "プール",
+    questions: [
+      "長時間いたい場所ですか？",
+      "季節によって楽しさは変わりますか？",
+      "持っていく物は多いですか？",
+      "一人でも利用しやすいですか？",
+      "利用後に疲れますか？"
+    ]
+  },
+  {
+    word: "映画館",
+    near: "劇場",
+    questions: [
+      "静かにする必要がありますか？",
+      "一人で行くことはありますか？",
+      "飲食物を持ち込みたいですか？",
+      "席の場所は重要ですか？",
+      "事前予約をしたいですか？"
+    ]
+  },
+  {
+    word: "コンビニ",
+    near: "スーパー",
+    questions: [
+      "深夜にも利用したいですか？",
+      "滞在時間は長いですか？",
+      "予定外の物を買うことはありますか？",
+      "週に何度も利用しますか？",
+      "一人で行くことが多いですか？"
+    ]
+  },
+  {
+    word: "花火大会",
+    near: "夏祭り",
+    questions: [
+      "混雑していても行きたいですか？",
+      "音は大きいですか？",
+      "雨の日でも楽しめますか？",
+      "浴衣で行きたいですか？",
+      "食べ物を買うことはありますか？"
+    ]
+  },
+  {
+    word: "水族館",
+    near: "博物館",
+    questions: [
+      "子どもと大人のどちらが楽しめますか？",
+      "暗い場所は多いですか？",
+      "写真をたくさん撮りたいですか？",
+      "ゆっくり見て回りたいですか？",
+      "何度も行きたい場所ですか？"
+    ]
+  },
+  {
+    word: "カラオケ",
+    near: "ライブハウス",
+    questions: [
+      "一人でも利用できますか？",
+      "上手さは重要ですか？",
+      "長時間いることはありますか？",
+      "大きな音が苦手でも楽しめますか？",
+      "知っている曲が多い方が楽しめますか？"
+    ]
+  },
+  {
+    word: "キャンプ",
+    near: "バーベキュー",
+    questions: [
+      "天気の影響を受けますか？",
+      "準備は大変ですか？",
+      "夜までいたいですか？",
+      "大人数の方が楽しめますか？",
+      "虫への対策は必要ですか？"
+    ]
+  },
+  {
+    word: "図書館",
+    near: "本屋",
+    questions: [
+      "長時間滞在できますか？",
+      "静かにする必要がありますか？",
+      "一人で行くことが多いですか？",
+      "目的がなくても立ち寄りますか？",
+      "子どもでも楽しめますか？"
+    ]
+  },
+  {
+    word: "喫茶店",
+    near: "ファミレス",
+    questions: [
+      "一人でも入りやすいですか？",
+      "長時間滞在したいですか？",
+      "仕事や勉強に利用できますか？",
+      "静かな方が良いですか？",
+      "食事より飲み物を重視しますか？"
+    ]
+  },
+  {
+    word: "居酒屋",
+    near: "焼肉屋",
+    questions: [
+      "大人数で行きたいですか？",
+      "服ににおいが付きやすいですか？",
+      "長時間滞在することがありますか？",
+      "予約した方が安心ですか？",
+      "会話を楽しむ場所ですか？"
+    ]
+  },
+  {
+    word: "海",
+    near: "プール",
+    questions: [
+      "夏以外でも行きたいですか？",
+      "泳げなくても楽しめますか？",
+      "日焼け対策は必要ですか？",
+      "一人で行くことはありますか？",
+      "持ち物は多くなりますか？"
+    ]
+  },
+  {
+    word: "山",
+    near: "森林公園",
+    questions: [
+      "体力が必要ですか？",
+      "季節によって危険度が変わりますか？",
+      "一人で行っても安全ですか？",
+      "写真を撮りたくなりますか？",
+      "飲み物を多めに持っていきますか？"
+    ]
+  },
+  {
+    word: "ホテル",
+    near: "旅館",
+    questions: [
+      "食事を楽しみにしますか？",
+      "一人でも利用したいですか？",
+      "建物の雰囲気は重要ですか？",
+      "滞在中は外出したいですか？",
+      "料金が高くても満足できますか？"
+    ]
+  },
+  {
+    word: "空港",
+    near: "駅",
+    questions: [
+      "待ち時間は長くなりやすいですか？",
+      "大きな荷物を持って行きますか？",
+      "迷いやすい場所ですか？",
+      "飲食店を利用することはありますか？",
+      "早めに到着した方が良いですか？"
+    ]
+  },
+  {
+    word: "学校",
+    near: "会社",
+    questions: [
+      "毎日行きたい場所ですか？",
+      "人間関係は重要ですか？",
+      "制服や決まった服装がありますか？",
+      "休み時間は楽しみですか？",
+      "遅刻すると困りますか？"
+    ]
+  },
+  {
+    word: "病院",
+    near: "薬局",
+    questions: [
+      "待ち時間は長いですか？",
+      "できれば行きたくない場所ですか？",
+      "予約してから行きますか？",
+      "定期的に利用する人もいますか？",
+      "説明をよく聞く必要がありますか？"
+    ]
+  },
+  {
+    word: "美容院",
+    near: "エステ",
+    questions: [
+      "予約が必要ですか？",
+      "定期的に利用しますか？",
+      "担当者との相性は重要ですか？",
+      "利用後に見た目が変わりますか？",
+      "長時間座ることがありますか？"
+    ]
+  },
+  {
+    word: "ゲームセンター",
+    near: "ボウリング場",
+    questions: [
+      "一人でも楽しめますか？",
+      "上手さによって楽しさは変わりますか？",
+      "音が大きい場所ですか？",
+      "お金を使いすぎることがありますか？",
+      "友人と行きたいですか？"
+    ]
+  },
+  {
+    word: "動物園",
+    near: "牧場",
+    questions: [
+      "においが気になることはありますか？",
+      "子どもと一緒に行きたいですか？",
+      "屋外を歩く時間は長いですか？",
+      "動きやすい服装が良いですか？",
+      "食事を楽しめますか？"
+    ]
+  },
+  {
+    word: "美術館",
+    near: "博物館",
+    questions: [
+      "静かに見る場所ですか？",
+      "説明を読まなくても楽しめますか？",
+      "写真撮影は禁止されることがありますか？",
+      "一人で行きたいですか？",
+      "何時間くらい滞在できますか？"
+    ]
+  },
+  {
+    word: "公園",
+    near: "河川敷",
+    questions: [
+      "無料で利用できますか？",
+      "一人で過ごすことはありますか？",
+      "運動をする人は多いですか？",
+      "夜でも行きたいですか？",
+      "飲食しても良い場所ですか？"
+    ]
+  },
+  {
+    word: "神社",
+    near: "寺",
+    questions: [
+      "年始に行くことがありますか？",
+      "静かに過ごしたい場所ですか？",
+      "写真を撮りたくなりますか？",
+      "お願い事をすることがありますか？",
+      "建物の歴史は重要ですか？"
+    ]
+  },
+  {
+    word: "結婚式",
+    near: "成人式",
+    questions: [
+      "普段よりおしゃれをしますか？",
+      "写真をたくさん撮りますか？",
+      "知り合いが多く集まりますか？",
+      "事前準備は大変ですか？",
+      "長時間参加することがありますか？"
+    ]
+  },
+  {
+    word: "誕生日会",
+    near: "送別会",
+    questions: [
+      "プレゼントを用意しますか？",
+      "主役になる人がいますか？",
+      "サプライズをしたいですか？",
+      "大人数の方が盛り上がりますか？",
+      "写真を撮ることは多いですか？"
+    ]
+  },
+  {
+    word: "クリスマス",
+    near: "ハロウィン",
+    questions: [
+      "飾り付けをしたいですか？",
+      "子どもの方が楽しみやすいですか？",
+      "特別な食べ物がありますか？",
+      "友人と過ごしたいですか？",
+      "街の雰囲気が変わりますか？"
+    ]
+  },
+  {
+    word: "運動会",
+    near: "体育祭",
+    questions: [
+      "事前に練習が必要ですか？",
+      "勝ち負けは重要ですか？",
+      "大人数で参加しますか？",
+      "応援する時間がありますか？",
+      "天気の影響を受けますか？"
+    ]
+  },
+  {
+    word: "修学旅行",
+    near: "社員旅行",
+    questions: [
+      "団体行動が多いですか？",
+      "自由時間は欲しいですか？",
+      "行き先を自分で決められますか？",
+      "普段話さない人と話しますか？",
+      "お土産を買いますか？"
+    ]
+  },
+  {
+    word: "電車",
+    near: "バス",
+    questions: [
+      "通勤や通学で利用しますか？",
+      "座れないことがありますか？",
+      "時間どおりに来ることは重要ですか？",
+      "乗り換えが必要になることがありますか？",
+      "寝過ごすことはありますか？"
+    ]
+  },
+  {
+    word: "自転車",
+    near: "バイク",
+    questions: [
+      "雨の日でも利用しますか？",
+      "ヘルメットは必要ですか？",
+      "長距離の移動に使えますか？",
+      "荷物を多く運べますか？",
+      "坂道は大変ですか？"
+    ]
+  },
+  {
+    word: "スマートフォン",
+    near: "パソコン",
+    questions: [
+      "毎日利用しますか？",
+      "外出先でも使いますか？",
+      "長時間使うと疲れますか？",
+      "高価な物を選びたいですか？",
+      "仕事にも使えますか？"
+    ]
+  },
+  {
+    word: "テレビ",
+    near: "動画配信サービス",
+    questions: [
+      "毎日見ますか？",
+      "家族と一緒に楽しめますか？",
+      "好きな時間に見たいですか？",
+      "広告は気になりますか？",
+      "大きな画面で見たいですか？"
+    ]
+  },
+  {
+    word: "漫画",
+    near: "小説",
+    questions: [
+      "一冊を短時間で読めますか？",
+      "何度も読み返しますか？",
+      "紙で読みたいですか？",
+      "映像化されると嬉しいですか？",
+      "長い作品でも楽しめますか？"
+    ]
+  },
+  {
+    word: "アニメ",
+    near: "ドラマ",
+    questions: [
+      "毎週続きを見たいですか？",
+      "一気に見ることがありますか？",
+      "登場人物は重要ですか？",
+      "原作がある作品は多いですか？",
+      "家族と一緒に見られますか？"
+    ]
+  },
+  {
+    word: "映画",
+    near: "ドラマ",
+    questions: [
+      "一度に最後まで見たいですか？",
+      "続編があると嬉しいですか？",
+      "有名な出演者は重要ですか？",
+      "泣くことがありますか？",
+      "事前情報なしで見たいですか？"
+    ]
+  },
+  {
+    word: "サッカー",
+    near: "バスケットボール",
+    questions: [
+      "走る量は多いですか？",
+      "背の高さは有利ですか？",
+      "テレビで観戦しますか？",
+      "大人数で行いますか？",
+      "接触が多い競技ですか？"
+    ]
+  },
+  {
+    word: "野球",
+    near: "ソフトボール",
+    questions: [
+      "道具を多く使いますか？",
+      "試合時間は長いですか？",
+      "観戦するだけでも楽しめますか？",
+      "個人の成績は注目されますか？",
+      "屋外で行うことが多いですか？"
+    ]
+  },
+  {
+    word: "卓球",
+    near: "バドミントン",
+    questions: [
+      "室内で行うことが多いですか？",
+      "二人でも楽しめますか？",
+      "反射神経は重要ですか？",
+      "初心者でも遊びやすいですか？",
+      "風の影響を受けますか？"
+    ]
+  },
+  {
+    word: "登山",
+    near: "ハイキング",
+    questions: [
+      "専用の靴が必要ですか？",
+      "初心者でも楽しめますか？",
+      "早朝から始めたいですか？",
+      "食べ物を持参しますか？",
+      "景色を楽しむことが目的ですか？"
+    ]
+  },
+  {
+    word: "料理",
+    near: "お菓子作り",
+    questions: [
+      "分量を正確に量りますか？",
+      "失敗することがありますか？",
+      "一人でも楽しめますか？",
+      "後片付けは大変ですか？",
+      "人に渡すことがありますか？"
+    ]
+  },
+  {
+    word: "寿司",
+    near: "刺身",
+    questions: [
+      "生ものが苦手だと楽しめませんか？",
+      "特別な日に食べたいですか？",
+      "高級なイメージがありますか？",
+      "醤油を使いますか？",
+      "種類を選ぶ楽しさがありますか？"
+    ]
+  },
+  {
+    word: "ラーメン",
+    near: "うどん",
+    questions: [
+      "熱いうちに食べたいですか？",
+      "汁を全部飲みますか？",
+      "一人でも食べに行きやすいですか？",
+      "具材は多い方が良いですか？",
+      "夜遅くに食べたくなりますか？"
+    ]
+  },
+  {
+    word: "カレー",
+    near: "シチュー",
+    questions: [
+      "ご飯と一緒に食べますか？",
+      "家庭によって味が違いますか？",
+      "作り置きに向いていますか？",
+      "辛さは重要ですか？",
+      "翌日も食べたいですか？"
+    ]
+  },
+  {
+    word: "パン",
+    near: "ケーキ",
+    questions: [
+      "朝に食べたいですか？",
+      "専門店で買いたいですか？",
+      "手作りできますか？",
+      "甘い種類は多いですか？",
+      "飲み物と一緒に楽しみますか？"
+    ]
+  },
+  {
+    word: "コーヒー",
+    near: "紅茶",
+    questions: [
+      "毎日飲みますか？",
+      "砂糖やミルクを入れますか？",
+      "香りは重要ですか？",
+      "眠る前にも飲めますか？",
+      "温かい方が好きですか？"
+    ]
+  },
+  {
+    word: "ビール",
+    near: "ハイボール",
+    questions: [
+      "食事と一緒に飲みたいですか？",
+      "苦味はありますか？",
+      "冷たい方が良いですか？",
+      "最初の一杯に選びますか？",
+      "飲みすぎることがありますか？"
+    ]
+  },
+  {
+    word: "犬",
+    near: "猫",
+    questions: [
+      "毎日世話が必要ですか？",
+      "一人暮らしでも飼えますか？",
+      "外に連れて行きますか？",
+      "人になつきやすいですか？",
+      "鳴き声が気になることはありますか？"
+    ]
+  },
+  {
+    word: "ライオン",
+    near: "トラ",
+    questions: [
+      "実際に近くで見たいですか？",
+      "群れで行動しますか？",
+      "強そうな印象がありますか？",
+      "動物園で人気がありますか？",
+      "夜の方が活発ですか？"
+    ]
+  },
+  {
+    word: "ペンギン",
+    near: "アザラシ",
+    questions: [
+      "寒い場所にいる印象がありますか？",
+      "泳ぐのが得意ですか？",
+      "水族館で見たいですか？",
+      "歩き方に特徴がありますか？",
+      "触ってみたいですか？"
+    ]
+  },
+  {
+    word: "春",
+    near: "秋",
+    questions: [
+      "過ごしやすい季節ですか？",
+      "服装選びが難しいですか？",
+      "旅行に向いていますか？",
+      "花粉が気になりますか？",
+      "食べ物を楽しめる季節ですか？"
+    ]
+  },
+  {
+    word: "夏",
+    near: "冬",
+    questions: [
+      "外出したくなる季節ですか？",
+      "電気代が高くなりますか？",
+      "服装は好きですか？",
+      "旅行に向いていますか？",
+      "体調管理が難しいですか？"
+    ]
+  },
+  {
+    word: "雨",
+    near: "雪",
+    questions: [
+      "外出を控えたくなりますか？",
+      "交通機関に影響しますか？",
+      "専用の靴が必要ですか？",
+      "景色をきれいだと思いますか？",
+      "子どもは喜びますか？"
+    ]
+  },
+  {
+    word: "夢",
+    near: "思い出",
+    questions: [
+      "時間がたつと忘れますか？",
+      "人に話したくなりますか？",
+      "現実と混同することがありますか？",
+      "良い内容だけとは限りませんか？",
+      "記録しておきたいですか？"
+    ]
+  },
+  {
+    word: "秘密",
+    near: "うわさ",
+    questions: [
+      "他人に話してはいけませんか？",
+      "広まりやすいですか？",
+      "本当とは限りませんか？",
+      "知ると気になりますか？",
+      "本人に確認したいですか？"
+    ]
+  },
+  {
+    word: "写真",
+    near: "動画",
+    questions: [
+      "スマートフォンで簡単に作れますか？",
+      "後から編集しますか？",
+      "容量を多く使いますか？",
+      "人に共有することがありますか？",
+      "思い出を残すために使いますか？"
+    ]
+  },
+  {
+    word: "電話",
+    near: "ビデオ通話",
+    questions: [
+      "顔を見せる必要がありますか？",
+      "長時間利用することがありますか？",
+      "突然来ると困りますか？",
+      "複数人で利用できますか？",
+      "外出先でも利用しますか？"
+    ]
+  },
+  {
+    word: "メール",
+    near: "チャット",
+    questions: [
+      "すぐに返信する必要がありますか？",
+      "仕事で利用しますか？",
+      "長い文章を送れますか？",
+      "既読が分かりますか？",
+      "複数人に同時に送りますか？"
+    ]
+  },
+  {
+    word: "財布",
+    near: "スマートフォン",
+    questions: [
+      "忘れると困りますか？",
+      "毎日持ち歩きますか？",
+      "支払いに使えますか？",
+      "高価な物を選びますか？",
+      "紛失した経験はありますか？"
+    ]
+  },
+  {
+    word: "傘",
+    near: "レインコート",
+    questions: [
+      "持ち運びが面倒ですか？",
+      "風が強い日でも使えますか？",
+      "忘れやすい物ですか？",
+      "色やデザインを重視しますか？",
+      "両手を自由にできますか？"
+    ]
+  },
+  {
+    word: "腕時計",
+    near: "スマートウォッチ",
+    questions: [
+      "毎日身に着けますか？",
+      "時間を見る以外にも使えますか？",
+      "充電が必要ですか？",
+      "服装に合わせて選びますか？",
+      "高級品を持ちたいですか？"
+    ]
+  },
+  {
+    word: "制服",
+    near: "スーツ",
+    questions: [
+      "毎日同じ物を着ますか？",
+      "着る場所が決まっていますか？",
+      "動きやすさは重要ですか？",
+      "自分で選べますか？",
+      "クリーニングが必要ですか？"
+    ]
+  },
+  {
+    word: "プレゼント",
+    near: "お土産",
+    questions: [
+      "相手の好みを考えますか？",
+      "自分用にも買いますか？",
+      "値段は重要ですか？",
+      "渡すタイミングを考えますか？",
+      "包装した方が良いですか？"
+    ]
+  },
+  {
+    word: "宝くじ",
+    near: "福引",
+    questions: [
+      "当たる確率は低いですか？",
+      "結果を見るまで楽しめますか？",
+      "お金を払って参加しますか？",
+      "大きな景品がありますか？",
+      "何度も挑戦したくなりますか？"
+    ]
+  },
+  {
+    word: "警察官",
+    near: "警備員",
+    questions: [
+      "制服を着ていますか？",
+      "困ったときに頼れますか？",
+      "危険な仕事ですか？",
+      "街中で見かけますか？",
+      "夜にも働きますか？"
+    ]
+  },
+  {
+    word: "医師",
+    near: "看護師",
+    questions: [
+      "専門的な知識が必要ですか？",
+      "夜勤がありますか？",
+      "人の命に関わる仕事ですか？",
+      "白い服を着る印象がありますか？",
+      "忙しい仕事ですか？"
+    ]
+  },
+  {
+    word: "教師",
+    near: "塾講師",
+    questions: [
+      "人に説明する仕事ですか？",
+      "子どもと接することが多いですか？",
+      "宿題を出しますか？",
+      "教える上手さが重要ですか？",
+      "試験に関わりますか？"
+    ]
+  },
+  {
+    word: "料理人",
+    near: "パティシエ",
+    questions: [
+      "味覚が重要ですか？",
+      "立っている時間が長いですか？",
+      "早朝から働くことがありますか？",
+      "見た目も重視しますか？",
+      "専門的な道具を使いますか？"
+    ]
+  },
+  {
+    word: "探偵",
+    near: "記者",
+    questions: [
+      "人から話を聞きますか？",
+      "秘密を調べることがありますか？",
+      "文章を書くことがありますか？",
+      "証拠が重要ですか？",
+      "危険な場面がありますか？"
+    ]
+  },
+  {
+    word: "王様",
+    near: "社長",
+    questions: [
+      "多くの人に指示を出しますか？",
+      "責任が重い立場ですか？",
+      "簡単にはなれませんか？",
+      "周囲に支える人がいますか？",
+      "豪華な生活をしている印象がありますか？"
+    ]
+  },
+  {
+    word: "遊園地のジェットコースター",
+    near: "お化け屋敷",
+    questions: [
+      "怖いと感じる人は多いですか？",
+      "大きな声を出すことがありますか？",
+      "苦手でも誘われたら参加しますか？",
+      "子どもでも楽しめますか？",
+      "待ち時間が長くても体験したいですか？"
+    ]
+  },
+  {
+    word: "観覧車",
+    near: "ロープウェイ",
+    questions: [
+      "高い場所が苦手だと楽しみにくいですか？",
+      "景色を楽しむことが目的ですか？",
+      "二人で利用したいですか？",
+      "天候の影響を受けますか？",
+      "写真を撮りたくなりますか？"
+    ]
+  },
+  {
+    word: "遊覧船",
+    near: "屋形船",
+    questions: [
+      "揺れが気になることがありますか？",
+      "景色を見ながら楽しめますか？",
+      "食事をすることがありますか？",
+      "夜に利用したいですか？",
+      "予約してから利用しますか？"
+    ]
+  },
+  {
+    word: "展望台",
+    near: "屋上",
+    questions: [
+      "夜景を見たい場所ですか？",
+      "風が強いことがありますか？",
+      "高い場所にありますか？",
+      "長時間滞在しますか？",
+      "写真撮影に向いていますか？"
+    ]
+  },
+  {
+    word: "洞窟",
+    near: "地下道",
+    questions: [
+      "暗い場所ですか？",
+      "夏でも涼しいですか？",
+      "一人で入ると不安ですか？",
+      "足元に注意が必要ですか？",
+      "携帯電話の電波が届きにくいですか？"
+    ]
+  },
+  {
+    word: "無人島",
+    near: "離島",
+    questions: [
+      "簡単に行ける場所ですか？",
+      "食料を持参する必要がありますか？",
+      "長期間滞在したいですか？",
+      "自然が多いですか？",
+      "一人で行くのは不安ですか？"
+    ]
+  },
+  {
+    word: "砂漠",
+    near: "砂浜",
+    questions: [
+      "歩きにくい場所ですか？",
+      "日差しへの対策が必要ですか？",
+      "水を多めに持っていきますか？",
+      "昼と夜で気温差がありますか？",
+      "靴の中に砂が入りやすいですか？"
+    ]
+  },
+  {
+    word: "滝",
+    near: "噴水",
+    questions: [
+      "水の音が大きいですか？",
+      "近くに行くと濡れることがありますか？",
+      "写真を撮りたくなりますか？",
+      "涼しさを感じられますか？",
+      "夜にライトアップされることがありますか？"
+    ]
+  },
+  {
+    word: "湖",
+    near: "池",
+    questions: [
+      "魚がいることがありますか？",
+      "周囲を歩いて楽しめますか？",
+      "ボートに乗れることがありますか？",
+      "水はきれいですか？",
+      "落ちると危険ですか？"
+    ]
+  },
+  {
+    word: "田んぼ",
+    near: "畑",
+    questions: [
+      "季節によって見た目が変わりますか？",
+      "虫が多い場所ですか？",
+      "食べ物を育てますか？",
+      "機械を使うことがありますか？",
+      "雨の影響を受けますか？"
+    ]
+  },
+  {
+    word: "植物園",
+    near: "庭園",
+    questions: [
+      "季節ごとに見どころが変わりますか？",
+      "写真撮影を楽しめますか？",
+      "静かに歩きたい場所ですか？",
+      "珍しい植物がありますか？",
+      "雨の日でも楽しめますか？"
+    ]
+  },
+  {
+    word: "花屋",
+    near: "園芸店",
+    questions: [
+      "プレゼントを買うことがありますか？",
+      "良い香りがしますか？",
+      "育て方を相談できますか？",
+      "季節によって商品が変わりますか？",
+      "水や土を扱いますか？"
+    ]
+  },
+  {
+    word: "パン屋",
+    near: "和菓子屋",
+    questions: [
+      "朝早くから営業していますか？",
+      "手土産を買うことがありますか？",
+      "店内に甘い香りがありますか？",
+      "商品を一つずつ選びますか？",
+      "季節限定の商品がありますか？"
+    ]
+  },
+  {
+    word: "ケーキ屋",
+    near: "アイスクリーム店",
+    questions: [
+      "子どもが喜びやすい場所ですか？",
+      "種類を選ぶのに迷いますか？",
+      "持ち帰ることが多いですか？",
+      "特別な日に利用しますか？",
+      "暑い日に利用したくなりますか？"
+    ]
+  },
+  {
+    word: "駄菓子屋",
+    near: "玩具店",
+    questions: [
+      "子どもの頃に行ったことがありますか？",
+      "少ない金額でも楽しめますか？",
+      "商品を見て回るだけでも楽しいですか？",
+      "懐かしさを感じますか？",
+      "小さな商品が多いですか？"
+    ]
+  },
+  {
+    word: "百貨店",
+    near: "ショッピングモール",
+    questions: [
+      "一日中過ごせますか？",
+      "食事をする場所がありますか？",
+      "贈り物を探すのに向いていますか？",
+      "休日は混雑しますか？",
+      "目的がなくても見て回れますか？"
+    ]
+  },
+  {
+    word: "ホームセンター",
+    near: "家具店",
+    questions: [
+      "大型の商品を扱っていますか？",
+      "車で行く方が便利ですか？",
+      "見るだけでも長時間過ごせますか？",
+      "自宅で使う物を買いますか？",
+      "専門的な商品がありますか？"
+    ]
+  },
+  {
+    word: "家電量販店",
+    near: "携帯電話ショップ",
+    questions: [
+      "店員に説明を聞くことがありますか？",
+      "高額な商品を扱っていますか？",
+      "契約手続きに時間がかかりますか？",
+      "実物を触って確認できますか？",
+      "値引きを期待しますか？"
+    ]
+  },
+  {
+    word: "古着屋",
+    near: "リサイクルショップ",
+    questions: [
+      "一点物が見つかることがありますか？",
+      "商品の状態を確認する必要がありますか？",
+      "安く買えることがありますか？",
+      "不要品を売ることもできますか？",
+      "宝探しのように楽しめますか？"
+    ]
+  },
+  {
+    word: "市場",
+    near: "商店街",
+    questions: [
+      "朝早く行く方が楽しめますか？",
+      "店の人と会話することがありますか？",
+      "食べ歩きできますか？",
+      "地域ごとの特色がありますか？",
+      "観光客も訪れますか？"
+    ]
+  },
+  {
+    word: "フードコート",
+    near: "屋台村",
+    questions: [
+      "複数の料理から選べますか？",
+      "席を探す必要がありますか？",
+      "大人数でも利用しやすいですか？",
+      "注文した料理を自分で運びますか？",
+      "周囲がにぎやかですか？"
+    ]
+  },
+  {
+    word: "回転寿司",
+    near: "ビュッフェ",
+    questions: [
+      "好きな物を自分で選べますか？",
+      "食べた量が分かりやすいですか？",
+      "つい食べすぎることがありますか？",
+      "家族で利用しやすいですか？",
+      "待ち時間が発生しやすいですか？"
+    ]
+  },
+  {
+    word: "焼き鳥",
+    near: "串カツ",
+    questions: [
+      "串に刺さっていますか？",
+      "一本ずつ注文できますか？",
+      "お酒と一緒に楽しみますか？",
+      "熱いうちに食べたいですか？",
+      "味付けを選べることがありますか？"
+    ]
+  },
+  {
+    word: "たこ焼き",
+    near: "お好み焼き",
+    questions: [
+      "熱いまま食べると危険ですか？",
+      "ソースをかけますか？",
+      "自宅でも作れますか？",
+      "複数人で分けて食べますか？",
+      "屋台で売られることがありますか？"
+    ]
+  },
+  {
+    word: "餃子",
+    near: "春巻き",
+    questions: [
+      "中に具材が入っていますか？",
+      "焼いたり揚げたりしますか？",
+      "皮の食感は重要ですか？",
+      "熱いうちに食べたいですか？",
+      "タレを付けますか？"
+    ]
+  },
+  {
+    word: "オムライス",
+    near: "チャーハン",
+    questions: [
+      "卵を使いますか？",
+      "家庭で作ることがありますか？",
+      "子どもに人気がありますか？",
+      "味付けを変えられますか？",
+      "一皿で満足できますか？"
+    ]
+  },
+  {
+    word: "ハンバーグ",
+    near: "ステーキ",
+    questions: [
+      "肉料理ですか？",
+      "焼き加減が重要ですか？",
+      "ソースを選べますか？",
+      "付け合わせがありますか？",
+      "特別な日に食べたいですか？"
+    ]
+  },
+  {
+    word: "唐揚げ",
+    near: "天ぷら",
+    questions: [
+      "揚げたてを食べたいですか？",
+      "油が気になりますか？",
+      "弁当に入れることがありますか？",
+      "衣の食感は重要ですか？",
+      "味付けを変えられますか？"
+    ]
+  },
+  {
+    word: "焼き魚",
+    near: "煮魚",
+    questions: [
+      "骨に注意する必要がありますか？",
+      "ご飯と一緒に食べたいですか？",
+      "家庭で作ることがありますか？",
+      "においが残りやすいですか？",
+      "箸で食べることが多いですか？"
+    ]
+  },
+  {
+    word: "味噌汁",
+    near: "豚汁",
+    questions: [
+      "温かいうちに飲みたいですか？",
+      "家庭によって具材が違いますか？",
+      "朝食に合いますか？",
+      "ご飯と一緒に食べますか？",
+      "作り置きできますか？"
+    ]
+  },
+  {
+    word: "おにぎり",
+    near: "サンドイッチ",
+    questions: [
+      "手で食べやすいですか？",
+      "持ち運びに向いていますか？",
+      "中身を選べますか？",
+      "昼食にすることがありますか？",
+      "コンビニで買えますか？"
+    ]
+  },
+  {
+    word: "弁当",
+    near: "給食",
+    questions: [
+      "昼に食べることが多いですか？",
+      "複数のおかずがありますか？",
+      "好き嫌いが影響しますか？",
+      "温かい方が良いですか？",
+      "食べ終わった後に片付けが必要ですか？"
+    ]
+  },
+  {
+    word: "ヨーグルト",
+    near: "プリン",
+    questions: [
+      "冷やして食べますか？",
+      "スプーンを使いますか？",
+      "甘さを選べますか？",
+      "朝食に食べることがありますか？",
+      "小さな容器で売られていますか？"
+    ]
+  },
+  {
+    word: "チョコレート",
+    near: "キャラメル",
+    questions: [
+      "甘い食べ物ですか？",
+      "暑いと状態が変わりますか？",
+      "一口サイズの商品がありますか？",
+      "人に渡すことがありますか？",
+      "食べすぎに注意しますか？"
+    ]
+  },
+  {
+    word: "せんべい",
+    near: "ポテトチップス",
+    questions: [
+      "音を立てずに食べるのは難しいですか？",
+      "塩味の商品がありますか？",
+      "手が汚れることがありますか？",
+      "複数人で分けて食べますか？",
+      "飲み物と一緒に楽しみますか？"
+    ]
+  },
+  {
+    word: "かき氷",
+    near: "ソフトクリーム",
+    questions: [
+      "暑い日に食べたいですか？",
+      "溶ける前に食べる必要がありますか？",
+      "味を選べますか？",
+      "頭が痛くなることがありますか？",
+      "屋外で売られることがありますか？"
+    ]
+  },
+  {
+    word: "牛乳",
+    near: "豆乳",
+    questions: [
+      "朝に飲むことがありますか？",
+      "冷やして飲みたいですか？",
+      "料理に使えますか？",
+      "苦手な人もいますか？",
+      "健康のために選ぶ人がいますか？"
+    ]
+  },
+  {
+    word: "炭酸飲料",
+    near: "エナジードリンク",
+    questions: [
+      "冷たい方がおいしいですか？",
+      "一気に飲みにくいですか？",
+      "甘い商品が多いですか？",
+      "夜に飲むと困ることがありますか？",
+      "缶で売られることがありますか？"
+    ]
+  },
+  {
+    word: "水筒",
+    near: "ペットボトル",
+    questions: [
+      "外出時に持ち歩きますか？",
+      "飲み物を入れる物ですか？",
+      "中身が漏れると困りますか？",
+      "冷たさを保てますか？",
+      "繰り返し使えますか？"
+    ]
+  },
+  {
+    word: "冷蔵庫",
+    near: "冷凍庫",
+    questions: [
+      "食べ物を保存しますか？",
+      "停電すると困りますか？",
+      "定期的に掃除しますか？",
+      "中身を忘れることがありますか？",
+      "温度設定が重要ですか？"
+    ]
+  },
+  {
+    word: "電子レンジ",
+    near: "オーブントースター",
+    questions: [
+      "食べ物を温めますか？",
+      "使いすぎると焦げることがありますか？",
+      "タイマーを設定しますか？",
+      "金属を入れてはいけませんか？",
+      "朝食の準備に使いますか？"
+    ]
+  },
+  {
+    word: "炊飯器",
+    near: "電気圧力鍋",
+    questions: [
+      "材料を入れて待つだけで使えますか？",
+      "予約機能がありますか？",
+      "調理中にふたを開けにくいですか？",
+      "家庭に一台あることが多いですか？",
+      "保温できますか？"
+    ]
+  },
+  {
+    word: "掃除機",
+    near: "モップ",
+    questions: [
+      "床をきれいにするために使いますか？",
+      "家具を動かすことがありますか？",
+      "定期的に使いますか？",
+      "細かいごみを取れますか？",
+      "使った後に手入れが必要ですか？"
+    ]
+  },
+  {
+    word: "洗濯機",
+    near: "食器洗い機",
+    questions: [
+      "家事の時間を減らせますか？",
+      "洗剤を使いますか？",
+      "動作中に音が出ますか？",
+      "一度に多く入れすぎると困りますか？",
+      "終わった後に中身を取り出しますか？"
+    ]
+  },
+  {
+    word: "扇風機",
+    near: "エアコン",
+    questions: [
+      "夏によく使いますか？",
+      "電気を使いますか？",
+      "眠るときにも使いますか？",
+      "風の強さを変えられますか？",
+      "長時間使うと体が冷えますか？"
+    ]
+  },
+  {
+    word: "加湿器",
+    near: "空気清浄機",
+    questions: [
+      "冬に使うことが多いですか？",
+      "水を入れる必要がありますか？",
+      "定期的な掃除が必要ですか？",
+      "寝室に置くことがありますか？",
+      "動作していても変化が分かりにくいですか？"
+    ]
+  },
+  {
+    word: "こたつ",
+    near: "電気毛布",
+    questions: [
+      "冬に使いたくなりますか？",
+      "そのまま眠ってしまうことがありますか？",
+      "電気を使いますか？",
+      "体の一部だけを温めますか？",
+      "動きたくなくなることがありますか？"
+    ]
+  },
+  {
+    word: "ベッド",
+    near: "布団",
+    questions: [
+      "毎日使いますか？",
+      "寝心地は重要ですか？",
+      "定期的に干したり掃除したりしますか？",
+      "場所を多く取りますか？",
+      "起きた後に整えますか？"
+    ]
+  },
+  {
+    word: "枕",
+    near: "クッション",
+    questions: [
+      "柔らかさは重要ですか？",
+      "頭や体を支えますか？",
+      "自分に合わないと疲れますか？",
+      "カバーを洗いますか？",
+      "複数個持つことがありますか？"
+    ]
+  },
+  {
+    word: "鏡",
+    near: "窓",
+    questions: [
+      "自分の姿が映りますか？",
+      "割れると危険ですか？",
+      "定期的に拭きますか？",
+      "光を反射しますか？",
+      "部屋を広く見せる効果がありますか？"
+    ]
+  },
+  {
+    word: "玄関",
+    near: "廊下",
+    questions: [
+      "靴を置くことがありますか？",
+      "来客が通る場所ですか？",
+      "物を置きすぎると邪魔ですか？",
+      "照明が必要ですか？",
+      "掃除を忘れやすい場所ですか？"
+    ]
+  },
+  {
+    word: "台所",
+    near: "食堂",
+    questions: [
+      "食べ物に関係する場所ですか？",
+      "水を使いますか？",
+      "においが残ることがありますか？",
+      "家族が集まることがありますか？",
+      "清潔にする必要がありますか？"
+    ]
+  },
+  {
+    word: "風呂場",
+    near: "洗面所",
+    questions: [
+      "水で床が濡れますか？",
+      "鏡が置かれていますか？",
+      "毎日利用しますか？",
+      "湿気が多いですか？",
+      "掃除が大変ですか？"
+    ]
+  },
+  {
+    word: "物置",
+    near: "押し入れ",
+    questions: [
+      "普段使わない物を入れますか？",
+      "中身を忘れることがありますか？",
+      "整理しないと物が増えますか？",
+      "暗い場所ですか？",
+      "季節用品を保管しますか？"
+    ]
+  },
+  {
+    word: "マンション",
+    near: "アパート",
+    questions: [
+      "集合住宅ですか？",
+      "隣の生活音が気になることがありますか？",
+      "階段やエレベーターを使いますか？",
+      "管理費が必要なことがありますか？",
+      "自分の庭を持ちにくいですか？"
+    ]
+  },
+  {
+    word: "一戸建て",
+    near: "別荘",
+    questions: [
+      "庭が付いていることがありますか？",
+      "維持管理が必要ですか？",
+      "複数の部屋がありますか？",
+      "購入すると高額ですか？",
+      "静かな場所に建てられることがありますか？"
+    ]
+  },
+  {
+    word: "エレベーター",
+    near: "エスカレーター",
+    questions: [
+      "階を移動するために使いますか？",
+      "混雑することがありますか？",
+      "停電すると使えませんか？",
+      "立ったまま利用しますか？",
+      "急いでいるときに便利ですか？"
+    ]
+  },
+  {
+    word: "横断歩道",
+    near: "歩道橋",
+    questions: [
+      "道路を渡るために使いますか？",
+      "安全確認が必要ですか？",
+      "信号があることがありますか？",
+      "高齢者には大変なことがありますか？",
+      "自転車で通ることがありますか？"
+    ]
+  },
+  {
+    word: "高速道路",
+    near: "一般道路",
+    questions: [
+      "車で利用しますか？",
+      "渋滞することがありますか？",
+      "速度に注意が必要ですか？",
+      "料金がかかることがありますか？",
+      "休憩できる場所がありますか？"
+    ]
+  },
+  {
+    word: "駐車場",
+    near: "駐輪場",
+    questions: [
+      "場所によって料金がかかりますか？",
+      "空きを探すことがありますか？",
+      "乗り物を置く場所ですか？",
+      "番号が付いていることがありますか？",
+      "長時間利用できますか？"
+    ]
+  },
+  {
+    word: "タクシー",
+    near: "送迎バス",
+    questions: [
+      "目的地まで運んでもらえますか？",
+      "知らない人と同乗することがありますか？",
+      "料金が必要ですか？",
+      "荷物が多いときに便利ですか？",
+      "待ち時間が発生することがありますか？"
+    ]
+  },
+  {
+    word: "新幹線",
+    near: "飛行機",
+    questions: [
+      "遠くへ移動するときに使いますか？",
+      "予約した方が安心ですか？",
+      "大きな荷物を持ち込みますか？",
+      "座席を選べますか？",
+      "出発時刻に遅れると困りますか？"
+    ]
+  },
+  {
+    word: "フェリー",
+    near: "クルーズ船",
+    questions: [
+      "海の上を移動しますか？",
+      "船内で眠ることがありますか？",
+      "食事ができますか？",
+      "車を載せられることがありますか？",
+      "船酔いが心配ですか？"
+    ]
+  },
+  {
+    word: "救急車",
+    near: "消防車",
+    questions: [
+      "緊急時に出動しますか？",
+      "大きな音を出して走りますか？",
+      "道路で道を譲る必要がありますか？",
+      "専門的な人が乗っていますか？",
+      "赤や白の車体が多いですか？"
+    ]
+  },
+  {
+    word: "パトカー",
+    near: "白バイ",
+    questions: [
+      "交通違反を取り締まりますか？",
+      "サイレンを鳴らすことがありますか？",
+      "警察官が乗っていますか？",
+      "道路で見かけますか？",
+      "追跡に使われることがありますか？"
+    ]
+  },
+  {
+    word: "郵便局",
+    near: "銀行",
+    questions: [
+      "お金を扱うことがありますか？",
+      "平日の昼間に利用することが多いですか？",
+      "窓口で手続きできますか？",
+      "待ち時間が発生しますか？",
+      "本人確認書類が必要なことがありますか？"
+    ]
+  },
+  {
+    word: "市役所",
+    near: "税務署",
+    questions: [
+      "書類の提出に行くことがありますか？",
+      "平日に利用することが多いですか？",
+      "待ち時間が長いことがありますか？",
+      "手続きが分かりにくいことがありますか？",
+      "本人確認が必要ですか？"
+    ]
+  },
+  {
+    word: "交番",
+    near: "案内所",
+    questions: [
+      "道を尋ねることができますか？",
+      "困ったときに利用しますか？",
+      "街中にありますか？",
+      "常に人がいるとは限りませんか？",
+      "場所を知らない人もいますか？"
+    ]
+  },
+  {
+    word: "裁判所",
+    near: "議会",
+    questions: [
+      "静かにする必要がありますか？",
+      "法律に関係する場所ですか？",
+      "一般の人が入れることがありますか？",
+      "重要な判断が行われますか？",
+      "発言の記録が残りますか？"
+    ]
+  },
+  {
+    word: "刑務所",
+    near: "留置場",
+    questions: [
+      "自由に出入りできませんか？",
+      "警備が厳しいですか？",
+      "規則正しい生活をしますか？",
+      "一般の人は中を見られませんか？",
+      "罪や事件に関係する場所ですか？"
+    ]
+  },
+  {
+    word: "工場",
+    near: "倉庫",
+    questions: [
+      "大きな建物ですか？",
+      "機械が置かれていますか？",
+      "多くの物を扱いますか？",
+      "安全確認が必要ですか？",
+      "一般の人が入れない場所がありますか？"
+    ]
+  },
+  {
+    word: "建設現場",
+    near: "工事現場",
+    questions: [
+      "ヘルメットが必要ですか？",
+      "大きな音がしますか？",
+      "危険な場所がありますか？",
+      "重い機械を使いますか？",
+      "完成すると景色が変わりますか？"
+    ]
+  },
+  {
+    word: "農場",
+    near: "牧場",
+    questions: [
+      "広い土地が必要ですか？",
+      "早朝から作業しますか？",
+      "食べ物を生産しますか？",
+      "動物がいることがありますか？",
+      "天候の影響を受けますか？"
+    ]
+  },
+  {
+    word: "港",
+    near: "漁港",
+    questions: [
+      "船が出入りしますか？",
+      "海のにおいがしますか？",
+      "早朝から人が働いていますか？",
+      "荷物を運ぶことがありますか？",
+      "魚を扱うことがありますか？"
+    ]
+  },
+  {
+    word: "灯台",
+    near: "電波塔",
+    questions: [
+      "遠くから見えますか？",
+      "高い建造物ですか？",
+      "光や信号を出しますか？",
+      "一般の人が上れることがありますか？",
+      "景色の良い場所にありますか？"
+    ]
+  },
+  {
+    word: "城",
+    near: "宮殿",
+    questions: [
+      "昔の権力者が住んでいましたか？",
+      "観光地になることがありますか？",
+      "大きな門がありますか？",
+      "内部を見学できますか？",
+      "豪華な装飾がありますか？"
+    ]
+  },
+  {
+    word: "ピラミッド",
+    near: "古墳",
+    questions: [
+      "昔の墓として作られましたか？",
+      "歴史的な建造物ですか？",
+      "大きな土や石を使っていますか？",
+      "内部に入れることがありますか？",
+      "観光客が訪れますか？"
+    ]
+  },
+  {
+    word: "遺跡",
+    near: "廃墟",
+    questions: [
+      "昔の建物の跡ですか？",
+      "危険な場所がありますか？",
+      "写真を撮りたくなりますか？",
+      "立入禁止の区域がありますか？",
+      "歴史を感じられますか？"
+    ]
+  },
+  {
+    word: "宇宙",
+    near: "深海",
+    questions: [
+      "人間が簡単には行けない場所ですか？",
+      "暗い場所ですか？",
+      "未知の生物や物質がありそうですか？",
+      "専用の装備が必要ですか？",
+      "研究対象になりますか？"
+    ]
+  },
+  {
+    word: "月",
+    near: "火星",
+    questions: [
+      "地球から見ることができますか？",
+      "人類が行こうとしていますか？",
+      "空気がほとんどありませんか？",
+      "夜空に関係しますか？",
+      "表面に大きな地形がありますか？"
+    ]
+  },
+  {
+    word: "太陽",
+    near: "恒星",
+    questions: [
+      "非常に熱いですか？",
+      "自ら光を出しますか？",
+      "直接見ると危険ですか？",
+      "地球から遠く離れていますか？",
+      "生命に影響を与えますか？"
+    ]
+  },
+  {
+    word: "虹",
+    near: "オーロラ",
+    questions: [
+      "空に現れますか？",
+      "色が複数見えますか？",
+      "いつでも見られるわけではありませんか？",
+      "写真を撮りたくなりますか？",
+      "自然現象ですか？"
+    ]
+  },
+  {
+    word: "雷",
+    near: "花火",
+    questions: [
+      "大きな音がしますか？",
+      "空が光りますか？",
+      "突然発生することがありますか？",
+      "苦手な動物がいますか？",
+      "近くで見ると危険ですか？"
+    ]
+  },
+  {
+    word: "台風",
+    near: "竜巻",
+    questions: [
+      "強い風が発生しますか？",
+      "建物に被害を与えることがありますか？",
+      "事前に避難が必要ですか？",
+      "交通機関に影響しますか？",
+      "ニュースで進路を確認しますか？"
+    ]
+  },
+  {
+    word: "地震",
+    near: "噴火",
+    questions: [
+      "突然発生することがありますか？",
+      "避難が必要になることがありますか？",
+      "建物に被害が出ますか？",
+      "事前の備えが重要ですか？",
+      "自然災害ですか？"
+    ]
+  },
+  {
+    word: "雲",
+    near: "霧",
+    questions: [
+      "白く見えることがありますか？",
+      "水分を含んでいますか？",
+      "視界を悪くすることがありますか？",
+      "天気に関係しますか？",
+      "形が変わりますか？"
+    ]
+  },
+  {
+    word: "星座",
+    near: "星占い",
+    questions: [
+      "誕生日に関係しますか？",
+      "夜空を見て楽しめますか？",
+      "複数の種類がありますか？",
+      "昔から知られていますか？",
+      "人によって興味が分かれますか？"
+    ]
+  },
+  {
+    word: "恐竜",
+    near: "マンモス",
+    questions: [
+      "現在は絶滅していますか？",
+      "化石が見つかりますか？",
+      "大きな体を持つ種類がいますか？",
+      "博物館で見られますか？",
+      "子どもに人気がありますか？"
+    ]
+  },
+  {
+    word: "サメ",
+    near: "ワニ",
+    questions: [
+      "鋭い歯がありますか？",
+      "人間にとって危険な種類がありますか？",
+      "水中で生活しますか？",
+      "大きく成長しますか？",
+      "映画に登場することがありますか？"
+    ]
+  },
+  {
+    word: "イルカ",
+    near: "シャチ",
+    questions: [
+      "泳ぐのが得意ですか？",
+      "知能が高い印象がありますか？",
+      "水族館で見られますか？",
+      "群れで行動しますか？",
+      "ショーに登場することがありますか？"
+    ]
+  },
+  {
+    word: "カメ",
+    near: "カエル",
+    questions: [
+      "水辺にいることがありますか？",
+      "動きが遅い印象がありますか？",
+      "ペットとして飼えますか？",
+      "冬眠する種類がありますか？",
+      "卵から生まれますか？"
+    ]
+  },
+  {
+    word: "ハムスター",
+    near: "モルモット",
+    questions: [
+      "小さな動物ですか？",
+      "ケージで飼うことがありますか？",
+      "草や種を食べますか？",
+      "子どもでも飼いやすいですか？",
+      "夜に活動することがありますか？"
+    ]
+  },
+  {
+    word: "ウサギ",
+    near: "リス",
+    questions: [
+      "耳や尻尾に特徴がありますか？",
+      "植物を食べますか？",
+      "動きが素早いですか？",
+      "かわいい印象がありますか？",
+      "野生でも見られますか？"
+    ]
+  },
+  {
+    word: "フクロウ",
+    near: "コウモリ",
+    questions: [
+      "夜に活動しますか？",
+      "空を飛びますか？",
+      "暗い場所でも行動できますか？",
+      "洞窟や森にいますか？",
+      "少し不気味だと感じる人もいますか？"
+    ]
+  },
+  {
+    word: "カラス",
+    near: "ハト",
+    questions: [
+      "街中でよく見かけますか？",
+      "人間の食べ物を狙うことがありますか？",
+      "群れで集まることがありますか？",
+      "鳴き声が気になることがありますか？",
+      "公園にいますか？"
+    ]
+  },
+  {
+    word: "チョウ",
+    near: "トンボ",
+    questions: [
+      "空を飛ぶ昆虫ですか？",
+      "暖かい季節に見かけますか？",
+      "羽に特徴がありますか？",
+      "子どもが捕まえることがありますか？",
+      "水辺や花の近くにいますか？"
+    ]
+  },
+  {
+    word: "カブトムシ",
+    near: "クワガタ",
+    questions: [
+      "夏に人気がありますか？",
+      "角やあごに特徴がありますか？",
+      "子どもが飼うことがありますか？",
+      "木に集まりますか？",
+      "夜に活動しますか？"
+    ]
+  },
+  {
+    word: "アリ",
+    near: "ハチ",
+    questions: [
+      "集団で生活しますか？",
+      "巣を作りますか？",
+      "働く役割がありますか？",
+      "甘い物に集まることがありますか？",
+      "刺したりかんだりする種類がありますか？"
+    ]
+  },
+  {
+    word: "野球場",
+    near: "陸上競技場",
+    questions: [
+      "多くの観客が入れますか？",
+      "屋外にあることが多いですか？",
+      "選手を応援しますか？",
+      "大型の画面がありますか？",
+      "飲食物を買えることがありますか？"
+    ]
+  },
+  {
+    word: "体育館",
+    near: "武道館",
+    questions: [
+      "室内で運動しますか？",
+      "観客席がありますか？",
+      "床が広いですか？",
+      "大会が行われますか？",
+      "靴を履き替えることがありますか？"
+    ]
+  },
+  {
+    word: "ゴルフ場",
+    near: "スキー場",
+    questions: [
+      "広い土地が必要ですか？",
+      "専用の道具を使いますか？",
+      "天候の影響を受けますか？",
+      "初心者向けの場所がありますか？",
+      "利用料金が高いことがありますか？"
+    ]
+  },
+  {
+    word: "テニス",
+    near: "スカッシュ",
+    questions: [
+      "ラケットを使いますか？",
+      "二人で対戦できますか？",
+      "ボールを打ち返しますか？",
+      "体力が必要ですか？",
+      "室内でもできますか？"
+    ]
+  },
+  {
+    word: "バレーボール",
+    near: "ドッジボール",
+    questions: [
+      "ボールを手で扱いますか？",
+      "複数人で行いますか？",
+      "相手側にボールを送りますか？",
+      "体育の授業で行いますか？",
+      "顔にボールが当たると怖いですか？"
+    ]
+  },
+  {
+    word: "水泳",
+    near: "サーフィン",
+    questions: [
+      "水の中で行いますか？",
+      "泳げないと難しいですか？",
+      "専用の服装が必要ですか？",
+      "体力を使いますか？",
+      "天候の影響を受けることがありますか？"
+    ]
+  },
+  {
+    word: "マラソン",
+    near: "駅伝",
+    questions: [
+      "長い距離を走りますか？",
+      "持久力が必要ですか？",
+      "道路を使うことがありますか？",
+      "応援する人がいますか？",
+      "途中で水分補給しますか？"
+    ]
+  },
+  {
+    word: "ボクシング",
+    near: "空手",
+    questions: [
+      "相手と戦う競技ですか？",
+      "防具を使うことがありますか？",
+      "体重による区分がありますか？",
+      "パンチを使いますか？",
+      "けがをする可能性がありますか？"
+    ]
+  },
+  {
+    word: "柔道",
+    near: "レスリング",
+    questions: [
+      "相手を投げることがありますか？",
+      "組み合って戦いますか？",
+      "床にマットを敷きますか？",
+      "体格が影響しますか？",
+      "押さえ込みがありますか？"
+    ]
+  },
+  {
+    word: "剣道",
+    near: "フェンシング",
+    questions: [
+      "細長い武器を使いますか？",
+      "防具を着けますか？",
+      "相手の体を狙いますか？",
+      "礼儀が重要ですか？",
+      "素早い反応が必要ですか？"
+    ]
+  },
+  {
+    word: "ダンス",
+    near: "体操",
+    questions: [
+      "体を大きく動かしますか？",
+      "音楽に合わせることがありますか？",
+      "柔軟性が必要ですか？",
+      "発表会がありますか？",
+      "複数人で合わせることがありますか？"
+    ]
+  },
+  {
+    word: "ピアノ",
+    near: "オルガン",
+    questions: [
+      "鍵盤がありますか？",
+      "両手を使って演奏しますか？",
+      "大きな楽器ですか？",
+      "電気を使う種類がありますか？",
+      "学校に置かれていることがありますか？"
+    ]
+  },
+  {
+    word: "ギター",
+    near: "ベース",
+    questions: [
+      "弦を使う楽器ですか？",
+      "バンドで演奏しますか？",
+      "指が痛くなることがありますか？",
+      "電気につなぐ種類がありますか？",
+      "立って演奏できますか？"
+    ]
+  },
+  {
+    word: "バイオリン",
+    near: "チェロ",
+    questions: [
+      "弓を使って演奏しますか？",
+      "木で作られていますか？",
+      "弦が張られていますか？",
+      "オーケストラで使いますか？",
+      "演奏が難しいですか？"
+    ]
+  },
+  {
+    word: "トランペット",
+    near: "トロンボーン",
+    questions: [
+      "息を吹き込んで演奏しますか？",
+      "金属で作られていますか？",
+      "大きな音が出ますか？",
+      "吹奏楽で使いますか？",
+      "唇の使い方が重要ですか？"
+    ]
+  },
+  {
+    word: "ドラム",
+    near: "和太鼓",
+    questions: [
+      "棒を使ってたたきますか？",
+      "大きな音が出ますか？",
+      "リズムが重要ですか？",
+      "複数の人と演奏しますか？",
+      "体力を使いますか？"
+    ]
+  },
+  {
+    word: "合唱",
+    near: "ミュージカル",
+    questions: [
+      "複数人で声を合わせますか？",
+      "練習が必要ですか？",
+      "舞台で発表しますか？",
+      "音程が重要ですか？",
+      "衣装を着ることがありますか？"
+    ]
+  },
+  {
+    word: "コンサート",
+    near: "音楽フェス",
+    questions: [
+      "大勢の観客が集まりますか？",
+      "大きな音で音楽を聴きますか？",
+      "チケットが必要ですか？",
+      "立ったまま楽しむことがありますか？",
+      "好きな出演者を目当てに行きますか？"
+    ]
+  },
+  {
+    word: "落語",
+    near: "漫才",
+    questions: [
+      "人を笑わせるものですか？",
+      "話す技術が重要ですか？",
+      "舞台で披露されますか？",
+      "少人数で演じますか？",
+      "言葉だけでも楽しめますか？"
+    ]
+  },
+  {
+    word: "手品",
+    near: "大道芸",
+    questions: [
+      "観客を驚かせますか？",
+      "練習が必要ですか？",
+      "仕掛けがありますか？",
+      "人前で披露しますか？",
+      "失敗すると分かりやすいですか？"
+    ]
+  },
+  {
+    word: "演劇",
+    near: "映画撮影",
+    questions: [
+      "役を演じますか？",
+      "台本がありますか？",
+      "衣装や小道具を使いますか？",
+      "何度も練習しますか？",
+      "多くのスタッフが関わりますか？"
+    ]
+  },
+  {
+    word: "小学校",
+    near: "幼稚園",
+    questions: [
+      "子どもが通う場所ですか？",
+      "先生がいますか？",
+      "給食があることがありますか？",
+      "行事がありますか？",
+      "保護者が迎えに行くことがありますか？"
+    ]
+  },
+  {
+    word: "高校",
+    near: "大学",
+    questions: [
+      "試験がありますか？",
+      "専門的な授業がありますか？",
+      "部活動やサークルがありますか？",
+      "卒業式がありますか？",
+      "進路を考える場所ですか？"
+    ]
+  },
+  {
+    word: "職員室",
+    near: "会議室",
+    questions: [
+      "仕事をする人が集まりますか？",
+      "机が複数ありますか？",
+      "用事がないと入りにくいですか？",
+      "書類が置かれていますか？",
+      "静かにする必要がありますか？"
+    ]
+  },
+  {
+    word: "教室",
+    near: "講義室",
+    questions: [
+      "机と椅子がありますか？",
+      "前に黒板や画面がありますか？",
+      "多くの人が同じ方向を向きますか？",
+      "授業に使いますか？",
+      "席が決まっていることがありますか？"
+    ]
+  },
+  {
+    word: "校庭",
+    near: "運動場",
+    questions: [
+      "屋外で運動しますか？",
+      "土や芝生がありますか？",
+      "行事に使われますか？",
+      "雨が降ると使いにくいですか？",
+      "走ることができますか？"
+    ]
+  },
+  {
+    word: "入学式",
+    near: "卒業式",
+    questions: [
+      "正装で参加しますか？",
+      "学校で行われますか？",
+      "写真を撮りますか？",
+      "家族が参加することがありますか？",
+      "代表者が話しますか？"
+    ]
+  },
+  {
+    word: "文化祭",
+    near: "学園祭",
+    questions: [
+      "学生が準備しますか？",
+      "食べ物を販売することがありますか？",
+      "外部の人が訪れますか？",
+      "出し物がありますか？",
+      "普段と学校の雰囲気が変わりますか？"
+    ]
+  },
+  {
+    word: "試験",
+    near: "面接",
+    questions: [
+      "事前の準備が必要ですか？",
+      "緊張する人が多いですか？",
+      "結果が後から分かりますか？",
+      "時間制限がありますか？",
+      "失敗すると困ることがありますか？"
+    ]
+  },
+  {
+    word: "宿題",
+    near: "自由研究",
+    questions: [
+      "家で取り組むことがありますか？",
+      "提出期限がありますか？",
+      "先生に確認されますか？",
+      "忘れると困りますか？",
+      "自分で考える必要がありますか？"
+    ]
+  },
+  {
+    word: "教科書",
+    near: "参考書",
+    questions: [
+      "勉強に使いますか？",
+      "文字や図が載っていますか？",
+      "学校に持っていきますか？",
+      "書き込みをすることがありますか？",
+      "内容が難しいことがありますか？"
+    ]
+  },
+  {
+    word: "鉛筆",
+    near: "シャープペンシル",
+    questions: [
+      "文字を書くために使いますか？",
+      "芯が折れることがありますか？",
+      "消しゴムで消せますか？",
+      "学校で使いますか？",
+      "先を細くする必要がありますか？"
+    ]
+  },
+  {
+    word: "定規",
+    near: "分度器",
+    questions: [
+      "長さや角度を測りますか？",
+      "透明な製品がありますか？",
+      "学校の授業で使いますか？",
+      "線を引くために使えますか？",
+      "数字が書かれていますか？"
+    ]
+  },
+  {
+    word: "黒板",
+    near: "ホワイトボード",
+    questions: [
+      "前に立って文字を書きますか？",
+      "授業や会議で使いますか？",
+      "消して繰り返し使えますか？",
+      "専用の筆記具が必要ですか？",
+      "書いた内容を写真に撮ることがありますか？"
+    ]
+  },
+  {
+    word: "ランドセル",
+    near: "通学かばん",
+    questions: [
+      "学校に持っていきますか？",
+      "教科書を入れますか？",
+      "毎日背負うことがありますか？",
+      "色を選べますか？",
+      "重くなることがありますか？"
+    ]
+  },
+  {
+    word: "会社員",
+    near: "公務員",
+    questions: [
+      "組織に所属して働きますか？",
+      "給与を受け取りますか？",
+      "勤務時間が決まっていますか？",
+      "上司がいますか？",
+      "転勤することがありますか？"
+    ]
+  },
+  {
+    word: "営業職",
+    near: "販売員",
+    questions: [
+      "人と話す機会が多いですか？",
+      "商品やサービスを勧めますか？",
+      "目標が設定されることがありますか？",
+      "相手の希望を聞きますか？",
+      "第一印象が重要ですか？"
+    ]
+  },
+  {
+    word: "事務職",
+    near: "受付",
+    questions: [
+      "机で仕事をすることが多いですか？",
+      "電話対応をしますか？",
+      "書類を扱いますか？",
+      "パソコンを使いますか？",
+      "正確さが重要ですか？"
+    ]
+  },
+  {
+    word: "プログラマー",
+    near: "システムエンジニア",
+    questions: [
+      "パソコンを使う仕事ですか？",
+      "専門知識が必要ですか？",
+      "不具合を直すことがありますか？",
+      "長時間座ることがありますか？",
+      "チームで働くことがありますか？"
+    ]
+  },
+  {
+    word: "デザイナー",
+    near: "イラストレーター",
+    questions: [
+      "見た目を考える仕事ですか？",
+      "パソコンを使うことがありますか？",
+      "依頼者の希望を聞きますか？",
+      "修正を求められることがありますか？",
+      "作品を公開することがありますか？"
+    ]
+  },
+  {
+    word: "カメラマン",
+    near: "映像制作者",
+    questions: [
+      "撮影機材を使いますか？",
+      "光の当たり方を考えますか？",
+      "人や景色を撮りますか？",
+      "後から編集しますか？",
+      "大切な行事で依頼されますか？"
+    ]
+  },
+  {
+    word: "美容師",
+    near: "理容師",
+    questions: [
+      "髪を切る仕事ですか？",
+      "はさみを使いますか？",
+      "客と会話しますか？",
+      "資格が必要ですか？",
+      "立って働く時間が長いですか？"
+    ]
+  },
+  {
+    word: "大工",
+    near: "建築士",
+    questions: [
+      "建物に関係する仕事ですか？",
+      "専門的な知識が必要ですか？",
+      "図面を見ることがありますか？",
+      "安全確認が重要ですか？",
+      "完成した物が形に残りますか？"
+    ]
+  },
+  {
+    word: "漁師",
+    near: "船員",
+    questions: [
+      "船に乗って働きますか？",
+      "早朝や夜に働くことがありますか？",
+      "天候の影響を受けますか？",
+      "海の上で長時間過ごしますか？",
+      "体力が必要ですか？"
+    ]
+  },
+  {
+    word: "農家",
+    near: "園芸家",
+    questions: [
+      "植物を育てますか？",
+      "天候に左右されますか？",
+      "土を扱いますか？",
+      "季節ごとに作業が変わりますか？",
+      "早起きすることがありますか？"
+    ]
+  },
+  {
+    word: "消防士",
+    near: "救急救命士",
+    questions: [
+      "緊急時に出動しますか？",
+      "人の命を助けますか？",
+      "体力が必要ですか？",
+      "夜勤がありますか？",
+      "専門的な訓練を受けますか？"
+    ]
+  },
+  {
+    word: "弁護士",
+    near: "検察官",
+    questions: [
+      "法律の知識が必要ですか？",
+      "裁判に関わりますか？",
+      "資格が必要ですか？",
+      "書類を多く扱いますか？",
+      "人の話を詳しく聞きますか？"
+    ]
+  },
+  {
+    word: "通訳",
+    near: "翻訳家",
+    questions: [
+      "複数の言語を扱いますか？",
+      "言葉の意味を正確に伝えますか？",
+      "専門用語を学ぶ必要がありますか？",
+      "外国の人と関わりますか？",
+      "機械に代替されることがありますか？"
+    ]
+  },
+  {
+    word: "科学者",
+    near: "発明家",
+    questions: [
+      "新しいことを研究しますか？",
+      "実験することがありますか？",
+      "失敗を繰り返しますか？",
+      "専門知識が必要ですか？",
+      "社会を変える成果を生むことがありますか？"
+    ]
+  },
+  {
+    word: "宇宙飛行士",
+    near: "パイロット",
+    questions: [
+      "厳しい訓練を受けますか？",
+      "乗り物を操縦することがありますか？",
+      "健康状態が重要ですか？",
+      "空より高い場所へ行きますか？",
+      "多くの人が憧れますか？"
+    ]
+  },
+  {
+    word: "ロボット",
+    near: "人工知能",
+    questions: [
+      "人間の仕事を助けますか？",
+      "電気が必要ですか？",
+      "指示に従って動きますか？",
+      "将来さらに普及しそうですか？",
+      "人間に似た能力がありますか？"
+    ]
+  },
+  {
+    word: "ドローン",
+    near: "ラジコン",
+    questions: [
+      "遠隔操作できますか？",
+      "空を飛ぶ種類がありますか？",
+      "充電が必要ですか？",
+      "撮影に使えますか？",
+      "操作を誤ると危険ですか？"
+    ]
+  },
+  {
+    word: "自動販売機",
+    near: "券売機",
+    questions: [
+      "お金を入れて使いますか？",
+      "人と話さずに利用できますか？",
+      "ボタンを押して選びますか？",
+      "現金以外でも支払えますか？",
+      "屋外に置かれることがありますか？"
+    ]
+  },
+  {
+    word: "信号機",
+    near: "踏切",
+    questions: [
+      "止まる必要があることを知らせますか？",
+      "光や音を使いますか？",
+      "道路の安全に関係しますか？",
+      "無視すると危険ですか？",
+      "故障すると困りますか？"
+    ]
+  },
+  {
+    word: "防犯カメラ",
+    near: "ドライブレコーダー",
+    questions: [
+      "映像を記録しますか？",
+      "事故や事件の証拠になりますか？",
+      "常に人が見ているとは限りませんか？",
+      "プライバシーが気になることがありますか？",
+      "定期的にデータが上書きされますか？"
+    ]
+  },
+  {
+    word: "鍵",
+    near: "暗証番号",
+    questions: [
+      "他人に知られると困りますか？",
+      "家や物を守るために使いますか？",
+      "忘れると中に入れませんか？",
+      "複製される可能性がありますか？",
+      "定期的に変更することがありますか？"
+    ]
+  },
+  {
+    word: "パスポート",
+    near: "運転免許証",
+    questions: [
+      "本人確認に使えますか？",
+      "顔写真が載っていますか？",
+      "有効期限がありますか？",
+      "紛失すると困りますか？",
+      "取得に手続きが必要ですか？"
+    ]
+  },
+  {
+    word: "地図",
+    near: "カーナビ",
+    questions: [
+      "目的地を探すために使いますか？",
+      "現在地が分かりますか？",
+      "道に迷ったときに役立ちますか？",
+      "古い情報だと困りますか？",
+      "縮尺がありますか？"
+    ]
+  },
+  {
+    word: "辞書",
+    near: "百科事典",
+    questions: [
+      "言葉や物事を調べますか？",
+      "多くの情報が載っていますか？",
+      "紙と電子の両方がありますか？",
+      "学校で使うことがありますか？",
+      "最初から順番に読む物ではありませんか？"
+    ]
+  },
+  {
+    word: "新聞",
+    near: "ニュースサイト",
+    questions: [
+      "最新情報を知るために使いますか？",
+      "毎日更新されますか？",
+      "広告が載っていますか？",
+      "社会の出来事を扱いますか？",
+      "内容が偏ることがありますか？"
+    ]
+  },
+  {
+    word: "雑誌",
+    near: "カタログ",
+    questions: [
+      "写真が多く載っていますか？",
+      "定期的に新しい物が出ますか？",
+      "商品を紹介することがありますか？",
+      "興味のある分野だけ読みますか？",
+      "紙で見ることがありますか？"
+    ]
+  },
+  {
+    word: "日記",
+    near: "ブログ",
+    questions: [
+      "日々の出来事を書きますか？",
+      "自分の気持ちを残せますか？",
+      "他人に見せることがありますか？",
+      "後から読み返しますか？",
+      "毎日続けるのは大変ですか？"
+    ]
+  },
+  {
+    word: "手紙",
+    near: "メッセージカード",
+    questions: [
+      "相手に気持ちを伝えますか？",
+      "手書きすることがありますか？",
+      "特別な日に渡しますか？",
+      "封筒に入れることがありますか？",
+      "受け取るとうれしいですか？"
+    ]
+  },
+  {
+    word: "ポスター",
+    near: "看板",
+    questions: [
+      "多くの人に情報を伝えますか？",
+      "目立つデザインが必要ですか？",
+      "文字と画像を使いますか？",
+      "屋外に置かれることがありますか？",
+      "イベントや店を宣伝しますか？"
+    ]
+  },
+  {
+    word: "広告",
+    near: "レビュー",
+    questions: [
+      "商品を選ぶ参考になりますか？",
+      "良い点が強調されますか？",
+      "インターネットで見かけますか？",
+      "内容をそのまま信じない方が良いですか？",
+      "企業や個人が作りますか？"
+    ]
+  },
+  {
+    word: "動画広告",
+    near: "テレビCM",
+    questions: [
+      "映像と音を使いますか？",
+      "途中で表示されると邪魔ですか？",
+      "短い時間で内容を伝えますか？",
+      "有名人が出演することがありますか？",
+      "商品やサービスを宣伝しますか？"
+    ]
+  },
+  {
+    word: "検索エンジン",
+    near: "生成AI",
+    questions: [
+      "質問や言葉を入力して使いますか？",
+      "インターネット上の情報に関係しますか？",
+      "間違った答えが出ることがありますか？",
+      "調べ物に使えますか？",
+      "使い方によって結果が変わりますか？"
+    ]
+  },
+  {
+    word: "パスワード",
+    near: "合言葉",
+    questions: [
+      "他人に知られてはいけませんか？",
+      "本人確認に使いますか？",
+      "忘れると困りますか？",
+      "複雑な方が安全ですか？",
+      "声に出して伝えることがありますか？"
+    ]
+  },
+  {
+    word: "ウイルス対策ソフト",
+    near: "ファイアウォール",
+    questions: [
+      "パソコンを守るために使いますか？",
+      "危険な通信を防ぎますか？",
+      "設定が必要ですか？",
+      "更新しないと安全性が下がりますか？",
+      "普段は動作が見えにくいですか？"
+    ]
+  },
+  {
+    word: "ゲーム機",
+    near: "ゲーミングパソコン",
+    questions: [
+      "ゲームを遊ぶために使いますか？",
+      "高価な物がありますか？",
+      "オンラインに接続できますか？",
+      "コントローラーを使うことがありますか？",
+      "映像の美しさが重要ですか？"
+    ]
+  },
+  {
+    word: "ボードゲーム",
+    near: "カードゲーム",
+    questions: [
+      "複数人で遊べますか？",
+      "ルールを覚える必要がありますか？",
+      "運と実力の両方が関係しますか？",
+      "テーブルを使いますか？",
+      "繰り返し遊べますか？"
+    ]
+  },
+  {
+    word: "将棋",
+    near: "チェス",
+    questions: [
+      "盤の上で駒を動かしますか？",
+      "二人で対戦しますか？",
+      "先を読む力が必要ですか？",
+      "駒ごとに動き方が違いますか？",
+      "運の要素が少ないですか？"
+    ]
+  },
+  {
+    word: "囲碁",
+    near: "オセロ",
+    questions: [
+      "白と黒の石を使いますか？",
+      "盤の上で対戦しますか？",
+      "二人で遊びますか？",
+      "先を読む必要がありますか？",
+      "最後に数を比べますか？"
+    ]
+  },
+  {
+    word: "トランプ",
+    near: "UNO",
+    questions: [
+      "複数人で遊べますか？",
+      "数字や記号が書かれていますか？",
+      "手札を持ちますか？",
+      "運が勝敗に影響しますか？",
+      "旅行先でも遊びやすいですか？"
+    ]
+  },
+  {
+    word: "パズル",
+    near: "迷路",
+    questions: [
+      "考えながら解きますか？",
+      "正しい答えがありますか？",
+      "子どもでも楽しめますか？",
+      "時間をかけて取り組みますか？",
+      "途中で行き詰まることがありますか？"
+    ]
+  },
+  {
+    word: "クイズ",
+    near: "なぞなぞ",
+    questions: [
+      "答えを考えますか？",
+      "知識が必要ですか？",
+      "正解すると気持ち良いですか？",
+      "複数人で競えますか？",
+      "問題を出す人がいますか？"
+    ]
+  },
+  {
+    word: "かくれんぼ",
+    near: "鬼ごっこ",
+    questions: [
+      "鬼になる人がいますか？",
+      "子どもが遊ぶことが多いですか？",
+      "広い場所が必要ですか？",
+      "走ることがありますか？",
+      "見つかると困りますか？"
+    ]
+  },
+  {
+    word: "福笑い",
+    near: "目隠しゲーム",
+    questions: [
+      "目を閉じて行いますか？",
+      "結果を見て笑うことがありますか？",
+      "正確に行うのは難しいですか？",
+      "複数人で楽しめますか？",
+      "道具を準備しますか？"
+    ]
+  },
+  {
+    word: "人形",
+    near: "ぬいぐるみ",
+    questions: [
+      "子どもが遊ぶことがありますか？",
+      "部屋に飾れますか？",
+      "人や動物の形をしていますか？",
+      "名前を付けることがありますか？",
+      "大切に保管する人がいますか？"
+    ]
+  },
+  {
+    word: "模型",
+    near: "プラモデル",
+    questions: [
+      "組み立てることがありますか？",
+      "細かい部品がありますか？",
+      "完成後に飾りますか？",
+      "塗装することがありますか？",
+      "実物を小さく再現しますか？"
+    ]
+  },
+  {
+    word: "折り紙",
+    near: "切り絵",
+    questions: [
+      "紙を使って作りますか？",
+      "手先の器用さが必要ですか？",
+      "子どもでも楽しめますか？",
+      "作品を飾れますか？",
+      "失敗してもやり直しやすいですか？"
+    ]
+  },
+  {
+    word: "編み物",
+    near: "裁縫",
+    questions: [
+      "糸を使いますか？",
+      "手作業で作りますか？",
+      "細かい作業が必要ですか？",
+      "衣類を作ることがありますか？",
+      "完成まで時間がかかりますか？"
+    ]
+  },
+  {
+    word: "絵画",
+    near: "書道",
+    questions: [
+      "筆を使うことがありますか？",
+      "紙に表現しますか？",
+      "作品を展示できますか？",
+      "上手さに個人差がありますか？",
+      "集中力が必要ですか？"
+    ]
+  },
+  {
+    word: "陶芸",
+    near: "彫刻",
+    questions: [
+      "立体的な作品を作りますか？",
+      "手を使って形を整えますか？",
+      "完成まで時間がかかりますか？",
+      "専用の道具がありますか？",
+      "作品を飾ったり使ったりできますか？"
+    ]
+  },
+  {
+    word: "釣り",
+    near: "潮干狩り",
+    questions: [
+      "水辺で行いますか？",
+      "天候の影響を受けますか？",
+      "道具を準備しますか？",
+      "食べられる物を取ることがありますか？",
+      "待つ時間が長いことがありますか？"
+    ]
+  },
+  {
+    word: "園芸",
+    near: "家庭菜園",
+    questions: [
+      "植物を育てますか？",
+      "水やりが必要ですか？",
+      "土を使いますか？",
+      "成長を待つ楽しみがありますか？",
+      "虫の対策が必要ですか？"
+    ]
+  },
+  {
+    word: "掃除",
+    near: "片付け",
+    questions: [
+      "部屋をきれいにしますか？",
+      "定期的に行う必要がありますか？",
+      "面倒に感じることがありますか？",
+      "物を移動させますか？",
+      "終わると気持ち良いですか？"
+    ]
+  },
+  {
+    word: "引っ越し",
+    near: "大掃除",
+    questions: [
+      "多くの物を整理しますか？",
+      "不要品を捨てますか？",
+      "体力を使いますか？",
+      "事前の準備が必要ですか？",
+      "業者に依頼することがありますか？"
+    ]
+  },
+  {
+    word: "昼寝",
+    near: "二度寝",
+    questions: [
+      "短時間眠りますか？",
+      "起きた後に後悔することがありますか？",
+      "疲れているとしたくなりますか？",
+      "予定に遅れる原因になりますか？",
+      "休日にすることが多いですか？"
+    ]
+  },
+  {
+    word: "早起き",
+    near: "夜更かし",
+    questions: [
+      "生活習慣に関係しますか？",
+      "体調に影響しますか？",
+      "仕事や学校がある日に意識しますか？",
+      "習慣化するのは難しいですか？",
+      "静かな時間を過ごせますか？"
+    ]
+  },
+  {
+    word: "散歩",
+    near: "ジョギング",
+    questions: [
+      "屋外で行いますか？",
+      "健康のためにできますか？",
+      "動きやすい靴が必要ですか？",
+      "一人でもできますか？",
+      "景色を楽しめますか？"
+    ]
+  },
+  {
+    word: "筋力トレーニング",
+    near: "ストレッチ",
+    questions: [
+      "自宅でもできますか？",
+      "健康のために行いますか？",
+      "継続が重要ですか？",
+      "正しい姿勢が必要ですか？",
+      "終わった後に体が痛くなることがありますか？"
+    ]
+  },
+  {
+    word: "健康診断",
+    near: "人間ドック",
+    questions: [
+      "定期的に受けますか？",
+      "病気を早く見つけるために行いますか？",
+      "食事制限が必要なことがありますか？",
+      "複数の検査を受けますか？",
+      "結果が後日届きますか？"
+    ]
+  },
+  {
+    word: "歯医者",
+    near: "眼科",
+    questions: [
+      "定期的に通う人がいますか？",
+      "検査を受けますか？",
+      "苦手な人がいますか？",
+      "予約が必要ですか？",
+      "専門的な器具を使いますか？"
+    ]
+  },
+  {
+    word: "注射",
+    near: "採血",
+    questions: [
+      "針を使いますか？",
+      "痛みを感じることがありますか？",
+      "腕に行うことが多いですか？",
+      "苦手な人が多いですか？",
+      "医療機関で行いますか？"
+    ]
+  },
+  {
+    word: "風邪",
+    near: "花粉症",
+    questions: [
+      "鼻水が出ますか？",
+      "せきやくしゃみが出ますか？",
+      "薬を飲むことがありますか？",
+      "季節によって増えますか？",
+      "人にうつる可能性がありますか？"
+    ]
+  },
+  {
+    word: "骨折",
+    near: "捻挫",
+    questions: [
+      "強い痛みがありますか？",
+      "スポーツ中に起きることがありますか？",
+      "病院で検査しますか？",
+      "しばらく動かしにくくなりますか？",
+      "固定することがありますか？"
+    ]
+  },
+  {
+    word: "マスク",
+    near: "眼鏡",
+    questions: [
+      "顔に着けますか？",
+      "長時間着けると不快ですか？",
+      "曇ることがありますか？",
+      "外出時に使いますか？",
+      "自分に合う大きさが必要ですか？"
+    ]
+  },
+  {
+    word: "夢占い",
+    near: "性格診断",
+    questions: [
+      "結果を信じる人と信じない人がいますか？",
+      "自分について知るために使いますか？",
+      "インターネットで簡単に試せますか？",
+      "結果を人と比べますか？",
+      "科学的とは限りませんか？"
+    ]
+  },
+  {
+    word: "幽霊",
+    near: "宇宙人",
+    questions: [
+      "存在を信じない人もいますか？",
+      "実際に見たという人がいますか？",
+      "怖いと感じることがありますか？",
+      "映画や物語に登場しますか？",
+      "写真や映像が話題になりますか？"
+    ]
+  },
+  {
+    word: "吸血鬼",
+    near: "ゾンビ",
+    questions: [
+      "人間を襲う物語がありますか？",
+      "夜に活動する印象がありますか？",
+      "映画やゲームに登場しますか？",
+      "普通の人間とは違う弱点がありますか？",
+      "仲間を増やすことがありますか？"
+    ]
+  },
+  {
+    word: "魔法使い",
+    near: "錬金術師",
+    questions: [
+      "不思議な力を使いますか？",
+      "物語やゲームに登場しますか？",
+      "特別な道具を持っていますか？",
+      "長い修行や勉強が必要ですか？",
+      "物を変化させることがありますか？"
+    ]
+  },
+  {
+    word: "勇者",
+    near: "騎士",
+    questions: [
+      "敵と戦いますか？",
+      "武器を持っていますか？",
+      "人々を守りますか？",
+      "物語の中心人物になりますか？",
+      "危険な旅に出ますか？"
+    ]
+  },
+  {
+    word: "忍者",
+    near: "侍",
+    questions: [
+      "昔の日本に関係しますか？",
+      "武器を使いますか？",
+      "映画や漫画に登場しますか？",
+      "特別な技を持つ印象がありますか？",
+      "海外でも知られていますか？"
+    ]
+  },
+  {
+    word: "海賊",
+    near: "冒険家",
+    questions: [
+      "船に乗ることがありますか？",
+      "未知の場所へ行きますか？",
+      "宝を探す物語がありますか？",
+      "危険な目に遭いますか？",
+      "地図を使いますか？"
+    ]
+  },
+  {
+    word: "ドラゴン",
+    near: "怪獣",
+    questions: [
+      "巨大な生き物ですか？",
+      "火を吐くことがありますか？",
+      "街を破壊する物語がありますか？",
+      "空を飛ぶ種類がありますか？",
+      "ゲームや映画に登場しますか？"
+    ]
+  },
+  {
+    word: "妖精",
+    near: "天使",
+    questions: [
+      "羽が描かれることがありますか？",
+      "人間を助ける物語がありますか？",
+      "小さかったり美しかったりしますか？",
+      "現実には存在しないと考えられていますか？",
+      "魔法や奇跡に関係しますか？"
+    ]
+  },
+  {
+    word: "悪魔",
+    near: "死神",
+    questions: [
+      "怖い姿で描かれますか？",
+      "人の命や魂に関係しますか？",
+      "物語の敵になることがありますか？",
+      "黒い服や暗い色の印象がありますか？",
+      "特別な武器を持つことがありますか？"
+    ]
+  },
+  {
+    word: "タイムマシン",
+    near: "瞬間移動装置",
+    questions: [
+      "現実には一般的に存在しませんか？",
+      "遠い場所や時代へ行けますか？",
+      "物語で重要な役割を持ちますか？",
+      "使うと問題が起こることがありますか？",
+      "科学技術として描かれますか？"
+    ]
+  },
+  {
+    word: "透明人間",
+    near: "変身能力",
+    questions: [
+      "他人に正体を隠せますか？",
+      "悪用すると危険ですか？",
+      "物語や映画に登場しますか？",
+      "普通の人にはできない能力ですか？",
+      "元に戻れなくなると困りますか？"
+    ]
+  },
+  {
+    word: "宝箱",
+    near: "金庫",
+    questions: [
+      "大切な物を入れますか？",
+      "鍵が付いていますか？",
+      "中身を見るまで分かりませんか？",
+      "重いことがありますか？",
+      "開けると何かが手に入りますか？"
+    ]
+  },
+  {
+    word: "迷宮",
+    near: "地下牢",
+    questions: [
+      "簡単に外へ出られませんか？",
+      "暗い場所ですか？",
+      "危険な物がいることがありますか？",
+      "物語やゲームに登場しますか？",
+      "道や部屋が複雑ですか？"
+    ]
+  },
+  {
+    word: "王冠",
+    near: "勲章",
+    questions: [
+      "特別な立場を表しますか？",
+      "身に着ける物ですか？",
+      "金色で作られることがありますか？",
+      "一般の人は持っていませんか？",
+      "儀式で使われることがありますか？"
+    ]
+  },
+  {
+    word: "指輪",
+    near: "ネックレス",
+    questions: [
+      "身に着ける装飾品ですか？",
+      "贈り物にすることがありますか？",
+      "高価な物がありますか？",
+      "宝石が付いていることがありますか？",
+      "紛失すると困りますか？"
+    ]
+  },
+  {
+    word: "香水",
+    near: "柔軟剤",
+    questions: [
+      "良い香りを付けるために使いますか？",
+      "好みが分かれますか？",
+      "使いすぎると周囲が気になりますか？",
+      "複数の香りから選べますか？",
+      "服に香りが残ることがありますか？"
+    ]
+  },
+  {
+    word: "化粧",
+    near: "スキンケア",
+    questions: [
+      "顔に使いますか？",
+      "毎日行う人がいますか？",
+      "複数の商品を使いますか？",
+      "自分に合わないと肌に影響しますか？",
+      "外出前に行うことがありますか？"
+    ]
+  },
+  {
+    word: "帽子",
+    near: "ヘルメット",
+    questions: [
+      "頭にかぶりますか？",
+      "日差しや衝撃から守りますか？",
+      "大きさが合わないと困りますか？",
+      "外出時に使いますか？",
+      "あごひもが付くことがありますか？"
+    ]
+  },
+  {
+    word: "手袋",
+    near: "軍手",
+    questions: [
+      "手を守るために使いますか？",
+      "左右一組で使いますか？",
+      "冬や作業時に使いますか？",
+      "汚れることがありますか？",
+      "大きさを選ぶ必要がありますか？"
+    ]
+  },
+  {
+    word: "長靴",
+    near: "登山靴",
+    questions: [
+      "普通の靴より重いですか？",
+      "悪い天候や地面で使いますか？",
+      "足を守るために履きますか？",
+      "長時間履くと疲れますか？",
+      "水や泥に強いですか？"
+    ]
+  },
+  {
+    word: "浴衣",
+    near: "着物",
+    questions: [
+      "日本の伝統的な服装ですか？",
+      "帯を使いますか？",
+      "特別な日に着ることがありますか？",
+      "着るのに時間がかかりますか？",
+      "動きにくいことがありますか？"
+    ]
+  },
+  {
+    word: "パジャマ",
+    near: "ジャージ",
+    questions: [
+      "自宅で着ることが多いですか？",
+      "動きやすさを重視しますか？",
+      "そのまま外出しにくいですか？",
+      "柔らかい素材が多いですか？",
+      "眠るときに着ることがありますか？"
+    ]
+  },
+  {
+    word: "制服のネクタイ",
+    near: "名札",
+    questions: [
+      "所属が分かる物ですか？",
+      "決められた場所で身に着けますか？",
+      "忘れると注意されることがありますか？",
+      "服装の一部ですか？",
+      "学校や会社で使いますか？"
+    ]
+  },
+  {
+    word: "卒業アルバム",
+    near: "写真集",
+    questions: [
+      "多くの写真が載っていますか？",
+      "後から見返しますか？",
+      "人に見せることがありますか？",
+      "長期間保管しますか？",
+      "思い出に関係しますか？"
+    ]
+  },
+  {
+    word: "同窓会",
+    near: "忘年会",
+    questions: [
+      "久しぶりに会う人がいますか？",
+      "飲食をしながら話しますか？",
+      "大人数で行うことがありますか？",
+      "参加するか迷うことがありますか？",
+      "昔の話をすることがありますか？"
+    ]
+  },
+  {
+    word: "歓迎会",
+    near: "新年会",
+    questions: [
+      "集団で飲食しますか？",
+      "あいさつをする人がいますか？",
+      "会社や学校で行うことがありますか？",
+      "参加が半ば必須になることがありますか？",
+      "人間関係を深める目的がありますか？"
+    ]
+  },
+  {
+    word: "葬式",
+    near: "法事",
+    questions: [
+      "静かな雰囲気ですか？",
+      "黒い服を着ることがありますか？",
+      "親族が集まりますか？",
+      "宗教的な儀式がありますか？",
+      "食事をすることがありますか？"
+    ]
+  },
+  {
+    word: "選挙",
+    near: "住民投票",
+    questions: [
+      "投票用紙を使いますか？",
+      "結果を多数決で決めますか？",
+      "決められた日に行われますか？",
+      "一人一票が基本ですか？",
+      "社会の決定に関係しますか？"
+    ]
+  },
+  {
+    word: "記者会見",
+    near: "謝罪会見",
+    questions: [
+      "多くのカメラが集まりますか？",
+      "質問に答える必要がありますか？",
+      "テレビで放送されることがありますか？",
+      "言葉選びが重要ですか？",
+      "緊張する場面ですか？"
+    ]
+  },
+  {
+    word: "裁判",
+    near: "討論会",
+    questions: [
+      "複数の立場が意見を述べますか？",
+      "証拠や根拠が重要ですか？",
+      "発言する順番がありますか？",
+      "第三者が判断しますか？",
+      "結果が人に影響しますか？"
+    ]
+  },
+  {
+    word: "記者",
+    near: "アナウンサー",
+    questions: [
+      "情報を人に伝える仕事ですか？",
+      "正確な言葉が必要ですか？",
+      "ニュースに関わりますか？",
+      "現場へ行くことがありますか？",
+      "多くの人に顔や名前を知られることがありますか？"
+    ]
+  },
+  {
+    word: "アイドル",
+    near: "俳優",
+    questions: [
+      "多くのファンがいますか？",
+      "テレビに出演しますか？",
+      "歌や演技をすることがありますか？",
+      "見た目やイメージが重要ですか？",
+      "イベントで人前に立ちますか？"
+    ]
+  },
+  {
+    word: "お笑い芸人",
+    near: "司会者",
+    questions: [
+      "人前で話しますか？",
+      "場を盛り上げますか？",
+      "テレビ番組に出演しますか？",
+      "話す技術が必要ですか？",
+      "予定外の出来事に対応しますか？"
+    ]
+  },
+  {
+    word: "YouTuber",
+    near: "配信者",
+    questions: [
+      "インターネットで活動しますか？",
+      "映像や音声を公開しますか？",
+      "視聴者の反応を受け取りますか？",
+      "広告収入を得ることがありますか？",
+      "定期的な投稿が必要ですか？"
+    ]
+  },
+  {
+    word: "ファンレター",
+    near: "応援コメント",
+    questions: [
+      "好きな人に気持ちを伝えますか？",
+      "返事が来るとは限りませんか？",
+      "文章を書きますか？",
+      "相手を励ます目的がありますか？",
+      "名前を明かさず送ることがありますか？"
+    ]
+  },
+  {
+    word: "握手会",
+    near: "サイン会",
+    questions: [
+      "好きな人物に直接会えますか？",
+      "短い時間しか話せませんか？",
+      "参加券が必要なことがありますか？",
+      "長い列に並ぶことがありますか？",
+      "記念になる物を得られますか？"
+    ]
+  },
+  {
+    word: "旅行",
+    near: "出張",
+    questions: [
+      "遠くへ移動しますか？",
+      "宿泊することがありますか？",
+      "荷物を準備しますか？",
+      "予定を立てますか？",
+      "仕事が関係する場合がありますか？"
+    ]
+  },
+  {
+    word: "日帰り旅行",
+    near: "ドライブ",
+    questions: [
+      "その日のうちに帰りますか？",
+      "遠くへ移動することがありますか？",
+      "途中で食事をしますか？",
+      "景色を楽しめますか？",
+      "事前に行き先を決めますか？"
+    ]
+  },
+  {
+    word: "海外旅行",
+    near: "海外留学",
+    questions: [
+      "パスポートが必要ですか？",
+      "外国語を使うことがありますか？",
+      "長期間滞在することがありますか？",
+      "文化の違いを感じますか？",
+      "高額な費用が必要ですか？"
+    ]
+  },
+  {
+    word: "バックパッカー",
+    near: "キャンピングカー旅行",
+    questions: [
+      "荷物を減らす必要がありますか？",
+      "宿泊場所を変えながら移動しますか？",
+      "自由な予定を立てられますか？",
+      "長期間旅行する人がいますか？",
+      "予想外の問題が起こりやすいですか？"
+    ]
+  },
+  {
+    word: "観光案内所",
+    near: "旅行代理店",
+    questions: [
+      "旅行の情報を得られますか？",
+      "おすすめの場所を教えてもらえますか？",
+      "地図や資料がありますか？",
+      "予約を依頼できることがありますか？",
+      "知らない地域で役立ちますか？"
+    ]
+  },
+  {
+    word: "ゲストハウス",
+    near: "カプセルホテル",
+    questions: [
+      "宿泊料金が比較的安いですか？",
+      "他の宿泊者と設備を共有しますか？",
+      "プライバシーが少ないことがありますか？",
+      "一人旅で利用しやすいですか？",
+      "荷物の管理に注意しますか？"
+    ]
+  },
+  {
+    word: "民宿",
+    near: "ペンション",
+    questions: [
+      "家庭的な雰囲気がありますか？",
+      "食事が提供されますか？",
+      "小規模な宿泊施設ですか？",
+      "経営者と会話することがありますか？",
+      "観光地にあることが多いですか？"
+    ]
+  },
+  {
+    word: "サービスエリア",
+    near: "道の駅",
+    questions: [
+      "車で移動中に利用しますか？",
+      "食事や買い物ができますか？",
+      "トイレ休憩に使いますか？",
+      "地域の商品を販売していますか？",
+      "休日に混雑しますか？"
+    ]
+  },
+  {
+    word: "旅行かばん",
+    near: "リュックサック",
+    questions: [
+      "荷物を入れて持ち運びますか？",
+      "旅行で使うことがありますか？",
+      "大きさを選ぶ必要がありますか？",
+      "重くなると移動が大変ですか？",
+      "鍵を付けられることがありますか？"
+    ]
+  },
+  {
+    word: "お土産屋",
+    near: "免税店",
+    questions: [
+      "旅行中に利用しますか？",
+      "地域や国に関係する商品がありますか？",
+      "人に渡す物を買いますか？",
+      "空港や観光地にありますか？",
+      "価格が高いと感じることがありますか？"
+    ]
+  },
+  {
+    word: "迷子センター",
+    near: "遺失物取扱所",
+    questions: [
+      "困ったときに利用しますか？",
+      "施設内にあることがありますか？",
+      "本人確認が必要なことがありますか？",
+      "放送で呼び出すことがありますか？",
+      "見つかるまで待つことがありますか？"
+    ]
+  },
+  {
+    word: "宝探し",
+    near: "スタンプラリー",
+    questions: [
+      "複数の場所を回りますか？",
+      "手がかりを集めますか？",
+      "子どもでも楽しめますか？",
+      "最後に景品をもらえることがありますか？",
+      "歩く距離が長くなることがありますか？"
+    ]
+  }
+];
+
+    const roleDefinitions = {
+      "招待客": {
+        team: "招待客陣営",
+        short: "本当のお題を知り、潜入スパイを探します。",
+        story: "あなたは正式な招待状を受け取り、この屋敷を訪れた招待客です。しかし、招待客の中には身分を偽った潜入スパイが紛れ込んでいます。会話の違和感を見逃さず、仲間と協力して正体を暴いてください。",
+        ability: "招待客陣営です。本当のお題を知っています。潜入スパイだけを追放できれば勝利に近づきます。お題を直接言うと潜入スパイに答えを教えてしまうため、遠回しに会話してください。"
+      },
+      "主催者": {
+        team: "招待客陣営",
+        short: "本当のお題とスパイ陣営の人数を知ります。",
+        story: "あなたはこの集まりを企画した主催者です。招待状の管理に不審な点があり、何者かが会場へ潜入していることを把握しています。ただし、主催者だと知られればスパイに警戒されてしまいます。",
+        ability: "招待客陣営です。本当のお題に加えて、潜入スパイと内通者を合わせた人数を知ります。自分の役職を悟られないよう、議論を正しい方向へ導いてください。"
+      },
+      "潜入スパイ": {
+        team: "スパイ陣営",
+        short: "本当のお題を知らず、招待客に紛れ込みます。",
+        story: "あなたは偽造した招待状を手に、正体を隠して会場へ潜入したスパイです。この集まりで何が話題になっているのかは分かりません。周囲の発言を利用し、正式な招待客らしく振る舞ってください。",
+        ability: "スパイ陣営です。本当のお題は表示されません。追放を逃れれば勝利です。追放された場合でも、最後に本当のお題を言い当てれば逆転できる想定です。"
+      },
+      "内通者": {
+        team: "スパイ陣営",
+        short: "本当のお題を知り、潜入スパイを援護します。",
+        story: "あなたは表向きには正式な招待客ですが、裏では潜入スパイに協力する内通者です。潜入スパイ本人が誰なのかは知らされていません。仲間を見極めながら、疑いを別の人物へ向けてください。",
+        ability: "スパイ陣営です。本当のお題を知っていますが、潜入スパイが誰かは分かりません。潜入スパイが追放されないよう議論を混乱させます。あなた自身が追放されても、潜入スパイが生き残れば陣営として勝利します。"
+      },
+      "迷子": {
+        team: "招待客陣営",
+        short: "似ている別のお題を受け取った招待客です。",
+        story: "あなたは正式に招かれた招待客ですが、会場案内を取り違え、別の集まりの資料を受け取ってしまいました。自分だけ話が少し噛み合わないことに戸惑いながらも、会場に潜むスパイを見つけなければなりません。",
+        ability: "招待客陣営です。本当のお題に似た別のお題が表示されます。潜入スパイではありません。発言が怪しまれやすいため、違和感を説明しつつ潜入スパイを探してください。"
+      }
+    };
+    const roleOrder = ["招待客", "主催者", "迷子", "潜入スパイ", "内通者"];
+    let roleCounts = {};
+
+    const ROLE_SETTINGS_DB_NAME = "missing-guests-settings";
+    const ROLE_SETTINGS_STORE_NAME = "role-settings";
+    const ROLE_SETTINGS_KEY = "role-counts";
+    const GAME_SETTINGS_KEY = "game-settings";
+
+    function openRoleSettingsDb() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(ROLE_SETTINGS_DB_NAME, 1);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(ROLE_SETTINGS_STORE_NAME)) {
+            db.createObjectStore(ROLE_SETTINGS_STORE_NAME);
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function loadSavedRoleCounts() {
+      const db = await openRoleSettingsDb();
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(ROLE_SETTINGS_STORE_NAME, "readonly");
+        const request = transaction.objectStore(ROLE_SETTINGS_STORE_NAME).get(ROLE_SETTINGS_KEY);
+        request.onsuccess = () => {
+          const saved = request.result;
+          const normalized = {};
+          roleOrder.forEach((role) => {
+            const value = Number.parseInt(saved?.[role], 10);
+            normalized[role] = Number.isFinite(value) ? Math.max(0, Math.min(20, value)) : 0;
+          });
+          resolve(saved ? normalized : null);
+        };
+        request.onerror = () => reject(request.error);
+        transaction.oncomplete = () => db.close();
+      });
+    }
+
+    async function saveRoleCounts() {
+      const db = await openRoleSettingsDb();
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(ROLE_SETTINGS_STORE_NAME, "readwrite");
+        transaction.objectStore(ROLE_SETTINGS_STORE_NAME).put({ ...roleCounts }, ROLE_SETTINGS_KEY);
+        transaction.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        transaction.onerror = () => reject(transaction.error);
+      });
+    }
+
+
+    async function loadSavedGameSettings() {
+      const db = await openRoleSettingsDb();
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(ROLE_SETTINGS_STORE_NAME, "readonly");
+        const request = transaction.objectStore(ROLE_SETTINGS_STORE_NAME).get(GAME_SETTINGS_KEY);
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error);
+        transaction.oncomplete = () => db.close();
+      });
+    }
+
+    async function saveGameSettings() {
+      const names = [...playerList.querySelectorAll("input")].map((input) => input.value);
+      const settings = {
+        playerCount: Number(playerCount.value),
+        discussionSeconds: Number(discussionMinutes.value),
+        playerNames: names
+      };
+      const db = await openRoleSettingsDb();
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(ROLE_SETTINGS_STORE_NAME, "readwrite");
+        transaction.objectStore(ROLE_SETTINGS_STORE_NAME).put(settings, GAME_SETTINGS_KEY);
+        transaction.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        transaction.onerror = () => reject(transaction.error);
+      });
+    }
+
+    const game = {
+      players: [], roles: [], topic: null, revealIndex: 0,
+      duration: 240, remaining: 240, timerId: null, running: false,
+      voteIndex: 0, selectedVote: null, votes: [],
+      questionOrder: [], questionIndex: 0
+    };
+
+    for (let n = 4; n <= 20; n += 1) {
+      const option = document.createElement("option");
+      option.value = n;
+      option.textContent = `${n}人`;
+      if (n === 6) option.selected = true;
+      playerCount.append(option);
+    }
+
+    function showView(target) {
+      views.forEach((view) => { view.hidden = view !== target; });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function shuffle(values) {
+      const array = [...values];
+      for (let i = array.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function defaultRoleCounts(count) {
+      const counts = { "招待客": 0, "主催者": 0, "迷子": 0, "潜入スパイ": 1, "内通者": 0 };
+      if (count >= 6) counts["内通者"] = 1;
+      if (count >= 7) counts["迷子"] = 1;
+      if (count >= 8) counts["主催者"] = 1;
+      if (count >= 12) counts["潜入スパイ"] = 2;
+      if (count >= 16) counts["内通者"] = 2;
+      counts["招待客"] = count - Object.values(counts).reduce((sum, value) => sum + value, 0);
+      return counts;
+    }
+
+    function rolePoolFromCounts() {
+      const pool = [];
+      roleOrder.forEach((role) => {
+        for (let i = 0; i < (roleCounts[role] || 0); i += 1) pool.push(role);
+      });
+      return pool;
+    }
+
+    function drawRoles(playerTotal) {
+      const pool = rolePoolFromCounts();
+      const maxAttempts = 10000;
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        const drawn = shuffle(pool).slice(0, playerTotal);
+        if (drawn.includes("潜入スパイ")) return drawn;
+      }
+      throw new Error("潜入スパイを含む配役を抽選できませんでした。役職内訳を調整してください。");
+    }
+
+    function usedRoleSummary() {
+      return roleOrder
+        .map((role) => ({ role, count: game.roles.filter((item) => item === role).length }))
+        .filter((item) => item.count > 0)
+        .map((item) => `${item.role}×${item.count}`)
+        .join("、");
+    }
+
+    function roleDescription(role) {
+      const visibleRole = role === "迷子" ? "招待客" : role;
+      const def = roleDefinitions[visibleRole];
+      let extra = "";
+      if (role === "招待客") extra = `今回のお題は「${game.topic.word}」です。`;
+      if (role === "主催者") extra = `今回のお題は「${game.topic.word}」です。
+今回使われている役職は「${usedRoleSummary()}」です。`;
+      if (role === "潜入スパイ") extra = "本当のお題は表示されません。";
+      if (role === "内通者") extra = `今回のお題は「${game.topic.word}」です。`;
+      if (role === "迷子") extra = `今回のお題は「${game.topic.near}」です。`;
+      return {
+        displayName: visibleRole,
+        team: def.team,
+        text: `【物語】
+${def.story}
+
+【能力・勝利条件】
+${def.ability}
+
+【今回の情報】
+${extra}`
+      };
+    }
+
+    function renderRoleGuide() {
+      roleGuideList.replaceChildren();
+      roleOrder.forEach((role) => {
+        const def = roleDefinitions[role];
+        const card = document.createElement("article");
+        card.className = "role-guide-card";
+        card.innerHTML = `<h3>${role}（${def.team}）</h3><p><span class="role-story-label">【物語】</span> ${def.story}</p><p><span class="role-ability-label">【能力・勝利条件】</span> ${def.ability}</p>`;
+        roleGuideList.append(card);
+      });
+    }
+
+    function renderRoleSettings(reset = false) {
+      const count = Number(playerCount.value);
+      if (reset || !Object.keys(roleCounts).length) {
+        roleCounts = defaultRoleCounts(count);
+        saveRoleCounts().catch(() => {});
+      }
+      roleSettings.replaceChildren();
+      roleOrder.forEach((role) => {
+        const def = roleDefinitions[role];
+        const row = document.createElement("label");
+        row.className = "role-setting";
+        row.innerHTML = `<span><strong>${role}</strong><small>${def.short}</small></span><input class="input role-count" type="number" min="0" max="20" step="1" value="${roleCounts[role] || 0}" data-role="${role}" aria-label="${role}の人数">`;
+        roleSettings.append(row);
+      });
+      roleSettings.querySelectorAll(".role-count").forEach((input) => {
+        input.addEventListener("input", () => {
+          const value = Math.max(0, Math.min(20, Number.parseInt(input.value || "0", 10) || 0));
+          roleCounts[input.dataset.role] = value;
+          updateRoleSummary();
+          saveRoleCounts().catch(() => {});
+        });
+      });
+      updateRoleSummary();
+    }
+
+    function updateRoleSummary() {
+      const count = Number(playerCount.value);
+      const total = Object.values(roleCounts).reduce((sum, value) => sum + Number(value || 0), 0);
+      const difference = count - total;
+      const details = roleOrder.filter((role) => roleCounts[role] > 0).map((role) => `${role}×${roleCounts[role]}`).join("、") || "役職なし";
+      roleSummary.textContent = `配役候補 ${total}人分／参加者 ${count}人：${details}${difference === 0 ? "" : `（${difference > 0 ? `${difference}人分不足` : `${Math.abs(difference)}人分は未使用になります`}）`}`;
+      roleSummary.style.borderColor = difference <= 0 ? "var(--line)" : "var(--danger)";
+    }
+
+    function renderPlayerInputs(resetRoles = true, preferredNames = null) {
+      const count = Number(playerCount.value);
+      const currentValues = [...playerList.querySelectorAll("input")].map((input) => input.value);
+      const oldValues = Array.isArray(preferredNames) ? preferredNames : currentValues;
+      playerList.replaceChildren();
+      for (let i = 0; i < count; i += 1) {
+        const row = document.createElement("label");
+        row.className = "player-item";
+        row.innerHTML = `<span class="player-number">${i + 1}</span><input class="input" maxlength="20" value="${oldValues[i] || `プレイヤー${i + 1}`}" aria-label="プレイヤー${i + 1}の名前">`;
+        const input = row.querySelector("input");
+        input.addEventListener("input", () => saveGameSettings().catch(() => {}));
+        playerList.append(row);
+      }
+      renderRoleSettings(resetRoles);
+    }
+
+    function startGame() {
+      const names = [...playerList.querySelectorAll("input")].map((input) => input.value.trim());
+      if (names.some((name) => !name)) {
+        setupStatus.textContent = "全員の名前を入力してください。";
+        setupStatus.dataset.kind = "error";
+        return;
+      }
+      if (new Set(names).size !== names.length) {
+        setupStatus.textContent = "同じ名前が複数あります。区別できる名前にしてください。";
+        setupStatus.dataset.kind = "error";
+        return;
+      }
+      const roleTotal = Object.values(roleCounts).reduce((sum, value) => sum + Number(value || 0), 0);
+      if (roleTotal < names.length) {
+        setupStatus.textContent = `役職候補を参加人数以上にしてください。あと${names.length - roleTotal}人分必要です。`;
+        setupStatus.dataset.kind = "error";
+        return;
+      }
+      if ((roleCounts["潜入スパイ"] || 0) < 1) {
+        setupStatus.textContent = "潜入スパイを1人以上入れてください。";
+        setupStatus.dataset.kind = "error";
+        return;
+      }
+      const guestTeamCount = (roleCounts["招待客"] || 0) + (roleCounts["主催者"] || 0) + (roleCounts["迷子"] || 0);
+      if (guestTeamCount < 1) {
+        setupStatus.textContent = "招待客陣営を1人以上入れてください。";
+        setupStatus.dataset.kind = "error";
+        return;
+      }
+      game.players = names;
+      try {
+        game.roles = drawRoles(names.length);
+      } catch (error) {
+        setupStatus.textContent = error.message;
+        setupStatus.dataset.kind = "error";
+        return;
+      }
+      game.topic = topics[Math.floor(Math.random() * topics.length)];
+      game.revealIndex = 0;
+      game.duration = Number(discussionMinutes.value);
+      game.remaining = game.duration;
+      game.votes = Array(names.length).fill(null);
+      setupStatus.textContent = "";
+      preparePassView();
+    }
+
+    function preparePassView() {
+      $("#passPlayerName").textContent = game.players[game.revealIndex];
+      $("#revealButton").style.setProperty("--hold-progress", "0%");
+      showView($("#passView"));
+    }
+
+    let holdTimer = null;
+    let holdStart = 0;
+    function startHold(event) {
+      event.preventDefault();
+      holdStart = performance.now();
+      const button = $("#revealButton");
+      const tick = () => {
+        const progress = Math.min(100, ((performance.now() - holdStart) / 800) * 100);
+        button.style.setProperty("--hold-progress", `${progress}%`);
+        if (progress >= 100) {
+          clearInterval(holdTimer);
+          holdTimer = null;
+          revealRole();
+        }
+      };
+      tick();
+      holdTimer = setInterval(tick, 25);
+    }
+    function cancelHold() {
+      if (holdTimer) clearInterval(holdTimer);
+      holdTimer = null;
+      $("#revealButton").style.setProperty("--hold-progress", "0%");
+    }
+
+    function revealRole() {
+      const role = game.roles[game.revealIndex];
+      const info = roleDescription(role);
+      $("#roleTeam").textContent = info.team;
+      $("#roleName").textContent = info.displayName;
+      $("#roleInfo").textContent = info.text;
+      showView($("#roleView"));
+    }
+
+    function hideRole() {
+      game.revealIndex += 1;
+      if (game.revealIndex < game.players.length) {
+        preparePassView();
+      } else {
+        prepareDiscussion();
+      }
+    }
+
+    function formatTime(seconds) {
+      const min = Math.floor(seconds / 60).toString().padStart(2, "0");
+      const sec = (seconds % 60).toString().padStart(2, "0");
+      return `${min}:${sec}`;
+    }
+
+    function renderTimer() {
+      $("#timer").textContent = formatTime(game.remaining);
+      $("#timerButton").textContent = game.running ? "一時停止" : game.remaining === game.duration ? "タイマー開始" : "再開";
+    }
+
+    function showNextQuestion() {
+      const questions = game.topic.questions;
+      if (!game.questionOrder.length || game.questionIndex >= game.questionOrder.length) {
+        game.questionOrder = shuffle(questions);
+        game.questionIndex = 0;
+      }
+      $("#questionLabel").textContent = game.questionIndex === 0 ? "最初の質問" : "次の質問";
+      $("#questionText").textContent = game.questionOrder[game.questionIndex];
+      game.questionIndex += 1;
+    }
+
+    function prepareDiscussion() {
+      game.questionOrder = shuffle(game.topic.questions);
+      game.questionIndex = 0;
+      showNextQuestion();
+      game.remaining = game.duration;
+      game.running = false;
+      clearInterval(game.timerId);
+      renderTimer();
+      showView($("#discussionView"));
+    }
+
+    function toggleTimer() {
+      game.running = !game.running;
+      clearInterval(game.timerId);
+      if (game.running) {
+        game.timerId = setInterval(() => {
+          game.remaining = Math.max(0, game.remaining - 1);
+          renderTimer();
+          if (game.remaining === 0) {
+            game.running = false;
+            clearInterval(game.timerId);
+            navigator.vibrate?.([200, 100, 200]);
+            renderTimer();
+          }
+        }, 1000);
+      }
+      renderTimer();
+    }
+
+    function prepareVote() {
+      clearInterval(game.timerId);
+      game.running = false;
+      game.voteIndex = 0;
+      game.selectedVote = null;
+      renderVoteStep();
+      showView($("#voteView"));
+    }
+
+    function renderVoteStep() {
+      $("#voteGuide").textContent = `${game.players[game.voteIndex]}さんだけが画面を見て、追放したい人を選んでください。`;
+      const list = $("#voteList");
+      list.replaceChildren();
+      game.players.forEach((name, index) => {
+        if (index === game.voteIndex) return;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "button button--secondary vote-button";
+        button.textContent = name;
+        button.dataset.selected = "false";
+        button.addEventListener("click", () => {
+          game.selectedVote = index;
+          [...list.children].forEach((child) => { child.dataset.selected = "false"; });
+          button.dataset.selected = "true";
+          $("#confirmVoteButton").disabled = false;
+        });
+        list.append(button);
+      });
+      $("#confirmVoteButton").disabled = true;
+    }
+
+    function confirmVote() {
+      if (game.selectedVote === null) return;
+      game.votes[game.voteIndex] = game.selectedVote;
+      game.voteIndex += 1;
+      game.selectedVote = null;
+      if (game.voteIndex < game.players.length) {
+        $("#voteGuide").textContent = "投票を記録しました。画面を伏せて次の人に渡してください。";
+        $("#voteList").innerHTML = "<div class='pass-card'><p class='helper'>次の人に端末を渡してください</p></div>";
+        $("#confirmVoteButton").disabled = true;
+        $("#confirmVoteButton").textContent = "次の人の投票へ";
+        $("#confirmVoteButton").disabled = false;
+        $("#confirmVoteButton").onclick = () => {
+          $("#confirmVoteButton").textContent = "この人に投票する";
+          $("#confirmVoteButton").onclick = confirmVote;
+          renderVoteStep();
+        };
+      } else {
+        showResults();
+      }
+    }
+
+    function showResults() {
+      const tally = Array(game.players.length).fill(0);
+      game.votes.forEach((index) => { tally[index] += 1; });
+      const maxVotes = Math.max(...tally);
+      const executed = tally.map((count, index) => count === maxVotes ? index : -1).filter((index) => index >= 0);
+      const executedNames = executed.map((index) => game.players[index]);
+      $("#executionText").textContent = `最多票は${maxVotes}票。追放対象：${executedNames.join("、")}`;
+
+      const spyIndexes = game.roles.map((role, index) => role === "潜入スパイ" ? index : -1).filter((index) => index >= 0);
+      const allSpiesExecuted = spyIndexes.every((index) => executed.includes(index));
+      const nonSpyExecuted = executed.some((index) => game.roles[index] !== "潜入スパイ");
+      const result = allSpiesExecuted && !nonSpyExecuted
+        ? "招待客陣営が優勢です。すべての潜入スパイが最後のお題当てに失敗すれば勝利です。"
+        : "スパイ陣営の勝利です。すべての潜入スパイだけを追放できませんでした。";
+      $("#winnerText").textContent = result;
+
+      const list = $("#resultList");
+      list.replaceChildren();
+      game.players.forEach((name, index) => {
+        const item = document.createElement("div");
+        item.className = "result-item";
+        item.innerHTML = `<strong>${name}：${game.roles[index]}</strong>${roleDescription(game.roles[index]).team}・得票 ${tally[index]}票`;
+        list.append(item);
+      });
+      $("#answerText").textContent = game.topic.word;
+      showView($("#resultView"));
+    }
+
+
+
+    function openRulesDialog() {
+      if (typeof rulesDialog.showModal === "function") {
+        rulesDialog.showModal();
+      } else {
+        rulesDialog.setAttribute("open", "");
+      }
+    }
+
+    function closeRulesDialog() {
+      if (typeof rulesDialog.close === "function") {
+        rulesDialog.close();
+      } else {
+        rulesDialog.removeAttribute("open");
+      }
+    }
+
+    $("#openRulesButton").addEventListener("click", openRulesDialog);
+    $("#closeRulesButton").addEventListener("click", closeRulesDialog);
+    $("#closeRulesIconButton").addEventListener("click", closeRulesDialog);
+    rulesDialog.addEventListener("click", (event) => {
+      if (event.target === rulesDialog) closeRulesDialog();
+    });
+    playerCount.addEventListener("change", () => {
+      renderPlayerInputs(true);
+      saveGameSettings().catch(() => {});
+    });
+    discussionMinutes.addEventListener("change", () => saveGameSettings().catch(() => {}));
+    $("#startButton").addEventListener("click", startGame);
+    $("#revealButton").addEventListener("pointerdown", startHold);
+    $("#revealButton").addEventListener("pointerup", cancelHold);
+    $("#revealButton").addEventListener("pointerleave", cancelHold);
+    $("#revealButton").addEventListener("pointercancel", cancelHold);
+    $("#hideRoleButton").addEventListener("click", hideRole);
+    $("#timerButton").addEventListener("click", toggleTimer);
+    $("#nextQuestionButton").addEventListener("click", showNextQuestion);
+    $("#resetTimerButton").addEventListener("click", () => { game.remaining = game.duration; game.running = false; clearInterval(game.timerId); renderTimer(); });
+    $("#goVoteButton").addEventListener("click", prepareVote);
+    $("#confirmVoteButton").onclick = confirmVote;
+    $("#restartButton").addEventListener("click", () => { clearInterval(game.timerId); renderPlayerInputs(false); showView($("#setupView")); });
+
+    async function initialize() {
+      renderRoleGuide();
+      let savedGameSettings = null;
+      try {
+        savedGameSettings = await loadSavedGameSettings();
+      } catch {
+        savedGameSettings = null;
+      }
+
+      if (savedGameSettings) {
+        const savedCount = Number(savedGameSettings.playerCount);
+        if (Number.isInteger(savedCount) && savedCount >= 4 && savedCount <= 20) {
+          playerCount.value = String(savedCount);
+        }
+        const savedDuration = Number(savedGameSettings.discussionSeconds);
+        if ([180, 240, 300, 420].includes(savedDuration)) {
+          discussionMinutes.value = String(savedDuration);
+        }
+      }
+
+      try {
+        const savedRoleCounts = await loadSavedRoleCounts();
+        roleCounts = savedRoleCounts || defaultRoleCounts(Number(playerCount.value));
+      } catch {
+        roleCounts = defaultRoleCounts(Number(playerCount.value));
+      }
+      renderPlayerInputs(false, savedGameSettings?.playerNames);
+    }
+
+    initialize();
+  </script>
+</body>
+</html>
