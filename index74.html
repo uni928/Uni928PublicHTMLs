@@ -7,7 +7,7 @@
   <title>消えた招待客</title>
   <meta name="description" content="スマホ1台を順番に回して遊ぶ、招待隠匿系パーティーゲームです。">
   <style>
-    @layer base, make1, make2, make3, make4, make5, make6, make7, make8;
+    @layer base, make1, make2, make3, make4, make5, make6, make7, make8, make9;
 
     @layer base {
       :root {
@@ -170,6 +170,40 @@
         .rule-button { padding-inline: 10px; }
       }
     }
+
+    @layer make9 {
+      /* 結果画面の本当のお題を初期状態で閉じる折りたたみパネル */
+      .answer-details {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: color-mix(in srgb, var(--bg) 58%, var(--panel));
+        overflow: hidden;
+      }
+      .answer-details summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 15px 16px;
+        cursor: pointer;
+        font-weight: 800;
+        list-style: none;
+      }
+      .answer-details summary::-webkit-details-marker { display: none; }
+      .answer-details summary::after {
+        content: "＋";
+        flex: 0 0 auto;
+        font-size: 1.25rem;
+        line-height: 1;
+        color: var(--primary);
+      }
+      .answer-details[open] summary::after { content: "−"; }
+      .answer-details__body {
+        padding: 0 16px 16px;
+      }
+      .answer-details__body .topic-box { margin: 0; }
+    }
+
   </style>
 </head>
 <body>
@@ -247,7 +281,9 @@
             <li>表示された質問を使って議論します。</li>
             <li>一人1回全員に追加の質問をします</li>
             <li>一人1回特定のプレイヤーに特定の質問をします</li>
-            <li>全員が秘密投票を行い、最多票のプレイヤーを追放します。</li>
+            <li>アプリ外で全員が同時に指差しし、処刑する人を決めます。</li>
+            <li>決まった処刑対象を、この画面で一人選択します。</li>
+            <li>まだ潜入スパイがいると思う場合は「再投票する」を選び、再び指差し確認して次の処刑対象を選びます。</li>
             <li>役職と本当のお題を公開し、勝敗を確認します。</li>
           </ol>
         </section>
@@ -255,8 +291,8 @@
         <section class="rules-section">
           <h3>勝利条件</h3>
           <ul>
-            <li><strong>招待客陣営：</strong>潜入スパイだけをすべて追放し、最後のお題当ても失敗させます。</li>
-            <li><strong>スパイ陣営：</strong>潜入スパイが1人でも追放を逃れるか、追放後に本当のお題を当てます。</li>
+            <li><strong>招待客陣営：</strong>招待客陣営を一人も処刑せず、潜入スパイをすべて処刑し、最後のお題当ても失敗させます。</li>
+            <li><strong>スパイ陣営：</strong>潜入スパイが1人でも処刑を逃れるか、招待客陣営が一人でも処刑されるか、処刑後に本当のお題を当てます。</li>
           </ul>
         </section>
 
@@ -310,17 +346,21 @@
         <button id="timerButton" class="button button--primary" type="button">タイマー開始</button>
         <button id="resetTimerButton" class="button button--secondary" type="button">時間を戻す</button>
       </div>
-      <button id="goVoteButton" class="button button--danger" type="button">議論を終了して投票へ</button>
-      <p class="helper tiny">投票はこの端末上で順番に行います。自分への投票はできません。</p>
+      <button id="goVoteButton" class="button button--danger" type="button">議論を終了して指差し投票へ</button>
+      <p class="helper tiny">投票はアプリ外で、合図に合わせて処刑したい人を指差して決めます。決定後、この端末で処刑対象を選択します。</p>
     </section>
 
     <section id="voteView" class="panel stack" hidden>
       <div>
-        <h2 class="section-title">秘密投票</h2>
+        <h2 class="section-title">処刑対象の確認</h2>
         <p id="voteGuide" class="helper"></p>
       </div>
       <div id="voteList" class="vote-list"></div>
-      <button id="confirmVoteButton" class="button button--primary" type="button" disabled>この人に投票する</button>
+      <button id="confirmVoteButton" class="button button--primary" type="button" disabled>この人を処刑する</button>
+      <div id="revoteActions" class="button-row" hidden>
+        <button id="revoteButton" class="button button--danger" type="button">再投票する</button>
+        <button id="finishVoteButton" class="button button--primary" type="button">処刑を終了する</button>
+      </div>
     </section>
 
     <section id="resultView" class="panel stack" hidden>
@@ -330,10 +370,15 @@
       </div>
       <div id="winnerText" class="winner"></div>
       <div id="resultList" class="result-list"></div>
-      <div class="topic-box">
-        本当のお題
-        <strong id="answerText"></strong>
-      </div>
+      <details id="answerDetails" class="answer-details">
+        <summary>本当のお題を確認する</summary>
+        <div class="answer-details__body">
+          <div class="topic-box">
+            本当のお題
+            <strong id="answerText"></strong>
+          </div>
+        </div>
+      </details>
       <button id="restartButton" class="button button--primary" type="button">同じメンバーでもう一度</button>
     </section>
   </main>
@@ -3927,7 +3972,7 @@ const topics = [
     const game = {
       players: [], roles: [], topic: null, revealIndex: 0,
       duration: 240, remaining: 240, timerId: null, running: false,
-      voteIndex: 0, selectedVote: null, votes: [],
+      selectedVote: null, executedIndexes: [],
       questionOrder: [], questionIndex: 0
     };
 
@@ -4116,7 +4161,8 @@ ${extra}`
       game.revealIndex = 0;
       game.duration = Number(discussionMinutes.value);
       game.remaining = game.duration;
-      game.votes = Array(names.length).fill(null);
+      game.executedIndexes = [];
+      game.selectedVote = null;
       setupStatus.textContent = "";
       preparePassView();
     }
@@ -4223,18 +4269,22 @@ ${extra}`
     function prepareVote() {
       clearInterval(game.timerId);
       game.running = false;
-      game.voteIndex = 0;
       game.selectedVote = null;
-      renderVoteStep();
+      game.executedIndexes = [];
+      renderExecutionSelection();
       showView($("#voteView"));
     }
 
-    function renderVoteStep() {
-      $("#voteGuide").textContent = `${game.players[game.voteIndex]}さんだけが画面を見て、追放したい人を選んでください。`;
+    function renderExecutionSelection() {
+      const alreadyExecuted = game.executedIndexes.map((index) => game.players[index]);
+      $("#voteGuide").textContent = alreadyExecuted.length
+        ? `アプリ外で再び指差し投票を行い、次に処刑する人を選んでください。処刑済み：${alreadyExecuted.join("、")}`
+        : "全員で合図を決め、アプリ外で同時に処刑したい人を指差してください。結果が決まったら、その人を下から選んでください。";
+
       const list = $("#voteList");
       list.replaceChildren();
       game.players.forEach((name, index) => {
-        if (index === game.voteIndex) return;
+        if (game.executedIndexes.includes(index)) return;
         const button = document.createElement("button");
         button.type = "button";
         button.className = "button button--secondary vote-button";
@@ -4248,44 +4298,45 @@ ${extra}`
         });
         list.append(button);
       });
+      $("#confirmVoteButton").hidden = false;
       $("#confirmVoteButton").disabled = true;
+      $("#revoteActions").hidden = true;
     }
 
     function confirmVote() {
       if (game.selectedVote === null) return;
-      game.votes[game.voteIndex] = game.selectedVote;
-      game.voteIndex += 1;
+      game.executedIndexes.push(game.selectedVote);
+      const executedName = game.players[game.selectedVote];
       game.selectedVote = null;
-      if (game.voteIndex < game.players.length) {
-        $("#voteGuide").textContent = "投票を記録しました。画面を伏せて次の人に渡してください。";
-        $("#voteList").innerHTML = "<div class='pass-card'><p class='helper'>次の人に端末を渡してください</p></div>";
-        $("#confirmVoteButton").disabled = true;
-        $("#confirmVoteButton").textContent = "次の人の投票へ";
-        $("#confirmVoteButton").disabled = false;
-        $("#confirmVoteButton").onclick = () => {
-          $("#confirmVoteButton").textContent = "この人に投票する";
-          $("#confirmVoteButton").onclick = confirmVote;
-          renderVoteStep();
-        };
-      } else {
-        showResults();
-      }
+      $("#voteGuide").textContent = `${executedName}さんを処刑対象として記録しました。まだ潜入スパイがいると思う場合は、再投票してください。`;
+      $("#voteList").innerHTML = `<div class="pass-card"><strong>${executedName}さんを処刑</strong><p class="helper">再投票するか、処刑を終了するかを選んでください。</p></div>`;
+      $("#confirmVoteButton").hidden = true;
+      $("#revoteActions").hidden = false;
+      $("#revoteButton").disabled = game.executedIndexes.length >= game.players.length;
     }
 
     function showResults() {
-      const tally = Array(game.players.length).fill(0);
-      game.votes.forEach((index) => { tally[index] += 1; });
-      const maxVotes = Math.max(...tally);
-      const executed = tally.map((count, index) => count === maxVotes ? index : -1).filter((index) => index >= 0);
+      const executed = [...game.executedIndexes];
       const executedNames = executed.map((index) => game.players[index]);
-      $("#executionText").textContent = `最多票は${maxVotes}票。追放対象：${executedNames.join("、")}`;
+      $("#executionText").textContent = executedNames.length
+        ? `処刑された人：${executedNames.join("、")}`
+        : "処刑された人はいません。";
 
-      const spyIndexes = game.roles.map((role, index) => role === "潜入スパイ" ? index : -1).filter((index) => index >= 0);
+      const spyIndexes = game.roles
+        .map((role, index) => role === "潜入スパイ" ? index : -1)
+        .filter((index) => index >= 0);
+      const guestTeamRoles = new Set(["招待客", "主催者", "迷子"]);
       const allSpiesExecuted = spyIndexes.every((index) => executed.includes(index));
-      const nonSpyExecuted = executed.some((index) => game.roles[index] !== "潜入スパイ");
-      const result = allSpiesExecuted && !nonSpyExecuted
-        ? "招待客陣営が優勢です。すべての潜入スパイが最後のお題当てに失敗すれば勝利です。"
-        : "スパイ陣営の勝利です。すべての潜入スパイだけを追放できませんでした。";
+      const guestExecuted = executed.some((index) => guestTeamRoles.has(game.roles[index]));
+
+      let result;
+      if (guestExecuted) {
+        result = "スパイ陣営の勝利です。招待客陣営を一人でも処刑してしまいました。";
+      } else if (!allSpiesExecuted) {
+        result = "スパイ陣営の勝利です。潜入スパイをすべて見つけられませんでした。";
+      } else {
+        result = "招待客陣営が優勢です。すべての潜入スパイが最後のお題当てに失敗すれば勝利です。";
+      }
       $("#winnerText").textContent = result;
 
       const list = $("#resultList");
@@ -4293,10 +4344,12 @@ ${extra}`
       game.players.forEach((name, index) => {
         const item = document.createElement("div");
         item.className = "result-item";
-        item.innerHTML = `<strong>${name}：${game.roles[index]}</strong>${roleDescription(game.roles[index]).team}・得票 ${tally[index]}票`;
+        const executionStatus = executed.includes(index) ? "処刑" : "生存";
+        item.innerHTML = `<strong>${name}：${game.roles[index]}</strong>${roleDescription(game.roles[index]).team}・${executionStatus}`;
         list.append(item);
       });
       $("#answerText").textContent = game.topic.word;
+      $("#answerDetails").removeAttribute("open");
       showView($("#resultView"));
     }
 
@@ -4340,6 +4393,11 @@ ${extra}`
     $("#resetTimerButton").addEventListener("click", () => { game.remaining = game.duration; game.running = false; clearInterval(game.timerId); renderTimer(); });
     $("#goVoteButton").addEventListener("click", prepareVote);
     $("#confirmVoteButton").onclick = confirmVote;
+    $("#revoteButton").addEventListener("click", () => {
+      game.selectedVote = null;
+      renderExecutionSelection();
+    });
+    $("#finishVoteButton").addEventListener("click", showResults);
     $("#restartButton").addEventListener("click", () => { clearInterval(game.timerId); renderPlayerInputs(false); showView($("#setupView")); });
 
     async function initialize() {
