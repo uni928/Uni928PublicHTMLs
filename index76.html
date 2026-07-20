@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f9d58">
+  <title>Google Play コードコピー</title>
+  <style>
+    @layer base, make1, make2, make3, make4;
+
+    @layer base {
+      :root {
+        color-scheme: light;
+        --bg: #f5f7f6;
+        --surface: #ffffff;
+        --text: #17201b;
+        --muted: #657068;
+        --line: #d9e1dc;
+        --accent: #0f9d58;
+        --accent-dark: #08783f;
+        --danger: #b3261e;
+        --shadow: 0 12px 32px rgba(25, 45, 34, .10);
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+      html { min-height: 100%; background: var(--bg); }
+      body {
+        min-height: 100vh;
+        margin: 0;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 10% 0%, rgba(15, 157, 88, .10), transparent 34rem),
+          var(--bg);
+      }
+      button, input { font: inherit; }
+      button { touch-action: manipulation; }
+      [hidden] { display: none !important; }
+    }
+
+    @layer make1 {
+      /* 画面全体のレイアウト */
+      .page {
+        width: min(760px, 100%);
+        margin: 0 auto;
+        padding: max(20px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom));
+      }
+      .hero { margin: 6px 2px 20px; }
+      .eyebrow {
+        margin: 0 0 5px;
+        color: var(--accent-dark);
+        font-size: .78rem;
+        font-weight: 800;
+        letter-spacing: .12em;
+      }
+      h1 { margin: 0; font-size: clamp(1.55rem, 5vw, 2.25rem); line-height: 1.2; }
+      .lead { margin: 9px 0 0; color: var(--muted); line-height: 1.7; }
+      .card {
+        padding: clamp(17px, 4vw, 28px);
+        border: 1px solid rgba(217, 225, 220, .85);
+        border-radius: 24px;
+        background: rgba(255, 255, 255, .94);
+        box-shadow: var(--shadow);
+      }
+    }
+
+    @layer make2 {
+      /* コード入力欄 */
+      .code-fields {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(122px, 1fr));
+        gap: 10px;
+      }
+      .code-input {
+        width: 100%;
+        min-width: 0;
+        padding: 15px 12px;
+        border: 2px solid var(--line);
+        border-radius: 14px;
+        outline: none;
+        background: #fff;
+        color: var(--text);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: clamp(1.25rem, 6vw, 1.8rem);
+        font-weight: 800;
+        letter-spacing: .10em;
+        text-align: center;
+        caret-color: var(--accent);
+        transition: border-color .15s, box-shadow .15s, transform .15s;
+      }
+      .code-input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 4px rgba(15, 157, 88, .13);
+        transform: translateY(-1px);
+      }
+      .code-input.is-complete { border-color: rgba(15, 157, 88, .55); background: #f7fff9; }
+      .status-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 12px 2px 18px;
+        color: var(--muted);
+        font-size: .88rem;
+      }
+      #countText { font-variant-numeric: tabular-nums; }
+    }
+
+    @layer make3 {
+      /* 数字パネルと操作ボタン */
+      .number-panel {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 9px;
+        margin-top: 12px;
+      }
+      .digit-button, .sub-button, .copy-button, .icon-button {
+        border: 0;
+        border-radius: 14px;
+        cursor: pointer;
+      }
+      .digit-button {
+        min-height: 54px;
+        border: 1px solid var(--line);
+        background: #f8faf9;
+        color: var(--text);
+        font-size: 1.2rem;
+        font-weight: 800;
+      }
+      .digit-button:active { transform: scale(.96); background: #eef5f0; }
+      .actions { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 14px; }
+      .copy-button {
+        min-height: 58px;
+        padding: 0 20px;
+        background: var(--accent);
+        color: #fff;
+        font-weight: 850;
+        box-shadow: 0 8px 20px rgba(15, 157, 88, .23);
+      }
+      .copy-button:active { background: var(--accent-dark); transform: translateY(1px); }
+      .sub-button, .icon-button {
+        min-height: 48px;
+        padding: 0 16px;
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--text);
+        font-weight: 700;
+      }
+      .sub-button.danger { color: var(--danger); }
+      .toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: max(24px, env(safe-area-inset-bottom));
+        z-index: 10;
+        transform: translate(-50%, 18px);
+        padding: 12px 18px;
+        border-radius: 999px;
+        background: #1d2721;
+        color: #fff;
+        font-weight: 700;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .2s, transform .2s;
+      }
+      .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    }
+
+    @layer make4 {
+      /* 設定ダイアログ */
+      dialog {
+        width: min(520px, calc(100% - 28px));
+        padding: 0;
+        border: 0;
+        border-radius: 22px;
+        color: var(--text);
+        box-shadow: 0 24px 70px rgba(0, 0, 0, .25);
+      }
+      dialog::backdrop { background: rgba(13, 25, 18, .45); backdrop-filter: blur(3px); }
+      .dialog-body { padding: 22px; }
+      .dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .dialog-head h2 { margin: 0; font-size: 1.25rem; }
+      .close-button { width: 42px; padding: 0; font-size: 1.25rem; }
+      .setting-label { display: block; margin: 20px 0 8px; font-weight: 800; }
+      .setting-input {
+        width: 100%;
+        padding: 13px 14px;
+        border: 2px solid var(--line);
+        border-radius: 12px;
+        outline: none;
+      }
+      .setting-input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(15, 157, 88, .12); }
+      .help { margin: 8px 0 0; color: var(--muted); font-size: .87rem; line-height: 1.55; }
+      .switch-row { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
+      .switch-row input { width: 20px; height: 20px; accent-color: var(--accent); }
+      .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+
+      @media (max-width: 520px) {
+        .code-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .code-fields.single { grid-template-columns: 1fr; }
+        .actions { grid-template-columns: 1fr; }
+        .sub-button { min-height: 52px; }
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <p class="eyebrow">CODE COPY TOOL</p>
+      <h1>Google Play コードコピー</h1>
+      <p class="lead">小文字アルファベットはスマホのキーボードで、数字だけ画面のボタンから入力できます。</p>
+    </header>
+
+    <section class="card" aria-labelledby="inputTitle">
+      <div class="toolbar">
+        <button class="icon-button" id="openSettings" type="button">設定</button>
+      </div>
+
+      <h2 id="inputTitle" hidden>コード入力</h2>
+      <div class="code-fields single" id="codeFields"></div>
+
+      <div class="status-row">
+        <span id="activeText">入力欄 1</span>
+        <span id="countText">0 / 16文字</span>
+      </div>
+
+      <div class="number-panel" aria-label="数字入力パネル">
+        <button class="digit-button" type="button" data-digit="1">1</button>
+        <button class="digit-button" type="button" data-digit="2">2</button>
+        <button class="digit-button" type="button" data-digit="3">3</button>
+        <button class="digit-button" type="button" data-digit="4">4</button>
+        <button class="digit-button" type="button" data-digit="5">5</button>
+        <button class="digit-button" type="button" data-digit="6">6</button>
+        <button class="digit-button" type="button" data-digit="7">7</button>
+        <button class="digit-button" type="button" data-digit="8">8</button>
+        <button class="digit-button" type="button" data-digit="9">9</button>
+        <button class="digit-button" type="button" data-digit="0">0</button>
+      </div>
+
+      <div class="actions">
+        <button class="copy-button" id="copyButton" type="button">コードをコピー</button>
+        <button class="sub-button danger" id="clearButton" type="button">消去</button>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="settingsDialog">
+    <form class="dialog-body" method="dialog" id="settingsForm">
+      <div class="dialog-head">
+        <h2>入力欄の設定</h2>
+        <button class="icon-button close-button" value="cancel" aria-label="閉じる">×</button>
+      </div>
+
+      <label class="setting-label" for="patternInput">文字数の区切り</label>
+      <input class="setting-input" id="patternInput" value="16" placeholder="例: 16 または 4-6-4" autocomplete="off">
+      <p class="help">「16」で1枠、「4-6-4」で3枠になります。各枠が埋まると次の枠へ移動します。</p>
+
+      <label class="switch-row">
+        <input id="hyphenCopy" type="checkbox" checked>
+        <span>コピー時に枠の間へ「-」を入れる</span>
+      </label>
+
+      <div class="dialog-actions">
+        <button class="sub-button" value="cancel">キャンセル</button>
+        <button class="copy-button" id="saveSettings" value="default">設定を保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const STORAGE_KEY = 'googlePlayCodeCopySettingsV1';
+      const DEFAULT_SETTINGS = { pattern: [16], hyphenCopy: true };
+
+      const fieldsContainer = document.getElementById('codeFields');
+      const activeText = document.getElementById('activeText');
+      const countText = document.getElementById('countText');
+      const copyButton = document.getElementById('copyButton');
+      const clearButton = document.getElementById('clearButton');
+      const settingsDialog = document.getElementById('settingsDialog');
+      const settingsForm = document.getElementById('settingsForm');
+      const patternInput = document.getElementById('patternInput');
+      const hyphenCopy = document.getElementById('hyphenCopy');
+      const toast = document.getElementById('toast');
+
+      let settings = loadSettings();
+      let activeInput = null;
+      let toastTimer = null;
+
+      function loadSettings() {
+        try {
+          const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+          if (saved && Array.isArray(saved.pattern) && saved.pattern.length) {
+            return {
+              pattern: saved.pattern.map(Number).filter(n => Number.isInteger(n) && n > 0 && n <= 64),
+              hyphenCopy: saved.hyphenCopy !== false
+            };
+          }
+        } catch (_) {}
+        return structuredClone(DEFAULT_SETTINGS);
+      }
+
+      function parsePattern(value) {
+        const values = value.trim().split(/[-,\s]+/).filter(Boolean).map(Number);
+        if (!values.length || values.some(n => !Number.isInteger(n) || n < 1 || n > 64)) return null;
+        if (values.length > 8 || values.reduce((sum, n) => sum + n, 0) > 128) return null;
+        return values;
+      }
+
+      function sanitize(value) {
+        return value.replace(/[^A-Za-z0-9]/g, '');
+      }
+
+      function renderFields(initialValues = []) {
+        fieldsContainer.replaceChildren();
+        fieldsContainer.classList.toggle('single', settings.pattern.length === 1);
+
+        settings.pattern.forEach((length, index) => {
+          const input = document.createElement('input');
+          input.className = 'code-input';
+          input.type = 'text';
+          input.inputMode = 'text';
+          input.autocomplete = 'off';
+          input.autocapitalize = 'none';
+          input.spellcheck = false;
+          input.maxLength = length;
+          input.dataset.index = String(index);
+          input.setAttribute('aria-label', `コード入力欄 ${index + 1}、${length}文字`);
+          input.placeholder = 'a'.repeat(Math.min(length, 4));
+          input.value = sanitize(initialValues[index] || '').slice(0, length);
+
+          input.addEventListener('focus', () => setActiveInput(input));
+          input.addEventListener('click', () => setActiveInput(input));
+          input.addEventListener('input', event => handleTextInput(event, length));
+          input.addEventListener('keydown', handleKeydown);
+          input.addEventListener('paste', handlePaste);
+
+          fieldsContainer.appendChild(input);
+        });
+
+        activeInput = fieldsContainer.querySelector('.code-input');
+        updateStatus();
+        requestAnimationFrame(() => activeInput?.focus());
+      }
+
+      function setActiveInput(input) {
+        activeInput = input;
+        updateStatus();
+      }
+
+      function handleTextInput(event, maxLength) {
+        const input = event.currentTarget;
+        const cursor = input.selectionStart ?? input.value.length;
+        const before = input.value;
+        input.value = sanitize(before).slice(0, maxLength);
+        const newCursor = Math.min(cursor, input.value.length);
+        input.setSelectionRange(newCursor, newCursor);
+
+        if (input.value.length >= maxLength && cursor >= maxLength) {
+          focusRelative(input, 1, true);
+        }
+        updateStatus();
+      }
+
+      function handleKeydown(event) {
+        const input = event.currentTarget;
+        if (event.key === 'Backspace' && input.selectionStart === 0 && input.selectionEnd === 0 && !input.value) {
+          const previous = focusRelative(input, -1, false);
+          if (previous) {
+            event.preventDefault();
+            const end = previous.value.length;
+            previous.setSelectionRange(end, end);
+          }
+        }
+        if (event.key === 'ArrowLeft' && input.selectionStart === 0 && input.selectionEnd === 0) {
+          const previous = focusRelative(input, -1, false);
+          if (previous) {
+            event.preventDefault();
+            previous.setSelectionRange(previous.value.length, previous.value.length);
+          }
+        }
+        if (event.key === 'ArrowRight' && input.selectionStart === input.value.length && input.selectionEnd === input.value.length) {
+          const next = focusRelative(input, 1, false);
+          if (next) {
+            event.preventDefault();
+            next.setSelectionRange(0, 0);
+          }
+        }
+      }
+
+      function handlePaste(event) {
+        const pasted = sanitize(event.clipboardData?.getData('text') || '');
+        if (!pasted) return;
+        event.preventDefault();
+
+        const inputs = [...fieldsContainer.querySelectorAll('.code-input')];
+        let remaining = pasted;
+        let startIndex = Number(event.currentTarget.dataset.index);
+
+        for (let i = startIndex; i < inputs.length && remaining; i++) {
+          const field = inputs[i];
+          const max = settings.pattern[i];
+          const start = i === startIndex ? (field.selectionStart ?? field.value.length) : 0;
+          const end = i === startIndex ? (field.selectionEnd ?? start) : field.value.length;
+          const available = max - (field.value.length - (end - start));
+          const chunk = remaining.slice(0, Math.max(0, available));
+          field.value = (field.value.slice(0, start) + chunk + field.value.slice(end)).slice(0, max);
+          remaining = remaining.slice(chunk.length);
+          activeInput = field;
+        }
+
+        activeInput?.focus();
+        activeInput?.setSelectionRange(activeInput.value.length, activeInput.value.length);
+        updateStatus();
+      }
+
+      function focusRelative(input, offset, onlyWhenExists) {
+        const inputs = [...fieldsContainer.querySelectorAll('.code-input')];
+        const next = inputs[Number(input.dataset.index) + offset];
+        if (next) {
+          next.focus();
+          const position = offset > 0 ? 0 : next.value.length;
+          next.setSelectionRange(position, position);
+          return next;
+        }
+        if (!onlyWhenExists) input.focus();
+        return null;
+      }
+
+      function insertDigit(digit) {
+        if (!activeInput) activeInput = fieldsContainer.querySelector('.code-input');
+        if (!activeInput) return;
+
+        activeInput.focus({ preventScroll: true });
+        const index = Number(activeInput.dataset.index);
+        const max = settings.pattern[index];
+        const start = activeInput.selectionStart ?? activeInput.value.length;
+        const end = activeInput.selectionEnd ?? start;
+        const nextValue = activeInput.value.slice(0, start) + digit + activeInput.value.slice(end);
+
+        if (nextValue.length <= max) {
+          activeInput.value = nextValue;
+          const nextCursor = start + 1;
+          activeInput.setSelectionRange(nextCursor, nextCursor);
+          if (activeInput.value.length === max && nextCursor === max) {
+            const next = focusRelative(activeInput, 1, true);
+            if (!next) activeInput.setSelectionRange(max, max);
+          }
+        } else {
+          const next = focusRelative(activeInput, 1, true);
+          if (next) insertDigit(digit);
+        }
+        updateStatus();
+      }
+
+      function getValues() {
+        return [...fieldsContainer.querySelectorAll('.code-input')].map(input => input.value);
+      }
+
+      function getCopyText() {
+        const separator = settings.hyphenCopy && settings.pattern.length > 1 ? '-' : '';
+        return getValues().join(separator);
+      }
+
+      async function copyCode() {
+        const text = getCopyText();
+        if (!text) {
+          showToast('コードが入力されていません');
+          activeInput?.focus();
+          return;
+        }
+
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast(`コピーしました：${text}`);
+        } catch (_) {
+          const helper = document.createElement('textarea');
+          helper.value = text;
+          helper.style.position = 'fixed';
+          helper.style.opacity = '0';
+          document.body.appendChild(helper);
+          helper.select();
+          const success = document.execCommand('copy');
+          helper.remove();
+          showToast(success ? `コピーしました：${text}` : 'コピーできませんでした');
+        }
+      }
+
+      function clearAll() {
+        fieldsContainer.querySelectorAll('.code-input').forEach(input => input.value = '');
+        activeInput = fieldsContainer.querySelector('.code-input');
+        activeInput?.focus();
+        updateStatus();
+        showToast('入力を消去しました');
+      }
+
+      function updateStatus() {
+        const inputs = [...fieldsContainer.querySelectorAll('.code-input')];
+        const total = settings.pattern.reduce((sum, n) => sum + n, 0);
+        const entered = inputs.reduce((sum, input) => sum + input.value.length, 0);
+        inputs.forEach((input, i) => input.classList.toggle('is-complete', input.value.length === settings.pattern[i]));
+        const activeIndex = activeInput ? Number(activeInput.dataset.index) + 1 : 1;
+        activeText.textContent = settings.pattern.length === 1 ? '1つの入力欄' : `入力欄 ${activeIndex} / ${settings.pattern.length}`;
+        countText.textContent = `${entered} / ${total}文字`;
+      }
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+      }
+
+      document.querySelectorAll('[data-digit]').forEach(button => {
+        button.addEventListener('pointerdown', event => event.preventDefault());
+        button.addEventListener('click', () => insertDigit(button.dataset.digit));
+      });
+
+      document.getElementById('openSettings').addEventListener('click', () => {
+        patternInput.value = settings.pattern.join('-');
+        hyphenCopy.checked = settings.hyphenCopy;
+        settingsDialog.showModal();
+        requestAnimationFrame(() => patternInput.select());
+      });
+
+      settingsForm.addEventListener('submit', event => {
+        event.preventDefault();
+        const pattern = parsePattern(patternInput.value);
+        if (!pattern) {
+          showToast('1〜64の数字を「-」で区切って入力してください');
+          patternInput.focus();
+          return;
+        }
+
+        const oldCharacters = getValues().join('');
+        settings = { pattern, hyphenCopy: hyphenCopy.checked };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+
+        const redistributed = [];
+        let cursor = 0;
+        pattern.forEach(length => {
+          redistributed.push(oldCharacters.slice(cursor, cursor + length));
+          cursor += length;
+        });
+        renderFields(redistributed);
+        settingsDialog.close();
+        showToast('設定を保存しました');
+      });
+
+      copyButton.addEventListener('click', copyCode);
+      clearButton.addEventListener('click', clearAll);
+
+      renderFields();
+    })();
+  </script>
+</body>
+</html>
