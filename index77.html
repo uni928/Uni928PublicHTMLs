@@ -5432,6 +5432,8 @@ function ensureCopyAreaUI() {
         value=""
         placeholder=""
         data-copy-tool="1"
+        disabled
+        aria-disabled="true"
         style="width:100%;max-width:360px;padding:10px 12px;border:1px solid #c9dbe8;border-radius:10px;background:#fff;color:#243447;font-size:13px;"
       />
     </div>
@@ -6010,7 +6012,7 @@ function restoreNormalGeneratedDisplay() {
   }
 }
 
-function refreshGeneratedContent(button, shouldCopy = false) {
+function refreshGeneratedContent(button, shouldCopy = false, shouldAutoFillClass = true) {
   if (!button) return;
 
   hideExternalCssElementCopyButton();
@@ -6019,12 +6021,17 @@ function refreshGeneratedContent(button, shouldCopy = false) {
   const classNameInput = document.getElementById("classNameInput");
 
   if (classNameInput) {
-    const autoClassName = [...button.classList].find(className =>
-      /^btn-[a-z]\d+/i.test(className)
-    );
+    classNameInput.disabled = false;
+    classNameInput.setAttribute("aria-disabled", "false");
 
-    if (autoClassName) {
-      classNameInput.value = autoClassName;
+    if (shouldAutoFillClass) {
+      const autoClassName = [...button.classList].find(className =>
+        /^btn-[a-z]\d+/i.test(className)
+      );
+
+      if (autoClassName) {
+        classNameInput.value = autoClassName;
+      }
     }
   }
 
@@ -6106,12 +6113,12 @@ function bindClassNameInput() {
 
   input.addEventListener("input", () => {
     if (!lastSelectedButton) return;
-    //refreshGeneratedContent(lastSelectedButton, false);
+    refreshGeneratedContent(lastSelectedButton, false, false);
   });
 
   input.addEventListener("change", () => {
     if (!lastSelectedButton) return;
-    //refreshGeneratedContent(lastSelectedButton, false);
+    refreshGeneratedContent(lastSelectedButton, false, false);
   });
 }
 
