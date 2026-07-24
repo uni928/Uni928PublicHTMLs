@@ -5433,7 +5433,7 @@ function ensureCopyAreaUI() {
         placeholder=""
         data-copy-tool="1"
         style="width:100%;max-width:360px;padding:10px 12px;border:1px solid #c9dbe8;border-radius:10px;background:#fff;color:#243447;font-size:13px;"
-      readonly />
+      />
     </div>
 
     <div class="btn-row" style="margin-bottom:12px;">
@@ -6106,12 +6106,12 @@ function bindClassNameInput() {
 
   input.addEventListener("input", () => {
     if (!lastSelectedButton) return;
-    refreshGeneratedContent(lastSelectedButton, false);
+    //refreshGeneratedContent(lastSelectedButton, false);
   });
 
   input.addEventListener("change", () => {
     if (!lastSelectedButton) return;
-    refreshGeneratedContent(lastSelectedButton, false);
+    //refreshGeneratedContent(lastSelectedButton, false);
   });
 }
 
