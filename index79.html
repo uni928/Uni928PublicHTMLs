@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Turn Markdown into a clean, readable web page and save it as a single HTML file.">
+  <title>Markdown to Readable HTML</title>
+  <style>
+    @layer base, layout, editor, viewer, responsive;
+
+    @layer base {
+      :root {
+        color-scheme: light;
+        --bg: #f4f7fb;
+        --panel: #ffffff;
+        --text: #1e293b;
+        --muted: #64748b;
+        --line: #dbe4f0;
+        --accent: #2563eb;
+        --accent-dark: #1d4ed8;
+        --accent-soft: #eaf2ff;
+        --danger: #b91c1c;
+        --shadow: 0 18px 48px rgba(30, 41, 59, 0.10);
+      }
+
+      * { box-sizing: border-box; }
+      html { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+      body { margin: 0; min-height: 100vh; background: linear-gradient(180deg, rgba(255,255,255,.78), transparent 340px), var(--bg); }
+      button, input, textarea { font: inherit; }
+      button { cursor: pointer; }
+      a { color: var(--accent); overflow-wrap: anywhere; }
+      .hidden { display: none !important; }
+    }
+
+    @layer layout {
+      .app { width: min(920px, calc(100% - 28px)); margin: 0 auto; padding: 28px 0 52px; }
+      .hero { margin-bottom: 18px; text-align: center; }
+      .hero h1 { margin: 0; font-size: clamp(1.8rem, 4vw, 2.75rem); letter-spacing: -.035em; line-height: 1.12; }
+      .hero p { max-width: 680px; margin: 12px auto 0; color: var(--muted); line-height: 1.65; }
+      .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow); }
+      .primary-button, .secondary-button { min-height: 48px; border: 0; border-radius: 14px; padding: 0 18px; font-weight: 800; }
+      .primary-button { background: var(--accent); color: #fff; }
+      .primary-button:hover { background: var(--accent-dark); }
+      .secondary-button { background: var(--accent-soft); color: var(--accent-dark); }
+    }
+
+    @layer editor {
+      .editor-panel { padding: 20px; }
+      .field-label { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-weight: 800; }
+      .field-label small { color: var(--muted); font-weight: 500; }
+      .title-input, .text-input { width: 100%; border: 1px solid var(--line); border-radius: 14px; background: #fff; color: var(--text); outline: none; }
+      .title-input:focus, .text-input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(37,99,235,.12); }
+      .title-input { padding: 12px 14px; margin-bottom: 16px; }
+      .text-input { min-height: 430px; padding: 16px; resize: vertical; line-height: 1.75; }
+      .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+      .controls .primary-button { flex: 1 1 300px; }
+      .helper { margin-top: 14px; padding: 14px 16px; border-radius: 14px; background: #f8fafc; color: var(--muted); line-height: 1.7; font-size: .94rem; }
+      .status { min-height: 24px; margin-top: 12px; color: var(--muted); font-size: .93rem; }
+      .status.error { color: var(--danger); }
+
+      /* Footer note editor */
+      .note-panel { margin-top: 14px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: #f8fafc; }
+      .note-panel .text-input { min-height: 120px; background: #fff; }
+    }
+
+    @layer viewer {
+      .document { position: relative; padding: clamp(24px, 5vw, 52px); max-width: 860px; margin: 0 auto; }
+      .viewer-actions { position: absolute; top: 16px; right: 16px; display: flex; gap: 8px; }
+      .viewer-actions button { min-height: 42px; }
+      .document h1 { margin: 0 110px 28px 0; font-size: clamp(1.8rem, 5vw, 2.8rem); line-height: 1.25; letter-spacing: -.035em; }
+      .document h2 { margin: 34px 0 14px; padding-bottom: 8px; border-bottom: 2px solid var(--accent-soft); font-size: clamp(1.2rem, 3vw, 1.55rem); line-height: 1.45; }
+      .document p, .document li, .document blockquote { font-size: clamp(1rem, 2.2vw, 1.08rem); line-height: 1.72; }
+      .document p { margin: 0 0 18px; }
+      .document ul { margin: 0 0 22px; padding-left: 1.5em; }
+      .document li + li { margin-top: 8px; }
+      .document blockquote { margin: 20px 0; padding: 15px 18px; border-left: 5px solid var(--accent); border-radius: 0 12px 12px 0; background: var(--accent-soft); }
+      .link-card { margin: 20px 0; }
+      .link-card a { display: block; padding: 16px 18px; border: 1px solid #bfd2f5; border-radius: 14px; background: var(--accent-soft); text-decoration: none; font-weight: 700; }
+      .meta { margin-top: 36px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: .86rem; }
+      .document h3 { margin: 28px 0 12px; font-size: 1.2rem; }
+      .document h4, .document h5, .document h6 { margin: 24px 0 10px; line-height: 1.5; }
+      .document ol { margin: 0 0 22px; padding-left: 1.7em; }
+      .document pre { overflow-x: auto; margin: 20px 0; padding: 16px; border-radius: 14px; background: #0f172a; color: #e2e8f0; line-height: 1.65; }
+      .document code { padding: .14em .38em; border-radius: 6px; background: #eef2f7; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .92em; }
+      .document pre code { padding: 0; background: transparent; color: inherit; }
+      .document hr { margin: 30px 0; border: 0; border-top: 1px solid var(--line); }
+      .table-wrap { overflow-x: auto; margin: 20px 0; }
+      .document table { width: 100%; border-collapse: collapse; background: #fff; }
+      .document th, .document td { padding: 11px 13px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+      .document th { background: #f8fafc; }
+      .document img { display: block; max-width: 100%; height: auto; margin: 20px auto; border-radius: 12px; }
+      .task-item { list-style: none; margin-left: -1.3em; }
+    }
+
+    @layer responsive {
+      @media (max-width: 620px) {
+        .app { width: min(100% - 16px, 920px); padding-top: 10px; }
+        .editor-panel, .document { padding: 18px; border-radius: 18px; }
+        .text-input { min-height: 55vh; }
+        .note-panel .text-input { min-height: 120px; }
+        .controls { flex-direction: column; }
+        .controls button { width: 100%; }
+        .viewer-actions { position: static; justify-content: flex-end; margin: -4px 0 14px; }
+        .document h1 { margin-right: 0; }
+      }
+
+#viewTitle {
+  margin-top: 36px;
+}
+    }
+  </style>
+</head>
+<body>
+  <main id="editorMode" class="app">
+    <header class="hero">
+      <h1>Markdown to Readable HTML</h1>
+      <p>Paste your Markdown, preview it as a polished reading page, and download everything as a single self-contained HTML file.</p>
+    </header>
+
+    <section class="panel editor-panel" aria-labelledby="editorTitle">
+      <div class="field-label">
+        <label for="pageTitle" id="editorTitle">Page title</label>
+        <small>Optional</small>
+      </div>
+      <input id="pageTitle" class="title-input" type="text" placeholder="e.g. Travel plans, Setup guide, Reference notes">
+
+      <div class="field-label">
+        <label for="sourceText">Markdown content</label>
+        <small id="charCount">0 characters</small>
+      </div>
+      <textarea id="sourceText" class="text-input" placeholder="Paste or write Markdown here."></textarea>
+
+      <div class="controls">
+        <button id="saveButton" class="primary-button" type="button">Download reading page</button>
+        <button id="saveEditorButton" class="secondary-button" type="button">Save editable copy</button>
+        <button id="viewButton" class="secondary-button" type="button">Preview</button>
+        <button id="noteEditButton" class="secondary-button" type="button" aria-expanded="false" aria-controls="notePanel">Edit footer note</button>
+        <button id="sampleButton" class="secondary-button" type="button">Insert example</button>
+        <div hidden>m<button id="clearButton" class="secondary-button" type="button">Clear input</button></div>
+      </div>
+
+      <div id="notePanel" class="note-panel hidden">
+        <div class="field-label">
+          <label for="noteText">Footer note</label>
+          <small>Add an author, source, or any custom note</small>
+        </div>
+        <textarea id="noteText" class="text-input" placeholder="e.g. Edited by Alex"></textarea>
+      </div>
+
+      <div class="helper">The downloaded HTML includes the original Markdown, so it can be reopened and edited later.</div>
+      <div id="status" class="status" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <main id="viewerMode" class="app hidden">
+    <article class="panel document">
+      <div class="viewer-actions">
+        <button id="editButton" class="secondary-button" type="button">Edit</button>
+      </div>
+      <h1 id="viewTitle"></h1>
+      <div id="viewContent"></div>
+      <footer id="viewMeta" class="meta"></footer>
+    </article>
+  </main>
+
+  <script id="initialData" type="application/json">{"title":"","source":"","createdAt":"","note":"","startMode":"auto"}</script>
+  <script>
+  window.addEventListener("DOMContentLoaded", function () {
+    "use strict";
+
+    const editorMode = document.getElementById("editorMode");
+    const viewerMode = document.getElementById("viewerMode");
+    const titleInput = document.getElementById("pageTitle");
+    const sourceText = document.getElementById("sourceText");
+    const noteText = document.getElementById("noteText");
+    const notePanel = document.getElementById("notePanel");
+    const noteEditButton = document.getElementById("noteEditButton");
+    const charCount = document.getElementById("charCount");
+    const status = document.getElementById("status");
+    const viewTitle = document.getElementById("viewTitle");
+    const viewContent = document.getElementById("viewContent");
+    const viewMeta = document.getElementById("viewMeta");
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function safeUrl(value) {
+      try {
+        const url = new URL(value, location.href);
+        return ["http:", "https:", "mailto:"].includes(url.protocol) ? url.href : "#";
+      } catch (error) {
+        return "#";
+      }
+    }
+
+    function parseInlineMarkdown(text) {
+      const codeTokens = [];
+      let value = String(text).replace(/`([^`]+)`/g, function (_, code) {
+        const token = "@@CODE" + codeTokens.length + "@@";
+        codeTokens.push("<code>" + escapeHtml(code) + "</code>");
+        return token;
+      });
+
+      value = escapeHtml(value);
+      value = value.replace(/!\[([^\]]*)\]\(([^\s)]+)(?:\s+["']([^"']*)["'])?\)/g, function (_, alt, url, title) {
+        const titleAttr = title ? ' title="' + escapeHtml(title) + '"' : "";
+        return '<img src="' + escapeHtml(safeUrl(url)) + '" alt="' + alt + '"' + titleAttr + ">";
+      });
+      value = value.replace(/\[([^\]]+)\]\(([^\s)]+)(?:\s+["']([^"']*)["'])?\)/g, function (_, label, url, title) {
+        const titleAttr = title ? ' title="' + escapeHtml(title) + '"' : "";
+        return '<a href="' + escapeHtml(safeUrl(url)) + '" target="_blank" rel="noopener noreferrer"' + titleAttr + '>' + label + "</a>";
+      });
+      value = value.replace(/(^|[\s(])((?:https?:\/\/)[^\s<]+)/g, function (_, prefix, url) {
+        return prefix + '<a href="' + escapeHtml(safeUrl(url)) + '" target="_blank" rel="noopener noreferrer">' + url + "</a>";
+      });
+      value = value.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+      value = value.replace(/__([^_]+)__/g, "<strong>$1</strong>");
+      value = value.replace(/~~([^~]+)~~/g, "<del>$1</del>");
+      value = value.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+      value = value.replace(/(^|[^_])_([^_\n]+)_/g, "$1<em>$2</em>");
+      value = value.replace(/  $/g, "<br>");
+      codeTokens.forEach(function (html, index) {
+        value = value.replace("@@CODE" + index + "@@", html);
+      });
+      return value;
+    }
+
+    function splitTableRow(line) {
+      return line.trim().replace(/^\||\|$/g, "").split("|").map(function (cell) { return cell.trim(); });
+    }
+
+    function isTableDivider(line) {
+      const cells = splitTableRow(line);
+      return cells.length > 0 && cells.every(function (cell) { return /^:?-{3,}:?$/.test(cell); });
+    }
+
+    function parseMarkdownToHtml(markdown) {
+      const normalized = String(markdown).replace(/\r\n?/g, "\n").trim();
+      if (!normalized) return "<p>No Markdown content has been entered.</p>";
+
+      const lines = normalized.split("\n");
+      const output = [];
+      let paragraph = [];
+      let listType = "";
+      let listItems = [];
+      let quoteLines = [];
+      let inCode = false;
+      let codeLanguage = "";
+      let codeLines = [];
+
+      function flushParagraph() {
+        if (!paragraph.length) return;
+        output.push("<p>" + paragraph.map(parseInlineMarkdown).join("\n") + "</p>");
+        paragraph = [];
+      }
+
+      function flushList() {
+        if (!listItems.length) return;
+        const tag = listType || "ul";
+        output.push("<" + tag + ">" + listItems.map(function (item) {
+          const task = item.match(/^\[([ xX])\]\s+(.+)$/);
+          if (task) {
+            return "<li class=\"task-item\"><input type=\"checkbox\" disabled" + (task[1].toLowerCase() === "x" ? " checked" : "") + "> " + parseInlineMarkdown(task[2]) + "</li>";
+          }
+          return "<li>" + parseInlineMarkdown(item) + "</li>";
+        }).join("") + "</" + tag + ">");
+        listItems = [];
+        listType = "";
+      }
+
+      function flushQuote() {
+        if (!quoteLines.length) return;
+        output.push("<blockquote>" + quoteLines.map(parseInlineMarkdown).join("<br>") + "</blockquote>");
+        quoteLines = [];
+      }
+
+      function flushAll() {
+        flushParagraph();
+        flushList();
+        flushQuote();
+      }
+
+      for (let index = 0; index < lines.length; index++) {
+        const raw = lines[index];
+        const trimmed = raw.trim();
+
+        if (inCode) {
+          if (/^```/.test(trimmed)) {
+            output.push('<pre><code' + (codeLanguage ? ' class="language-' + escapeHtml(codeLanguage) + '"' : "") + '>' + escapeHtml(codeLines.join("\n")) + "</code></pre>");
+            inCode = false;
+            codeLanguage = "";
+            codeLines = [];
+          } else {
+            codeLines.push(raw);
+          }
+          continue;
+        }
+
+        const fence = trimmed.match(/^```\s*([\w-]*)\s*$/);
+        if (fence) {
+          flushAll();
+          inCode = true;
+          codeLanguage = fence[1] || "";
+          continue;
+        }
+
+        if (!trimmed) {
+          flushAll();
+          continue;
+        }
+
+        if (index + 1 < lines.length && raw.includes("|") && isTableDivider(lines[index + 1])) {
+          flushAll();
+          const headers = splitTableRow(raw);
+          const aligns = splitTableRow(lines[index + 1]).map(function (cell) {
+            if (/^:-+:$/.test(cell)) return "center";
+            if (/-+:$/.test(cell)) return "right";
+            return "left";
+          });
+          const rows = [];
+          index += 2;
+          while (index < lines.length && lines[index].includes("|") && lines[index].trim()) {
+            rows.push(splitTableRow(lines[index]));
+            index++;
+          }
+          index--;
+          let html = '<div class="table-wrap"><table><thead><tr>';
+          headers.forEach(function (cell, i) { html += '<th style="text-align:' + aligns[i] + '">' + parseInlineMarkdown(cell) + "</th>"; });
+          html += "</tr></thead><tbody>";
+          rows.forEach(function (row) {
+            html += "<tr>";
+            headers.forEach(function (_, i) { html += '<td style="text-align:' + aligns[i] + '">' + parseInlineMarkdown(row[i] || "") + "</td>"; });
+            html += "</tr>";
+          });
+          html += "</tbody></table></div>";
+          output.push(html);
+          continue;
+        }
+
+        const heading = trimmed.match(/^(#{1,6})\s+(.+)$/);
+        if (heading) {
+          flushAll();
+          const level = heading[1].length;
+          output.push("<h" + level + ">" + parseInlineMarkdown(heading[2]) + "</h" + level + ">");
+          continue;
+        }
+
+        if (/^(?:-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
+          flushAll();
+          output.push("<hr>");
+          continue;
+        }
+
+        const quote = trimmed.match(/^>\s?(.*)$/);
+        if (quote) {
+          flushParagraph();
+          flushList();
+          quoteLines.push(quote[1]);
+          continue;
+        }
+
+        const unordered = trimmed.match(/^[-+*]\s+(.+)$/);
+        const ordered = trimmed.match(/^\d+[.)]\s+(.+)$/);
+        if (unordered || ordered) {
+          flushParagraph();
+          flushQuote();
+          const nextType = ordered ? "ol" : "ul";
+          if (listType && listType !== nextType) flushList();
+          listType = nextType;
+          listItems.push((unordered || ordered)[1]);
+          continue;
+        }
+
+        flushList();
+        flushQuote();
+        paragraph.push(raw);
+      }
+
+      if (inCode) {
+        output.push('<pre><code' + (codeLanguage ? ' class="language-' + escapeHtml(codeLanguage) + '"' : "") + '>' + escapeHtml(codeLines.join("\n")) + "</code></pre>");
+      }
+      flushAll();
+      return output.join("\n");
+    }
+
+    function parseTextToHtml(text) {
+      return parseMarkdownToHtml(text);
+    }
+
+    function parseTextToMarkdown(text) {
+      return String(text).replace(/\r\n?/g, "\n").trim();
+    }
+
+    function encodeStoredText(value) {
+      return String(value)
+        .replace(/`/g, "jfasofklasflkd")
+        .replace(/<\//g, "<gsafnasdfhags/");
+    }
+
+    function decodeStoredText(value) {
+      return String(value)
+        .replace(/<gsafnasdfhags\//g, "</")
+        .replace(/jfasofklasflkd/g, String.fromCharCode(96));
+    }
+
+    function readInitialData() {
+      try {
+        const raw = decodeStoredText(document.getElementById("initialData").textContent || "");
+        const parsed = JSON.parse(raw);
+        return {
+          title: typeof parsed.title === "string" ? parsed.title : "",
+          source: typeof parsed.source === "string" ? parsed.source : "",
+          createdAt: typeof parsed.createdAt === "string" ? parsed.createdAt : "",
+          note: typeof parsed.note === "string" ? parsed.note : "",
+          startMode: parsed.startMode === "editor" ? "editor" : "auto"
+        };
+      } catch (error) {
+        return { title: "", source: "", createdAt: "", note: "", startMode: "auto" };
+      }
+    }
+
+
+    function applyMarkdownTitle() {
+      if (titleInput.value.trim()) return;
+
+      const normalized = sourceText.value.replace(/\r\n?/g, "\n");
+      const lines = normalized.split("\n");
+      const firstLine = lines[0] || "";
+      const match = firstLine.match(/^#\s+(.+?)\s*$/);
+      if (!match) return;
+
+      titleInput.value = match[1].trim();
+      lines.shift();
+      while (lines.length && !lines[0].trim()) lines.shift();
+      sourceText.value = lines.join("\n").trim();
+      updateCount();
+    }
+
+    function showStatus(message, isError) {
+      status.textContent = message;
+      status.classList.toggle("error", Boolean(isError));
+    }
+
+    function updateCount() {
+      charCount.textContent = sourceText.value.length.toLocaleString("en-US") + " characters";
+    }
+
+    function showEditor() {
+      viewerMode.classList.add("hidden");
+      editorMode.classList.remove("hidden");
+      document.title = "Markdown to Readable HTML";
+      updateCount();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function showViewer() {
+      applyMarkdownTitle();
+      const title = titleInput.value.trim() || "Reading Page";
+      const source = sourceText.value;
+      if (!source.length && !titleInput.value.length) {
+        showStatus("Enter at least one character in the title or Markdown field.", true);
+        sourceText.focus();
+        return false;
+      }
+
+      viewTitle.textContent = title;
+      viewContent.innerHTML = parseTextToHtml(source);
+      const savedData = readInitialData();
+      const dateText = savedData.createdAt || new Intl.DateTimeFormat("en-US", {
+        year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit"
+      }).format(new Date());
+      viewMeta.replaceChildren();
+      const createdLine = document.createElement("div");
+      createdLine.textContent = "Created: " + dateText;
+      viewMeta.appendChild(createdLine);
+      if (noteText.value.trim()) {
+        const noteLine = document.createElement("div");
+        noteLine.style.whiteSpace = "pre-wrap";
+        noteLine.style.marginTop = "6px";
+        noteLine.textContent = noteText.value.trim();
+        viewMeta.appendChild(noteLine);
+      }
+      editorMode.classList.add("hidden");
+      viewerMode.classList.remove("hidden");
+      document.title = title;
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return true;
+    }
+
+    function makeFileName() {
+      const base = titleInput.value.trim() || "reading-page";
+      const safe = base.replace(/[\\/:*?"<>|]/g, "_").replace(/\s+/g, " ").trim().slice(0, 60);
+      return (safe || "reading-page") + ".html";
+    }
+
+    function buildSelfHtml(startMode) {
+      applyMarkdownTitle();
+      const clone = document.documentElement.cloneNode(true);
+      const dataNode = clone.querySelector("#initialData");
+      const data = {
+        title: titleInput.value,
+        source: sourceText.value,
+        createdAt: new Intl.DateTimeFormat("en-US", {
+          year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit"
+        }).format(new Date()),
+        note: noteText.value,
+        startMode: startMode === "editor" ? "editor" : "auto"
+      };
+      dataNode.textContent = encodeStoredText(JSON.stringify(data));
+
+      clone.querySelector("#editorMode").classList.add("hidden");
+      clone.querySelector("#viewerMode").classList.remove("hidden");
+      clone.querySelector("#pageTitle").value = "";
+      clone.querySelector("#sourceText").textContent = "";
+      clone.querySelector("#noteText").textContent = "";
+      clone.querySelector("#status").textContent = "";
+
+      return "<!DOCTYPE html>\n" + clone.outerHTML;
+    }
+
+    function downloadSelf(startMode) {
+      applyMarkdownTitle();
+      if (!sourceText.value.length && !titleInput.value.length) {
+        showStatus("Enter at least one character in the title or Markdown field.", true);
+        sourceText.focus();
+        return;
+      }
+
+      const html = buildSelfHtml(startMode);
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = makeFileName();
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      showStatus(startMode === "editor" ? "Saved an editable HTML file that opens in editor mode." : "Saved an HTML file that opens in reading mode.");
+    }
+
+    document.getElementById("saveButton").addEventListener("click", function () { downloadSelf("auto"); });
+    document.getElementById("saveEditorButton").addEventListener("click", function () { downloadSelf("editor"); });
+    document.getElementById("viewButton").addEventListener("click", showViewer);
+    document.getElementById("editButton").addEventListener("click", showEditor);
+    noteEditButton.addEventListener("click", function () {
+      const willOpen = notePanel.classList.contains("hidden");
+      notePanel.classList.toggle("hidden", !willOpen);
+      noteEditButton.setAttribute("aria-expanded", String(willOpen));
+      if (willOpen) noteText.focus();
+    });
+    document.getElementById("sampleButton").addEventListener("click", function () {
+      titleInput.value = "Weekend Trip Plan";
+      sourceText.value = "## Meeting point\n\nMeet at the main station entrance by 9:00 AM.\n\n## What to bring\n\n- Smartphone\n- Charger\n- Water bottle\n- Compact umbrella\n\n> The schedule may change in case of heavy rain.\n\nReference: [National Park Service](https://www.nps.gov/)";
+      updateCount();
+      showStatus("Example content inserted.");
+    });
+    document.getElementById("clearButton").addEventListener("click", function () {
+      titleInput.value = "";
+      sourceText.value = "";
+      noteText.value = "";
+      updateCount();
+      showStatus("Input cleared.");
+      sourceText.focus();
+    });
+    sourceText.addEventListener("input", updateCount);
+
+    document.addEventListener("keydown", function (event) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        downloadSelf("editor");
+      }
+    });
+
+    const initialData = readInitialData();
+    titleInput.value = initialData.title;
+    sourceText.value = initialData.source;
+    noteText.value = initialData.note;
+    if (noteText.value.trim()) {
+      notePanel.classList.remove("hidden");
+      noteEditButton.setAttribute("aria-expanded", "true");
+    }
+    updateCount();
+
+    if (initialData.startMode !== "editor" && (initialData.title + initialData.source).length >= 1) {
+      showViewer();
+    } else {
+      showEditor();
+    }
+  });
+  </script>
+</body>
+</html>
