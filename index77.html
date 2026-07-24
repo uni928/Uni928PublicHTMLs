@@ -5420,7 +5420,7 @@ function ensureCopyAreaUI() {
 
   copyArea.innerHTML = `
     <h2>直近でコピーしたHTML</h2>
-    <p>見本ボタンを押すと、通常・ホバー・クリック時の挙動を含むHTML一式をここに表示します。下の4ボタンで必要な部分だけコピーできます。</p>
+    <p>見本ボタンを押すと、通常・ホバー・クリック時の挙動を含むHTML一式をここに表示します。下のボタンで必要な部分のコピーやCSSファイルの保存ができます。</p>
 
     <div style="margin-bottom:12px;">
       <label for="classNameInput" style="display:block;margin-bottom:6px;font-size:13px;font-weight:700;color:#476179;">
@@ -5442,8 +5442,10 @@ function ensureCopyAreaUI() {
     <div class="btn-row" style="margin-bottom:12px;">
       <button type="button" id="copyCssBtn" class="btn btn-sm tone-soft shadow-light" data-copy-tool="1">css をコピー</button>
       <button type="button" id="copyElementBtn" class="btn btn-sm tone-main shadow-light" data-copy-tool="1">要素をコピー</button>
+      <button type="button" id="copyExternalCssElementBtn" class="btn btn-sm tone-main shadow-light" data-copy-tool="1" hidden style="display:none;">CSS をダウンロードした版の要素をコピー</button>
       <button type="button" id="copyJsBtn" class="btn btn-sm tone-sub shadow-light" data-copy-tool="1">javascript をコピー</button>
       <button type="button" id="copyLazyBtn" class="btn btn-sm tone-gray shadow-light" data-copy-tool="1">ズボラ版要素をコピー</button>
+      <button type="button" id="downloadAssetsBtn" class="btn btn-sm btn-x74 shadow-light" data-copy-tool="1">CSSをダウンロードして要素をコピー</button>
     </div>
 
     <pre id="copiedHtml">&lt;html&gt;
@@ -5461,14 +5463,17 @@ function ensureCopyAreaUI() {
 
   const copyCssBtn = document.getElementById("copyCssBtn");
   const copyElementBtn = document.getElementById("copyElementBtn");
+  const copyExternalCssElementBtn = document.getElementById("copyExternalCssElementBtn");
   const copyJsBtn = document.getElementById("copyJsBtn");
   const copyLazyBtn = document.getElementById("copyLazyBtn");
+  const downloadAssetsBtn = document.getElementById("downloadAssetsBtn");
 
   copyCssBtn.addEventListener("click", async () => {
     if (!currentCopiedData.cssText) {
       showToast("先に見本ボタンを押してください");
       return;
     }
+    restoreNormalGeneratedDisplay();
     const ok = await copyText(currentCopiedData.cssText);
     showToast(ok ? "CSSをコピーしました" : "コピーに失敗しました");
   });
@@ -5478,8 +5483,20 @@ function ensureCopyAreaUI() {
       showToast("先に見本ボタンを押してください");
       return;
     }
+    restoreNormalGeneratedDisplay();
     const ok = await copyText(currentCopiedData.elementHtml);
     showToast(ok ? "要素をコピーしました" : "コピーに失敗しました");
+  });
+
+  copyExternalCssElementBtn.addEventListener("click", async () => {
+    const generated = buildExternalCssHtml();
+    if (!generated) {
+      showToast("先に見本ボタンを押してください");
+      return;
+    }
+    const ok = await copyText(generated.externalElementHtml);
+    updateCopyAreaPreview(generated.fullHtml);
+    showToast(ok ? "CSSをダウンロードした版の要素をコピーしました" : "コピーに失敗しました");
   });
 
   copyJsBtn.addEventListener("click", async () => {
@@ -5499,6 +5516,8 @@ function ensureCopyAreaUI() {
     const ok = await copyText(currentCopiedData.lazyElementHtml);
     showToast(ok ? "ズボラ版要素をコピーしました" : "コピーに失敗しました");
   });
+
+  downloadAssetsBtn.addEventListener("click", downloadCssAndCopyElement);
 
   return copyArea;
 }
@@ -5882,6 +5901,71 @@ function buildJavascriptText() {
   ].join("\n");
 }
 
+
+function buildExternalCssHtml() {
+  if (!lastSelectedButton) return null;
+
+  const className = getRequestedClassName();
+  const { cssText, elementHtml } = buildCssButtonParts(lastSelectedButton);
+  const cssFileName = `${className}.css`;
+
+  const javascriptText = buildJavascriptText();
+
+  const externalElementHtml = [
+    `<link rel="stylesheet" href="${cssFileName}">`,
+    elementHtml
+  ].join("\n");
+
+  const bodyHtml = [
+    `<body>`,
+    `  <link rel="stylesheet" href="${cssFileName}">`,
+    `  ${elementHtml}`,
+    `  <script>`,
+    javascriptText,
+    `  <\/script>`,
+    `</body>`
+  ].join("\n");
+
+  const fullHtml = [
+    `<html>`,
+    `<style>`,
+    `</style>`,
+    bodyHtml,
+    `</html>`
+  ].join("\n");
+
+  return { className, cssText, cssFileName, externalElementHtml, bodyHtml, fullHtml };
+}
+
+function downloadBlob(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function downloadCssAndCopyElement() {
+  const generated = buildExternalCssHtml();
+  if (!generated) {
+    showToast("先に見本ボタンを押してください");
+    return;
+  }
+
+  downloadBlob(new Blob([generated.cssText], { type: "text/css;charset=utf-8" }), generated.cssFileName);
+  const copied = await copyText(generated.externalElementHtml);
+  const copyExternalCssElementBtn = document.getElementById("copyExternalCssElementBtn");
+  if (copyExternalCssElementBtn) {
+    copyExternalCssElementBtn.hidden = false;
+    copyExternalCssElementBtn.style.display = "inline-flex";
+  }
+  updateCopyAreaPreview(generated.fullHtml);
+  showToast(copied ? "CSSをダウンロードし、要素をコピーしました" : "CSSをダウンロードしました");
+}
+
 function buildFullHtml(button) {
   const { cssText, elementHtml } = buildCssButtonParts(button);
   const javascriptText = buildJavascriptText();
@@ -5914,8 +5998,25 @@ function updateCopyAreaPreview(fullHtml) {
   copiedHtmlEl.textContent = fullHtml;
 }
 
+function hideExternalCssElementCopyButton() {
+  const button = document.getElementById("copyExternalCssElementBtn");
+  if (button) {
+    button.hidden = true;
+    button.style.display = "none";
+  }
+}
+
+function restoreNormalGeneratedDisplay() {
+  hideExternalCssElementCopyButton();
+  if (currentCopiedData.fullHtml) {
+    updateCopyAreaPreview(currentCopiedData.fullHtml);
+  }
+}
+
 function refreshGeneratedContent(button, shouldCopy = false) {
   if (!button) return;
+
+  hideExternalCssElementCopyButton();
 
   // 選択したボタンの固有クラス名を自動入力
   const classNameInput = document.getElementById("classNameInput");
@@ -5990,8 +6091,14 @@ function bindQuickCopyPanel() {
 
   document.getElementById("panelScrollCopyAreaBtn")?.addEventListener("click", scrollToCopyArea);
   document.getElementById("panelScrollSelectedBtn")?.addEventListener("click", scrollToLastSelectedButton);
-  document.getElementById("panelCopyCssBtn")?.addEventListener("click", () => copyCurrentPart("cssText", "CSSをコピーしました"));
-  document.getElementById("panelCopyElementBtn")?.addEventListener("click", () => copyCurrentPart("elementHtml", "要素をコピーしました"));
+  document.getElementById("panelCopyCssBtn")?.addEventListener("click", () => {
+    restoreNormalGeneratedDisplay();
+    copyCurrentPart("cssText", "CSSをコピーしました");
+  });
+  document.getElementById("panelCopyElementBtn")?.addEventListener("click", () => {
+    restoreNormalGeneratedDisplay();
+    copyCurrentPart("elementHtml", "要素をコピーしました");
+  });
   document.getElementById("panelCopyJsBtn")?.addEventListener("click", () => copyCurrentPart("javascriptText", "JavaScriptをコピーしました"));
   document.getElementById("panelCopyLazyBtn")?.addEventListener("click", () => copyCurrentPart("lazyElementHtml", "ズボラ版要素をコピーしました"));
 }
