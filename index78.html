@@ -5439,8 +5439,10 @@ function ensureCopyAreaUI() {
     <div class="btn-row" style="margin-bottom:12px;">
       <button type="button" id="copyCssBtn" class="btn btn-sm tone-soft shadow-light" data-copy-tool="1">Copy CSS</button>
       <button type="button" id="copyElementBtn" class="btn btn-sm tone-main shadow-light" data-copy-tool="1">Copy Element</button>
+      <button type="button" id="copyExternalCssElementBtn" class="btn btn-sm tone-main shadow-light" data-copy-tool="1" hidden style="display:none;">Copy Element with Downloaded CSS</button>
       <button type="button" id="copyJsBtn" class="btn btn-sm tone-sub shadow-light" data-copy-tool="1">Copy JavaScript</button>
       <button type="button" id="copyLazyBtn" class="btn btn-sm tone-gray shadow-light" data-copy-tool="1">Copy Simplified Element</button>
+      <button type="button" id="downloadAssetsBtn" class="btn btn-sm btn-x74 shadow-light" data-copy-tool="1">Download CSS and Copy Element</button>
     </div>
 
     <pre id="copiedHtml">&lt;html&gt;
@@ -5458,14 +5460,17 @@ function ensureCopyAreaUI() {
 
   const copyCssBtn = document.getElementById("copyCssBtn");
   const copyElementBtn = document.getElementById("copyElementBtn");
+  const copyExternalCssElementBtn = document.getElementById("copyExternalCssElementBtn");
   const copyJsBtn = document.getElementById("copyJsBtn");
   const copyLazyBtn = document.getElementById("copyLazyBtn");
+  const downloadAssetsBtn = document.getElementById("downloadAssetsBtn");
 
   copyCssBtn.addEventListener("click", async () => {
     if (!currentCopiedData.cssText) {
       showToast("Select a sample button first");
       return;
     }
+    restoreNormalGeneratedDisplay();
     const ok = await copyText(currentCopiedData.cssText);
     showToast(ok ? "CSS copied" : "Copy failed");
   });
@@ -5475,8 +5480,20 @@ function ensureCopyAreaUI() {
       showToast("Select a sample button first");
       return;
     }
+    restoreNormalGeneratedDisplay();
     const ok = await copyText(currentCopiedData.elementHtml);
     showToast(ok ? "Element copied" : "Copy failed");
+  });
+
+  copyExternalCssElementBtn.addEventListener("click", async () => {
+    const generated = buildExternalCssHtml();
+    if (!generated) {
+      showToast("Select a sample button first");
+      return;
+    }
+    const ok = await copyText(generated.externalElementHtml);
+    updateCopyAreaPreview(generated.fullHtml);
+    showToast(ok ? "Element with downloaded CSS copied" : "Copy failed");
   });
 
   copyJsBtn.addEventListener("click", async () => {
@@ -5496,6 +5513,8 @@ function ensureCopyAreaUI() {
     const ok = await copyText(currentCopiedData.lazyElementHtml);
     showToast(ok ? "Simplified element copied" : "Copy failed");
   });
+
+  downloadAssetsBtn.addEventListener("click", downloadCssAndCopyElement);
 
   return copyArea;
 }
@@ -5879,6 +5898,69 @@ function buildJavascriptText() {
   ].join("\n");
 }
 
+function buildExternalCssHtml() {
+  if (!lastSelectedButton) return null;
+
+  const className = getRequestedClassName();
+  const { cssText, elementHtml } = buildCssButtonParts(lastSelectedButton);
+  const cssFileName = `${className}.css`;
+  const javascriptText = buildJavascriptText();
+
+  const externalElementHtml = [
+    `<link rel="stylesheet" href="${cssFileName}">`,
+    elementHtml
+  ].join("\n");
+
+  const bodyHtml = [
+    `<body>`,
+    `  <link rel="stylesheet" href="${cssFileName}">`,
+    `  ${elementHtml}`,
+    `  <script>`,
+    javascriptText,
+    `  <\/script>`,
+    `</body>`
+  ].join("\n");
+
+  const fullHtml = [
+    `<html>`,
+    `<style>`,
+    `</style>`,
+    bodyHtml,
+    `</html>`
+  ].join("\n");
+
+  return { className, cssText, cssFileName, externalElementHtml, bodyHtml, fullHtml };
+}
+
+function downloadBlob(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function downloadCssAndCopyElement() {
+  const generated = buildExternalCssHtml();
+  if (!generated) {
+    showToast("Select a sample button first");
+    return;
+  }
+
+  downloadBlob(new Blob([generated.cssText], { type: "text/css;charset=utf-8" }), generated.cssFileName);
+  const copied = await copyText(generated.externalElementHtml);
+  const copyExternalCssElementBtn = document.getElementById("copyExternalCssElementBtn");
+  if (copyExternalCssElementBtn) {
+    copyExternalCssElementBtn.hidden = false;
+    copyExternalCssElementBtn.style.display = "inline-flex";
+  }
+  updateCopyAreaPreview(generated.fullHtml);
+  showToast(copied ? "CSS downloaded and element copied" : "CSS downloaded");
+}
+
 function buildFullHtml(button) {
   const { cssText, elementHtml } = buildCssButtonParts(button);
   const javascriptText = buildJavascriptText();
@@ -5909,6 +5991,15 @@ function updateCopyAreaPreview(fullHtml) {
   const copiedHtmlEl = document.getElementById("copiedHtml");
   if (!copiedHtmlEl) return;
   copiedHtmlEl.textContent = fullHtml;
+}
+
+function restoreNormalGeneratedDisplay() {
+  const button = document.getElementById("copyExternalCssElementBtn");
+  if (button) {
+    button.hidden = true;
+    button.style.display = "none";
+  }
+  if (lastSelectedButton) refreshGeneratedContent(lastSelectedButton, false);
 }
 
 function refreshGeneratedContent(button, shouldCopy = false) {
@@ -5987,8 +6078,14 @@ function bindQuickCopyPanel() {
 
   document.getElementById("panelScrollCopyAreaBtn")?.addEventListener("click", scrollToCopyArea);
   document.getElementById("panelScrollSelectedBtn")?.addEventListener("click", scrollToLastSelectedButton);
-  document.getElementById("panelCopyCssBtn")?.addEventListener("click", () => copyCurrentPart("cssText", "CSS copied"));
-  document.getElementById("panelCopyElementBtn")?.addEventListener("click", () => copyCurrentPart("elementHtml", "Element copied"));
+  document.getElementById("panelCopyCssBtn")?.addEventListener("click", () => {
+    restoreNormalGeneratedDisplay();
+    copyCurrentPart("cssText", "CSS copied");
+  });
+  document.getElementById("panelCopyElementBtn")?.addEventListener("click", () => {
+    restoreNormalGeneratedDisplay();
+    copyCurrentPart("elementHtml", "Element copied");
+  });
   document.getElementById("panelCopyJsBtn")?.addEventListener("click", () => copyCurrentPart("javascriptText", "JavaScript copied"));
   document.getElementById("panelCopyLazyBtn")?.addEventListener("click", () => copyCurrentPart("lazyElementHtml", "Simplified element copied"));
 }
@@ -6016,6 +6113,11 @@ function bindSampleButtons() {
       document.querySelectorAll(".copied").forEach(el => el.classList.remove("copied"));
       button.classList.add("copied");
       lastSelectedButton = button;
+      const externalCopyButton = document.getElementById("copyExternalCssElementBtn");
+      if (externalCopyButton) {
+        externalCopyButton.hidden = true;
+        externalCopyButton.style.display = "none";
+      }
 
       refreshGeneratedContent(button, true);
     });
