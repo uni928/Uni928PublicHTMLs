@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="コードをドラッグ＆ドロップして、関数・メソッド間の呼び出し関係を簡易解析するローカル完結型ツールです。">
+  <title>メソッド呼び出し関係 簡易解析</title>
+  <style>
+    @layer base, layout, controls, panels, graph, responsive;
+
+    @layer base {
+      :root {
+        color-scheme: light;
+        --bg: #f4f6f8;
+        --panel: #ffffff;
+        --text: #172033;
+        --muted: #667085;
+        --line: #d8dee8;
+        --accent: #2563eb;
+        --accent-soft: #eaf1ff;
+        --danger: #b42318;
+        --danger-soft: #fff0ee;
+        --warning: #b54708;
+        --warning-soft: #fff4e8;
+        --ok: #067647;
+        --ok-soft: #ecfdf3;
+        --shadow: 0 18px 50px rgba(23, 32, 51, 0.08);
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      button, input, select { font: inherit; }
+      button { cursor: pointer; }
+      code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    }
+
+    @layer layout {
+      .app {
+        width: min(1500px, calc(100% - 28px));
+        margin: 0 auto;
+        padding: 28px 0 48px;
+      }
+
+      .hero {
+        margin-bottom: 18px;
+      }
+
+      .hero h1 {
+        margin: 0;
+        font-size: clamp(1.55rem, 2vw, 2.2rem);
+        letter-spacing: 0.01em;
+      }
+
+      .hero p {
+        margin: 10px 0 0;
+        color: var(--muted);
+        line-height: 1.75;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+        gap: 18px;
+        align-items: start;
+      }
+
+      .left-stack,
+      .right-stack {
+        display: grid;
+        gap: 18px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .panel-header {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .panel-header h2 {
+        margin: 0;
+        font-size: 1rem;
+      }
+
+      .panel-body { padding: 16px 18px; }
+    }
+
+    @layer controls {
+      .drop-zone {
+        border: 2px dashed #9fb2d7;
+        border-radius: 16px;
+        padding: 28px 18px;
+        text-align: center;
+        background: linear-gradient(180deg, #f8fbff, #f3f7ff);
+        transition: 0.18s ease;
+      }
+
+      .drop-zone.dragover {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+        transform: translateY(-1px);
+      }
+
+      .drop-zone strong {
+        display: block;
+        font-size: 1.03rem;
+        margin-bottom: 8px;
+      }
+
+      .drop-zone small {
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .btn {
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--text);
+        border-radius: 10px;
+        min-height: 42px;
+        padding: 0 14px;
+        font-weight: 700;
+      }
+
+      .btn.primary {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+      }
+
+      .btn.danger {
+        color: var(--danger);
+        border-color: #f0b4ad;
+        background: var(--danger-soft);
+      }
+
+      .btn:disabled {
+        opacity: .48;
+        cursor: not-allowed;
+      }
+
+      .file-list {
+        display: grid;
+        gap: 8px;
+        max-height: 280px;
+        overflow: auto;
+      }
+
+      .file-item {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        align-items: center;
+        padding: 10px 11px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fafbfd;
+      }
+
+      .file-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 700;
+        font-size: .92rem;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        border-radius: 999px;
+        padding: 4px 8px;
+        font-size: .75rem;
+        font-weight: 800;
+        background: var(--accent-soft);
+        color: #174ea6;
+      }
+
+      .notice {
+        padding: 12px 14px;
+        border-radius: 12px;
+        line-height: 1.65;
+        font-size: .9rem;
+        color: var(--warning);
+        background: var(--warning-soft);
+        border: 1px solid #f0c88f;
+      }
+
+      .filters {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 180px 180px;
+        gap: 10px;
+      }
+
+      .field {
+        min-height: 42px;
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 0 12px;
+        background: #fff;
+        color: var(--text);
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .stat {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px;
+        background: #fafbfd;
+      }
+
+      .stat strong {
+        display: block;
+        font-size: 1.35rem;
+      }
+
+      .stat span {
+        color: var(--muted);
+        font-size: .78rem;
+      }
+    }
+
+    @layer panels {
+      .table-wrap {
+        overflow: auto;
+        max-height: 480px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 760px;
+      }
+
+      th, td {
+        text-align: left;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+        font-size: .88rem;
+      }
+
+      th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: #f8fafc;
+        color: var(--muted);
+        font-size: .78rem;
+      }
+
+      tr[data-clickable="true"] { cursor: pointer; }
+      tr[data-clickable="true"]:hover { background: #f7faff; }
+      tr.selected { background: var(--accent-soft); }
+
+      .risk-high { color: var(--danger); font-weight: 800; }
+      .risk-mid { color: var(--warning); font-weight: 800; }
+      .risk-low { color: var(--ok); font-weight: 800; }
+
+      .detail-empty {
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .detail-title {
+        margin: 0 0 8px;
+        font-size: 1.05rem;
+      }
+
+      .detail-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+
+      .call-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .call-item {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: #fafbfd;
+      }
+
+      .call-item strong { display: block; margin-bottom: 4px; }
+      .call-item span { color: var(--muted); font-size: .82rem; }
+    }
+
+    @layer graph {
+      .graph-shell {
+        position: relative;
+        min-height: 560px;
+        background:
+          linear-gradient(#eef2f7 1px, transparent 1px),
+          linear-gradient(90deg, #eef2f7 1px, transparent 1px),
+          #fff;
+        background-size: 28px 28px;
+        overflow: auto;
+      }
+
+      #graphSvg {
+        display: block;
+        min-width: 100%;
+        min-height: 560px;
+      }
+
+      .graph-note {
+        position: absolute;
+        left: 14px;
+        bottom: 14px;
+        padding: 8px 10px;
+        border-radius: 9px;
+        background: rgba(255,255,255,.92);
+        border: 1px solid var(--line);
+        color: var(--muted);
+        font-size: .77rem;
+        pointer-events: none;
+      }
+    }
+
+    @layer responsive {
+      @media (max-width: 1050px) {
+        .grid { grid-template-columns: 1fr; }
+        .left-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .left-stack .panel:first-child { grid-column: 1 / -1; }
+      }
+
+      @media (max-width: 760px) {
+        .app { width: min(100% - 16px, 1500px); padding-top: 16px; }
+        .left-stack { grid-template-columns: 1fr; }
+        .left-stack .panel:first-child { grid-column: auto; }
+        .filters { grid-template-columns: 1fr; }
+        .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .panel-header { align-items: flex-start; flex-direction: column; }
+        .actions .btn { flex: 1 1 140px; }
+        .graph-shell, #graphSvg { min-height: 460px; }
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="hero">
+      <h1>メソッド呼び出し関係 簡易解析</h1>
+      <p>コードファイルをドラッグ＆ドロップすると、関数・メソッドの定義と呼び出し関係を、一覧と図で簡易確認できます。解析はブラウザ内だけで行います。</p>
+    </section>
+
+    <section class="grid">
+      <div class="left-stack">
+        <section class="panel">
+          <div class="panel-header"><h2>1. コードを読み込む</h2></div>
+          <div class="panel-body">
+            <div id="dropZone" class="drop-zone" tabindex="0">
+              <strong>ここにコードをドラッグ＆ドロップ</strong>
+              <small>複数ファイル対応です。フォルダ選択にも対応しています。<br>.html / .htm / .js は JavaScript として簡易解析します。</small>
+            </div>
+            <input id="fileInput" type="file" multiple hidden>
+            <input id="folderInput" type="file" webkitdirectory directory multiple hidden>
+            <div class="actions">
+              <button id="selectFilesBtn" class="btn primary">ファイルを選択</button>
+              <button id="selectFolderBtn" class="btn">フォルダを選択</button>
+              <button id="clearBtn" class="btn danger" disabled>クリア</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header"><h2>読み込み済みファイル</h2><span id="fileCountBadge" class="badge">0件</span></div>
+          <div class="panel-body">
+            <div id="fileList" class="file-list"><div class="detail-empty">まだファイルがありません。</div></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header"><h2>注意</h2></div>
+          <div class="panel-body">
+            <div class="notice">正規表現と簡易構文解析による推定です。動的呼び出し、継承、インターフェイス、ラムダ、リフレクション、外部ライブラリ、同名メソッドは誤判定する場合があります。</div>
+          </div>
+        </section>
+      </div>
+
+      <div class="right-stack">
+        <section class="panel">
+          <div class="panel-header"><h2>簡易解析結果</h2></div>
+          <div class="panel-body">
+            <div class="summary">
+              <div class="stat"><strong id="statFiles">0</strong><span>ファイル</span></div>
+              <div class="stat"><strong id="statMethods">0</strong><span>定義</span></div>
+              <div class="stat"><strong id="statCalls">0</strong><span>呼び出し関係</span></div>
+              <div class="stat"><strong id="statUnused">0</strong><span>未参照候補</span></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header"><h2>絞り込み</h2></div>
+          <div class="panel-body">
+            <div class="filters">
+              <input id="searchInput" class="field" type="search" placeholder="系列をメソッド名・ファイル名で検索">
+              <select id="languageFilter" class="field"><option value="all">すべての言語</option></select>
+              <select id="riskFilter" class="field">
+                <option value="all">すべての危険度</option>
+                <option value="high">高: 削除危険</option>
+                <option value="mid">中: 要確認</option>
+                <option value="low">低: 未参照候補</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header"><h2>呼び出し関係図</h2><button id="fitGraphBtn" class="btn" disabled>全体表示</button></div>
+          <div class="graph-shell" id="graphShell">
+            <svg id="graphSvg" xmlns="http://www.w3.org/2000/svg" aria-label="メソッド呼び出し関係図"></svg>
+            <div class="graph-note">呼び出し階層を左から右へ並べます。紫色の上向き経路は、循環開始メソッドへ戻る参照です。</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header"><h2>メソッド一覧</h2></div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>危険度</th>
+                  <th>メソッド</th>
+                  <th>言語</th>
+                  <th>ファイル</th>
+                  <th>行</th>
+                  <th>呼ぶ</th>
+                  <th>呼ばれる</th>
+                </tr>
+              </thead>
+              <tbody id="methodTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header"><h2>選択したメソッドの詳細</h2></div>
+          <div id="detailPanel" class="panel-body"><div class="detail-empty">一覧または図からメソッドを選択してください。</div></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const state = {
+        files: [],
+        methods: [],
+        edges: [],
+        selectedId: null,
+        graphTransform: { scale: 1, x: 0, y: 0 }
+      };
+
+      const languageByExtension = {
+        html: 'JavaScript', htm: 'JavaScript', js: 'JavaScript', mjs: 'JavaScript', cjs: 'JavaScript', jsx: 'JavaScript',
+        ts: 'TypeScript', tsx: 'TypeScript',
+        py: 'Python',
+        java: 'Java',
+        cs: 'C#',
+        c: 'C', h: 'C/C++', cpp: 'C++', cc: 'C++', cxx: 'C++', hpp: 'C++',
+        php: 'PHP',
+        rb: 'Ruby',
+        go: 'Go',
+        kt: 'Kotlin', kts: 'Kotlin',
+        swift: 'Swift',
+        rs: 'Rust'
+      };
+
+      const ignoredCallNames = new Set([
+        'if','for','while','switch','catch','function','return','typeof','new','delete','void','await','async',
+        'print','println','echo','require','include','include_once','require_once','isset','empty','array','list',
+        'sizeof','count','len','range','int','float','str','string','bool','dict','set','map','filter','reduce',
+        'super','this','self','parent','main','constructor','get','set','add','remove','push','pop','shift','unshift'
+      ]);
+
+      const els = {
+        dropZone: document.getElementById('dropZone'),
+        fileInput: document.getElementById('fileInput'),
+        folderInput: document.getElementById('folderInput'),
+        selectFilesBtn: document.getElementById('selectFilesBtn'),
+        selectFolderBtn: document.getElementById('selectFolderBtn'),
+        clearBtn: document.getElementById('clearBtn'),
+        fileList: document.getElementById('fileList'),
+        fileCountBadge: document.getElementById('fileCountBadge'),
+        statFiles: document.getElementById('statFiles'),
+        statMethods: document.getElementById('statMethods'),
+        statCalls: document.getElementById('statCalls'),
+        statUnused: document.getElementById('statUnused'),
+        searchInput: document.getElementById('searchInput'),
+        languageFilter: document.getElementById('languageFilter'),
+        riskFilter: document.getElementById('riskFilter'),
+        methodTableBody: document.getElementById('methodTableBody'),
+        detailPanel: document.getElementById('detailPanel'),
+        graphSvg: document.getElementById('graphSvg'),
+        graphShell: document.getElementById('graphShell'),
+        fitGraphBtn: document.getElementById('fitGraphBtn')
+      };
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", '&#039;');
+      }
+
+      function extensionOf(name) {
+        const part = name.split('.').pop();
+        return part && part !== name ? part.toLowerCase() : '';
+      }
+
+      function languageOf(name) {
+        return languageByExtension[extensionOf(name)] || '未対応';
+      }
+
+      function stripCommentsAndStrings(code, language) {
+        let text = code;
+        if (language === 'Python' || language === 'Ruby') {
+          text = text.replace(/'''[\s\S]*?'''|"""[\s\S]*?"""/g, m => '\n'.repeat((m.match(/\n/g) || []).length));
+          text = text.replace(/#.*$/gm, '');
+        } else {
+          text = text.replace(/\/\*[\s\S]*?\*\//g, m => '\n'.repeat((m.match(/\n/g) || []).length));
+          text = text.replace(/\/\/.*$/gm, '');
+        }
+        text = text.replace(/`(?:\\.|[^`])*`/g, m => '\n'.repeat((m.match(/\n/g) || []).length));
+        text = text.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, '');
+        return text;
+      }
+
+      function extractJavaScriptFromHtml(code) {
+        const scripts = [];
+        const regex = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
+        let match;
+        while ((match = regex.exec(code))) scripts.push(match[1]);
+        return scripts.join('\n');
+      }
+
+      function getPatterns(language) {
+        const common = [];
+        switch (language) {
+          case 'JavaScript':
+          case 'TypeScript':
+            return [
+              { kind: 'function', re: /(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{/g },
+              { kind: 'arrow', re: /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>\s*\{/g },
+              { kind: 'method', re: /(?:^|\n)\s*(?:static\s+)?(?:async\s+)?([A-Za-z_$][\w$]*)\s*\([^;{}]*\)\s*\{/g },
+              { kind: 'assigned', re: /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?function\s*\([^)]*\)\s*\{/g }
+            ];
+          case 'Python':
+            return [{ kind: 'def', re: /^\s*(?:async\s+)?def\s+([A-Za-z_][\w]*)\s*\([^)]*\)\s*:/gm }];
+          case 'Ruby':
+            return [{ kind: 'def', re: /^\s*def\s+(?:self\.)?([A-Za-z_][\w!?=]*)/gm }];
+          case 'PHP':
+            return [{ kind: 'function', re: /(?:public|protected|private|static|final|abstract|\s)*function\s+&?\s*([A-Za-z_][\w]*)\s*\([^)]*\)\s*\{/g }];
+          case 'Go':
+            return [{ kind: 'func', re: /func\s+(?:\([^)]*\)\s*)?([A-Za-z_][\w]*)\s*\([^)]*\)\s*(?:\([^)]*\)|[A-Za-z_][\w\[\]*.]*)?\s*\{/g }];
+          case 'Rust':
+            return [{ kind: 'fn', re: /(?:pub\s+)?(?:async\s+)?fn\s+([A-Za-z_][\w]*)\s*(?:<[^>]+>)?\s*\([^)]*\)[^{;]*\{/g }];
+          case 'Swift':
+            return [{ kind: 'func', re: /(?:public|private|internal|fileprivate|open|static|class|mutating|override|final|\s)*func\s+([A-Za-z_][\w]*)\s*\([^)]*\)[^{]*\{/g }];
+          case 'Kotlin':
+            return [{ kind: 'fun', re: /(?:public|private|protected|internal|open|override|suspend|inline|tailrec|operator|infix|external|\s)*fun\s+(?:<[^>]+>\s*)?([A-Za-z_][\w]*)\s*\([^)]*\)[^{=]*\{/g }];
+          case 'Java':
+          case 'C#':
+          case 'C':
+          case 'C++':
+          case 'C/C++':
+            common.push({ kind: 'method', re: /(?:^|[;{}]\s*|\n\s*)(?:public|protected|private|static|final|virtual|override|abstract|async|extern|inline|constexpr|friend|synchronized|sealed|partial|unsafe|new|\s)*[A-Za-z_][\w:<>,\[\]*&?\s]*\s+([A-Za-z_~][\w]*)\s*\([^;{}]*\)\s*(?:const\s*)?(?:throws\s+[^{]+)?\{/g });
+            return common;
+          default:
+            return [];
+        }
+      }
+
+      function findBraceEnd(text, openIndex) {
+        let depth = 0;
+        for (let i = openIndex; i < text.length; i++) {
+          if (text[i] === '{') depth++;
+          else if (text[i] === '}') {
+            depth--;
+            if (depth === 0) return i + 1;
+          }
+        }
+        return text.length;
+      }
+
+      function findPythonRubyEnd(text, startIndex, language) {
+        const lines = text.split('\n');
+        const before = text.slice(0, startIndex);
+        const startLine = (before.match(/\n/g) || []).length;
+        const baseLine = lines[startLine] || '';
+        const baseIndent = (baseLine.match(/^\s*/) || [''])[0].replace(/\t/g, '    ').length;
+        let offset = 0;
+        for (let i = 0; i <= startLine; i++) offset += lines[i].length + 1;
+        for (let i = startLine + 1; i < lines.length; i++) {
+          const line = lines[i];
+          if (!line.trim()) { offset += line.length + 1; continue; }
+          const indent = (line.match(/^\s*/) || [''])[0].replace(/\t/g, '    ').length;
+          if (language === 'Ruby') {
+            if (/^\s*end\b/.test(line) && indent <= baseIndent) return offset + line.length;
+          } else if (indent <= baseIndent) {
+            return offset;
+          }
+          offset += line.length + 1;
+        }
+        return text.length;
+      }
+
+      function lineNumberAt(text, index) {
+        return (text.slice(0, index).match(/\n/g) || []).length + 1;
+      }
+
+      function extractDefinitions(file) {
+        let code = file.content;
+        if ((extensionOf(file.name) === 'html' || extensionOf(file.name) === 'htm')) {
+          code = extractJavaScriptFromHtml(code);
+        }
+        const cleaned = stripCommentsAndStrings(code, file.language);
+        const definitions = [];
+        for (const pattern of getPatterns(file.language)) {
+          pattern.re.lastIndex = 0;
+          let match;
+          while ((match = pattern.re.exec(cleaned))) {
+            const name = match[1];
+            if (!name || ignoredCallNames.has(name)) continue;
+            const start = match.index;
+            let bodyStart = cleaned.indexOf('{', match.index + match[0].length - 1);
+            let end;
+            if (file.language === 'Python' || file.language === 'Ruby') {
+              end = findPythonRubyEnd(cleaned, start, file.language);
+              bodyStart = match.index + match[0].length;
+            } else {
+              if (bodyStart < 0) bodyStart = match.index + match[0].length;
+              end = findBraceEnd(cleaned, bodyStart);
+            }
+            const id = `${file.id}:${start}:${name}`;
+            definitions.push({
+              id,
+              name,
+              fileId: file.id,
+              fileName: file.name,
+              language: file.language,
+              kind: pattern.kind,
+              line: lineNumberAt(cleaned, start),
+              start,
+              bodyStart,
+              end,
+              body: cleaned.slice(bodyStart, end),
+              calls: [],
+              calledBy: []
+            });
+          }
+        }
+        return deduplicateDefinitions(definitions);
+      }
+
+      function deduplicateDefinitions(defs) {
+        const seen = new Set();
+        return defs.filter(d => {
+          const key = `${d.fileId}|${d.line}|${d.name}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      }
+
+      function extractCallNames(body) {
+        const calls = [];
+        const regex = /(?:\b|\.)([A-Za-z_$][\w$!?=]*)\s*\(/g;
+        let match;
+        while ((match = regex.exec(body))) {
+          const name = match[1];
+          if (!ignoredCallNames.has(name)) calls.push(name);
+        }
+        return calls;
+      }
+
+      function analyze() {
+        state.methods = state.files.flatMap(extractDefinitions);
+        const byName = new Map();
+        for (const method of state.methods) {
+          if (!byName.has(method.name)) byName.set(method.name, []);
+          byName.get(method.name).push(method);
+        }
+
+        const edgeSet = new Set();
+        state.edges = [];
+        for (const method of state.methods) {
+          const names = extractCallNames(method.body);
+          for (const calledName of names) {
+            const targets = byName.get(calledName) || [];
+            let selectedTargets = targets;
+            const sameFile = targets.filter(t => t.fileId === method.fileId);
+            if (sameFile.length) selectedTargets = sameFile;
+            for (const target of selectedTargets) {
+              if (target.id === method.id) continue;
+              const key = `${method.id}->${target.id}`;
+              if (edgeSet.has(key)) continue;
+              edgeSet.add(key);
+              state.edges.push({ from: method.id, to: target.id, ambiguous: selectedTargets.length > 1 });
+              method.calls.push(target.id);
+              target.calledBy.push(method.id);
+            }
+          }
+        }
+
+        refreshLanguageFilter();
+        renderAll();
+      }
+
+      function riskOf(method) {
+        const incoming = method.calledBy.length;
+        const outgoing = method.calls.length;
+        const name = method.name.toLowerCase();
+        const entryLike = ['main','init','start','awake','update','render','mount','setup','load','run','execute'].includes(name);
+        if (incoming >= 2 || entryLike) return 'high';
+        if (incoming === 1 || outgoing >= 2) return 'mid';
+        return 'low';
+      }
+
+      function riskLabel(risk) {
+        return risk === 'high' ? '高' : risk === 'mid' ? '中' : '低';
+      }
+
+      function filteredMethods() {
+        const q = els.searchInput.value.trim().toLowerCase();
+        const lang = els.languageFilter.value;
+        const risk = els.riskFilter.value;
+        return state.methods.filter(m => {
+          const matchesQ = !q || m.name.toLowerCase().includes(q) || m.fileName.toLowerCase().includes(q);
+          const matchesLang = lang === 'all' || m.language === lang;
+          const matchesRisk = risk === 'all' || riskOf(m) === risk;
+          return matchesQ && matchesLang && matchesRisk;
+        });
+      }
+
+      function renderAll() {
+        renderFileList();
+        renderStats();
+        renderTable();
+        renderGraph();
+        renderDetail();
+        els.clearBtn.disabled = state.files.length === 0;
+        els.fitGraphBtn.disabled = state.methods.length === 0;
+      }
+
+      function renderFileList() {
+        els.fileCountBadge.textContent = `${state.files.length}件`;
+        if (!state.files.length) {
+          els.fileList.innerHTML = '<div class="detail-empty">まだファイルがありません。</div>';
+          return;
+        }
+        els.fileList.innerHTML = state.files.map(file => `
+          <div class="file-item">
+            <div>
+              <div class="file-name" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</div>
+              <small>${Math.max(1, Math.round(file.content.length / 1024))} KB</small>
+            </div>
+            <span class="badge">${escapeHtml(file.language)}</span>
+          </div>
+        `).join('');
+      }
+
+      function renderStats() {
+        els.statFiles.textContent = state.files.length;
+        els.statMethods.textContent = state.methods.length;
+        els.statCalls.textContent = state.edges.length;
+        els.statUnused.textContent = state.methods.filter(m => riskOf(m) === 'low').length;
+      }
+
+      function renderTable() {
+        const methods = filteredMethods().sort((a, b) => {
+          const order = { high: 0, mid: 1, low: 2 };
+          return order[riskOf(a)] - order[riskOf(b)] || a.name.localeCompare(b.name, 'ja');
+        });
+        if (!methods.length) {
+          els.methodTableBody.innerHTML = '<tr><td colspan="7" class="detail-empty">該当するメソッドがありません。</td></tr>';
+          return;
+        }
+        els.methodTableBody.innerHTML = methods.map(m => {
+          const risk = riskOf(m);
+          return `<tr data-clickable="true" data-id="${escapeHtml(m.id)}" class="${state.selectedId === m.id ? 'selected' : ''}">
+            <td class="risk-${risk}">${riskLabel(risk)}</td>
+            <td><code>${escapeHtml(m.name)}</code></td>
+            <td>${escapeHtml(m.language)}</td>
+            <td>${escapeHtml(m.fileName)}</td>
+            <td>${m.line}</td>
+            <td>${m.calls.length}</td>
+            <td>${m.calledBy.length}</td>
+          </tr>`;
+        }).join('');
+      }
+
+      function methodById(id) {
+        return state.methods.find(m => m.id === id) || null;
+      }
+
+      function renderDetail() {
+        const method = methodById(state.selectedId);
+        if (!method) {
+          els.detailPanel.innerHTML = '<div class="detail-empty">一覧または図からメソッドを選択してください。</div>';
+          return;
+        }
+        const risk = riskOf(method);
+        const callers = method.calledBy.map(methodById).filter(Boolean);
+        const callees = method.calls.map(methodById).filter(Boolean);
+        els.detailPanel.innerHTML = `
+          <h3 class="detail-title"><code>${escapeHtml(method.name)}</code></h3>
+          <div class="detail-meta">
+            <span class="badge">${escapeHtml(method.language)}</span>
+            <span class="badge">${escapeHtml(method.fileName)}:${method.line}</span>
+            <span class="badge risk-${risk}">削除危険度 ${riskLabel(risk)}</span>
+          </div>
+          <div class="notice" style="margin-bottom:14px;">${risk === 'high' ? '複数箇所から参照されているか、入口になりやすい名前です。削除前に実行経路を確認してください。' : risk === 'mid' ? '参照または内部呼び出しがあります。削除時は関連メソッドも確認してください。' : 'この解析では参照元を検出できませんでした。ただしイベントや動的呼び出しの可能性があります。'}</div>
+          <h4>このメソッドを呼ぶ場所</h4>
+          <div class="call-list">${callers.length ? callers.map(m => `<div class="call-item" data-detail-id="${escapeHtml(m.id)}"><strong><code>${escapeHtml(m.name)}</code></strong><span>${escapeHtml(m.fileName)}:${m.line}</span></div>`).join('') : '<div class="detail-empty">検出されませんでした。</div>'}</div>
+          <h4>このメソッドから呼ぶ先</h4>
+          <div class="call-list">${callees.length ? callees.map(m => `<div class="call-item" data-detail-id="${escapeHtml(m.id)}"><strong><code>${escapeHtml(m.name)}</code></strong><span>${escapeHtml(m.fileName)}:${m.line}</span></div>`).join('') : '<div class="detail-empty">検出されませんでした。</div>'}</div>
+        `;
+      }
+
+      function graphBlocks() {
+        const allIds = new Set(state.methods.map(m => m.id));
+        const outgoing = new Map(state.methods.map(m => [m.id, []]));
+        state.edges.forEach(e => {
+          if (allIds.has(e.from) && allIds.has(e.to)) outgoing.get(e.from)?.push(e.to);
+        });
+
+        function collectFrom(root) {
+          const ids = new Set();
+          const queue = [root.id];
+          while (queue.length) {
+            const id = queue.shift();
+            if (ids.has(id)) continue;
+            ids.add(id);
+            (outgoing.get(id) || []).forEach(to => queue.push(to));
+          }
+          return ids;
+        }
+
+        // 全メソッドをそれぞれ系列の起点にします。
+        // 親へ戻って別の分岐へ進むことはなく、起点から呼び出せる下流だけを含めます。
+        return [...state.methods]
+          .sort((a, b) => a.name.localeCompare(b.name, 'ja') || a.fileName.localeCompare(b.fileName, 'ja') || a.line - b.line)
+          .map(root => ({ root, ids: collectFrom(root) }));
+      }
+
+      function blockMatches(block) {
+        const q = els.searchInput.value.trim().toLowerCase();
+        const lang = els.languageFilter.value;
+        const risk = els.riskFilter.value;
+        const members = [...block.ids].map(methodById).filter(Boolean);
+        return members.some(m => {
+          const matchesQ = !q || m.name.toLowerCase().includes(q) || m.fileName.toLowerCase().includes(q);
+          const matchesLang = lang === 'all' || m.language === lang;
+          const matchesRisk = risk === 'all' || riskOf(m) === risk;
+          return matchesQ && matchesLang && matchesRisk;
+        });
+      }
+
+      function layoutGraphBlock(block, offsetY) {
+        const methods = [...block.ids].map(methodById).filter(Boolean);
+        const ids = block.ids;
+        const levels = new Map([[block.root.id, 0]]);
+        const queue = [block.root.id];
+
+        while (queue.length) {
+          const id = queue.shift();
+          const level = levels.get(id) || 0;
+          state.edges
+            .filter(e => e.from === id && ids.has(e.to))
+            .forEach(e => {
+              const nextLevel = level + 1;
+              if (!levels.has(e.to) || nextLevel < levels.get(e.to)) {
+                levels.set(e.to, nextLevel);
+                queue.push(e.to);
+              }
+            });
+        }
+        methods.forEach(m => { if (!levels.has(m.id)) levels.set(m.id, 0); });
+
+        const children = new Map(methods.map(m => [m.id, []]));
+        state.edges.forEach(e => {
+          if (ids.has(e.from) && ids.has(e.to) && (levels.get(e.to) || 0) === (levels.get(e.from) || 0) + 1) {
+            children.get(e.from)?.push(e.to);
+          }
+        });
+        children.forEach(list => list.sort((a, b) => (methodById(a)?.name || '').localeCompare(methodById(b)?.name || '', 'ja')));
+
+        const row = new Map();
+        let nextRow = 0;
+        const visiting = new Set();
+        function place(id) {
+          if (row.has(id)) return row.get(id);
+          if (visiting.has(id)) {
+            const value = nextRow++;
+            row.set(id, value);
+            return value;
+          }
+          visiting.add(id);
+          const childIds = children.get(id) || [];
+          let value;
+          if (!childIds.length) {
+            value = nextRow++;
+          } else {
+            const rows = childIds.map(place);
+            value = rows.reduce((sum, n) => sum + n, 0) / rows.length;
+          }
+          visiting.delete(id);
+          row.set(id, value);
+          return value;
+        }
+        place(block.root.id);
+        methods.forEach(m => place(m.id));
+
+        const nodeW = 180, nodeH = 58, gapX = 70, gapY = 24;
+        // 循環線をノード上部へ逃がすため、見出し下に専用レーンを確保します。
+        const titleH = 72, padX = 26, padBottom = 24;
+        const maxLevel = Math.max(0, ...methods.map(m => levels.get(m.id) || 0));
+        const maxRow = Math.max(0, ...methods.map(m => row.get(m.id) || 0));
+        const width = padX * 2 + (maxLevel + 1) * nodeW + maxLevel * gapX;
+        const height = titleH + (maxRow + 1) * nodeH + maxRow * gapY + padBottom;
+        const pos = new Map();
+        methods.forEach(m => {
+          pos.set(m.id, {
+            x: padX + (levels.get(m.id) || 0) * (nodeW + gapX),
+            y: offsetY + titleH + (row.get(m.id) || 0) * (nodeH + gapY),
+            w: nodeW,
+            h: nodeH
+          });
+        });
+        return { methods, pos, width, height, top: offsetY };
+      }
+
+      function renderGraph() {
+        const blocks = graphBlocks().filter(blockMatches);
+        if (!blocks.length) {
+          els.graphSvg.setAttribute('viewBox', '0 0 900 560');
+          els.graphSvg.setAttribute('width', 900);
+          els.graphSvg.setAttribute('height', 560);
+          els.graphSvg.innerHTML = '<text x="450" y="280" text-anchor="middle" fill="#667085" font-size="16">該当する呼び出し系列がありません。</text>';
+          return;
+        }
+
+        const gapBlock = 28;
+        let offsetY = 18;
+        const layouts = blocks.map(block => {
+          const layout = layoutGraphBlock(block, offsetY);
+          offsetY += layout.height + gapBlock;
+          return { block, ...layout };
+        });
+        const width = Math.max(900, ...layouts.map(l => l.width + 20));
+        const height = Math.max(560, offsetY);
+        const marker = `<defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#7a8aa0"/></marker>
+          <marker id="cycleArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#7c3aed"/></marker>
+        </defs>`;
+
+        const content = layouts.map((layout, blockIndex) => {
+          const { block, methods, pos, top } = layout;
+          const bottom = top + layout.height;
+          const panel = `<rect x="10" y="${top}" width="${Math.max(860, layout.width)}" height="${layout.height}" rx="16" fill="rgba(255,255,255,.88)" stroke="#d8dee8"/>`;
+          const title = `<text x="28" y="${top + 27}" font-size="13" font-weight="800" fill="#475467">系列 ${blockIndex + 1}：${escapeHtml(block.root.name)}</text>`;
+          const blockEdges = state.edges.filter(e => block.ids.has(e.from) && block.ids.has(e.to));
+          let cycleIndex = 0;
+          const edges = blockEdges.map(e => {
+            const a = pos.get(e.from), b = pos.get(e.to);
+            if (!a || !b) return '';
+
+            const fromLevel = Math.round((a.x - 26) / (180 + 70));
+            const toLevel = Math.round((b.x - 26) / (180 + 70));
+            const isCycle = toLevel <= fromLevel;
+
+            if (isCycle) {
+              // 循環参照は上辺から出し、系列上部の専用レーンを通して循環開始ノードへ戻します。
+              const laneY = top + 46 - cycleIndex * 8;
+              cycleIndex++;
+              const x1 = a.x + a.w / 2;
+              const y1 = a.y;
+              const x2 = b.x + b.w / 2;
+              const y2 = b.y;
+              const d = `M ${x1} ${y1} L ${x1} ${laneY} L ${x2} ${laneY} L ${x2} ${y2}`;
+              return `<path d="${d}" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#cycleArrow)"/>`;
+            }
+
+            const x1 = a.x + a.w, y1 = a.y + a.h / 2;
+            const x2 = b.x, y2 = b.y + b.h / 2;
+            const c1 = x1 + 36, c2 = x2 - 36;
+            return `<path d="M ${x1} ${y1} C ${c1} ${y1}, ${c2} ${y2}, ${x2} ${y2}" fill="none" stroke="${e.ambiguous ? '#b54708' : '#7a8aa0'}" stroke-width="1.7" ${e.ambiguous ? 'stroke-dasharray="6 5"' : ''} marker-end="url(#arrow)"/>`;
+          }).join('');
+          const nodes = methods.map(m => {
+            const p = pos.get(m.id);
+            const risk = riskOf(m);
+            const fill = risk === 'high' ? '#fff0ee' : risk === 'mid' ? '#fff4e8' : '#ecfdf3';
+            const stroke = risk === 'high' ? '#d92d20' : risk === 'mid' ? '#dc6803' : '#079455';
+            const selected = state.selectedId === m.id;
+            return `<g class="graph-node" data-id="${escapeHtml(m.id)}" style="cursor:pointer">
+              <rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" rx="12" fill="${fill}" stroke="${selected ? '#2563eb' : stroke}" stroke-width="${selected ? 3 : 1.5}"/>
+              <text x="${p.x + 12}" y="${p.y + 23}" font-size="13" font-weight="700" fill="#172033">${escapeHtml(m.name.length > 20 ? m.name.slice(0, 19) + '…' : m.name)}</text>
+              <text x="${p.x + 12}" y="${p.y + 43}" font-size="10.5" fill="#667085">${escapeHtml(m.fileName.length > 24 ? '…' + m.fileName.slice(-23) : m.fileName)}</text>
+            </g>`;
+          }).join('');
+          return panel + title + edges + nodes;
+        }).join('');
+
+        els.graphSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        els.graphSvg.setAttribute('width', width);
+        els.graphSvg.setAttribute('height', height);
+        els.graphSvg.innerHTML = marker + content;
+      }
+
+      function refreshLanguageFilter() {
+        const current = els.languageFilter.value;
+        const langs = [...new Set(state.files.map(f => f.language))].sort((a,b) => a.localeCompare(b,'ja'));
+        els.languageFilter.innerHTML = '<option value="all">すべての言語</option>' + langs.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+        if (langs.includes(current)) els.languageFilter.value = current;
+      }
+
+      async function readFiles(fileList) {
+        const incoming = [...fileList].filter(file => languageOf(file.name) !== '未対応');
+        const existing = new Set(state.files.map(f => `${f.name}|${f.size}|${f.lastModified}`));
+        const loaded = [];
+        for (const file of incoming) {
+          const key = `${file.name}|${file.size}|${file.lastModified}`;
+          if (existing.has(key)) continue;
+          const content = await file.text();
+          loaded.push({
+            id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+            name: file.webkitRelativePath || file.name,
+            size: file.size,
+            lastModified: file.lastModified,
+            language: languageOf(file.name),
+            content
+          });
+          existing.add(key);
+        }
+        state.files.push(...loaded);
+        state.selectedId = null;
+        analyze();
+      }
+
+      function selectMethod(id) {
+        state.selectedId = id;
+        renderTable();
+        renderGraph();
+        renderDetail();
+        document.querySelector('[data-id="' + CSS.escape(id) + '"]')?.scrollIntoView({ block: 'nearest' });
+      }
+
+      function clearAll() {
+        state.files = [];
+        state.methods = [];
+        state.edges = [];
+        state.selectedId = null;
+        els.fileInput.value = '';
+        els.folderInput.value = '';
+        els.searchInput.value = '';
+        els.languageFilter.innerHTML = '<option value="all">すべての言語</option>';
+        els.riskFilter.value = 'all';
+        renderAll();
+      }
+
+      ['dragenter','dragover'].forEach(type => els.dropZone.addEventListener(type, e => {
+        e.preventDefault();
+        els.dropZone.classList.add('dragover');
+      }));
+      ['dragleave','drop'].forEach(type => els.dropZone.addEventListener(type, e => {
+        e.preventDefault();
+        els.dropZone.classList.remove('dragover');
+      }));
+      els.dropZone.addEventListener('drop', e => readFiles(e.dataTransfer.files));
+      els.dropZone.addEventListener('click', () => els.fileInput.click());
+      els.dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') els.fileInput.click(); });
+      els.selectFilesBtn.addEventListener('click', () => els.fileInput.click());
+      els.selectFolderBtn.addEventListener('click', () => els.folderInput.click());
+      els.fileInput.addEventListener('change', e => readFiles(e.target.files));
+      els.folderInput.addEventListener('change', e => readFiles(e.target.files));
+      els.clearBtn.addEventListener('click', clearAll);
+      [els.searchInput, els.languageFilter, els.riskFilter].forEach(el => el.addEventListener('input', () => {
+        renderTable(); renderGraph();
+      }));
+      els.methodTableBody.addEventListener('click', e => {
+        const row = e.target.closest('tr[data-id]');
+        if (row) selectMethod(row.dataset.id);
+      });
+      els.graphSvg.addEventListener('click', e => {
+        const node = e.target.closest('.graph-node[data-id]');
+        if (node) selectMethod(node.dataset.id);
+      });
+      els.detailPanel.addEventListener('click', e => {
+        const item = e.target.closest('[data-detail-id]');
+        if (item) selectMethod(item.dataset.detailId);
+      });
+      els.fitGraphBtn.addEventListener('click', () => {
+        els.graphShell.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
+      });
+
+      renderAll();
+    })();
+  </script>
+</body>
+</html>
