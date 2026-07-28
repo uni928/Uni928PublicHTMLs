@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>WebP圧縮 見た目確認ツール</title>
+  <style>
+    @layer base, make1, make2;
+
+    @layer base {
+      :root {
+        color-scheme: light;
+        --bg: #f4f7fb;
+        --surface: #ffffff;
+        --text: #172033;
+        --muted: #657084;
+        --line: #dbe3ef;
+        --accent: #6f67dc;
+        --accent2: #d58ebf;
+        --danger: #b42318;
+        --good: #067647;
+        --shadow: 0 12px 30px rgba(27, 40, 67, .08);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); }
+      body { padding: 18px 14px 42px; }
+      button, input { font: inherit; }
+      button { cursor: pointer; }
+      img { max-width: 100%; display: block; }
+      .hidden { display: none !important; }
+    }
+
+    @layer make1 {
+      .app { width: min(100%, 980px); margin: 0 auto; }
+      .hero {
+        padding: 22px;
+        border-radius: 22px;
+        background: linear-gradient(135deg, #736ddf, #b486d6 55%, #e7a0bb);
+        color: #fff;
+        box-shadow: var(--shadow);
+      }
+      .hero h1 { margin: 0; font-size: clamp(23px, 4vw, 34px); letter-spacing: .02em; }
+      .hero p { margin: 10px 0 0; line-height: 1.75; opacity: .94; }
+      .panel {
+        margin-top: 16px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+      .settings-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: end; }
+      .field { display: grid; gap: 7px; }
+      .field label { font-weight: 800; font-size: 13px; }
+      .field small { color: var(--muted); line-height: 1.55; }
+      .field input {
+        width: 100%; min-height: 48px; padding: 10px 13px;
+        border: 1px solid var(--line); border-radius: 13px; background: #fff; color: var(--text);
+      }
+      .field input:focus { outline: 3px solid rgba(111, 103, 220, .16); border-color: #8b85e4; }
+      .button {
+        min-height: 48px; padding: 11px 17px; border: 0; border-radius: 13px;
+        background: linear-gradient(90deg, var(--accent), var(--accent2)); color: #fff; font-weight: 900;
+      }
+      .button.secondary { background: #eef2f8; color: #30415e; border: 1px solid var(--line); }
+      .drop {
+        position: relative; min-height: 180px; display: grid; place-items: center; text-align: center;
+        padding: 24px; border: 2px dashed #b9c7db; border-radius: 18px; background: #f9fbfe;
+      }
+      .drop.is-drag { border-color: var(--accent); background: #f5f3ff; }
+      .drop input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+      .drop strong { display: block; font-size: 17px; }
+      .drop span { display: block; margin-top: 8px; color: var(--muted); font-size: 13px; }
+      .compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+      .preview-card { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 17px; background: #fbfcfe; }
+      .preview-card h2 { margin: 0 0 11px; font-size: 16px; }
+      .image-stage {
+        min-height: 260px; display: grid; place-items: center; overflow: hidden;
+        border-radius: 14px; background:
+          linear-gradient(45deg, #edf1f7 25%, transparent 25%) 0 0 / 20px 20px,
+          linear-gradient(-45deg, #edf1f7 25%, transparent 25%) 0 10px / 20px 20px,
+          linear-gradient(45deg, transparent 75%, #edf1f7 75%) 10px -10px / 20px 20px,
+          linear-gradient(-45deg, transparent 75%, #edf1f7 75%) -10px 0 / 20px 20px,
+          #fff;
+      }
+      .image-stage img { width: 100%; height: auto; max-height: 620px; object-fit: contain; }
+      .meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+      .meta div { padding: 9px 10px; border-radius: 11px; background: #fff; border: 1px solid #e6ebf2; }
+      .meta span { display: block; color: var(--muted); font-size: 11px; }
+      .meta strong { display: block; margin-top: 3px; font-size: 13px; overflow-wrap: anywhere; }
+      .status { margin-top: 14px; padding: 12px 14px; border-radius: 13px; line-height: 1.65; font-size: 13px; }
+      .status.good { background: #ecfdf3; color: var(--good); }
+      .status.bad { background: #fef3f2; color: var(--danger); }
+      .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+      .zoom-note { margin: 12px 0 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+    }
+
+    @layer make2 {
+      @media (max-width: 720px) {
+        body { padding-inline: 10px; }
+        .hero, .panel { border-radius: 17px; }
+        .settings-grid, .compare { grid-template-columns: 1fr; }
+        .settings-grid .button { width: 100%; }
+        .image-stage { min-height: 210px; }
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="hero">
+      <h1>WebP圧縮 見た目確認</h1>
+      <p>送信前と同じ段階圧縮を行い、元画像と圧縮後画像を並べて確認できます。画像は外部へ送信しません。</p>
+    </header>
+
+    <section class="panel">
+      <div class="settings-grid">
+        <div class="field">
+          <label for="limitInput">送信する文字数の上限</label>
+          <input id="limitInput" type="number" inputmode="numeric" min="1000" max="500000" step="100" value="28000">
+          <small>Data URL全体（<code>data:image/webp;base64,</code>を含む）の文字数です。変更内容はIndexedDBに保存します。</small>
+        </div>
+        <button id="saveLimitBtn" class="button secondary" type="button">上限を保存</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div id="drop" class="drop">
+        <div>
+          <strong>画像を選択・ドロップ</strong>
+          <span>JPEG・PNG・WebPなど、ブラウザで読める画像に対応します</span>
+        </div>
+        <input id="fileInput" type="file" accept="image/*" aria-label="画像を選択">
+      </div>
+    </section>
+
+    <section id="resultSection" class="panel hidden">
+      <div class="compare">
+        <article class="preview-card">
+          <h2>元画像</h2>
+          <div class="image-stage"><img id="originalImage" alt="元画像"></div>
+          <div class="meta">
+            <div><span>画像サイズ</span><strong id="originalDimensions">-</strong></div>
+            <div><span>ファイル容量</span><strong id="originalBytes">-</strong></div>
+          </div>
+        </article>
+
+        <article class="preview-card">
+          <h2>圧縮後WebP</h2>
+          <div class="image-stage"><img id="compressedImage" alt="圧縮後画像"></div>
+          <div class="meta">
+            <div><span>画像サイズ</span><strong id="compressedDimensions">-</strong></div>
+            <div><span>推定容量</span><strong id="compressedBytes">-</strong></div>
+            <div><span>Data URL文字数</span><strong id="dataUrlLength">-</strong></div>
+            <div><span>採用設定</span><strong id="compressionSetting">-</strong></div>
+          </div>
+        </article>
+      </div>
+
+      <div id="status" class="status"></div>
+      <div class="actions">
+        <button id="recompressBtn" class="button" type="button">現在の上限で再圧縮</button>
+        <button id="downloadBtn" class="button secondary" type="button">圧縮後WebPを保存</button>
+        <button id="copyBase64Btn" class="button secondary" type="button">Base64をコピー</button>
+      </div>
+      <p class="zoom-note">細部を確認する場合は、画像を右クリックまたは長押しして別タブで開くか、ブラウザの拡大機能をご利用ください。</p>
+    </section>
+  </main>
+
+  <script>
+    const DB_NAME = "webp-compression-preview";
+    const DB_VERSION = 1;
+    const STORE_NAME = "settings";
+    const LIMIT_KEY = "maxDataUrlLength";
+    const DEFAULT_LIMIT = 28000;
+
+    const compressionSteps = [
+      [768, 0.72], [640, 0.66], [560, 0.60], [480, 0.54], [420, 0.48],
+      [360, 0.42], [320, 0.36], [280, 0.30], [240, 0.24], [200, 0.18], [160, 0.12]
+    ];
+
+    const fileInput = document.getElementById("fileInput");
+    const drop = document.getElementById("drop");
+    const limitInput = document.getElementById("limitInput");
+    const resultSection = document.getElementById("resultSection");
+    const originalImage = document.getElementById("originalImage");
+    const compressedImage = document.getElementById("compressedImage");
+    const status = document.getElementById("status");
+
+    let currentSourceDataUrl = "";
+    let currentCompressedDataUrl = "";
+    let currentFile = null;
+
+    function openDb() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME);
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function saveSetting(key, value) {
+      const db = await openDb();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        tx.objectStore(STORE_NAME).put(value, key);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      });
+      db.close();
+    }
+
+    async function loadSetting(key) {
+      const db = await openDb();
+      const value = await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const request = tx.objectStore(STORE_NAME).get(key);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      db.close();
+      return value;
+    }
+
+    function getLimit() {
+      const value = Math.round(Number(limitInput.value));
+      return Number.isFinite(value) ? Math.max(1000, Math.min(500000, value)) : DEFAULT_LIMIT;
+    }
+
+    function readFileAsDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(reader.error || new Error("画像を読み込めませんでした。"));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function loadImage(src) {
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error("画像を表示できませんでした。"));
+        image.src = src;
+      });
+    }
+
+    function formatBytes(bytes) {
+      if (!Number.isFinite(bytes)) return "-";
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+    }
+
+    function estimateDataUrlBytes(dataUrl) {
+      const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
+      const padding = (base64.match(/=+$/) || [""])[0].length;
+      return Math.max(0, Math.floor(base64.length * 3 / 4) - padding);
+    }
+
+    async function renderWebp(sourceImage, maxSize, quality) {
+      const width = sourceImage.naturalWidth || sourceImage.width;
+      const height = sourceImage.naturalHeight || sourceImage.height;
+      const scale = Math.min(maxSize / width, maxSize / height, 1);
+      const outputWidth = Math.max(1, Math.round(width * scale));
+      const outputHeight = Math.max(1, Math.round(height * scale));
+
+      const canvas = document.createElement("canvas");
+      canvas.width = outputWidth;
+      canvas.height = outputHeight;
+      const context = canvas.getContext("2d", { alpha: false });
+      if (!context) throw new Error("Canvasを初期化できませんでした。");
+
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, outputWidth, outputHeight);
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "high";
+      context.drawImage(sourceImage, 0, 0, outputWidth, outputHeight);
+
+      const dataUrl = canvas.toDataURL("image/webp", quality);
+      if (!dataUrl.startsWith("data:image/webp;base64,")) {
+        throw new Error("このブラウザはWebP変換に対応していません。");
+      }
+      return { dataUrl, width: outputWidth, height: outputHeight, maxSize, quality };
+    }
+
+    async function compressToLimit(sourceDataUrl, maxLength) {
+      const sourceImage = await loadImage(sourceDataUrl);
+      let smallest = null;
+
+      for (const [maxSize, quality] of compressionSteps) {
+        const result = await renderWebp(sourceImage, maxSize, quality);
+        if (!smallest || result.dataUrl.length < smallest.dataUrl.length) smallest = result;
+        if (result.dataUrl.length <= maxLength) return { ...result, reached: true };
+      }
+
+      return { ...smallest, reached: false };
+    }
+
+    async function processCurrentImage() {
+      if (!currentSourceDataUrl) return;
+      const maxLength = getLimit();
+      limitInput.value = String(maxLength);
+      status.className = "status";
+      status.textContent = "圧縮しています…";
+
+      try {
+        const result = await compressToLimit(currentSourceDataUrl, maxLength);
+        currentCompressedDataUrl = result.dataUrl;
+        compressedImage.src = result.dataUrl;
+        document.getElementById("compressedDimensions").textContent = `${result.width} × ${result.height}px`;
+        document.getElementById("compressedBytes").textContent = formatBytes(estimateDataUrlBytes(result.dataUrl));
+        document.getElementById("dataUrlLength").textContent = `${result.dataUrl.length.toLocaleString()}文字 / 上限${maxLength.toLocaleString()}文字`;
+        document.getElementById("compressionSetting").textContent = `最大${result.maxSize}px・品質${result.quality.toFixed(2)}`;
+
+        status.className = `status ${result.reached ? "good" : "bad"}`;
+        status.textContent = result.reached
+          ? `上限内に収まりました。余裕は ${(maxLength - result.dataUrl.length).toLocaleString()}文字です。`
+          : `最小設定でも上限を ${(result.dataUrl.length - maxLength).toLocaleString()}文字超えています。実際の送信処理ではエラー停止する想定です。`;
+      } catch (error) {
+        currentCompressedDataUrl = "";
+        status.className = "status bad";
+        status.textContent = error?.message || "圧縮に失敗しました。";
+      }
+    }
+
+    async function handleFile(file) {
+      if (!file || !file.type.startsWith("image/")) {
+        status.className = "status bad";
+        status.textContent = "画像ファイルを選択してください。";
+        return;
+      }
+
+      currentFile = file;
+      currentSourceDataUrl = await readFileAsDataUrl(file);
+      const image = await loadImage(currentSourceDataUrl);
+      originalImage.src = currentSourceDataUrl;
+      document.getElementById("originalDimensions").textContent = `${image.naturalWidth} × ${image.naturalHeight}px`;
+      document.getElementById("originalBytes").textContent = formatBytes(file.size);
+      resultSection.classList.remove("hidden");
+      await processCurrentImage();
+    }
+
+    fileInput.addEventListener("change", () => handleFile(fileInput.files?.[0]).catch(showFatal));
+    ["dragenter", "dragover"].forEach(type => drop.addEventListener(type, event => {
+      event.preventDefault(); drop.classList.add("is-drag");
+    }));
+    ["dragleave", "drop"].forEach(type => drop.addEventListener(type, event => {
+      event.preventDefault(); drop.classList.remove("is-drag");
+    }));
+    drop.addEventListener("drop", event => handleFile(event.dataTransfer?.files?.[0]).catch(showFatal));
+
+    document.getElementById("saveLimitBtn").addEventListener("click", async () => {
+      const value = getLimit();
+      limitInput.value = String(value);
+      await saveSetting(LIMIT_KEY, value);
+      if (currentSourceDataUrl) await processCurrentImage();
+      else alert(`上限を${value.toLocaleString()}文字で保存しました。`);
+    });
+
+    document.getElementById("recompressBtn").addEventListener("click", processCurrentImage);
+
+    document.getElementById("downloadBtn").addEventListener("click", () => {
+      if (!currentCompressedDataUrl) return;
+      const link = document.createElement("a");
+      const baseName = (currentFile?.name || "compressed").replace(/\.[^.]+$/, "");
+      link.href = currentCompressedDataUrl;
+      link.download = `${baseName}_compressed.webp`;
+      link.click();
+    });
+
+    document.getElementById("copyBase64Btn").addEventListener("click", async () => {
+      if (!currentCompressedDataUrl) return;
+      try {
+        await navigator.clipboard.writeText(currentCompressedDataUrl);
+        status.className = "status good";
+        status.textContent = "圧縮後のWebP Data URLをコピーしました。";
+      } catch {
+        prompt("下の文字列をコピーしてください。", currentCompressedDataUrl);
+      }
+    });
+
+    function showFatal(error) {
+      resultSection.classList.remove("hidden");
+      status.className = "status bad";
+      status.textContent = error?.message || "処理に失敗しました。";
+    }
+
+    (async () => {
+      try {
+        const saved = await loadSetting(LIMIT_KEY);
+        limitInput.value = String(Number.isFinite(Number(saved)) ? Number(saved) : DEFAULT_LIMIT);
+      } catch {
+        limitInput.value = String(DEFAULT_LIMIT);
+      }
+    })();
+  </script>
+</body>
+</html>
