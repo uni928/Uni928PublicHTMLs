@@ -393,9 +393,9 @@
             <div class="field">
               <div class="labelrow">
                 <label for="outTok">想定 output（<a href="https://platform.openai.com/tokenizer" target="_blank">tokens</a>）</label>
-                <span class="hint">例: 300</span>
+                <span class="hint">例: 900</span>
               </div>
-              <input id="outTok" type="number" inputmode="numeric" min="0" step="1" value="300" />
+              <input id="outTok" type="number" inputmode="numeric" min="0" step="1" value="900" />
             </div>
 
             <div class="field">
@@ -775,7 +775,7 @@ const btnCopyUrl = $("btnCopyUrl");
 
     btnReset.addEventListener("click", () => {
       inTok.value = 1500;
-      outTok.value = 300;
+      outTok.value = 900;
       fx.value = 168;
       perDay.value = 1000;
       render();
