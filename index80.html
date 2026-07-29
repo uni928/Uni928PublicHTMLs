@@ -239,7 +239,17 @@
 
     function isTableDivider(line) {
       const cells = splitTableRow(line);
-      return cells.length > 0 && cells.every(function (cell) { return /^:?-{3,}:?$/.test(cell); });
+      if (!line.includes("|") || !cells.length) return false;
+
+      return cells.every(function (cell) {
+        return cell === "" || /^:?-+:?$/.test(cell);
+      });
+    }
+
+    function isTableCandidate(line) {
+      if (!line || !line.includes("|")) return false;
+      const cells = splitTableRow(line);
+      return cells.length >= 2;
     }
 
     function parseMarkdownToHtml(markdown) {
@@ -317,32 +327,48 @@
           continue;
         }
 
-        if (index + 1 < lines.length && raw.includes("|") && isTableDivider(lines[index + 1])) {
-          flushAll();
-          const headers = splitTableRow(raw);
-          const aligns = splitTableRow(lines[index + 1]).map(function (cell) {
-            if (/^:-+:$/.test(cell)) return "center";
-            if (/-+:$/.test(cell)) return "right";
-            return "left";
-          });
-          const rows = [];
-          index += 2;
-          while (index < lines.length && lines[index].includes("|") && lines[index].trim()) {
-            rows.push(splitTableRow(lines[index]));
-            index++;
+        if (isTableCandidate(raw)) {
+          const nextLine = index + 1 < lines.length ? lines[index + 1] : "";
+          const hasFollowingTableLine = isTableCandidate(nextLine);
+          const looksExplicit = /^\s*\|.*\|\s*$/.test(raw);
+
+          if (hasFollowingTableLine || looksExplicit) {
+            flushAll();
+
+            const headers = splitTableRow(raw);
+            const secondLineIsDivider = isTableDivider(nextLine);
+            const dividerCells = secondLineIsDivider ? splitTableRow(nextLine) : [];
+            const aligns = headers.map(function (_, i) {
+              const cell = dividerCells[i] || "";
+              if (/^:-+:$/.test(cell)) return "center";
+              if (/^-+:$/.test(cell)) return "right";
+              return "left";
+            });
+
+            const rows = [];
+            index += secondLineIsDivider ? 2 : 1;
+            while (index < lines.length && isTableCandidate(lines[index]) && lines[index].trim()) {
+              rows.push(splitTableRow(lines[index]));
+              index++;
+            }
+            index--;
+
+            let html = '<div class="table-wrap"><table><thead><tr>';
+            headers.forEach(function (cell, i) {
+              html += '<th style="text-align:' + aligns[i] + '">' + parseInlineMarkdown(cell) + "</th>";
+            });
+            html += "</tr></thead><tbody>";
+            rows.forEach(function (row) {
+              html += "<tr>";
+              headers.forEach(function (_, i) {
+                html += '<td style="text-align:' + aligns[i] + '">' + parseInlineMarkdown(row[i] || "") + "</td>";
+              });
+              html += "</tr>";
+            });
+            html += "</tbody></table></div>";
+            output.push(html);
+            continue;
           }
-          index--;
-          let html = '<div class="table-wrap"><table><thead><tr>';
-          headers.forEach(function (cell, i) { html += '<th style="text-align:' + aligns[i] + '">' + parseInlineMarkdown(cell) + "</th>"; });
-          html += "</tr></thead><tbody>";
-          rows.forEach(function (row) {
-            html += "<tr>";
-            headers.forEach(function (_, i) { html += '<td style="text-align:' + aligns[i] + '">' + parseInlineMarkdown(row[i] || "") + "</td>"; });
-            html += "</tr>";
-          });
-          html += "</tbody></table></div>";
-          output.push(html);
-          continue;
         }
 
         const heading = trimmed.match(/^(#{1,6})\s+(.+)$/);
