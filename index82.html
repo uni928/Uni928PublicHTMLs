@@ -158,52 +158,13 @@
         <div hidden=""><button id="copyMarkdownButton" class="secondary-button" type="button">Markdownをコピー</button></div>
         <button id="editButton" class="secondary-button" type="button">編集する</button>
       </div>
-      <h1 id="viewTitle">お問い合わせフォーム改善に関する進捗報告</h1>
-      <div id="viewContent"><h2>概要</h2>
-<p>Webサイトのお問い合わせフォームについて、入力途中の離脱を減らすための改善を実施しました。</p>
-<p>今回の対応では、入力項目の見直し、エラー表示の改善、スマートフォンでの操作性向上を行っています。</p>
-<p>現時点では社内確認用の環境へ反映済みです。大きな問題がなければ、次回の定期更新時に公開環境へ反映する予定です。</p>
-<h2>今回実施した内容</h2>
-<ul><li>必須入力項目を8項目から5項目へ削減</li><li>氏名欄を姓・名の2枠から1枠へ変更</li><li>電話番号を任意入力へ変更</li><li>入力エラーを画面上部だけでなく、各入力欄の直下にも表示</li><li>郵便番号入力時の自動住所入力に対応</li><li>送信前の確認画面を簡略化</li><li>スマートフォンで入力欄が拡大される問題を修正</li><li>二重送信を防ぐため、送信処理中はボタンを無効化</li><li>送信完了後に受付番号を表示</li><li>管理者向け通知メールの内容を整理</li></ul>
-<h2>対応の背景</h2>
-<p>直近1か月のアクセス状況を確認したところ、お問い合わせフォームを開いた利用者のうち、送信完了まで進んだ割合が想定より低い状態でした。</p>
-<p>特に、次の箇所で離脱が多く発生していました。</p>
-<ol><li>電話番号の入力欄</li><li>お問い合わせ種別の選択欄</li><li>確認画面から送信するまでの区間</li></ol>
-<p>電話番号については、メールで回答できる内容でも必須入力となっていたため、利用者に負担をかけていた可能性があります。</p>
-<p>また、入力内容に問題がある場合、エラーメッセージが画面上部にしか表示されておらず、どの項目を修正すればよいか分かりにくい状態でした。</p>
-<h2>修正前後の比較</h2>
-<div class="table-wrap"><table><thead><tr><th style="text-align:left">項目</th><th style="text-align:left">修正前</th><th style="text-align:left">修正後</th></tr></thead><tbody><tr><td style="text-align:left">必須項目数</td><td style="text-align:left">8項目</td><td style="text-align:left">5項目</td></tr><tr><td style="text-align:left">電話番号</td><td style="text-align:left">必須</td><td style="text-align:left">任意</td></tr><tr><td style="text-align:left">エラー表示</td><td style="text-align:left">画面上部のみ</td><td style="text-align:left">各項目にも表示</td></tr><tr><td style="text-align:left">住所入力</td><td style="text-align:left">すべて手入力</td><td style="text-align:left">郵便番号から補助</td></tr><tr><td style="text-align:left">送信ボタン</td><td style="text-align:left">連続押下可能</td><td style="text-align:left">処理中は無効</td></tr><tr><td style="text-align:left">完了通知</td><td style="text-align:left">完了メッセージのみ</td><td style="text-align:left">受付番号を表示</td></tr></tbody></table></div>
-<h2>動作確認の結果</h2>
-<p>以下の環境で基本的な動作確認を行いました。</p>
-<ul><li>Windowsの主要ブラウザ</li><li>Androidスマートフォン</li><li>iPhone</li><li>タブレット端末</li></ul>
-<p>確認した主な内容は次のとおりです。</p>
-<ul><li>必須項目を入力しない場合にエラーが表示される</li><li>メールアドレスの形式が不正な場合に送信できない</li><li>電話番号を入力しなくても送信できる</li><li>入力内容が確認画面へ正しく引き継がれる</li><li>送信ボタンを複数回押しても二重送信されない</li><li>管理者と利用者の両方へ通知メールが届く</li><li>受付番号が画面と通知メールで一致する</li></ul>
-<p>現時点では、送信できないなどの重大な問題は確認されていません。</p>
-<h2>確認中の課題</h2>
-<p>一部の古い端末では、住所の自動入力後に画面の表示位置が少しずれる場合があります。</p>
-<p>送信自体には影響しませんが、操作性に関わるため、公開前に追加確認を行います。</p>
-<p>また、お問い合わせ種別によって入力項目を切り替える案も検討しましたが、今回の修正範囲が大きくなるため、次回以降の改善候補としています。</p>
-<h2>今後の予定</h2>
-<p>今後は次の順番で対応します。</p>
-<ol><li>社内確認用環境で最終確認</li><li>通知メールの文面確認</li><li>利用規約とプライバシーポリシーへのリンク確認</li><li>公開環境への反映</li><li>公開後1週間のエラー状況確認</li><li>変更前後の送信完了率を比較</li></ol>
-<p>公開後は、送信完了率だけでなく、入力開始から送信までにかかった時間も確認する予定です。</p>
-<h2>公開後に確認する数値</h2>
-<p>改善効果を確認するため、次の数値を記録します。</p>
-<ul><li>フォームを開いた人数</li><li>入力を開始した人数</li><li>確認画面へ進んだ人数</li><li>送信が完了した人数</li><li>入力エラーが発生した回数</li><li>送信処理でエラーが発生した回数</li><li>端末別の送信完了率</li></ul>
-<p>ただし、アクセス数が少ない期間の数値は変動が大きいため、公開直後の結果だけで判断せず、少なくとも2週間分のデータを確認します。</p>
-<h2>補足</h2>
-<p>今回の修正は、利用者が入力する際の負担を減らすことを主な目的としています。</p>
-<p>お問い合わせ内容を詳しく取得するために入力項目を増やすと、担当者側では確認しやすくなりますが、利用者の離脱が増える可能性があります。</p>
-<p>そのため、最初のフォームでは必要最低限の情報のみを取得し、不足する内容は受付後のやり取りで確認する方針としました。</p>
-<h2>まとめ</h2>
-<p>お問い合わせフォームの入力項目とエラー表示を見直し、スマートフォンでも操作しやすい形へ改善しました。</p>
-<p>基本的な動作確認は完了しており、現在は公開前の最終確認を行っています。</p>
-<p>公開後は送信完了率やエラー件数を確認し、今回の変更が実際に利用者の負担軽減につながっているかを検証します。</p></div>
-      <footer id="viewMeta" class="meta"><div>作成日時：2026年7月28日 10:40</div></footer>
+      <h1 id="viewTitle"></h1>
+      <div id="viewContent"></div>
+      <footer id="viewMeta" class="meta"></footer>
     </article>
   </main>
 
-  <script id="initialData" type="application/json">{"title":"お問い合わせフォーム改善に関する進捗報告","source":"## 概要\n\nWebサイトのお問い合わせフォームについて、入力途中の離脱を減らすための改善を実施しました。\n\n今回の対応では、入力項目の見直し、エラー表示の改善、スマートフォンでの操作性向上を行っています。\n\n現時点では社内確認用の環境へ反映済みです。大きな問題がなければ、次回の定期更新時に公開環境へ反映する予定です。\n\n## 今回実施した内容\n\n* 必須入力項目を8項目から5項目へ削減\n* 氏名欄を姓・名の2枠から1枠へ変更\n* 電話番号を任意入力へ変更\n* 入力エラーを画面上部だけでなく、各入力欄の直下にも表示\n* 郵便番号入力時の自動住所入力に対応\n* 送信前の確認画面を簡略化\n* スマートフォンで入力欄が拡大される問題を修正\n* 二重送信を防ぐため、送信処理中はボタンを無効化\n* 送信完了後に受付番号を表示\n* 管理者向け通知メールの内容を整理\n\n## 対応の背景\n\n直近1か月のアクセス状況を確認したところ、お問い合わせフォームを開いた利用者のうち、送信完了まで進んだ割合が想定より低い状態でした。\n\n特に、次の箇所で離脱が多く発生していました。\n\n1. 電話番号の入力欄\n2. お問い合わせ種別の選択欄\n3. 確認画面から送信するまでの区間\n\n電話番号については、メールで回答できる内容でも必須入力となっていたため、利用者に負担をかけていた可能性があります。\n\nまた、入力内容に問題がある場合、エラーメッセージが画面上部にしか表示されておらず、どの項目を修正すればよいか分かりにくい状態でした。\n\n## 修正前後の比較\n\n| 項目    | 修正前       | 修正後      |\n| ----- | --------- | -------- |\n| 必須項目数 | 8項目       | 5項目      |\n| 電話番号  | 必須        | 任意       |\n| エラー表示 | 画面上部のみ    | 各項目にも表示  |\n| 住所入力  | すべて手入力    | 郵便番号から補助 |\n| 送信ボタン | 連続押下可能    | 処理中は無効   |\n| 完了通知  | 完了メッセージのみ | 受付番号を表示  |\n\n## 動作確認の結果\n\n以下の環境で基本的な動作確認を行いました。\n\n* Windowsの主要ブラウザ\n* Androidスマートフォン\n* iPhone\n* タブレット端末\n\n確認した主な内容は次のとおりです。\n\n* 必須項目を入力しない場合にエラーが表示される\n* メールアドレスの形式が不正な場合に送信できない\n* 電話番号を入力しなくても送信できる\n* 入力内容が確認画面へ正しく引き継がれる\n* 送信ボタンを複数回押しても二重送信されない\n* 管理者と利用者の両方へ通知メールが届く\n* 受付番号が画面と通知メールで一致する\n\n現時点では、送信できないなどの重大な問題は確認されていません。\n\n## 確認中の課題\n\n一部の古い端末では、住所の自動入力後に画面の表示位置が少しずれる場合があります。\n\n送信自体には影響しませんが、操作性に関わるため、公開前に追加確認を行います。\n\nまた、お問い合わせ種別によって入力項目を切り替える案も検討しましたが、今回の修正範囲が大きくなるため、次回以降の改善候補としています。\n\n## 今後の予定\n\n今後は次の順番で対応します。\n\n1. 社内確認用環境で最終確認\n2. 通知メールの文面確認\n3. 利用規約とプライバシーポリシーへのリンク確認\n4. 公開環境への反映\n5. 公開後1週間のエラー状況確認\n6. 変更前後の送信完了率を比較\n\n公開後は、送信完了率だけでなく、入力開始から送信までにかかった時間も確認する予定です。\n\n## 公開後に確認する数値\n\n改善効果を確認するため、次の数値を記録します。\n\n* フォームを開いた人数\n* 入力を開始した人数\n* 確認画面へ進んだ人数\n* 送信が完了した人数\n* 入力エラーが発生した回数\n* 送信処理でエラーが発生した回数\n* 端末別の送信完了率\n\nただし、アクセス数が少ない期間の数値は変動が大きいため、公開直後の結果だけで判断せず、少なくとも2週間分のデータを確認します。\n\n## 補足\n\n今回の修正は、利用者が入力する際の負担を減らすことを主な目的としています。\n\nお問い合わせ内容を詳しく取得するために入力項目を増やすと、担当者側では確認しやすくなりますが、利用者の離脱が増える可能性があります。\n\nそのため、最初のフォームでは必要最低限の情報のみを取得し、不足する内容は受付後のやり取りで確認する方針としました。\n\n## まとめ\n\nお問い合わせフォームの入力項目とエラー表示を見直し、スマートフォンでも操作しやすい形へ改善しました。\n\n基本的な動作確認は完了しており、現在は公開前の最終確認を行っています。\n\n公開後は送信完了率やエラー件数を確認し、今回の変更が実際に利用者の負担軽減につながっているかを検証します。","createdAt":"2026年7月28日 14:30","note":"","startMode":"auto"}</script>
+  <script id="initialData" type="application/json">{"title":"お問い合わせフォーム改善に関する進捗報告","source":"## 概要\n\nWebサイトのお問い合わせフォームについて、入力途中の離脱を減らすための改善を実施しました。\n\n今回の対応では、入力項目の見直し、エラー表示の改善、スマートフォンでの操作性向上を行っています。\n\n現時点では社内確認用の環境へ反映済みです。大きな問題がなければ、次回の定期更新時に公開環境へ反映する予定です。\n\n## 今回実施した内容\n\n* 必須入力項目を8項目から5項目へ削減\n* 氏名欄を姓・名の2枠から1枠へ変更\n* 電話番号を任意入力へ変更\n* 入力エラーを画面上部だけでなく、各入力欄の直下にも表示\n* 郵便番号入力時の自動住所入力に対応\n* 送信前の確認画面を簡略化\n* スマートフォンで入力欄が拡大される問題を修正\n* 二重送信を防ぐため、送信処理中はボタンを無効化\n* 送信完了後に受付番号を表示\n* 管理者向け通知メールの内容を整理\n\n## 対応の背景\n\n直近1か月のアクセス状況を確認したところ、お問い合わせフォームを開いた利用者のうち、送信完了まで進んだ割合が想定より低い状態でした。\n\n特に、次の箇所で離脱が多く発生していました。\n\n1. 電話番号の入力欄\n2. お問い合わせ種別の選択欄\n3. 確認画面から送信するまでの区間\n\n電話番号については、メールで回答できる内容でも必須入力となっていたため、利用者に負担をかけていた可能性があります。\n\nまた、入力内容に問題がある場合、エラーメッセージが画面上部にしか表示されておらず、どの項目を修正すればよいか分かりにくい状態でした。\n\n## 修正前後の比較\n\n| 項目    | 修正前       | 修正後      |\n| ----- | --------- | -------- |\n| 必須項目数 | 8項目       | 5項目      |\n| 電話番号  | 必須        | 任意       |\n| エラー表示 | 画面上部のみ    | 各項目にも表示  |\n| 住所入力  | すべて手入力    | 郵便番号から補助 |\n| 送信ボタン | 連続押下可能    | 処理中は無効   |\n| 完了通知  | 完了メッセージのみ | 受付番号を表示  |\n\n## 動作確認の結果\n\n以下の環境で基本的な動作確認を行いました。\n\n* Windowsの主要ブラウザ\n* Androidスマートフォン\n* iPhone\n* タブレット端末\n\n確認した主な内容は次のとおりです。\n\n* 必須項目を入力しない場合にエラーが表示される\n* メールアドレスの形式が不正な場合に送信できない\n* 電話番号を入力しなくても送信できる\n* 入力内容が確認画面へ正しく引き継がれる\n* 送信ボタンを複数回押しても二重送信されない\n* 管理者と利用者の両方へ通知メールが届く\n* 受付番号が画面と通知メールで一致する\n\n現時点では、送信できないなどの重大な問題は確認されていません。\n\n## 確認中の課題\n\n一部の古い端末では、住所の自動入力後に画面の表示位置が少しずれる場合があります。\n\n送信自体には影響しませんが、操作性に関わるため、公開前に追加確認を行います。\n\nまた、お問い合わせ種別によって入力項目を切り替える案も検討しましたが、今回の修正範囲が大きくなるため、次回以降の改善候補としています。\n\n## 今後の予定\n\n今後は次の順番で対応します。\n\n1. 社内確認用環境で最終確認\n2. 通知メールの文面確認\n3. 利用規約とプライバシーポリシーへのリンク確認\n4. 公開環境への反映\n5. 公開後1週間のエラー状況確認\n6. 変更前後の送信完了率を比較\n\n公開後は、送信完了率だけでなく、入力開始から送信までにかかった時間も確認する予定です。\n\n## 公開後に確認する数値\n\n改善効果を確認するため、次の数値を記録します。\n\n* フォームを開いた人数\n* 入力を開始した人数\n* 確認画面へ進んだ人数\n* 送信が完了した人数\n* 入力エラーが発生した回数\n* 送信処理でエラーが発生した回数\n* 端末別の送信完了率\n\nただし、アクセス数が少ない期間の数値は変動が大きいため、公開直後の結果だけで判断せず、少なくとも2週間分のデータを確認します。\n\n## 補足\n\n今回の修正は、利用者が入力する際の負担を減らすことを主な目的としています。\n\nお問い合わせ内容を詳しく取得するために入力項目を増やすと、担当者側では確認しやすくなりますが、利用者の離脱が増える可能性があります。\n\nそのため、最初のフォームでは必要最低限の情報のみを取得し、不足する内容は受付後のやり取りで確認する方針としました。\n\n## まとめ\n\nお問い合わせフォームの入力項目とエラー表示を見直し、スマートフォンでも操作しやすい形へ改善しました。\n\n基本的な動作確認は完了しており、現在は公開前の最終確認を行っています。\n\n公開後は送信完了率やエラー件数を確認し、今回の変更が実際に利用者の負担軽減につながっているかを検証します。","createdAt":"2026年7月29日 12:48","note":"","startMode":"auto"}</script>
   <script>
   window.addEventListener("DOMContentLoaded", function () {
     "use strict";
@@ -277,7 +238,17 @@
 
     function isTableDivider(line) {
       const cells = splitTableRow(line);
-      return cells.length > 0 && cells.every(function (cell) { return /^:?-{3,}:?$/.test(cell); });
+      if (!line.includes("|") || !cells.length) return false;
+
+      return cells.every(function (cell) {
+        return cell === "" || /^:?-+:?$/.test(cell);
+      });
+    }
+
+    function isTableCandidate(line) {
+      if (!line || !line.includes("|")) return false;
+      const cells = splitTableRow(line);
+      return cells.length >= 2;
     }
 
     function parseMarkdownToHtml(markdown) {
@@ -355,32 +326,48 @@
           continue;
         }
 
-        if (index + 1 < lines.length && raw.includes("|") && isTableDivider(lines[index + 1])) {
-          flushAll();
-          const headers = splitTableRow(raw);
-          const aligns = splitTableRow(lines[index + 1]).map(function (cell) {
-            if (/^:-+:$/.test(cell)) return "center";
-            if (/-+:$/.test(cell)) return "right";
-            return "left";
-          });
-          const rows = [];
-          index += 2;
-          while (index < lines.length && lines[index].includes("|") && lines[index].trim()) {
-            rows.push(splitTableRow(lines[index]));
-            index++;
+        if (isTableCandidate(raw)) {
+          const nextLine = index + 1 < lines.length ? lines[index + 1] : "";
+          const hasFollowingTableLine = isTableCandidate(nextLine);
+          const looksExplicit = /^\s*\|.*\|\s*$/.test(raw);
+
+          if (hasFollowingTableLine || looksExplicit) {
+            flushAll();
+
+            const headers = splitTableRow(raw);
+            const secondLineIsDivider = isTableDivider(nextLine);
+            const dividerCells = secondLineIsDivider ? splitTableRow(nextLine) : [];
+            const aligns = headers.map(function (_, i) {
+              const cell = dividerCells[i] || "";
+              if (/^:-+:$/.test(cell)) return "center";
+              if (/^-+:$/.test(cell)) return "right";
+              return "left";
+            });
+
+            const rows = [];
+            index += secondLineIsDivider ? 2 : 1;
+            while (index < lines.length && isTableCandidate(lines[index]) && lines[index].trim()) {
+              rows.push(splitTableRow(lines[index]));
+              index++;
+            }
+            index--;
+
+            let html = '<div class="table-wrap"><table><thead><tr>';
+            headers.forEach(function (cell, i) {
+              html += '<th style="text-align:' + aligns[i] + '">' + parseInlineMarkdown(cell) + "</th>";
+            });
+            html += "</tr></thead><tbody>";
+            rows.forEach(function (row) {
+              html += "<tr>";
+              headers.forEach(function (_, i) {
+                html += '<td style="text-align:' + aligns[i] + '">' + parseInlineMarkdown(row[i] || "") + "</td>";
+              });
+              html += "</tr>";
+            });
+            html += "</tbody></table></div>";
+            output.push(html);
+            continue;
           }
-          index--;
-          let html = '<div class="table-wrap"><table><thead><tr>';
-          headers.forEach(function (cell, i) { html += '<th style="text-align:' + aligns[i] + '">' + parseInlineMarkdown(cell) + "</th>"; });
-          html += "</tr></thead><tbody>";
-          rows.forEach(function (row) {
-            html += "<tr>";
-            headers.forEach(function (_, i) { html += '<td style="text-align:' + aligns[i] + '">' + parseInlineMarkdown(row[i] || "") + "</td>"; });
-            html += "</tr>";
-          });
-          html += "</tbody></table></div>";
-          output.push(html);
-          continue;
         }
 
         const heading = trimmed.match(/^(#{1,6})\s+(.+)$/);
@@ -516,9 +503,6 @@
         year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit"
       }).format(new Date());
       viewMeta.replaceChildren();
-      const createdLine = document.createElement("div");
-      createdLine.textContent = "作成日時：" + dateText;
-      viewMeta.appendChild(createdLine);
       if (noteText.value.trim()) {
         const noteLine = document.createElement("div");
         noteLine.style.whiteSpace = "pre-wrap";
@@ -526,6 +510,9 @@
         noteLine.textContent = noteText.value.trim();
         viewMeta.appendChild(noteLine);
       }
+      const createdLine = document.createElement("div");
+      createdLine.textContent = "作成日時：" + dateText;
+      viewMeta.appendChild(createdLine);
       editorMode.classList.add("hidden");
       viewerMode.classList.remove("hidden");
       document.title = title;
