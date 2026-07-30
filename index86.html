@@ -1,0 +1,2891 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>プロフィール写真診断</title>
+
+  <style>
+    :root{
+      --ink: #0f172a;
+      --muted: #6b7280;
+
+
+      --shadow: 0 10px 30px rgba(16, 24, 40, 0.08);
+
+      --footer-h: 64px;
+
+
+
+      /* メイン（採点する） 青紫 → 赤紫（白文字が読める濃度） */
+      /* --grad-main: linear-gradient(to  right, #9791e4 0%,#5f5fe4 100% ); */
+      /* --grad-main: linear-gradient(to  right, #7e78ce 0%,#5f5fe4 100% ); */
+      /* --grad-main:#6a68dc; */
+      --grad-main: linear-gradient(135deg, #8F8BE1 0%, #C89AE0 55%, #F3A9C4 100%);
+      /* サブ（写真を入れ替える）＝同系色で一段落ち着かせた */
+      --grad-swap: linear-gradient(90deg, #4b4b50CC 0%);
+    }
+
+    *{
+      box-sizing: border-box;
+    }
+
+html,
+body{
+  height: 100%;
+}
+
+html{
+  scroll-behavior: smooth;
+  background: rgba(255, 242, 255, 0.7);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+body{
+  margin: 0;
+  min-height: 100vh;
+  color: var(--text);
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    "Hiragino Kaku Gothic ProN",
+    "Hiragino Sans",
+    "Noto Sans JP",
+    "Meiryo",
+    sans-serif;
+  line-height: 1.55;
+  background: transparent;
+  padding: 0 0 calc(env(safe-area-inset-bottom) + var(--footer-h)) 0;
+}
+
+body::before{
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.10)),
+    radial-gradient(circle at 20% 10%, rgba(255, 255, 255, 0.40), transparent 24%);
+  z-index: -1;
+}
+
+    /* Layout */
+    .container{
+      width: 100%;
+      max-width: 640px;
+      margin: 0 auto;
+      padding: calc(14px + env(safe-area-inset-top)) 16px calc(90px + env(safe-area-inset-bottom));
+    }
+
+    /* AppBar */
+    .appbar{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0 12px;
+    }
+
+    .back{
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: #fff;
+      border: 1px solid rgba(229, 231, 235, 0.9);
+      box-shadow: 0 6px 18px rgba(16, 24, 40, 0.08);
+      cursor: pointer;
+    }
+
+    .back:active{
+      opacity: 0.7;
+    }
+
+    .back svg{
+      width: 18px;
+      height: 18px;
+    }
+
+
+
+    
+
+
+
+    /* Card */
+    
+
+    /* Uploader (image-like) */
+    .drop{
+      position: relative;
+      width: 100%;
+      max-width: 520px;
+      height: 190px;
+      margin: 4px auto 12px;
+      border-radius: 18px;
+      background: #fff;
+      border: 1px solid rgba(229, 231, 235, 0.9);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .drop .dash{
+      position: absolute;
+      inset: 12px;
+      width: calc(100% - 24px);
+      height: calc(100% - 24px);
+      pointer-events: none;
+    }
+
+    .drop .dash rect{
+      stroke: #cbd5e1;
+      stroke-dasharray: 4 4;
+    }
+
+    
+
+    .drop .drop-inner{
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      text-align: center;
+      padding: 16px;
+    }
+
+    .drop .icon{
+      opacity: 0.9;
+    }
+
+    .drop p{
+      margin: 0;
+      font-size: 14px;
+      color: #475569;
+      line-height: 1.45;
+    }
+
+    .drop strong{
+      font-weight: 800;
+    }
+
+    .drop input[type="file"]{
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    .preview{
+      max-width: 100%;
+      display: block;
+      margin: 8px auto 0;
+      border-radius: 14px;
+      border: 1px solid rgba(229, 231, 235, 0.9);
+      box-shadow: 0 10px 24px rgba(16, 24, 40, 0.08);
+    }
+
+    /* プレビューをタップして入れ替え可能にする */
+    .preview-wrap{
+      position: relative;
+      display: block;
+    }
+
+    /* 画像は従来通りでOK（必要なら） */
+    .preview-wrap .preview{
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      /* 既存に合わせて調整 */
+    }
+
+
+    /* バッジ */
+    .swap-badge{
+      position: absolute;
+      right: 10px;
+      bottom: 10px;
+      padding: 6px 10px;
+      font-size: 12px;
+      line-height: 1;
+      border-radius: 999px;
+      /* background: rgba(161, 152, 232, 0.55); */
+      /* background: rgb(174, 169, 207); */
+      /* background: rgba(0, 0, 0, 0.55); */
+
+      background: var(--grad-swap);
+      color: #fff;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      pointer-events: none;
+      /* バッジ自体はクリックを邪魔しない */
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    /* クリック可能の見た目（wrapに付けてもOK） */
+    
+
+    /* ===== MARK:Segmented Control (診断対象) ===== */
+    /* 2カラム（通常） */
+    .select-panel{
+      display: flex;
+      gap: 12px;
+    }
+
+    /* 子要素が WebView で潰れてはみ出すのを防ぐ */
+    .select-panel>div{
+      min-width: 0;
+    }
+
+    /* 狭い画面では縦並び */
+    @media (max-width: 540px) {
+      .select-panel{
+        flex-direction: column;
+      }
+
+      .select-panel>div{
+        flex-basis: auto !important;
+        /* inline の flex-basis:50% を上書き */
+        width: 100%;
+      }
+    }
+
+    .seg-wrap{
+      position: relative;
+      display: flex;
+      gap: 10px;
+      background-color: #f2f6fd;
+      padding: 5px;
+      border-radius: 10px;
+      overflow: hidden;
+      /* 角丸からはみ出さないように */
+      font-size: 12px;
+      /* flex-wrap: wrap;  */
+    }
+
+    /* 動く白い四角（ハイライト） */
+    .seg-highlight{
+      position: absolute;
+      top: 5px;
+      bottom: 5px;
+      left: 5px;
+
+      /* 2択なので幅は (全体 - gap - padding左右) / 2 でOK */
+      width: calc((100% - 10px - 10px) / 2);
+      /* gap=10px, padding左右=5px×2=10px */
+
+      border-radius: 10px;
+      background: #ffffff;
+      border: 1px solid rgba(229, 231, 235, 0.9);
+      box-shadow: var(--shadow);
+
+      transform: translateX(0%);
+      transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+      will-change: transform;
+      pointer-events: none;
+    }
+
+    /* ボタン本体はハイライトより前面に */
+    .seg-item{
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      padding: 8px 10px;
+      cursor: pointer;
+      user-select: none;
+
+      background: transparent;
+      border: 1px solid transparent;
+      color: #747f8f;
+    }
+
+    .seg-item input[type="radio"]{
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* アクティブ時の文字色だけ変える */
+    .seg-item.is-active{
+      color: var(--ink);
+      font-weight: bold;
+
+    }
+
+    /* ===== MARK:App select (使用アプリ) ===== */
+
+
+    .app-select-wrap{
+      position: relative;
+      width: 100%;
+    }
+
+    .app-select-wrap .app-select{
+      width: 100%;
+      background-color: #f2f6fd;
+      border: none;
+      border-radius: 10px;
+      padding: 19px 40px 19px 32px;
+      /* 左:丸の分 / 右:矢印の分 */
+      color: var(--ink);
+      outline: none;
+      font-size: 12px;
+      /* ネイティブ矢印を消す */
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+    }
+
+    /* 左の丸 */
+    .app-select-wrap .app-dot{
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      transform: translateY(-50%);
+      background: #ff5aa5;
+      /* 初期：romance（ピンク） */
+      pointer-events: none;
+    }
+
+    /* 右の灰色“塗りつぶし”下向き三角形 */
+    .app-select-wrap .app-chevron{
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 8px solid #9aa3b2;
+      /* 灰色の塗りつぶし */
+      pointer-events: none;
+    }
+
+
+
+
+    /* Buttons */
+    .row{
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .primary{
+      width: 100%;
+      padding: 14px 14px;
+      border: 0;
+      color: #fff;
+      /*background: #111827;*/
+
+      background: var(--grad-main);
+      background-position: 0% 50%;
+
+      border-radius: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 14px 26px rgba(16, 24, 40, 0.14);
+      /* text-shadow: 0 1px 1px rgba(0,0,0,.2); */
+    }
+
+    .primary:disabled{
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* “採点する”ボタンに付与するクラス */
+    
+
+    /* disabled のときは止める（念のため） */
+    
+
+    /* 端末設定でアニメ軽減のユーザーには止める */
+    
+
+    .sub{
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid rgba(229, 231, 235, 0.9);
+      background: #fff;
+      border-radius: 14px;
+      cursor: pointer;
+      color: #111827;
+    }
+
+    /* Mode (控えめ) */
+    
+
+    
+
+    /* Status/Error */
+    .status{
+      margin-top: 10px;
+      font-size: 13px;
+      color: #334155;
+    }
+
+    .error{
+      margin-top: 6px;
+      font-size: 13px;
+      color: #e25b5b;
+    }
+
+    .hidden{
+      display: none !important;
+    }
+
+    /* Result area (like screenshot: no outer card) */
+    #resultWrap{
+      margin-top: 14px;
+    }
+
+    .section-title{
+      font-size: 14px;
+      font-weight: 900;
+      margin: 14px 0 10px;
+    }
+
+    /* Result layout */
+    .result{
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 20%;
+      align-items: flex-start;
+    }
+
+    .score{
+      width: 120px;
+      height: 120px;
+      display: grid;
+      place-items: center;
+      position: relative;
+    }
+
+    .score svg{
+      transform: rotate(-90deg);
+    }
+
+    .score .num{
+      position: absolute;
+      font-weight: bolder;
+      font-size: 26px;
+      z-index: 2;
+      transform: translateY(-10px);
+      color: #111827;
+    }
+
+    .score .small{
+      font-weight: bolder;
+
+      position: absolute;
+      bottom: 37px;
+      font-size: 8px;
+      color: var(--muted);
+      /* letter-spacing: 0.6px; */
+
+    }
+
+    /* Bullet list (✔ / ✖) */
+    .bullets{
+      display: grid;
+      gap: 10px;
+      padding-top: 6px;
+    }
+
+    .li{
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 14px;
+      line-height: 1.55;
+      color: #0f172a;
+    }
+
+    .badge-wrapper{
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      color: #424753;
+    }
+
+    .badge-ok,
+.badge-ng{
+      display: inline-grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      font-size: 13px;
+      flex: 0 0 auto;
+    }
+
+    .badge-ok{
+      background: #ecfdf5;
+      color: #0f766e;
+      border: 1px solid #d1fae5;
+    }
+
+    .badge-ng{
+      background: #fff7ed;
+      color: #c2410c;
+      border: 1px solid #ffedd5;
+    }
+
+
+    /* MARK:CSS radar-chart */
+    .radar-chart-7{
+      position: relative;
+      width: 100%;
+      max-width: 360px;
+    }
+
+    #detailRadarSvg{
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .radar-metrics{
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      padding: 0;
+      pointer-events: none;
+    }
+
+    .radar-metrics .rm{
+      position: absolute;
+      display: inline-flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 14px;
+      line-height: 1.1;
+      text-align: center;
+      transform: translate(-50%, -50%);
+      white-space: nowrap;
+      color: var(--muted);
+    }
+
+    .radar-metrics .rm dt{
+      margin: 0;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .radar-metrics .rm dd{
+      margin: 0;
+      font-weight: 700;
+    }
+
+
+    /* Advice card */
+    .advice{
+      /* background: rgba(255, 255, 255, 0.92); */
+      /* background: linear-gradient(to left,#f7faff,#fbf9fd); */
+      background: linear-gradient(#fdfcff);
+
+      /* background: linear-gradient(#fbf9fd); */
+
+      border: 1px solid rgba(229, 231, 235, 0.9);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 14px 16px;
+      line-height: 1.65;
+    }
+
+    .advice h4{
+      margin: 0 0 8px;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    /* badge */
+
+    /* Footer tabs */
+    .app-footer{
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: calc(var(--footer-h) + env(safe-area-inset-bottom));
+      padding-bottom: env(safe-area-inset-bottom);
+      background: #ffffffcc;
+      backdrop-filter: blur(10px);
+      border-top: 1px solid #e6e8eb;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      align-items: center;
+      z-index: 9999;
+    }
+
+    .footer-item{
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: var(--footer-h);
+      text-decoration: none;
+      color: #4b5563;
+      font-size: 12px;
+      line-height: 1.1;
+      gap: 6px;
+      background: transparent;
+      border: none;
+    }
+
+    .footer-item.active{
+      color: #111827;
+      font-weight: 700;
+    }
+
+    .footer-item:active{
+      opacity: 0.6;
+    }
+
+    .footer-item .ico{
+      font-size: 0;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .footer-item .ico svg{
+      width: 20px;
+      height: 20px;
+      display: block;
+    }
+
+    @media (max-width: 480px) {
+      .result{
+        grid-template-columns: 110px 1fr;
+      }
+
+      .score{
+        width: 110px;
+        height: 110px;
+      }
+
+      .score .num{
+        font-size: 30px;
+      }
+    }
+
+    .small-break{
+      display: block;
+      height: 9px;
+    }
+
+    /* ===== Custom Dialog (alert/confirm 置換) ===== */
+    .dlg-backdrop{
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      padding: 16px;
+    }
+
+    .dlg-card{
+      width: min(420px, 92vw);
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
+      border: 1px solid #e5e7eb;
+      overflow: hidden;
+    }
+
+    .dlg-head{
+      padding: 14px 16px 10px;
+      font-weight: 800;
+      font-size: 15px;
+      color: #111827;
+      border-bottom: 1px solid #eef2f7;
+    }
+
+    .dlg-body{
+      padding: 12px 16px 6px;
+      color: #111827;
+      font-size: 14px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    .dlg-actions{
+      display: flex;
+      gap: 10px;
+      padding: 12px 16px 14px;
+      justify-content: flex-end;
+    }
+
+    .dlg-btn{
+      appearance: none;
+      border: none;
+      cursor: pointer;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .dlg-cancel{
+      background: #f1f5f9;
+      color: #111827;
+      border: 1px solid #e5e7eb;
+    }
+
+    .dlg-ok{
+      background: #111827;
+      color: #fff;
+      box-shadow: 0 10px 20px rgba(17, 24, 39, 0.18);
+    }
+
+.container{
+  width:min(100%, 720px) !important;
+  max-width:720px !important;
+  margin:0 auto !important;
+  padding:
+    calc(22px + env(safe-area-inset-top))
+    16px
+    calc(32px + env(safe-area-inset-bottom)) !important;
+}
+
+.appbar{
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin:0 0 18px;
+  padding:14px 18px !important;
+  background:rgba(255, 255, 255, 0.62) !important;
+  border:1px solid rgba(255, 255, 255, 0.72) !important;
+  border-radius:18px !important;
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  box-shadow:var(--shadow-sm) !important;
+}
+
+.title{
+  flex:1;
+  text-align:center;
+  font-size:22px !important;
+  font-weight:800 !important;
+  color:var(--text) !important;
+}
+
+.back{
+  width:38px;
+  height:38px;
+  flex:0 0 38px;
+}
+
+.back{
+  border-radius:999px !important;
+  border:1px solid rgba(123, 151, 201, 0.28) !important;
+  background:linear-gradient(180deg, #ffffff, #edf5ff) !important;
+  box-shadow:0 6px 16px rgba(59, 130, 246, 0.08) !important;
+}
+
+.advice{
+  position:relative;
+  background:var(--surface) !important;
+  border:1px solid rgba(255, 255, 255, 0.72) !important;
+  border-radius:18px !important;
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  box-shadow:var(--shadow-md) !important;
+  overflow:hidden;
+}
+
+.advice::before{
+  content:"";
+  position:absolute;
+  inset:0 0 auto 0;
+  height:1px;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,0.95), transparent);
+  pointer-events:none;
+}
+
+
+
+.advice{
+  padding:18px !important;
+  background:linear-gradient(180deg, rgba(255,255,255,0.92), rgba(245,249,255,0.90)) !important;
+  border:1px solid rgba(191, 206, 230, 0.55) !important;
+  box-shadow:
+    0 10px 26px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75) !important;
+}
+
+.select-panel{
+  align-items:stretch;
+  gap:16px !important;
+}
+
+.section-title{
+  margin:0 0 12px !important;
+  font-size:14px !important;
+  font-weight:800 !important;
+  color:#10233f !important;
+}
+
+.seg-wrap{
+  background:linear-gradient(180deg, #f3f8ff, #e8f1ff) !important;
+  border:1px solid rgba(159, 187, 231, 0.42);
+  border-radius:14px !important;
+  padding:6px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+}
+
+.seg-highlight{
+  top:6px !important;
+  bottom:6px !important;
+  left:6px !important;
+  width:calc((100% - 12px - 10px) / 2) !important;
+  border-radius:12px !important;
+  background:rgba(255,255,255,0.96) !important;
+  border:1px solid rgba(255,255,255,0.75) !important;
+  box-shadow:0 8px 20px rgba(15,23,42,0.08) !important;
+}
+
+.seg-item{
+  min-height:44px;
+  border-radius:12px !important;
+  color:var(--text-soft) !important;
+  font-size:13px;
+  font-weight:700;
+}
+
+.seg-item.is-active{
+  color:#10233f !important;
+  font-weight:800 !important;
+}
+
+.app-select-wrap .app-select{
+  min-height:56px;
+  background:linear-gradient(180deg, #f3f8ff, #e8f1ff) !important;
+  border:1px solid rgba(159, 187, 231, 0.42) !important;
+  border-radius:14px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+  padding:17px 42px 17px 34px !important;
+  color:#10233f !important;
+  font-weight:700;
+}
+
+.app-select-wrap .app-dot{
+  width:10px;
+  height:10px;
+  left:14px !important;
+  box-shadow:0 0 0 3px rgba(255,255,255,0.75);
+}
+
+.app-select-wrap .app-chevron{
+  right:16px !important;
+  border-left:6px solid transparent !important;
+  border-right:6px solid transparent !important;
+  border-top:8px solid #7d8ba1 !important;
+}
+
+.drop{
+  max-width:none !important;
+  height:210px !important;
+  margin:4px auto 14px !important;
+  border-radius:22px !important;
+  background:linear-gradient(180deg, rgba(255,255,255,0.92), rgba(245,249,255,0.92)) !important;
+  border:1px solid rgba(191, 206, 230, 0.45) !important;
+  box-shadow:
+    0 10px 26px rgba(15,23,42,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.75) !important;
+}
+
+.drop .dash rect{
+  stroke:#bdd0ee !important;
+  stroke-width:2;
+  stroke-dasharray:6 6 !important;
+}
+
+
+
+.drop .drop-inner{
+  gap:12px !important;
+  padding:22px !important;
+}
+
+.drop p{
+  color:var(--text-soft) !important;
+  font-size:14px !important;
+  line-height:1.6 !important;
+}
+
+.preview-wrap .preview,
+.preview{
+  border-radius:18px !important;
+  border:1px solid rgba(110, 145, 210, 0.16) !important;
+  box-shadow:
+    0 8px 20px rgba(15, 23, 42, 0.08),
+    0 2px 6px rgba(15, 23, 42, 0.04) !important;
+}
+
+.swap-badge{
+  right:12px !important;
+  bottom:12px !important;
+  padding:8px 12px !important;
+  font-size:12px !important;
+  font-weight:700;
+  background:linear-gradient(180deg, rgba(34, 46, 66, 0.84), rgba(56, 69, 92, 0.90)) !important;
+  border:1px solid rgba(255,255,255,0.18);
+  box-shadow:0 6px 16px rgba(15,23,42,0.18);
+}
+
+.row{
+  gap:12px !important;
+  margin-top:14px !important;
+}
+
+.primary{
+  width:100%;
+  min-height:50px;
+  padding:14px 16px !important;
+  background:linear-gradient(180deg, #111827, #1f2937) !important;
+  color:#ffffff !important;
+  font-size:15px !important;
+  font-weight:800 !important;
+  letter-spacing:0.03em;
+  border-radius:14px !important;
+  box-shadow:0 12px 28px rgba(17, 24, 39, 0.22) !important;
+}
+
+.primary:hover{
+  box-shadow:0 16px 32px rgba(17, 24, 39, 0.28) !important;
+}
+
+
+
+.sub{
+  width:100%;
+  min-height:48px;
+  padding:12px 14px !important;
+  background:#ffffff !important;
+  color:#24446f !important;
+  border:1.5px solid rgba(59, 130, 246, 0.28) !important;
+  box-shadow:var(--shadow-sm) !important;
+}
+
+
+
+
+
+.status{
+  margin-top:12px !important;
+  padding:10px 12px !important;
+  border-radius:12px !important;
+  background:rgba(16, 185, 129, 0.08) !important;
+  color:#0f766e !important;
+  font-weight:700 !important;
+  font-size:12px !important;
+  line-height:1.5 !important;
+}
+
+.error{
+  margin-top:10px !important;
+  padding:10px 12px !important;
+  border-radius:12px !important;
+  background:rgba(239, 68, 68, 0.08) !important;
+  color:#b91c1c !important;
+  font-weight:700 !important;
+  font-size:12px !important;
+  line-height:1.5 !important;
+}
+
+#resultWrap{
+  margin-top:22px !important;
+}
+
+.result{
+  gap:18px !important;
+  align-items:flex-start !important;
+}
+
+.score{
+  width:120px !important;
+  height:120px !important;
+}
+
+.score .num{
+  font-size:28px !important;
+  font-weight:800 !important;
+  transform:translateY(-8px) !important;
+  color:#10233f !important;
+}
+
+.score .small{
+  bottom:33px !important;
+  font-size:9px !important;
+  color:#6f7d90 !important;
+}
+
+.bullets{
+  gap:12px !important;
+  padding-top:4px !important;
+}
+
+.li{
+  color:var(--text) !important;
+  font-size:14px !important;
+  line-height:1.6 !important;
+}
+
+.badge-ok{
+  background:#ecfdf5 !important;
+  color:#0f766e !important;
+  border:1px solid #d1fae5 !important;
+}
+
+.badge-ng{
+  background:#fff7ed !important;
+  color:#c2410c !important;
+  border:1px solid #ffedd5 !important;
+}
+
+.radar-chart-7{
+  max-width:380px !important;
+}
+
+.advice h4{
+  color:#10233f !important;
+  margin:0 0 8px !important;
+  font-size:14px !important;
+  font-weight:800 !important;
+}
+
+.app-footer{
+  position:fixed !important;
+  left:12px !important;
+  right:12px !important;
+  bottom:calc(10px + env(safe-area-inset-bottom)) !important;
+  height:var(--footer-h) !important;
+  padding:6px !important;
+  display:grid !important;
+  grid-template-columns:repeat(4, 1fr) !important;
+  gap:6px !important;
+  align-items:center !important;
+  background:rgba(255, 255, 255, 0.82) !important;
+  border:1px solid rgba(255, 255, 255, 0.75) !important;
+  border-radius:22px !important;
+  backdrop-filter:blur(18px) !important;
+  -webkit-backdrop-filter:blur(18px) !important;
+  box-shadow:var(--shadow-lg) !important;
+  z-index:9999 !important;
+}
+
+.footer-item{
+  height:100% !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:5px !important;
+  padding:6px 4px !important;
+  background:transparent !important;
+  border:none !important;
+  border-radius:16px !important;
+  color:var(--text-soft) !important;
+  text-decoration:none !important;
+  font-size:11px !important;
+  font-weight:700 !important;
+  line-height:1.1 !important;
+}
+
+.footer-item:hover{
+  background:rgba(59, 130, 246, 0.06) !important;
+}
+
+.footer-item.active{
+  background:linear-gradient(180deg, #eef5ff, #e6efff) !important;
+  color:#0f172a !important;
+  box-shadow:inset 0 0 0 1px rgba(59, 130, 246, 0.10) !important;
+  font-weight:800 !important;
+}
+
+.footer-item .ico{
+  width:24px !important;
+  height:24px !important;
+  font-size:0 !important;
+}
+
+.footer-item .ico svg{
+  width:20px !important;
+  height:20px !important;
+  display:block !important;
+}
+
+.footer-item.active .ico svg path,
+.footer-item.active .ico svg rect,
+.footer-item.active .ico svg circle{
+  stroke:#111827 !important;
+}
+
+.dlg-backdrop{
+  background:rgba(15, 23, 42, 0.42) !important;
+  backdrop-filter:blur(6px);
+}
+
+.dlg-card{
+  width:min(92vw, 440px) !important;
+  background:rgba(255, 255, 255, 0.96) !important;
+  border:1px solid rgba(255, 255, 255, 0.75) !important;
+  border-radius:22px !important;
+  box-shadow:var(--shadow-lg) !important;
+}
+
+.dlg-head{
+  margin:0 !important;
+  padding:16px 18px 10px !important;
+  font-size:15px !important;
+  font-weight:800 !important;
+  color:var(--text) !important;
+  border-bottom:1px solid rgba(148, 163, 184, 0.14) !important;
+}
+
+.dlg-body{
+  margin:0 !important;
+  padding:14px 18px 8px !important;
+  color:var(--text) !important;
+  font-size:14px !important;
+  line-height:1.7 !important;
+}
+
+.dlg-actions{
+  display:flex !important;
+  gap:10px !important;
+  padding:14px 18px 18px !important;
+  justify-content:flex-end !important;
+}
+
+.dlg-btn{
+  min-width:88px;
+  min-height:42px;
+  border-radius:12px !important;
+  font-size:13px !important;
+  font-weight:800 !important;
+}
+
+.dlg-cancel{
+  background:linear-gradient(180deg, #ffffff, #f3f6fb) !important;
+  color:var(--text) !important;
+  border:1px solid rgba(148, 163, 184, 0.20) !important;
+}
+
+.dlg-ok{
+  background:linear-gradient(180deg, #111827, #1f2937) !important;
+  color:#ffffff !important;
+  box-shadow:0 10px 24px rgba(17, 24, 39, 0.20) !important;
+}
+
+::-webkit-scrollbar{
+  width:10px;
+  height:10px;
+}
+
+::-webkit-scrollbar-track{
+  background:rgba(255, 255, 255, 0.35);
+}
+
+::-webkit-scrollbar-thumb{
+  background:rgba(100, 116, 139, 0.28);
+  border-radius:999px;
+  border:2px solid transparent;
+  background-clip:padding-box;
+}
+
+@media (max-width: 540px){
+  .container{
+    width:100% !important;
+    margin:0 !important;
+    padding:
+      calc(16px + env(safe-area-inset-top))
+      12px
+      calc(24px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .title{
+    font-size:19px !important;
+  }
+
+  .appbar,
+.advice{
+    border-radius:16px !important;
+  }
+
+  .app-footer{
+    left:8px !important;
+    right:8px !important;
+    bottom:calc(8px + env(safe-area-inset-bottom)) !important;
+    border-radius:18px !important;
+  }
+
+  .footer-item{
+    font-size:10px !important;
+  }
+
+  .result{
+    grid-template-columns:110px 1fr !important;
+  }
+
+  .score{
+    width:110px !important;
+    height:110px !important;
+  }
+
+  .score .num{
+    font-size:26px !important;
+  }
+
+  .drop{
+    height:190px !important;
+  }
+}
+
+
+
+    /* ===== Readability improvement patch ===== */
+    html{
+      background: linear-gradient(180deg, #f6f9ff 0%, #eef4ff 48%, #f6f3ff 100%) !important;
+      background-attachment: fixed !important;
+      background-repeat: no-repeat !important;
+      background-size: cover !important;
+    }
+
+    body{
+      color: #0f172a !important;
+    }
+
+    body::before{
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.28)) !important;
+      opacity: 1 !important;
+    }
+
+    :root{
+      --surface: rgba(255, 255, 255, 0.96) !important;
+
+
+
+      --text: #0f172a !important;
+      --text-soft: #475569 !important;
+
+
+
+      --shadow-sm: 0 6px 16px rgba(15, 23, 42, 0.06) !important;
+      --shadow-md: 0 10px 28px rgba(15, 23, 42, 0.08) !important;
+      --shadow-lg: 0 18px 42px rgba(15, 23, 42, 0.10) !important;
+    }
+
+    .container,
+main{
+      position: relative;
+      z-index: 1;
+    }
+
+    .appbar,
+.dlg-card,
+.advice,
+section,
+.drop{
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+
+    .appbar,
+.dlg-card,
+.advice,
+section,
+.drop{
+      background: rgba(255, 255, 255, 0.94) !important;
+      border-color: rgba(148, 163, 184, 0.28) !important;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08) !important;
+    }
+
+    
+
+    .title,
+.section-title,
+h1,
+h2,
+h3,
+h4,
+strong,
+b{
+      color: #0f172a !important;
+    }
+
+    .small,
+.dlg-body,
+.sub,
+.label,
+.footer-item{
+      color: #475569 !important;
+    }
+
+    input,
+textarea,
+select{
+      background: #ffffff !important;
+      color: #0f172a !important;
+      border-color: rgba(148, 163, 184, 0.32) !important;
+      box-shadow: none !important;
+    }
+
+    input::placeholder,
+textarea::placeholder{
+      color: #94a3b8 !important;
+    }
+
+    input:focus,
+textarea:focus,
+select:focus{
+      border-color: #60a5fa !important;
+      box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.18) !important;
+      outline: none !important;
+    }
+
+    .app-footer{
+      background: rgba(255,255,255,0.96) !important;
+      border-top-color: rgba(148, 163, 184, 0.24) !important;
+      backdrop-filter: blur(12px) !important;
+      -webkit-backdrop-filter: blur(12px) !important;
+    }
+
+    .footer-item.active{
+      color: #0f172a !important;
+      font-weight: 700 !important;
+    }
+    
+
+    :root{
+      --ink: #0f172a !important;
+      --muted: #64748b !important;
+
+
+      --shadow: 0 10px 28px rgba(15, 23, 42, 0.08) !important;
+      --grad-main: linear-gradient(90deg, #8f85e7 0%, #b891de 48%, #e7a1be 100%) !important;
+      --grad-swap: linear-gradient(135deg, rgba(15, 23, 42, 0.78) 0%, rgba(51, 65, 85, 0.86) 100%) !important;
+    }
+
+    .primary,
+.dlg-ok{
+      background: linear-gradient(90deg, #8f85e7 0%, #b891de 48%, #e7a1be 100%) !important;
+      color: #fff !important;
+      text-shadow: 0 1px 0 rgba(255,255,255,0.08) !important;
+      border: 1px solid rgba(255,255,255,0.22) !important;
+      box-shadow: 0 12px 28px rgba(191, 140, 199, 0.30), inset 0 1px 0 rgba(255,255,255,0.20) !important;
+    }
+
+    .sub,
+.app-select,
+.badge-wrapper,
+.advice,
+.drop{
+      background: rgba(255,255,255,0.97) !important;
+    }
+
+    .seg-highlight{
+      background: #ffffff !important;
+      border-color: rgba(148, 163, 184, 0.24) !important;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06) !important;
+    }
+    
+
+    /* ===== 自分のChatGPTタブ追加 ===== */
+    @layer make1 {
+      
+
+      
+
+      
+
+      
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+
+    /* ===== 採点項目の数値表示改善 ===== */
+    @layer make2 {
+      .metric-summary{
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .metric-card{
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px 12px;
+        align-items: center;
+        padding: 12px 13px;
+        background: linear-gradient(180deg, #ffffff, #f8fbff);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 14px;
+        box-shadow: 0 5px 14px rgba(15, 23, 42, 0.05);
+      }
+
+      .metric-name{
+        min-width: 0;
+        color: #334155;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .metric-score{
+        min-width: 48px;
+        text-align: right;
+        color: #0f172a;
+        font-size: 17px;
+        font-weight: 900;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .metric-score small{
+        color: #64748b;
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      .metric-bar{
+        grid-column: 1 / -1;
+        position: relative;
+        height: 7px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #e8eef7;
+      }
+
+      .metric-bar > span{
+        display: block;
+        width: 0%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #8f85e7 0%, #b891de 48%, #e7a1be 100%);
+        transition: width 700ms cubic-bezier(.2,.8,.2,1);
+      }
+
+      .metric-highlight{
+        margin-top: 12px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: linear-gradient(180deg, #f7f5ff, #fff8fc);
+        border: 1px solid rgba(184, 145, 222, 0.24);
+        color: #475569;
+        font-size: 13px;
+        line-height: 1.65;
+      }
+
+      .metric-highlight strong{
+        color: #0f172a !important;
+      }
+
+      @media (max-width: 440px) {
+        .metric-summary{
+          grid-template-columns: 1fr;
+        }
+      }
+    }
+
+
+    /* ===== 結果タブ・項目考察・表示改善 ===== */
+    @layer make3 {
+      .result-tabs{
+        position: sticky;
+        top: 8px;
+        z-index: 20;
+        display: flex;
+        gap: 8px;
+        margin: 0 0 12px;
+        padding: 6px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        background: rgba(255,255,255,.96);
+        border: 1px solid rgba(148,163,184,.28);
+        border-radius: 15px;
+        box-shadow: 0 8px 22px rgba(15,23,42,.08);
+      }
+      .result-tabs::-webkit-scrollbar{ display:none; }
+      .result-tab{
+        flex: 0 0 auto;
+        min-height: 40px;
+        padding: 9px 13px;
+        border: 0;
+        border-radius: 11px;
+        background: transparent;
+        color: #64748b;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 800;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .result-tab.is-active{
+        color: #fff;
+        background: linear-gradient(90deg,#8f85e7,#b891de 48%,#e7a1be);
+        box-shadow: 0 7px 17px rgba(191,140,199,.24);
+      }
+      .result-panel.hidden-panel{ display:none !important; }
+      .result-copy{
+        margin-top: 14px;
+        padding: 13px 14px;
+        border-radius: 14px;
+        background: #f8fafc;
+        border: 1px solid rgba(148,163,184,.24);
+        color: #475569;
+        font-size: 13px;
+        line-height: 1.75;
+        white-space: pre-wrap;
+      }
+      .metric-card{ align-items:start; }
+      .metric-thought{
+        grid-column: 1 / -1;
+        margin-top: 3px;
+        padding-top: 10px;
+        border-top: 1px dashed rgba(148,163,184,.28);
+        color: #475569;
+        font-size: 12px;
+        line-height: 1.7;
+      }
+      .action-block{
+        margin-top: 12px;
+        padding: 14px;
+        border-radius: 14px;
+        background: linear-gradient(180deg,#fbfcff,#f7f5ff);
+        border: 1px solid rgba(184,145,222,.22);
+      }
+      .action-block h5{ margin:0 0 7px; font-size:13px; color:#0f172a; }
+      .action-block p{ margin:0; color:#475569; font-size:13px; line-height:1.75; white-space:pre-wrap; }
+    }
+
+    @layer make4 {
+      .result-panel[data-result-panel="overview"]{ display:block; }
+      .insight-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+      .insight-card{ padding:14px; border-radius:14px; background:#f8fafc; border:1px solid rgba(148,163,184,.24); }
+      .insight-card h4{ margin:0 0 7px; font-size:13px; }
+      .insight-card p,
+.tab-lead{ margin:0; color:#475569; font-size:13px; line-height:1.75; white-space:pre-wrap; }
+      .priority-list{ display:grid; gap:10px; margin-top:12px; }
+      .priority-item{ display:grid; grid-template-columns:34px 1fr; gap:10px; padding:13px; border-radius:14px; background:#f8fafc; border:1px solid rgba(148,163,184,.24); }
+      .priority-rank{ width:30px; height:30px; display:grid; place-items:center; border-radius:999px; background:linear-gradient(90deg,#8f85e7,#b891de); color:#fff; font-weight:900; }
+      .priority-item strong{ display:block; margin-bottom:4px; font-size:13px; }
+      .priority-item span{ color:#475569; font-size:12px; line-height:1.65; }
+      .checklist{ display:grid; gap:10px; }
+      .checklist > div{ display:grid; gap:5px; padding:13px 14px; border-radius:14px; background:#f8fafc; border:1px solid rgba(148,163,184,.24); }
+      .checklist strong{ font-size:13px; }
+      .checklist span{ color:#475569; font-size:13px; line-height:1.7; }
+      @media (max-width:520px){ .insight-grid{grid-template-columns:1fr;} }
+    }
+
+
+
+    /* ===== 入力経路別の採点結果表示 ===== */
+    /* ===== 補助結果タブの表示制御 ===== */
+    @layer make4_1 {
+      .result-tabs-sub{
+        margin-top: 24px;
+        margin-bottom: 14px;
+      }
+
+      .result-tabs-sub.hidden{
+        display: none !important;
+      }
+    }
+
+    @layer make5 {
+      /* 旧仕様互換：main表示指定時だけ簡潔表示。現在のメイン採点はchatgpt表示を使用する。 */
+      #resultWrap.result-mode-main .result-tabs,
+#resultWrap.result-mode-main #overallAnalysis,
+#resultWrap.result-mode-main .metric-summary,
+#resultWrap.result-mode-main #metricHighlight,
+#resultWrap.result-mode-main #actionPlanBlock,
+#resultWrap.result-mode-main #photoUseTipsBlock,
+#resultWrap.result-mode-main [data-result-panel="impression"],
+#resultWrap.result-mode-main [data-result-panel="priority"],
+#resultWrap.result-mode-main [data-result-panel="retake"],
+#resultWrap.result-mode-main [data-result-panel="usage"]{
+        display: none !important;
+      }
+
+      #resultWrap.result-mode-main [data-result-panel="overview"]{
+        display: block !important;
+      }
+
+      /* 自分のChatGPTでは、詳細タグ・考察・用途別情報をすべて表示 */
+      #resultWrap.result-mode-chatgpt .result-tabs{
+        display: flex;
+      }
+    }
+
+
+    /* ===== 長時間考察オプション ===== */
+    @layer make6 {
+      .reasoning-option{
+        margin: -2px 0 14px;
+        padding: 0;
+        overflow: hidden;
+      }
+
+      .reasoning-toggle{
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 14px;
+        align-items: center;
+        width: 100%;
+        min-height: 76px;
+        padding: 15px 16px;
+        cursor: pointer;
+        user-select: none;
+        border-radius: 16px;
+        background: linear-gradient(180deg, #ffffff 0%, #f7f5ff 100%);
+        border: 1px solid rgba(184, 145, 222, 0.25);
+        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+      }
+
+      .reasoning-toggle:has(input:focus-visible){
+        outline: 3px solid rgba(143, 133, 231, 0.28);
+        outline-offset: 2px;
+      }
+
+      .reasoning-copy{
+        min-width: 0;
+      }
+
+      .reasoning-title-row{
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+      }
+
+      .reasoning-icon{
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        flex: 0 0 28px;
+        border-radius: 9px;
+        background: linear-gradient(135deg, #8f85e7, #d39bd3);
+        color: #fff;
+        font-size: 15px;
+        box-shadow: 0 6px 14px rgba(143, 133, 231, 0.22);
+      }
+
+      .reasoning-title{
+        color: #172033;
+        font-size: 14px;
+        font-weight: 900;
+      }
+
+      .reasoning-description{
+        display: block;
+        color: #64748b;
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .reasoning-switch{
+        position: relative;
+        width: 52px;
+        height: 30px;
+        flex: 0 0 52px;
+      }
+
+      .reasoning-switch input{
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .reasoning-slider{
+        position: absolute;
+        inset: 0;
+        border-radius: 999px;
+        background: #dbe3ef;
+        border: 1px solid rgba(100, 116, 139, 0.16);
+        transition: background 180ms ease, box-shadow 180ms ease;
+      }
+
+      .reasoning-slider::after{
+        content: "";
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 3px 9px rgba(15, 23, 42, 0.20);
+        transition: transform 180ms ease;
+      }
+
+      .reasoning-switch input:checked + .reasoning-slider{
+        background: linear-gradient(90deg, #8f85e7, #c797d8);
+        box-shadow: 0 0 0 4px rgba(143, 133, 231, 0.10);
+      }
+
+      .reasoning-switch input:checked + .reasoning-slider::after{
+        transform: translateX(22px);
+      }
+
+      @media (max-width: 420px) {
+        .reasoning-toggle{
+          min-height: 72px;
+          padding: 13px 14px;
+        }
+        .reasoning-description{
+          font-size: 11px;
+        }
+      }
+    }
+
+  
+    /* ===== 公開用生成HTML ===== */
+    @layer make99 {
+      
+      #mainModeScreen{ display: block !important; }
+    }
+  }</style>
+</head>
+
+<body>
+  <div class="container">
+    <!-- AppBar -->
+    <header class="appbar">
+      <!-- MARK:前の画面に戻るボタン -->
+      <div hidden>
+        <button class="back" type="button" aria-label="戻る">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" aria-hidden="true">
+            <path d="M15 18l-6-6 6-6"></path>
+          </svg>
+        </button>
+      </div>
+      <!-- MARK:HEADER -->
+      <div class="title">写真採点</div>
+    </header>
+    <div id="mainModeScreen">
+    <!-- MARK:選択画面 -->
+    <section class="advice select-panel" style="
+          margin-top: 12px;
+          padding-bottom: 40px;
+          margin-bottom: 14px;
+          display: flex;
+          gap: 12px;
+        ">
+      <!-- MARK:メイン画像・サブ画像 -->
+      <div style="flex-basis:50%;">
+        <h3 class="section-title">診断対象</h3>
+        <div class="seg-wrap" role="radiogroup" aria-label="診断対象の選択">
+          <span class="seg-highlight" aria-hidden="true"></span>
+          <label class="seg-item ">
+            <input type="radio" name="photoTarget" value="main" checked />
+            <span>メイン写真</span>
+          </label>
+
+          <label class="seg-item">
+            <input type="radio" name="photoTarget" value="sub" />
+            <span>サブ写真</span>
+          </label>
+        </div>
+      </div>
+      <!-- MARK:アプリタイプ選択 -->
+      <div style="flex-basis:50%;">
+        <h3 class="section-title">使用アプリ</h3>
+
+        <div class="app-select-wrap">
+          <span class="app-dot" aria-hidden="true"></span>
+
+          <select id="usedApp" name="usedApp" size="1" class="app-select">
+            <option value="romance" selected>恋愛王道アプリ</option>
+            <option value="light">ライト・カジュアルアプリ</option>
+            <option value="highspec">ハイスペック/審査制アプリ</option>
+          </select>
+
+          <span class="app-chevron" aria-hidden="true"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- MARK:長時間考察オプション -->
+    <section class="reasoning-option" aria-label="AIの考察設定">
+      <label class="reasoning-toggle" for="longReasoning">
+        <span class="reasoning-copy">
+          <span class="reasoning-title-row">
+            <span class="reasoning-icon" aria-hidden="true">✦</span>
+            <span class="reasoning-title">長時間考察する</span>
+          </span>
+          <span class="reasoning-description">より慎重に分析します。通常より結果の表示に時間がかかる場合があります。</span>
+        </span>
+        <span class="reasoning-switch" aria-hidden="true">
+          <input id="longReasoning" type="checkbox" />
+          <span class="reasoning-slider"></span>
+        </span>
+      </label>
+    </section>
+    <!-- Uploader -->
+    <section class="advice">
+      <div id="drop" class="drop" role="button" tabindex="0" aria-label="写真をアップロード">
+        <svg class="dash" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true">
+          <rect x="0" y="0" width="100" height="34" rx="4" ry="4" fill="none" stroke-width="2" />
+        </svg>
+        <div class="drop-inner">
+          <div class="icon" aria-hidden="true">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2">
+              <rect x="3" y="5" width="18" height="14" rx="3"></rect>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </div>
+          <p>
+            <strong>写真をアップロード</strong><br /><span class="small-break"></span><br /><span
+              style="font-size: 12px;">他者の写真を無断で貼り付けないでください
+          </p>
+        </div>
+        <input id="file" type="file" accept="image/*" />
+      </div>
+
+      <div id="previewWrap" class="preview-wrap hidden">
+        <img id="preview" class="preview" alt="アップロードした写真のプレビュー" />
+        <span id="swapBadge" class="swap-badge" aria-hidden="true">写真を入れ替える</span>
+      </div>
+
+      <div class="row">
+        <button id="scoreBtn" class="primary">採点する</button>
+      </div>
+    </section>
+    <div id="status" class="status"></div>
+    <div id="error" class="error"></div>
+
+    <!-- MARK:Result -->
+    <div id="resultWrap" class="hidden" aria-live="polite">
+      <div class="result-tabs" role="tablist" aria-label="採点結果の表示項目">
+        <button class="result-tab is-active" type="button" data-result-tab="overview" aria-selected="true">総合</button>
+        <button class="result-tab" type="button" data-result-tab="impression" aria-selected="false">第一印象</button>
+        <button class="result-tab" type="button" data-result-tab="priority" aria-selected="false">改善順</button>
+        <button class="result-tab" type="button" data-result-tab="retake" aria-selected="false">撮影方法</button>
+        <button class="result-tab" type="button" data-result-tab="usage" aria-selected="false">使い方</button>
+      </div>
+
+      <div class="result-panel" data-result-panel="overview">
+        <section class="advice">
+          <h3 class="section-title">採点結果</h3>
+          <div class="result">
+            <div class="score">
+              <svg width="110" height="110" viewBox="0 0 120 120" aria-hidden="true">
+                <defs><linearGradient id="ringGrad" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6d5efc"></stop><stop offset="1" stop-color="#d067ff"></stop></linearGradient></defs>
+                <circle cx="60" cy="60" r="48" stroke="#e9e7ff" stroke-width="8" fill="none" />
+                <circle id="ring" cx="60" cy="60" r="48" stroke="url(#ringGrad)" stroke-linecap="round" stroke-width="8" fill="none" stroke-dasharray="0 999" />
+              </svg>
+              <div class="num" id="num">82</div><div class="small unit">SCORE</div>
+            </div>
+            <div style="align-self:center;height:100%;"><div id="judge" style="font-weight:bold;font-size:26px;color:var(--ink);">A判定</div><div id="judgeText" style="color:var(--muted);font-size:13px;">プロフィール写真として利用可能</div></div>
+          </div>
+          <div id="overallAnalysis" class="result-copy">採点後に総合的な考察を表示します。</div>
+        </section>
+
+        <section id="detail_scores-ladorchart" class="advice" style="margin-top:12px;">
+          <h3 class="section-title">7項目評価</h3>
+          <div class="radar-chart-7" style="margin:10px auto 0;">
+            <svg id="detailRadarSvg" xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 220 220" role="img" aria-label="7項目評価のレーダーチャート" style="width:100%;max-width:360px;height:auto;display:block;">
+              <defs><linearGradient id="radarStroke" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#BDF6EE"></stop><stop offset="1" stop-color="#7FE6D8"></stop></linearGradient><linearGradient id="radarFill" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F3FFFD" stop-opacity="0.55"></stop><stop offset="1" stop-color="#CFFAF3" stop-opacity="0.25"></stop></linearGradient></defs>
+              <g id="radarAxes" stroke="#dce5eb" stroke-width="1"></g><g id="radarGrid" stroke="#dce5eb" stroke-width="1" fill="none"></g>
+              <path id="radarArea" d="M 100 100 L 100 100 L 100 100 L 100 100 L 100 100 L 100 100 L 100 100 Z" fill="url(#radarFill)" stroke="url(#radarStroke)" stroke-width="2.5"></path><g id="radarPoints" fill="#7FE6D8"></g>
+            </svg>
+            <dl class="radar-metrics">
+              <div class="rm" data-idx="0"><dt>髪型</dt><dd id="dd_hairstyle">-</dd></div><div class="rm" data-idx="1"><dt>服装</dt><dd id="dd_clothing">-</dd></div><div class="rm" data-idx="2"><dt>照明</dt><dd id="dd_lighting">-</dd></div><div class="rm" data-idx="3"><dt>構図</dt><dd id="dd_composition">-</dd></div><div class="rm" data-idx="4"><dt>ロケーション</dt><dd id="dd_location">-</dd></div><div class="rm" data-idx="5"><dt>表情</dt><dd id="dd_expression">-</dd></div><div class="rm" data-idx="6"><dt>ポージング</dt><dd id="dd_posing">-</dd></div>
+            </dl>
+          </div>
+          <div class="metric-summary" aria-label="7項目の点数一覧">
+            <div class="metric-card"><div class="metric-name">髪型</div><div class="metric-score"><span id="metricScore_hairstyle">-</span><small>/10</small></div><div class="metric-bar"><span id="metricBar_hairstyle"></span></div><div id="metricThought_hairstyle" class="metric-thought">採点後に考察を表示します。</div></div>
+            <div class="metric-card"><div class="metric-name">服装</div><div class="metric-score"><span id="metricScore_clothing">-</span><small>/10</small></div><div class="metric-bar"><span id="metricBar_clothing"></span></div><div id="metricThought_clothing" class="metric-thought">採点後に考察を表示します。</div></div>
+            <div class="metric-card"><div class="metric-name">照明</div><div class="metric-score"><span id="metricScore_lighting">-</span><small>/10</small></div><div class="metric-bar"><span id="metricBar_lighting"></span></div><div id="metricThought_lighting" class="metric-thought">採点後に考察を表示します。</div></div>
+            <div class="metric-card"><div class="metric-name">構図</div><div class="metric-score"><span id="metricScore_composition">-</span><small>/10</small></div><div class="metric-bar"><span id="metricBar_composition"></span></div><div id="metricThought_composition" class="metric-thought">採点後に考察を表示します。</div></div>
+            <div class="metric-card"><div class="metric-name">ロケーション</div><div class="metric-score"><span id="metricScore_location">-</span><small>/10</small></div><div class="metric-bar"><span id="metricBar_location"></span></div><div id="metricThought_location" class="metric-thought">採点後に考察を表示します。</div></div>
+            <div class="metric-card"><div class="metric-name">表情</div><div class="metric-score"><span id="metricScore_expression">-</span><small>/10</small></div><div class="metric-bar"><span id="metricBar_expression"></span></div><div id="metricThought_expression" class="metric-thought">採点後に考察を表示します。</div></div>
+            <div class="metric-card"><div class="metric-name">ポージング</div><div class="metric-score"><span id="metricScore_posing">-</span><small>/10</small></div><div class="metric-bar"><span id="metricBar_posing"></span></div><div id="metricThought_posing" class="metric-thought">採点後に考察を表示します。</div></div>
+          </div>
+          <div id="metricHighlight" class="metric-highlight">採点後に、最も高い項目と改善優先項目を表示します。</div>
+        </section>
+
+        <section class="advice" style="margin-top:12px"><h3 class="section-title">良い点</h3><div class="bullets"><div class="li"><div class="advice"><div class="badge-wrapper"><span class="badge-ok">✓</span><span id="pos1">—</span></div></div></div><div class="li"><div class="advice"><div class="badge-wrapper"><span class="badge-ok">✓</span><span id="pos2">—</span></div></div></div></div></section>
+        <section class="advice" style="margin-top:12px"><h3 class="section-title">改善点</h3><div class="bullets"><div class="li"><div class="advice"><div class="badge-wrapper"><span class="badge-ng">!</span><span id="neg1">—</span></div></div></div><div class="li"><div class="advice"><div class="badge-wrapper"><span class="badge-ng">!</span><span id="neg2">—</span></div></div></div></div></section>
+        <section class="advice" style="margin-top:12px"><h3 class="section-title">具体的なアドバイス</h3><div id="advice" class="result-copy">採点後に表示します。</div><div id="actionPlanBlock" class="action-block"><h5>優先して試すこと</h5><p id="actionPlan">採点後に表示します。</p></div><div id="photoUseTipsBlock" class="action-block"><h5>この写真の使い方</h5><p id="photoUseTips">採点後に表示します。</p></div></section>
+      </div>
+
+      <!-- 既存の結果タブと同期する補助タブ -->
+      <div class="result-tabs result-tabs-sub" role="tablist" aria-label="採点結果の表示項目（補助）">
+        <button class="result-tab is-active" type="button" data-result-tab="overview" aria-selected="true">総合</button>
+        <button class="result-tab" type="button" data-result-tab="impression" aria-selected="false">第一印象</button>
+        <button class="result-tab" type="button" data-result-tab="priority" aria-selected="false">改善順</button>
+        <button class="result-tab" type="button" data-result-tab="retake" aria-selected="false">撮影方法</button>
+        <button class="result-tab" type="button" data-result-tab="usage" aria-selected="false">使い方</button>
+      </div>
+
+      <section class="advice result-panel hidden-panel" data-result-panel="impression">
+        <h3 class="section-title">相手に伝わりやすい第一印象</h3>
+        <div class="insight-grid"><div class="insight-card"><h4>最初に伝わる魅力</h4><p id="firstImpressionStrength">採点後に表示します。</p></div><div class="insight-card"><h4>誤解される可能性</h4><p id="firstImpressionRisk">採点後に表示します。</p></div><div class="insight-card"><h4>一覧画面での見え方</h4><p id="thumbnailImpression">採点後に表示します。</p></div></div>
+      </section>
+
+      <section class="advice result-panel hidden-panel" data-result-panel="priority">
+        <h3 class="section-title">改善する順番</h3>
+        <p class="tab-lead">効果が出やすい順に、直す項目を3つへ絞ります。</p>
+        <div id="priorityList" class="priority-list"><div class="priority-item">採点後に表示します。</div></div>
+        <div class="action-block"><h5>改善後に残したい長所</h5><p id="keepStrength">採点後に表示します。</p></div>
+      </section>
+
+      <section class="advice result-panel hidden-panel" data-result-panel="retake">
+        <h3 class="section-title">撮り直す場合の手順</h3>
+        <div class="checklist"><div><strong>1. 光</strong><span id="retakeLight">採点後に表示します。</span></div><div><strong>2. 背景・構図</strong><span id="retakeComposition">採点後に表示します。</span></div><div><strong>3. 表情・姿勢</strong><span id="retakePose">採点後に表示します。</span></div><div><strong>4. 最後の確認</strong><span id="retakeFinal">採点後に表示します。</span></div></div>
+      </section>
+
+      <section class="advice result-panel hidden-panel" data-result-panel="usage">
+        <h3 class="section-title">写真の使い分け</h3>
+        <div class="insight-grid"><div class="insight-card"><h4>メイン写真として</h4><p id="mainPhotoSuitability">採点後に表示します。</p></div><div class="insight-card"><h4>サブ写真として</h4><p id="subPhotoSuitability">採点後に表示します。</p></div><div class="insight-card"><h4>アプリとの相性</h4><p id="appSuitability">採点後に表示します。</p></div></div>
+      </section>
+    </div>
+
+    </div>
+
+    <!-- hidden canvas for local analysis -->
+    <canvas id="cv" class="hidden"></canvas>
+  </div>
+
+  <br /><br /><br /><br /><br />
+  <!-- MARK:footer -->
+  <nav class="app-footer" role="tablist" aria-label="bottom tabs">
+    <!-- メッセージ -->
+    <button class="footer-item" role="tab" aria-selected="false">
+      <span class="ico" aria-hidden="true">
+        <svg width="83" height="83" viewBox="0 0 83 83" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M11.5 16.5H41.0082M41.9918 52.7745H71.5M41.9918 28.2647H71.5M12.4836 66.5H41.9918M12.4836 41.0098H41.9918"
+            stroke="#374151" stroke-width="3" stroke-linecap="round" />
+          <path d="M1.5 1.5H81.5V81.5H41.5H1.5V1.5Z" stroke="#374151" stroke-width="3" />
+        </svg>
+      </span>
+      <span>メッセージ</span>
+    </button>
+
+    <!-- 写真採点 -->
+    <button class="footer-item active" role="tab" aria-selected="true">
+      <span class="ico" aria-hidden="true">
+        <svg width="87" height="86" viewBox="0 0 87 86" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M75.5 20.2781H11.5C7.08172 20.2781 3.5 24.2578 3.5 29.1669V73.6113C3.5 78.5204 7.08172 82.5001 11.5 82.5001H75.5C79.9183 82.5001 83.5 78.5204 83.5 73.6113V29.1669C83.5 24.2578 79.9183 20.2781 75.5 20.2781Z"
+            stroke="#374151" stroke-width="7" />
+          <path
+            d="M43.5 69.166C52.3366 69.166 59.5 61.2067 59.5 51.3883C59.5 41.57 52.3366 33.6106 43.5 33.6106C34.6634 33.6106 27.5 41.57 27.5 51.3883C27.5 61.2067 34.6634 69.166 43.5 69.166Z"
+            stroke="#374151" stroke-width="7" />
+          <path
+            d="M63.5 2.5H23.5C21.2909 2.5 19.5 4.48984 19.5 6.94443V15.8333C19.5 18.2879 21.2909 20.2777 23.5 20.2777H63.5C65.7091 20.2777 67.5 18.2879 67.5 15.8333V6.94443C67.5 4.48984 65.7091 2.5 63.5 2.5Z"
+            fill="#374151" stroke="#374151" stroke-width="5" />
+        </svg>
+      </span>
+      <span><strong>写真採点</strong></span>
+    </button>
+
+    <!-- プロフ採点 -->
+    <button class="footer-item" role="tab" aria-selected="false">
+      <span class="ico" aria-hidden="true">
+        <svg width="83" height="83" viewBox="0 0 83 83" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M71.5 1.5H11.5C5.97715 1.5 1.5 5.08172 1.5 9.5V73.5C1.5 77.9183 5.97715 81.5 11.5 81.5H71.5C77.0228 81.5 81.5 77.9183 81.5 73.5V9.5C81.5 5.08172 77.0228 1.5 71.5 1.5Z"
+            stroke="#374151" stroke-width="3" />
+          <path d="M12.5 25.5H72.5M12.5 41.5H72.5M12.5 57.5H72.5" stroke="#374151" stroke-width="3"
+            stroke-linecap="round" />
+        </svg>
+      </span>
+      <span>プロフ採点</span>
+    </button>
+
+    <!-- その他 -->
+    <button class="footer-item" role="tab" aria-selected="false">
+      <span class="ico" aria-hidden="true">
+        <svg width="74" height="22" viewBox="0 0 74 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M9.94161 20.75C14.8799 20.75 18.8832 16.3288 18.8832 10.875C18.8832 5.42119 14.8799 1 9.94161 1C5.0033 1 1 5.42119 1 10.875C1 16.3288 5.0033 20.75 9.94161 20.75Z"
+            fill="#596372" stroke="#596372" stroke-width="2" />
+          <path
+            d="M36.7678 20.75C41.7061 20.75 45.7094 16.3288 45.7094 10.875C45.7094 5.42119 41.7061 1 36.7678 1C31.8295 1 27.8262 5.42119 27.8262 10.875C27.8262 16.3288 31.8295 20.75 36.7678 20.75Z"
+            fill="#596372" stroke="#596372" stroke-width="2" />
+          <path
+            d="M63.592 20.75C68.5303 20.75 72.5336 16.3288 72.5336 10.875C72.5336 5.42119 68.5303 1 63.592 1C58.6537 1 54.6504 5.42119 54.6504 10.875C54.6504 16.3288 58.6537 20.75 63.592 20.75Z"
+            fill="#596372" stroke="#596372" stroke-width="2" />
+        </svg>
+      </span>
+      <span>その他</span>
+    </button>
+  </nav>
+
+  <!-- ===== Custom Dialog UI (alert/confirm 置換) ===== -->
+  <div id="dlgBackdrop" class="dlg-backdrop" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="dlg-card">
+      <div id="dlgTitle" class="dlg-head">確認</div>
+      <div id="dlgMsg" class="dlg-body"></div>
+
+      <div class="dlg-actions">
+        <button id="dlgCancel" class="dlg-btn dlg-cancel">キャンセル</button>
+        <button id="dlgOk" class="dlg-btn dlg-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+
+  <script>
+
+    /* ================== 公開用デモ設定 ================== */
+
+    /* ================== 要素参照 ================== */
+    const fileEl = document.getElementById("file");
+    const drop = document.getElementById("drop");
+    const scoreBtn = document.getElementById("scoreBtn");
+    const preview = document.getElementById("preview");
+    const statusEl = document.getElementById("status");
+    const errorEl = document.getElementById("error");
+    const wrap = document.getElementById("resultWrap");
+    const cv = document.getElementById("cv");
+    const ctx = cv.getContext("2d");
+    let loadedDataUrl = null;
+
+
+    /* ===== 診断対象 / 使用アプリ：状態 ===== */
+    let selectedPhotoTarget = "main"; // main | sub
+    let selectedAppType = "romance";  // romance | light | casual | highspec
+    let useLongReasoning = false;
+
+    const LONG_REASONING_STORAGE_KEY = "photoScore.longReasoning";
+
+    function syncLongReasoningUI() {
+      const checkbox = document.getElementById("longReasoning");
+      if (!checkbox) return;
+      useLongReasoning = checkbox.checked;
+      try {
+        localStorage.setItem(LONG_REASONING_STORAGE_KEY, useLongReasoning ? "1" : "0");
+      } catch (e) {
+        console.warn("長時間考察設定を保存できませんでした。", e);
+      }
+    }
+
+    function syncPhotoTargetUI() {
+      const items = Array.from(document.querySelectorAll(".seg-item"));
+      const highlight = document.querySelector(".seg-highlight");
+      const checked = document.querySelector('input[name="photoTarget"]:checked');
+
+      // is-active（文字色用）
+      items.forEach((el) => el.classList.remove("is-active"));
+
+      if (!checked) return;
+
+      selectedPhotoTarget = checked.value === "sub" ? "sub" : "main";
+
+      const activeLabel = checked.closest(".seg-item");
+      const idx = items.indexOf(activeLabel);
+
+      if (activeLabel) activeLabel.classList.add("is-active");
+
+      // 2択なので 0 => 左, 1 => 右
+      if (highlight && idx >= 0) {
+        // gap があるので 100% ではなく「(幅+gap)」分動かす必要がある。
+        // ここでは calc を使って “1つ分 + gap” を移動させる。
+        if (idx === 0) {
+          highlight.style.transform = "translateX(0px)";
+        } else {
+          highlight.style.transform = "translateX(calc(100% + 10px))"; // gap=10px
+        }
+      }
+    }
+
+    function updateAppDotColor(appType) {
+      const dot = document.querySelector(".app-dot");
+      if (!dot) return;
+
+      const map = {
+        romance: "#ff5aa5", // ピンク
+        light: "#63c7ff",   // 水色
+        casual: "#f59e0b",  // オレンジ
+        highspec: "#111111" // 黒
+      };
+      dot.style.background = map[appType] || map.romance;
+    }
+
+    function syncAppTypeUI() {
+      const sel = document.getElementById("usedApp");
+      if (!sel) return;
+      selectedAppType = sel.value || "romance";
+      updateAppDotColor(selectedAppType);
+    }
+
+    /* 初期化 */
+    try {
+      const savedLongReasoning = localStorage.getItem(LONG_REASONING_STORAGE_KEY);
+      const checkbox = document.getElementById("longReasoning");
+      if (checkbox) checkbox.checked = savedLongReasoning === "1";
+    } catch (e) {
+      console.warn("長時間考察設定を読み込めませんでした。", e);
+    }
+    syncPhotoTargetUI();
+    syncAppTypeUI();
+    syncLongReasoningUI();
+
+    document.addEventListener("change", (e) => {
+      if (e.target && e.target.matches('input[name="photoTarget"]')) syncPhotoTargetUI();
+      if (e.target && e.target.id === "usedApp") syncAppTypeUI();
+      if (e.target && e.target.id === "longReasoning") syncLongReasoningUI();
+    });
+
+    /* ================== ユーティリティ ================== */
+    const getJudgeByScore = (score) => {
+      if (score >= 90) return { grade: "A判定", message: "プロフィール写真として利用可能" };
+      if (score >= 80) return { grade: "B判定", message: "改善すれば利用可能" };
+      if (score >= 70) return { grade: "C判定", message: "差し替えを推奨" };
+      if (score >= 60) return { grade: "D判定", message: "差し替えを推奨" };
+      return { grade: "E判定", message: "使用を非推奨" };
+    };
+
+    const setJudgeResult = (score) => {
+      const { grade, message } = getJudgeByScore(score);
+      const judgeEl = document.getElementById("judge");
+      const textEl = document.getElementById("judgeText");
+      if (judgeEl) judgeEl.textContent = grade;
+      if (textEl) textEl.textContent = message;
+    };
+
+    const RING_R = 48;
+    const RING_CIRC = 2 * Math.PI * RING_R;
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+    const clamp01 = (x) => Math.max(0, Math.min(1, x));
+    const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+
+    let animId = null;
+    const renderScore = (score) => {
+      const s = Math.max(0, Math.min(100, score));
+      const pct = s / 100;
+      const ring = document.getElementById("ring");
+      ring.style.strokeDasharray = `${RING_CIRC} ${RING_CIRC}`;
+      ring.style.strokeDashoffset = `${RING_CIRC * (1 - pct)}`;
+      document.getElementById("num").textContent = String(Math.round(s));
+    };
+
+    const animateScoreFromZero = (targetScore, duration = 900) => {
+      const to = Math.max(0, Math.min(100, targetScore));
+      if (animId) cancelAnimationFrame(animId);
+
+      renderScore(0);
+      setJudgeResult(0);
+
+      const start = performance.now();
+      const tick = (now) => {
+        const t = clamp01((now - start) / duration);
+        const v = to * easeOutCubic(t);
+        renderScore(v);
+        setJudgeResult(v);
+        if (t < 1) animId = requestAnimationFrame(tick);
+        else { renderScore(to); setJudgeResult(to); animId = null; }
+      };
+      animId = requestAnimationFrame(tick);
+    };
+
+    const setDD = (id, v) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = `${v ?? 0}/10`;
+    };
+
+    const setResult = (json, displayMode = "chatgpt", isBounus = false) => {
+
+      let {
+        score = 0,
+        positives = [],
+        negatives = [],
+        advice = "",
+        overallAnalysis = "",
+        actionPlan = "",
+        photoUseTips = "",
+        detailComments = {},
+        detailScores = {},
+      } = json || {};
+
+      const isMainDisplay = displayMode === "main";
+      wrap.classList.toggle("result-mode-main", isMainDisplay);
+      wrap.classList.toggle("result-mode-chatgpt", !isMainDisplay);
+
+      /* 自分のChatGPT側だけ、7項目点を使って甘い総合点を再校正する。 */
+if(true) {
+
+          if(isBounus && detailScores.hairstyle < 5) detailScores.hairstyle--;
+          if(isBounus && detailScores.clothing < 5) detailScores.clothing--;
+          if(isBounus && detailScores.lighting < 5) detailScores.lighting--;
+          if(isBounus && detailScores.composition < 5) detailScores.composition--;
+          if(isBounus && detailScores.location < 5) detailScores.location--;
+          if(isBounus && detailScores.expression < 5) detailScores.expression--;
+          if(isBounus && detailScores.posing < 5) detailScores.posing--;
+
+          if(isBounus && detailScores.hairstyle <= 2) detailScores.hairstyle = 1;
+          if(isBounus && detailScores.clothing <= 2) detailScores.clothing = 1;
+          if(isBounus && detailScores.lighting <= 2) detailScores.lighting = 1;
+          if(isBounus && detailScores.composition <= 2) detailScores.composition = 1;
+          if(isBounus && detailScores.location <= 2) detailScores.location = 1;
+          if(isBounus && detailScores.expression <= 2) detailScores.expression = 1;
+          if(isBounus && detailScores.posing <= 2) detailScores.posing = 1;
+
+          if(isBounus && 5 < detailScores.hairstyle) detailScores.hairstyle++;
+          if(isBounus && 5 < detailScores.clothing)detailScores.clothing++;
+          if(isBounus && 5 < detailScores.lighting)detailScores.lighting++;
+          if(isBounus && 5 < detailScores.composition)detailScores.composition++;
+          if(isBounus && 5 < detailScores.location)detailScores.location++;
+          if(isBounus && 5 < detailScores.expression)detailScores.expression++;
+          if(isBounus && 5 < detailScores.posing)detailScores.posing++;
+
+          if(isBounus && 7 < detailScores.hairstyle) detailScores.hairstyle++;
+          if(isBounus && 7 < detailScores.clothing)detailScores.clothing++;
+          if(isBounus && 7 < detailScores.lighting)detailScores.lighting++;
+          if(isBounus && 7 < detailScores.composition)detailScores.composition++;
+          if(isBounus && 7 < detailScores.location)detailScores.location++;
+          if(isBounus && 7 < detailScores.expression)detailScores.expression++;
+          if(isBounus && 7 < detailScores.posing)detailScores.posing++;
+
+          if(isBounus && 10 < detailScores.hairstyle) detailScores.hairstyle = 10;
+          if(isBounus && 10 < detailScores.clothing)detailScores.clothing = 10;
+          if(isBounus && 10 < detailScores.lighting)detailScores.lighting = 10;
+          if(isBounus && 10 < detailScores.composition)detailScores.composition = 10;
+          if(isBounus && 10 < detailScores.location)detailScores.location = 10;
+          if(isBounus && 10 < detailScores.expression)detailScores.expression = 10;
+          if(isBounus && 10 < detailScores.posing)detailScores.posing = 10;
+
+      if (!isMainDisplay) {
+        const strictValues = [
+          Number(detailScores.hairstyle) || 0,
+          Number(detailScores.clothing) || 0,
+          Number(detailScores.lighting) || 0,
+          Number(detailScores.composition) || 0,
+          Number(detailScores.location) || 0,
+          Number(detailScores.expression) || 0,
+          Number(detailScores.posing) || 0,
+        ].map((v) => clamp(v, 0, 10));
+
+        // 髪型・服装・表情をやや重く扱い、7項目から100点換算値を作る。
+        const strictWeights = [3, 2, 1, 1, 1, 2, 1];
+        const weightTotal = strictWeights.reduce((sum, v) => sum + v, 0);
+        const detailBasedScore = strictValues.reduce(
+          (sum, v, i) => sum + v * strictWeights[i],
+          0
+        ) / weightTotal * 10;
+
+        // モデルの総合点より7項目点を重視し、高得点への寄りを抑える。
+        score = Math.round((clamp(Number(score) || 0, 0, 100) * 0.35) + (detailBasedScore * 0.65));
+
+        const lowCount = strictValues.filter((v) => v <= 5).length;
+        const veryLowCount = strictValues.filter((v) => v <= 3).length;
+        const average = strictValues.reduce((sum, v) => sum + v, 0) / strictValues.length;
+
+        // 悪い項目が複数ある写真は、総合点が高止まりしないよう追加調整する。
+        score -= lowCount * 2;
+        score -= veryLowCount * 4;
+
+        if (average < 4) score = Math.min(score, 42);
+        else if (average < 5) score = Math.min(score, 52);
+        else if (average < 6) score = Math.min(score, 64);
+
+        if (veryLowCount >= 2) score = Math.min(score, 48);
+        if (lowCount >= 4) score = Math.min(score, 58);
+      }
+
+      if (8 <= detailScores.hairstyle) {
+        score++;
+        score++;
+        score++;
+      }
+      else {
+        if (detailScores.hairstyle <= 6) {
+          score--;
+          score--;
+          score--;
+        }
+      }
+
+
+      if (8 <= detailScores.clothing) {
+        score++;
+        score++;
+      }
+      else {
+        if (detailScores.clothing <= 6) {
+          score--;
+          score--;
+        }
+      }
+
+
+      if (8 <= detailScores.lighting) {
+        score++;
+      }
+      else {
+        if (detailScores.lighting <= 6) {
+          score--;
+        }
+      }
+
+
+      if (8 <= detailScores.composition) {
+        score++;
+      }
+      else {
+        if (detailScores.composition <= 6) {
+          score--;
+        }
+      }
+
+
+      if (8 <= detailScores.location) {
+        score++;
+      }
+      else {
+        if (detailScores.location <= 6) {
+          score--;
+        }
+      }
+
+
+      if (8 <= detailScores.expression) {
+        score++;
+        score++;
+      }
+      else {
+        if (detailScores.expression <= 6) {
+          score--;
+          score--;
+        }
+      }
+
+      if (8 <= detailScores.posing) {
+        score++;
+      }
+      else {
+        if (detailScores.posing <= 6) {
+          score--;
+        }
+      }
+
+score = score * score / 117;
+
+      score = Math.round(clamp(Number(score) || 0, 0, 100));
+}
+      // 返却文章内の「A〜E相当」「A〜E判定」を、補正後スコアの判定へ統一する。
+      const replaceGradeReferences = (text, correctedScore) => {
+        const source = String(text || "");
+        if (!source) return source;
+
+        const correctedGrade = getJudgeByScore(correctedScore).grade.charAt(0);
+        return source.replace(/[A-E](?=相当|判定)/g, correctedGrade);
+      };
+
+      const normalizeGradeText = (value) => replaceGradeReferences(value, score);
+      positives = positives.map(normalizeGradeText);
+      negatives = negatives.map(normalizeGradeText);
+      advice = normalizeGradeText(advice);
+      overallAnalysis = normalizeGradeText(overallAnalysis);
+      actionPlan = normalizeGradeText(actionPlan);
+      photoUseTips = normalizeGradeText(photoUseTips);
+      detailComments = Object.fromEntries(
+        Object.entries(detailComments || {}).map(([key, value]) => [key, normalizeGradeText(value)])
+      );
+
+      const correctedPhotoUseTips = photoUseTips ||
+        "写真の用途に合わせて、最も点数の低い項目から改善してください。";
+
+      document.getElementById("pos1").textContent = positives[0] || "長所の抽出なし";
+      document.getElementById("pos2").textContent = positives[1] || positives[0] || "—";
+      document.getElementById("neg1").textContent = negatives[0] || "改善点の抽出なし";
+      document.getElementById("neg2").textContent = negatives[1] || negatives[0] || "—";
+      document.getElementById("advice").textContent = advice || "—";
+      document.getElementById("overallAnalysis").textContent = overallAnalysis || "総合的な考察はありません。";
+      document.getElementById("actionPlan").textContent = actionPlan || advice || "—";
+      document.getElementById("photoUseTips").textContent = correctedPhotoUseTips;
+
+      wrap.classList.remove("hidden");
+      if (!isMainDisplay) showResultPanel("overview");
+      animateScoreFromZero(score | 0, 900);
+
+      const values = [
+        detailScores.hairstyle ?? 0,
+        detailScores.clothing ?? 0,
+        detailScores.lighting ?? 0,
+        detailScores.composition ?? 0,
+        detailScores.location ?? 0,
+        detailScores.expression ?? 0,
+        detailScores.posing ?? 0,
+      ];
+
+      animateRadarFromZero(values, { duration: 900 });
+      requestAnimationFrame(() => positionRadarLabels({ offset: 12 }));
+
+      setDD("dd_hairstyle", values[0]);
+      setDD("dd_clothing", values[1]);
+      setDD("dd_lighting", values[2]);
+      setDD("dd_composition", values[3]);
+      setDD("dd_location", values[4]);
+      setDD("dd_expression", values[5]);
+      setDD("dd_posing", values[6]);
+
+      const metricKeys = [
+        ["hairstyle", "髪型"],
+        ["clothing", "服装"],
+        ["lighting", "照明"],
+        ["composition", "構図"],
+        ["location", "ロケーション"],
+        ["expression", "表情"],
+        ["posing", "ポージング"],
+      ];
+
+      metricKeys.forEach(([key], index) => {
+        const value = clamp(Number(values[index]) || 0, 0, 10);
+        const scoreEl = document.getElementById(`metricScore_${key}`);
+        const barEl = document.getElementById(`metricBar_${key}`);
+        const thoughtEl = document.getElementById(`metricThought_${key}`);
+        if (scoreEl) scoreEl.textContent = String(Math.round(value));
+        if (thoughtEl) thoughtEl.textContent = String(detailComments?.[key] || "この項目の考察はありません。");
+        if (barEl) {
+          barEl.style.width = "0%";
+          requestAnimationFrame(() => {
+            barEl.style.width = `${value * 10}%`;
+          });
+        }
+      });
+
+      const rankedMetrics = metricKeys.map(([key, label], index) => ({
+        key,
+        label,
+        value: clamp(Number(values[index]) || 0, 0, 10)
+      })).sort((a, b) => b.value - a.value);
+
+      const best = rankedMetrics[0];
+      const weakest = rankedMetrics[rankedMetrics.length - 1];
+      const highlightEl = document.getElementById("metricHighlight");
+      if (highlightEl && best && weakest) {
+        highlightEl.innerHTML = `<strong>最も高い項目：</strong>${best.label} ${Math.round(best.value)}/10<br><strong>改善優先項目：</strong>${weakest.label} ${Math.round(weakest.value)}/10`;
+      }
+
+
+      const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+
+      // JSON内のどこかに「自撮り」がある場合は、機械生成文で致命的な減点理由として優先表示する。
+      const hasSelfieMention = JSON.stringify(json || {}).includes("自撮り") && !JSON.stringify(json || {}).includes("自撮りっぽさは感じられない") && score < 50;
+      const selfieFatalText = "自撮りであることが致命的な減点理由です。プロフィール写真では自撮り感が強い写真を使用せず、他者に撮影してもらった自然な写真へ差し替えてください。";
+
+      const topTwo = rankedMetrics.slice(0, 2);
+      const lowThree = [...rankedMetrics].sort((a, b) => a.value - b.value).slice(0, 3);
+      setText("firstImpressionStrength", positives[0] || `${topTwo.map(v => v.label).join("・")}が比較的良く、人物像が伝わりやすい写真です。`);
+      setText("firstImpressionRisk", hasSelfieMention
+        ? selfieFatalText
+        : (negatives[0] || `${weakest.label}が弱いため、実物より魅力が伝わりにくくなる可能性があります。`));
+      setText("thumbnailImpression", detailScores.composition >= 8 && detailScores.lighting >= 8 ? "小さな一覧表示でも顔と雰囲気が伝わりやすい状態です。" : "一覧画面では顔が小さく、または暗く見える可能性があります。顔をやや大きく切り取り、明るさを整えると改善しやすいです。");
+
+      const priorityList = document.getElementById("priorityList");
+      if (priorityList) {
+        const metricPriorityItems = lowThree.map((item, index) => `<div class="priority-item"><div class="priority-rank">${index + 1}</div><div><strong>${item.label} ${Math.round(item.value)}/10</strong><span>${String(detailComments?.[item.key] || "この項目を整えると、写真全体の印象が改善しやすくなります。")}</span></div></div>`);
+        if (hasSelfieMention) {
+          metricPriorityItems.unshift(`<div class="priority-item"><div class="priority-rank">1</div><div><strong>自撮り写真の差し替え</strong><span>${selfieFatalText}</span></div></div>`);
+          metricPriorityItems.slice(1).forEach((html, index) => {
+            metricPriorityItems[index + 1] = html.replace(/<div class="priority-rank">\d+<\/div>/, `<div class="priority-rank">${index + 2}</div>`);
+          });
+          metricPriorityItems.length = 3;
+        }
+        priorityList.innerHTML = metricPriorityItems.join("");
+      }
+      setText("keepStrength", positives.filter(Boolean).join(" また、") || `${best.label}の良さは残しながら、弱い項目だけを調整してください。`);
+
+      setText("retakeLight", detailComments.lighting || "窓際の柔らかい自然光を正面斜めから当て、顔に強い影が出ない位置を選びます。");
+      setText("retakeComposition", `${detailComments.composition || "顔が一覧表示でも分かる大きさになるように調整します。"} ${detailComments.location || "背景の情報量を減らします。"}`);
+      setText("retakePose", `${detailComments.expression || "口角と目元が自然に見える表情を選びます。"} ${detailComments.posing || "肩の力を抜きます。"}`);
+      setText("retakeFinal", hasSelfieMention
+        ? "自撮りではなく、他者に撮影してもらってください。タイマーや三脚を使う場合も、手を伸ばした自撮りに見えない距離と構図にし、自然な候補を3〜5枚比較します。"
+        : "同じ条件で3〜5枚撮り、顔の明るさ、目線、口元、背景の乱れを比較して最も自然な1枚を選びます。");
+
+      const adjustedScore = clamp(Math.round(score), 0, 100);
+      const ascendingMetrics = [...rankedMetrics].sort((a, b) => a.value - b.value);
+      const criticalMetrics = ascendingMetrics.filter((item) => item.value <= 3);
+      const weakMetrics = ascendingMetrics.filter((item) => item.value <= 5);
+      const weakLabels = weakMetrics.slice(0, 3).map((item) => item.label);
+      const criticalLabels = criticalMetrics.slice(0, 3).map((item) => item.label);
+      const weakLabelText = weakLabels.length ? weakLabels.join("・") : weakest.label;
+      const criticalLabelText = criticalLabels.length ? criticalLabels.join("・") : weakest.label;
+      const targetIsMain = selectedPhotoTarget === "main";
+
+      function usageGuidanceByScore() {
+        if (adjustedScore >= 90) {
+          return {
+            main: "メイン写真としてそのまま採用しやすい水準です。過度な加工は避け、現在の自然な印象と本人の分かりやすさを維持してください。",
+            sub: "サブ写真に置くより、最初に見せるメイン写真として活かしやすい写真です。サブに使う場合は、趣味や全身など別の情報を補う写真と組み合わせてください。",
+            app: "写真単体の完成度は十分です。プロフィール全体では、同じ表情や似た構図の写真を重ねず、人物像の幅が伝わる並びにすると効果的です。"
+          };
+        }
+        if (adjustedScore >= 80) {
+          return {
+            main: `メイン写真の有力候補です。${weakest.label}を軽く整えた版も撮影し、一覧画面で顔の分かりやすさを比較してから採用してください。`,
+            sub: "サブ写真としては十分使えますが、メイン写真として使える可能性もあります。より自然な表情や明るさの別カットがあれば比較してください。",
+            app: `${best.label}の良さが伝わる写真です。${weakest.label}だけを調整すれば、選択したアプリでも安定した第一印象を作りやすくなります。`
+          };
+        }
+        if (adjustedScore >= 70) {
+          return {
+            main: `現状でも候補にはできますが、メイン写真として即採用するより、${weakLabelText}を直した撮り直し版と比較する方が安全です。改善前しかない場合は、他に顔が明るく分かりやすい写真がないか先に確認してください。`,
+            sub: "人柄や雰囲気を補うサブ写真としては利用可能です。ただし、同じ弱点を持つ写真がプロフィール内に複数ある場合は、別写真への差し替えを優先してください。",
+            app: `${best.label}は活かせますが、${weakLabelText}が一覧画面での印象を弱める可能性があります。プロフィールの前半には、より欠点の少ない写真を配置してください。`
+          };
+        }
+        if (adjustedScore >= 60) {
+          return {
+            main: `メイン写真としての使用は推奨しません。${weakLabelText}の複数項目が第一印象を下げるため、部分修正だけで済ませず、撮影条件を変えた別カットを用意してください。`,
+            sub: `サブ写真としても無条件で掲載できる水準ではありません。${weakLabelText}を改善した撮り直しが難しい場合は、この写真を外し、趣味・全身・日常の雰囲気が自然に伝わる別写真へ差し替えてください。`,
+            app: `選択したアプリでは、${weakLabelText}が本人の魅力より先に伝わるおそれがあります。プロフィール後半への配置でごまかすより、差し替えを優先してください。`
+          };
+        }
+        if (adjustedScore >= 45) {
+          return {
+            main: `メイン写真には使用しないでください。${weakLabelText}が同時に弱く、最初の一枚として本人の魅力や安心感を十分に伝えられません。小さな補正ではなく、明るさ・背景・表情・構図を見直して撮り直す必要があります。`,
+            sub: `サブ写真としても基本的には差し替えを推奨します。${weakLabelText}のうち一項目だけを少し直しても不十分なため、複数の弱点をまとめて改善した別写真を用意してください。`,
+            app: `このまま掲載すると、選択したアプリで写真全体の信頼感を下げる可能性があります。良い点を残しつつ、${weakLabelText}をまとめて改善した写真へ差し替えてください。`
+          };
+        }
+        return {
+          main: `メイン写真としては使用非推奨です。${criticalLabelText}を含む重大な弱点があり、本人の判別、清潔感、親しみやすさ、安心感のいずれかが十分に伝わらない可能性があります。加工やトリミングだけでの救済は考えず、別の写真へ差し替えてください。`,
+          sub: `サブ写真としても掲載を見送ることを推奨します。低得点項目を一〜二点だけ改善する対応では不十分で、${criticalLabelText}を中心に撮影条件そのものを変える必要があります。代替写真がない場合も、枚数を埋める目的で使わず、撮り直してから追加してください。`,
+          app: `選択したアプリとの相性以前に、プロフィール写真としての基本条件が不足しています。${criticalLabelText}を個別補正するのではなく、場所・光・構図・表情を再設計して撮り直してください。`
+        };
+      }
+
+      const usageGuidance = usageGuidanceByScore();
+      if (hasSelfieMention) {
+        usageGuidance.main = `${selfieFatalText} メイン写真としては使用しないでください。`;
+        usageGuidance.sub = `${selfieFatalText} サブ写真であっても、自撮り感が明確なままの掲載は推奨しません。`;
+        usageGuidance.app = `${selfieFatalText} アプリの種類にかかわらず、他撮りの写真を優先してください。`;
+      }
+      setText("mainPhotoSuitability", usageGuidance.main);
+      setText("subPhotoSuitability", usageGuidance.sub);
+      const appNames = { romance:"恋愛王道アプリ", light:"ライト・カジュアルアプリ", casual:"ライト・カジュアルアプリ", highspec:"ハイスペック／審査制アプリ" };
+      setText("appSuitability", `${appNames[selectedAppType] || "選択したアプリ"}での評価：${usageGuidance.app}`);
+
+      // ChatGPTの用途説明が判定より甘い場合は、機械判定側の強い注意を優先して補足する。
+      if (!isMainDisplay) {
+        const useTipsEl = document.getElementById("photoUseTips");
+        if (useTipsEl) {
+          const generatedTips = replaceGradeReferences(String(photoUseTips || "").trim(), adjustedScore);
+          const selectedGuidance = targetIsMain ? usageGuidance.main : usageGuidance.sub;
+          useTipsEl.textContent = adjustedScore < 70
+            ? `${selectedGuidance}${generatedTips ? `
+
+写真内容に応じた補足：${generatedTips}` : ""}`
+            : (generatedTips || selectedGuidance);
+        }
+      }
+    };
+
+
+    function showResultPanel(name) {
+      document.querySelectorAll("[data-result-panel]").forEach((panel) => {
+        panel.classList.toggle("hidden-panel", panel.dataset.resultPanel !== name);
+      });
+
+      // 補助タブは総合パネルの末尾にあるため、総合表示中だけ見せる。
+      document.querySelectorAll(".result-tabs-sub").forEach((tabs) => {
+        tabs.classList.toggle("hidden", name !== "overview");
+      });
+
+      document.querySelectorAll("[data-result-tab]").forEach((tab) => {
+        const active = tab.dataset.resultTab === name;
+        tab.classList.toggle("is-active", active);
+        tab.setAttribute("aria-selected", String(active));
+      });
+      if (name === "overview") requestAnimationFrame(() => positionRadarLabels({ offset: 12 }));
+    }
+
+    document.querySelectorAll("[data-result-tab]").forEach((tab) => {
+      tab.addEventListener("click", () => showResultPanel(tab.dataset.resultTab));
+    });
+
+    /* ================== 実行 ================== */
+    scoreBtn.addEventListener("click", () => {
+      __dlg.alert("このページは採点結果の見た目を確認するための公開用サンプルです。ここでは新しく写真を採点できません。", "採点できません");
+    });
+
+    /* ================== レーダーチャート ================== */
+    const RADAR = {
+      n: 7,
+      cx: 100,
+      cy: 100,
+      r: 94,
+      pad: 0,
+      max: 10,
+      startAngle: -Math.PI / 2,
+    };
+
+    const buildRadarBackground = ({ levels = 10, showOuter = true } = {}) => {
+      const axesG = document.getElementById("radarAxes");
+      const gridG = document.getElementById("radarGrid");
+      if (!axesG || !gridG) return;
+
+      const ns = "http://www.w3.org/2000/svg";
+      axesG.innerHTML = "";
+      gridG.innerHTML = "";
+
+      const angleAt = (i) => RADAR.startAngle + (2 * Math.PI * i) / RADAR.n;
+
+      for (let i = 0; i < RADAR.n; i++) {
+        const a = angleAt(i);
+        const x = RADAR.cx + RADAR.r * Math.cos(a);
+        const y = RADAR.cy + RADAR.r * Math.sin(a);
+        const p = document.createElementNS(ns, "path");
+        p.setAttribute("d", `M ${RADAR.cx} ${RADAR.cy} L ${x.toFixed(1)} ${y.toFixed(1)}`);
+        axesG.appendChild(p);
+      }
+
+      const startLv = 1;
+      const endLv = showOuter ? levels : (levels - 1);
+
+      for (let lv = startLv; lv <= endLv; lv++) {
+        const frac = lv / levels;
+        const rr = RADAR.r * frac;
+
+        let d = "";
+        for (let i = 0; i < RADAR.n; i++) {
+          const a = angleAt(i);
+          const x = RADAR.cx + rr * Math.cos(a);
+          const y = RADAR.cy + rr * Math.sin(a);
+          d += (i === 0) ? `M ${x.toFixed(1)} ${y.toFixed(1)} ` : `L ${x.toFixed(1)} ${y.toFixed(1)} `;
+        }
+        d += "Z";
+
+        const path = document.createElementNS(ns, "path");
+        path.setAttribute("d", d);
+        gridG.appendChild(path);
+      }
+    };
+
+    const radarRadius = () => (RADAR.r - RADAR.pad);
+
+    const radarPoint = (i, value) => {
+      const v = clamp(value, 0, RADAR.max) / RADAR.max;
+      const a = RADAR.startAngle + (2 * Math.PI * i) / RADAR.n;
+      const rr = radarRadius() * v;
+      return { x: RADAR.cx + rr * Math.cos(a), y: RADAR.cy + rr * Math.sin(a) };
+    };
+
+    const radarPathD = (values) => {
+      const pts = values.map((v, i) => radarPoint(i, v));
+      const head = pts[0];
+      const body = pts.slice(1).map((p) => `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+      return `M ${head.x.toFixed(1)} ${head.y.toFixed(1)} ${body} Z`;
+    };
+
+    const ensureRadarPoints = () => {
+      const g = document.getElementById("radarPoints");
+      if (!g) return;
+      if (g.querySelectorAll("circle").length === RADAR.n) return;
+
+      g.innerHTML = "";
+      for (let i = 0; i < RADAR.n; i++) {
+        const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        c.setAttribute("r", "3");
+        c.setAttribute("cx", String(RADAR.cx));
+        c.setAttribute("cy", String(RADAR.cy));
+        g.appendChild(c);
+      }
+    };
+
+    const renderRadar = (values) => {
+      const area = document.getElementById("radarArea");
+      const g = document.getElementById("radarPoints");
+      if (!area || !g) return;
+
+      area.setAttribute("d", radarPathD(values));
+      const circles = g.querySelectorAll("circle");
+      values.forEach((v, i) => {
+        const p = radarPoint(i, v);
+        const c = circles[i];
+        if (!c) return;
+        c.setAttribute("cx", p.x.toFixed(1));
+        c.setAttribute("cy", p.y.toFixed(1));
+      });
+    };
+
+    let radarAnimId = null;
+    const animateRadarFromZero = (targetValues, { duration = 900, easing = easeOutCubic } = {}) => {
+      const to = targetValues.map((v) => clamp(v, 0, RADAR.max));
+      const from = new Array(RADAR.n).fill(0);
+
+      if (radarAnimId) cancelAnimationFrame(radarAnimId);
+
+      ensureRadarPoints();
+      renderRadar(from);
+
+      const start = performance.now();
+      const tick = (now) => {
+        const t = Math.min(1, (now - start) / duration);
+        const k = easing(t);
+        const current = to.map((v) => v * k);
+        renderRadar(current);
+
+        if (t < 1) radarAnimId = requestAnimationFrame(tick);
+        else { renderRadar(to); radarAnimId = null; }
+      };
+      radarAnimId = requestAnimationFrame(tick);
+    };
+
+    const positionRadarLabels = ({ offset = 10 } = {}) => {
+      const svg = document.getElementById("detailRadarSvg");
+      if (!svg) return;
+
+      const metrics = svg.closest(".radar-chart-7")?.querySelector(".radar-metrics");
+      if (!metrics) return;
+
+      const vb = svg.viewBox && svg.viewBox.baseVal ? svg.viewBox.baseVal : { x: 0, y: 0, width: 200, height: 200 };
+      const vbW = vb.width || 200;
+      const vbH = vb.height || 200;
+
+      const items = metrics.querySelectorAll(".rm[data-idx]");
+      items.forEach((el) => {
+        const i = Number(el.getAttribute("data-idx"));
+        if (!Number.isFinite(i)) return;
+
+        let p = radarPoint(i, RADAR.max);
+        const dx = p.x - RADAR.cx;
+        const dy = p.y - RADAR.cy;
+        const len = Math.hypot(dx, dy) || 1;
+        p = { x: p.x + (dx / len) * offset, y: p.y + (dy / len) * offset };
+
+        const leftPct = ((p.x - vb.x) / vbW) * 100;
+        const topPct = ((p.y - vb.y) / vbH) * 100;
+
+        el.style.left = `${leftPct}%`;
+        el.style.top = `${topPct}%`;
+      });
+    };
+
+    document.addEventListener("DOMContentLoaded", () => {
+      buildRadarBackground({ levels: 10, showOuter: true });
+      ensureRadarPoints();
+      renderRadar(new Array(RADAR.n).fill(0));
+      positionRadarLabels({ offset: 12 });
+    });
+    window.addEventListener("resize", () => positionRadarLabels({ offset: 12 }));
+
+    /* ===== Custom Dialog helpers ===== */
+    const __dlg = (() => {
+      const bd = document.getElementById('dlgBackdrop');
+      const ttl = document.getElementById('dlgTitle');
+      const msg = document.getElementById('dlgMsg');
+      const ok = document.getElementById('dlgOk');
+      const ng = document.getElementById('dlgCancel');
+
+      let resolver = null;
+
+      function open({ title = '確認', message = '', hideCancel = false, okText = 'OK', cancelText = 'キャンセル' }) {
+        ttl.textContent = title;
+        msg.textContent = message;
+        ok.textContent = okText;
+        ng.textContent = cancelText;
+
+        ng.style.display = hideCancel ? 'none' : '';
+        bd.style.display = 'flex';
+        bd.setAttribute('aria-hidden', 'false');
+
+        return new Promise((resolve) => { resolver = resolve; });
+      }
+
+      function close() {
+        bd.style.display = 'none';
+        bd.setAttribute('aria-hidden', 'true');
+        resolver = null;
+      }
+
+      ok.addEventListener('click', () => {
+        if (!resolver) return;
+        const r = resolver;
+        close();
+        r(true);
+      });
+
+      ng.addEventListener('click', () => {
+        if (!resolver) return;
+        const r = resolver;
+        close();
+        r(false);
+      });
+
+      bd.addEventListener('click', (e) => {
+        if (e.target === bd) ng.click();
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (bd.style.display !== 'flex') return;
+        if (e.key === 'Escape') { e.preventDefault(); ng.click(); }
+      });
+
+      return {
+        alert: (message, title = 'お知らせ') => open({ title, message, hideCancel: true }),
+        confirm: (message, title = '確認') => open({ title, message, hideCancel: false })
+      };
+    })();
+
+  </script>
+
+<script>
+/* JSON差し替えHTML生成ツール用：公開版の表示データ */
+const jsonString = "{\"score\":86,\"positives\":[\"清潔感のある服装と整ったヘアスタイルで好印象を与えています。落ち着いた色合いが安心感につながっています。\",\"自然光で顔の表情がはっきり見え、背景の緑や海が上品に添えられているため生活感よりも好印象な雰囲気が出ています。\"],\"negatives\":[\"表情がやや控えめで、親しみやすさをさらに高める余地があります。より柔らかい笑顔があるとマッチング率が上がりやすいです。\",\"背景の明るい空の部分が白飛び気味で、顔とのコントラストによりややディテールが薄く見える箇所があります。\"],\"advice\":\"撮影時は顔に向けて軽く笑顔を作り、あごを少し引いてカメラ目線を保つと親しみが増します。逆光ぎみの状況では、レフ板や白い板で顔に柔らかい前光を足すか、撮影位置を少し変えて背景の明るい部分を避けてください。服は清潔感のあるままで、トップスにやや明るめの色を取り入れると顔色が良く見えます。撮影は目線と肩の角度を軽く斜めにすることで立体感が出ますので、カメラ位置は目線と同じ高さから若干下向きにすると自然です。\",\"overallAnalysis\":\"全体としてメイン写真に求められる清潔感と安心感が良く出ている写真です。顔の見え方や背景の雰囲気が整っており、恋愛王道アプリの第一印象として適しています。改善点は表情のつくりと背景の明るさ調整で、そこを整えればさらに魅力的になります。\",\"actionPlan\":\"まず表情を柔らかくすることを優先してください。次に撮影時の光を調整して顔の前方に柔らかい光を当て、白飛びを抑えます。その後、構図を少しだけ顔寄りにトリミングするかカメラ位置を調整して顔の面積をやや大きく出すとメイン向きになります。\",\"photoUseTips\":\"この写真は清潔感と落ち着きが伝わるためメイン写真に適しています。他の写真とは、全身や趣味を見せる写真を補助として並べ、親しみやすさと活動性の両方を示す組み合わせにしてください。背景が明るく飛んでいる場合は、アプリ内でのサムネイル確認をして、顔が小さく見えないかを必ずチェックしてください。\",\"detailScores\":{\"hairstyle\":10,\"clothing\":10,\"lighting\":10,\"composition\":10,\"location\":10,\"expression\":10,\"posing\":10},\"detailComments\":{\"hairstyle\":\"髪は整っており清潔感があります。前髪の流れも自然で顔立ちと相性が良いです。撮影前に軽くスタイリング剤で動きを整えるとより洗練された印象になります。\",\"clothing\":\"落ち着いた色味のジャケットとインナーが安心感を与えています。やや暗めの色が中心なので、顔色を明るく見せたい場合は淡い色や温かみのある色のトップスを試してみてください。\",\"lighting\":\"自然光で顔がよく見える一方で、背景の明るい空が白飛びしているため全体の階調がやや弱く見えます。撮影位置を変えて空の明るい部分を外したり、前方に反射板を置いて顔に柔らかい補助光を入れると顔のディテールが強調されます。\",\"composition\":\"肩から上が程よく収まっており、メイン写真として必要な情報が揃っています。顔の占める割合をもう少し大きくするためにややトリミングするかカメラ位置を近づけるとサムネイルでも認識されやすくなります。\",\"location\":\"屋外の緑と水辺の背景が上品で、活動的かつ落ち着いたイメージを演出しています。背景が主張しすぎない点は良いので、同じ場所で少し角度や時間帯を変えたバリエーションを撮ると使い分けしやすくなります。\",\"expression\":\"穏やかな表情で誠実さが伝わりますが、もう少し親しみを出すために口角をやや上げ、目に笑いを含ませると好感度がさらに上がります。リラックスして深呼吸してから自然に笑うと無理のない表情が作れます。\",\"posing\":\"肩の向きや首の角度が自然で安心感を与えています。より立体感を出すために肩を少しだけ斜めにし、顎をわずかに下げると顔が引き締まって見えます。手の位置が写らない構図ですが、サブで手や全身のポーズを見せる写真を用意すると補完になります。\"},\"safety_flags\":[]}";
+window.addEventListener("DOMContentLoaded", () => {
+  try {
+    const generatedResult = JSON.parse(jsonString);
+    setResult(generatedResult, "chatgpt", false);
+    const resultWrap = document.getElementById("resultWrap");
+    if (resultWrap) resultWrap.classList.remove("hidden");
+  } catch (error) {
+    console.error("生成済みJSONの反映に失敗しました。", error);
+  }
+});
+</script>
+
+</body>
+
+</html>
