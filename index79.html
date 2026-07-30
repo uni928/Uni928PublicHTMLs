@@ -502,9 +502,6 @@
         year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit"
       }).format(new Date());
       viewMeta.replaceChildren();
-      const createdLine = document.createElement("div");
-      createdLine.textContent = "Created: " + dateText;
-      viewMeta.appendChild(createdLine);
       if (noteText.value.trim()) {
         const noteLine = document.createElement("div");
         noteLine.style.whiteSpace = "pre-wrap";
@@ -512,6 +509,9 @@
         noteLine.textContent = noteText.value.trim();
         viewMeta.appendChild(noteLine);
       }
+      const createdLine = document.createElement("div");
+      createdLine.textContent = "Created: " + dateText;
+      viewMeta.appendChild(createdLine);
       editorMode.classList.add("hidden");
       viewerMode.classList.remove("hidden");
       document.title = title;
