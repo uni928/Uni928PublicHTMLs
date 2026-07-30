@@ -380,6 +380,17 @@
       <p class="note">英数字・ハイフン・アンダースコアが使用できます。コピー内容へ即時反映されます。</p>
     </section>
 
+    <section class="panel" aria-labelledby="textTitle">
+      <h2 id="textTitle" class="panel-title">案内文</h2>
+      <label class="field-label" for="uploadTitleInput">1行目</label>
+      <input id="uploadTitleInput" class="class-input" type="text" value="写真をアップロード" autocomplete="off">
+      <label class="field-label" for="uploadGuideInput" style="margin-top:12px">2行目</label>
+      <input id="uploadGuideInput" class="class-input" type="text" value="クリックして選択、またはここへドラッグ" autocomplete="off">
+      <label class="field-label" for="uploadMetaInput" style="margin-top:12px">3行目</label>
+      <input id="uploadMetaInput" class="class-input" type="text" value="JPG・PNG・WebPに対応" autocomplete="off">
+      <p class="note">変更内容は表示例とコピーコードへ即時反映され、IndexedDBへ自動保存されます。</p>
+    </section>
+
     <section class="panel" aria-labelledby="previewTitle">
       <h2 id="previewTitle" class="panel-title">表示例</h2>
       <div id="demoMount"></div>
@@ -404,6 +415,9 @@
   <script>
     (() => {
       const classInput = document.getElementById('classNameInput');
+      const uploadTitleInput = document.getElementById('uploadTitleInput');
+      const uploadGuideInput = document.getElementById('uploadGuideInput');
+      const uploadMetaInput = document.getElementById('uploadMetaInput');
       const demoMount = document.getElementById('demoMount');
       const copyStatus = document.getElementById('copyStatus');
       const fullCodeOutput = document.getElementById('fullCodeOutput');
@@ -424,7 +438,15 @@
         .replaceAll('<', '&lt;')
         .replaceAll('>', '&gt;');
 
-      const getElementHtml = (base) => `<div class="${base}">
+      const getCopyTexts = () => ({
+        title: escapeHtml(uploadTitleInput.value),
+        guide: escapeHtml(uploadGuideInput.value),
+        meta: escapeHtml(uploadMetaInput.value)
+      });
+
+      const getElementHtml = (base) => {
+        const texts = getCopyTexts();
+        return `<div class="${base}">
   <label class="${base}__zone">
     <span class="${base}__inner">
       <span class="${base}__icon" aria-hidden="true">
@@ -434,9 +456,9 @@
         </svg>
       </span>
       <span class="${base}__copy">
-        <span class="${base}__title">写真をアップロード</span>
-        <span class="${base}__guide">クリックして選択、またはここへドラッグ</span>
-        <span class="${base}__meta">JPG・PNG・WebPに対応</span>
+        <span class="${base}__title">${texts.title}</span>
+        <span class="${base}__guide">${texts.guide}</span>
+        <span class="${base}__meta">${texts.meta}</span>
       </span>
     </span>
     <input class="${base}__input" type="file" accept="image/*">
@@ -446,6 +468,7 @@
     <span class="${base}__change">写真を入れ替える</span>
   </div>
 </div>`;
+      };
 
       const getCss = (base) => `@layer ${base} {
   .${base} {
@@ -619,9 +642,10 @@
 });`;
 
       const getLazyHtml = (base) => {
+        const texts = getCopyTexts();
         const id = `${base}-${Math.random().toString(36).slice(2, 8)}`;
         const style = 'position:relative;display:grid;place-items:center;width:100%;height:220px;overflow:hidden;border:1.5px dashed rgba(117,103,220,.28);border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,247,253,.98));cursor:pointer;box-sizing:border-box;transition:border-color .18s ease,transform .18s ease,box-shadow .18s ease';
-        return `<div id="${id}" style="padding:20px;background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.9);border-radius:24px;box-shadow:0 8px 24px rgba(41,50,75,.07);box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP','Hiragino Sans','Meiryo',sans-serif;color:#0f172a;line-height:1.6"><label style="${style}" onmouseenter="this.style.borderColor='rgba(117,103,220,.58)';this.style.boxShadow='0 12px 28px rgba(117,103,220,.10)';this.style.transform='translateY(-1px)'" onmouseleave="this.style.borderColor='rgba(117,103,220,.28)';this.style.boxShadow='none';this.style.transform='none'" ondragover="event.preventDefault();this.style.borderColor='rgba(117,103,220,.58)';this.style.boxShadow='0 12px 28px rgba(117,103,220,.10)';this.style.transform='translateY(-1px)'" ondragleave="this.style.borderColor='rgba(117,103,220,.28)';this.style.boxShadow='none';this.style.transform='none'" ondrop="event.preventDefault();this.style.borderColor='rgba(117,103,220,.28)';this.style.boxShadow='none';this.style.transform='none';const f=event.dataTransfer.files[0];if(f&&f.type.startsWith('image/')){const r=new FileReader();r.onload=()=>{this.style.display='none';const w=this.nextElementSibling;w.style.display='block';w.querySelector('img').src=r.result};r.readAsDataURL(f)}"><span style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:22px;text-align:center;pointer-events:none"><span style="display:grid;place-items:center;width:54px;height:54px;border-radius:18px;background:linear-gradient(135deg,rgba(117,103,220,.12),rgba(217,137,180,.16))"><svg viewBox="0 0 24 24" fill="none" stroke="#6e65ad" stroke-width="2" style="width:25px;height:25px"><rect x="3" y="5" width="18" height="14" rx="3"></rect><circle cx="12" cy="12" r="3"></circle></svg></span><span style="display:grid;gap:5px;margin:0;text-align:center"><span style="color:#182033;font-size:16px;font-weight:800;line-height:1.35;letter-spacing:.01em">写真をアップロード</span><span style="color:#667085;font-size:13px;font-weight:600;line-height:1.55">クリックして選択、またはここへドラッグ</span><span style="color:#98a2b3;font-size:11px;font-weight:500;line-height:1.4">JPG・PNG・WebPに対応</span></span></span><input type="file" accept="image/*" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer" onchange="const f=this.files[0];if(f&&f.type.startsWith('image/')){const r=new FileReader();r.onload=()=>{this.parentElement.style.display='none';const w=this.parentElement.nextElementSibling;w.style.display='block';w.querySelector('img').src=r.result};r.readAsDataURL(f)}"></label><div style="position:relative;display:none;overflow:hidden;border-radius:18px;cursor:pointer" onclick="this.previousElementSibling.querySelector('input').click()"><img alt="アップロードした写真のプレビュー" style="display:block;width:100%;max-height:420px;object-fit:contain;background:#f8fafc;border:1px solid rgba(110,145,210,.16);border-radius:18px;box-shadow:0 8px 20px rgba(15,23,42,.08);box-sizing:border-box"><span style="position:absolute;right:12px;bottom:12px;padding:8px 12px;border:1px solid rgba(255,255,255,.18);border-radius:999px;background:linear-gradient(180deg,rgba(34,46,66,.84),rgba(56,69,92,.9));color:#fff;font-size:12px;font-weight:700;line-height:1;box-shadow:0 6px 16px rgba(15,23,42,.18);pointer-events:none">写真を入れ替える</span></div></div>`;
+        return `<div id="${id}" style="padding:20px;background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.9);border-radius:24px;box-shadow:0 8px 24px rgba(41,50,75,.07);box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP','Hiragino Sans','Meiryo',sans-serif;color:#0f172a;line-height:1.6"><label style="${style}" onmouseenter="this.style.borderColor='rgba(117,103,220,.58)';this.style.boxShadow='0 12px 28px rgba(117,103,220,.10)';this.style.transform='translateY(-1px)'" onmouseleave="this.style.borderColor='rgba(117,103,220,.28)';this.style.boxShadow='none';this.style.transform='none'" ondragover="event.preventDefault();this.style.borderColor='rgba(117,103,220,.58)';this.style.boxShadow='0 12px 28px rgba(117,103,220,.10)';this.style.transform='translateY(-1px)'" ondragleave="this.style.borderColor='rgba(117,103,220,.28)';this.style.boxShadow='none';this.style.transform='none'" ondrop="event.preventDefault();this.style.borderColor='rgba(117,103,220,.28)';this.style.boxShadow='none';this.style.transform='none';const f=event.dataTransfer.files[0];if(f&&f.type.startsWith('image/')){const r=new FileReader();r.onload=()=>{this.style.display='none';const w=this.nextElementSibling;w.style.display='block';w.querySelector('img').src=r.result};r.readAsDataURL(f)}"><span style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:22px;text-align:center;pointer-events:none"><span style="display:grid;place-items:center;width:54px;height:54px;border-radius:18px;background:linear-gradient(135deg,rgba(117,103,220,.12),rgba(217,137,180,.16))"><svg viewBox="0 0 24 24" fill="none" stroke="#6e65ad" stroke-width="2" style="width:25px;height:25px"><rect x="3" y="5" width="18" height="14" rx="3"></rect><circle cx="12" cy="12" r="3"></circle></svg></span><span style="display:grid;gap:5px;margin:0;text-align:center"><span style="color:#182033;font-size:16px;font-weight:800;line-height:1.35;letter-spacing:.01em">${texts.title}</span><span style="color:#667085;font-size:13px;font-weight:600;line-height:1.55">${texts.guide}</span><span style="color:#98a2b3;font-size:11px;font-weight:500;line-height:1.4">${texts.meta}</span></span></span><input type="file" accept="image/*" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer" onchange="const f=this.files[0];if(f&&f.type.startsWith('image/')){const r=new FileReader();r.onload=()=>{this.parentElement.style.display='none';const w=this.parentElement.nextElementSibling;w.style.display='block';w.querySelector('img').src=r.result};r.readAsDataURL(f)}"></label><div style="position:relative;display:none;overflow:hidden;border-radius:18px;cursor:pointer" onclick="this.previousElementSibling.querySelector('input').click()"><img alt="アップロードした写真のプレビュー" style="display:block;width:100%;max-height:420px;object-fit:contain;background:#f8fafc;border:1px solid rgba(110,145,210,.16);border-radius:18px;box-shadow:0 8px 20px rgba(15,23,42,.08);box-sizing:border-box"><span style="position:absolute;right:12px;bottom:12px;padding:8px 12px;border:1px solid rgba(255,255,255,.18);border-radius:999px;background:linear-gradient(180deg,rgba(34,46,66,.84),rgba(56,69,92,.9));color:#fff;font-size:12px;font-weight:700;line-height:1;box-shadow:0 6px 16px rgba(15,23,42,.18);pointer-events:none">写真を入れ替える</span></div></div>`;
       };
 
 
@@ -652,9 +676,9 @@ ${getJs(base)}
                   </svg>
                 </span>
                 <span class="photo-upload-copy">
-                  <span class="photo-upload-title">写真をアップロード</span>
-                  <span class="photo-upload-guide">クリックして選択、またはここへドラッグ</span>
-                  <span class="photo-upload-meta">JPG・PNG・WebPに対応</span>
+                  <span class="photo-upload-title">${escapeHtml(uploadTitleInput.value)}</span>
+                  <span class="photo-upload-guide">${escapeHtml(uploadGuideInput.value)}</span>
+                  <span class="photo-upload-meta">${escapeHtml(uploadMetaInput.value)}</span>
                 </span>
               </span>
               <input id="demoInput" class="photo-upload-input" type="file" accept="image/*">
@@ -692,6 +716,66 @@ ${getJs(base)}
           zone.classList.remove('is-dragging');
         }));
         zone.addEventListener('drop', (event) => showImage(event.dataTransfer.files[0]));
+      };
+
+      const DB_NAME = 'photo-upload-element-settings';
+      const STORE_NAME = 'settings';
+
+      const openSettingsDb = () => new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onupgradeneeded = () => {
+          if (!request.result.objectStoreNames.contains(STORE_NAME)) {
+            request.result.createObjectStore(STORE_NAME);
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+
+      const saveTextSettings = async () => {
+        try {
+          const db = await openSettingsDb();
+          const tx = db.transaction(STORE_NAME, 'readwrite');
+          tx.objectStore(STORE_NAME).put({
+            title: uploadTitleInput.value,
+            guide: uploadGuideInput.value,
+            meta: uploadMetaInput.value
+          }, 'upload-copy');
+          tx.oncomplete = () => db.close();
+          tx.onerror = () => db.close();
+        } catch (_) {
+          // IndexedDBを利用できない環境では画面内の反映のみ継続します。
+        }
+      };
+
+      const loadTextSettings = async () => {
+        try {
+          const db = await openSettingsDb();
+          const value = await new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readonly');
+            const request = tx.objectStore(STORE_NAME).get('upload-copy');
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+            tx.oncomplete = () => db.close();
+          });
+          if (value) {
+            uploadTitleInput.value = value.title ?? uploadTitleInput.value;
+            uploadGuideInput.value = value.guide ?? uploadGuideInput.value;
+            uploadMetaInput.value = value.meta ?? uploadMetaInput.value;
+          }
+        } catch (_) {
+          // 読み込みに失敗しても初期値で動作します。
+        }
+      };
+
+      const refreshTextOutputs = () => {
+        const title = document.querySelector('.photo-upload-title');
+        const guide = document.querySelector('.photo-upload-guide');
+        const meta = document.querySelector('.photo-upload-meta');
+        if (title) title.textContent = uploadTitleInput.value;
+        if (guide) guide.textContent = uploadGuideInput.value;
+        if (meta) meta.textContent = uploadMetaInput.value;
+        updateFullCode();
       };
 
       const writeClipboard = async (text) => {
@@ -735,6 +819,12 @@ ${getJs(base)}
       });
 
       classInput.addEventListener('input', updateFullCode);
+      [uploadTitleInput, uploadGuideInput, uploadMetaInput].forEach((input) => {
+        input.addEventListener('input', () => {
+          refreshTextOutputs();
+          saveTextSettings();
+        });
+      });
       classInput.addEventListener('blur', () => {
         classInput.value = normalizeClassName(classInput.value);
         updateFullCode();
@@ -742,6 +832,7 @@ ${getJs(base)}
 
       mountDemo();
       updateFullCode();
+      loadTextSettings().then(refreshTextOutputs);
     })();
   </script>
 </body>
