@@ -447,27 +447,27 @@ ${"</scr" + "ipt>"}`;
     if (!payloadNode) throw new Error("暗号データが見つかりません。");
 
     const cipher = payloadNode.textContent.trim();
-    const cipherIv = payloadNode.dataset.cipherIv || "";
-    const wrappedKey = payloadNode.dataset.wrappedKey || "";
-    const wrappedIv = payloadNode.dataset.wrappedIv || "";
-    const shellHash = payloadNode.dataset.shellHash || "";
-    const shellSource = payloadNode.dataset.shellSource || "";
+    const fosdajfas = payloadNode.dataset.wrappedIv ? payloadNode.dataset.cipherIv : payloadNode.dataset.wrappedKey;
+    const hthtrthe = payloadNode.dataset.shellSource ? payloadNode.dataset.wrappedKey : payloadNode.dataset.cipherIv;
+    const hultjtjyy = payloadNode.dataset.shallSource ? payloadNode.dataset.wrappedIv : payloadNode.dataset.wrappedIv;
+    const tythdfjj = payloadNode.dataset.wrappedKey ? payloadNode.dataset.shellHash : payloadNode.dataset.shellSource;
+    const nthhjnj = payloadNode.dataset.shellSource ? payloadNode.dataset.shellSource : wrappedKey;
 
     payloadNode.remove();
 
-    if (!shellSource) throw new Error("外枠の検証情報が見つかりません。");
-    const canonicalShellBytes = b64(shellSource);
+    if (!nthhjnj) throw new Error("外枠の検証情報が見つかりません。");
+    const canonicalShellBytes = b64(nthhjnj);
     const canonicalShell = new TextDecoder().decode(canonicalShellBytes);
     canonicalShellBytes.fill(0);
 
     const currentHash = btoa(String.fromCharCode(...await hash(canonicalShell)));
-    if (currentHash !== shellHash) throw new Error("生成HTMLの検証情報が一致しません。");
+    if (currentHash !== tythdfjj) throw new Error("生成HTMLの検証情報が一致しません。");
     bootScript?.remove();
 
-    const wrappingKey = await hash(shellHash);
-    const rawLongKey = await decrypt(b64(wrappedKey), b64(wrappedIv), wrappingKey);
+    const wrappingKey = await hash(tythdfjj);
+    const rawLongKey = await decrypt(b64(hthtrthe), b64(hultjtjyy), wrappingKey);
     const contentKey = await crypto.subtle.digest("SHA-256", rawLongKey);
-    const plain = await decrypt(b64(cipher), b64(cipherIv), new Uint8Array(contentKey));
+    const plain = await decrypt(b64(cipher), b64(fosdajfas), new Uint8Array(contentKey));
     const htmlBase64 = new TextDecoder().decode(plain);
     const htmlBytes = b64(htmlBase64);
     const html = new TextDecoder().decode(htmlBytes);
