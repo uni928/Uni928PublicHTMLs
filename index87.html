@@ -628,9 +628,13 @@
   const input = root.querySelector('.${base}__input');
   const previewWrap = root.querySelector('.${base}__preview-wrap');
   const preview = root.querySelector('.${base}__preview');
+  let selectedFile = null;
 
   const showImage = (file) => {
     if (!file || !file.type.startsWith('image/')) return;
+    
+    selectedFile = file;
+    
     const reader = new FileReader();
     reader.onload = () => {
       preview.src = reader.result;
