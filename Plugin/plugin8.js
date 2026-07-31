@@ -1,31 +1,67 @@
 /**
- * DOM Source Cleaner
+ * DOM Source Cleaner - Temporary Site Edition
  *
  * Usage:
- *   <script src="./dom-source-cleaner.js" defer></script>
+ *   <script src="./dom-source-cleaner-temporary-site.js" defer></script>
  *
  * Optional data attributes:
- *   data-remove-inline-handlers="true"
- *   data-remove-javascript-urls="true"
- *   data-keep-self="false"
+ *   data-open-temporary-site="true"       // default: true
+ *   data-remove-inline-handlers="true"    // default: true
+ *   data-remove-javascript-urls="true"    // default: true
+ *   data-keep-self="false"                // default: false
  *
- * Notes:
- * - Removes style/link/script elements from the DOM after page load.
- * - Migrates readable CSS into adoptedStyleSheets when supported.
- * - This is obfuscation / inspection-friction, not strong secrecy.
+ * The first load serializes the page into a Blob URL and opens it in the same tab.
+ * The Blob page then migrates CSS to adoptedStyleSheets and removes source elements.
+ * This increases inspection friction; it is not strong secrecy.
  */
 (function () {
   "use strict";
 
+  const TEMP_ATTRIBUTE = "data-dom-source-cleaner-temporary";
   const selfScript = document.currentScript;
   const options = {
-    removeInlineHandlers:
-      selfScript?.dataset.removeInlineHandlers !== "false",
-    removeJavascriptUrls:
-      selfScript?.dataset.removeJavascriptUrls !== "false",
-    keepSelf:
-      selfScript?.dataset.keepSelf === "true"
+    openTemporarySite: selfScript?.dataset.openTemporarySite !== "false",
+    removeInlineHandlers: selfScript?.dataset.removeInlineHandlers !== "false",
+    removeJavascriptUrls: selfScript?.dataset.removeJavascriptUrls !== "false",
+    keepSelf: selfScript?.dataset.keepSelf === "true"
   };
+
+  function getDoctypeText() {
+    const doctype = document.doctype;
+    if (!doctype) return "<!DOCTYPE html>";
+
+    let value = `<!DOCTYPE ${doctype.name}`;
+    if (doctype.publicId) value += ` PUBLIC "${doctype.publicId}"`;
+    if (!doctype.publicId && doctype.systemId) value += " SYSTEM";
+    if (doctype.systemId) value += ` "${doctype.systemId}"`;
+    return `${value}>`;
+  }
+
+  function ensureBaseElement(root, sourceUrl) {
+    const head = root.querySelector("head");
+    if (!head || head.querySelector("base")) return;
+
+    const base = root.ownerDocument.createElement("base");
+    base.href = sourceUrl;
+    head.prepend(base);
+  }
+
+  function openAsTemporarySite() {
+    if (!options.openTemporarySite) return false;
+    if (document.documentElement.hasAttribute(TEMP_ATTRIBUTE)) return false;
+    if (!/^https?:$|^file:$/.test(location.protocol)) return false;
+
+    const clone = document.documentElement.cloneNode(true);
+    clone.setAttribute(TEMP_ATTRIBUTE, "1");
+    ensureBaseElement(clone, location.href);
+
+    const html = `${getDoctypeText()}\n${clone.outerHTML}`;
+    const blob = new Blob([html], { type: "text/html;charset=UTF-8" });
+    const temporaryUrl = URL.createObjectURL(blob);
+
+    location.replace(temporaryUrl);
+    return true;
+  }
 
   function escapeCssString(value) {
     return String(value)
@@ -57,11 +93,7 @@
 
   function wrapMedia(cssText, mediaText) {
     const media = String(mediaText || "").trim();
-
-    if (!media || media.toLowerCase() === "all") {
-      return cssText;
-    }
-
+    if (!media || media.toLowerCase() === "all") return cssText;
     return `@media ${media} {\n${cssText}\n}`;
   }
 
@@ -70,7 +102,6 @@
       .toLowerCase()
       .split(/\s+/)
       .filter(Boolean);
-
     return rel.includes("stylesheet");
   }
 
@@ -80,39 +111,28 @@
       .split(/\s+/)
       .filter(Boolean);
 
-    return (
-      rel.includes("stylesheet") &&
+    return rel.includes("stylesheet") &&
       !rel.includes("alternate") &&
       !link.disabled &&
-      Boolean(link.href)
-    );
+      Boolean(link.href);
   }
 
   async function fetchCssFromLink(link) {
-    if (!shouldMigrateStylesheet(link)) {
-      return null;
-    }
+    if (!shouldMigrateStylesheet(link)) return null;
 
     try {
       const response = await fetch(link.href, {
         cache: "force-cache",
         credentials: "same-origin"
       });
-
-      if (!response.ok) {
-        return null;
-      }
+      if (!response.ok) return null;
 
       let cssText = await response.text();
-
       cssText = cssText.replace(/@import\s+[^;]+;/gi, function (rule) {
         return `/* Unsupported import removed: ${rule} */`;
       });
-
       cssText = absolutizeCssUrls(cssText, link.href);
-      cssText = wrapMedia(cssText, link.media && link.media.mediaText);
-
-      return cssText;
+      return wrapMedia(cssText, link.media && link.media.mediaText);
     } catch (_) {
       return null;
     }
@@ -120,60 +140,40 @@
 
   function collectInlineStyles() {
     const cssTexts = [];
-
     document.querySelectorAll("style").forEach(function (style) {
-      if (!style.textContent || style.disabled) {
-        return;
-      }
-
-      cssTexts.push(
-        wrapMedia(style.textContent, style.media && style.media.mediaText)
-      );
+      if (!style.textContent || style.disabled) return;
+      cssTexts.push(wrapMedia(
+        style.textContent,
+        style.media && style.media.mediaText
+      ));
     });
-
     return cssTexts;
   }
 
   async function collectLinkedStyles() {
     const cssTexts = [];
-
     for (const link of document.querySelectorAll("link[rel~='stylesheet']")) {
       const cssText = await fetchCssFromLink(link);
-
-      if (cssText) {
-        cssTexts.push(cssText);
-      }
+      if (cssText) cssTexts.push(cssText);
     }
-
     return cssTexts;
   }
 
   function removeInlineEventHandlers() {
     document.querySelectorAll("*").forEach(function (element) {
       for (const attribute of Array.from(element.attributes)) {
-        if (/^on/i.test(attribute.name)) {
-          element.removeAttribute(attribute.name);
-        }
+        if (/^on/i.test(attribute.name)) element.removeAttribute(attribute.name);
       }
     });
   }
 
   function removeJavascriptUrls() {
-    const attributes = [
-      "href",
-      "src",
-      "action",
-      "formaction",
-      "xlink:href"
-    ];
+    const attributes = ["href", "src", "action", "formaction", "xlink:href"];
 
     document.querySelectorAll("*").forEach(function (element) {
       for (const attributeName of attributes) {
         const value = element.getAttribute(attributeName);
-
-        if (!value) {
-          continue;
-        }
+        if (!value) continue;
 
         const normalized = value
           .trim()
@@ -184,30 +184,6 @@
         }
       }
     });
-  }
-
-  function removeSourceElements() {
-    document.querySelectorAll("style").forEach(function (node) {
-      node.remove();
-    });
-
-    document.querySelectorAll("link").forEach(function (link) {
-      if (isStylesheetLink(link)) {
-        link.remove();
-      }
-    });
-
-    document.querySelectorAll("script").forEach(function (script) {
-      if (options.keepSelf && script === selfScript) {
-        return;
-      }
-
-      script.remove();
-    });
-
-    if (!options.keepSelf) {
-      selfScript?.remove();
-    }
   }
 
   async function migrateStyles(cssTexts) {
@@ -222,33 +198,62 @@
     try {
       const sheet = new CSSStyleSheet();
       sheet.replaceSync(cssTexts.join("\n\n"));
-      document.adoptedStyleSheets = [
-        ...document.adoptedStyleSheets,
-        sheet
-      ];
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
       return true;
     } catch (_) {
       return false;
     }
   }
 
-  async function run() {
+  function removeSourceElements() {
+    document.querySelectorAll("style").forEach(function (node) {
+      node.remove();
+    });
+
+    document.querySelectorAll("link").forEach(function (link) {
+      if (isStylesheetLink(link)) link.remove();
+    });
+
+    document.querySelectorAll("script").forEach(function (script) {
+      if (options.keepSelf && script === selfScript) return;
+      script.remove();
+    });
+
+    if (!options.keepSelf) selfScript?.remove();
+  }
+
+  async function cleanTemporarySite() {
     const cssTexts = [
       ...collectInlineStyles(),
       ...(await collectLinkedStyles())
     ];
 
-    await migrateStyles(cssTexts);
+    const migrated = await migrateStyles(cssTexts);
 
-    if (options.removeInlineHandlers) {
-      removeInlineEventHandlers();
+    // CSS migration failed: retain CSS nodes to avoid destroying the layout.
+    if (migrated) {
+      document.querySelectorAll("style").forEach(function (node) {
+        node.remove();
+      });
+      document.querySelectorAll("link").forEach(function (link) {
+        if (isStylesheetLink(link)) link.remove();
+      });
     }
 
-    if (options.removeJavascriptUrls) {
-      removeJavascriptUrls();
-    }
+    if (options.removeInlineHandlers) removeInlineEventHandlers();
+    if (options.removeJavascriptUrls) removeJavascriptUrls();
 
-    removeSourceElements();
+    document.querySelectorAll("script").forEach(function (script) {
+      if (options.keepSelf && script === selfScript) return;
+      script.remove();
+    });
+
+    if (!options.keepSelf) selfScript?.remove();
+  }
+
+  async function run() {
+    if (openAsTemporarySite()) return;
+    await cleanTemporarySite();
   }
 
   if (document.readyState === "complete") {
