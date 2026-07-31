@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="HTMLをドラッグ＆ドロップし、単一HTMLとして簡易暗号化するローカルツールです。">
+  <title>HTML簡易暗号化ツール</title>
+  <style>
+    @layer base, layout, components, states, responsive;
+
+    @layer base {
+      :root {
+        color-scheme: light;
+        --bg: #f4f7fb;
+        --panel: #ffffff;
+        --text: #172033;
+        --muted: #68758a;
+        --line: #d9e1ec;
+        --accent: #2457d6;
+        --accent-dark: #173f9f;
+        --soft: #eaf0ff;
+        --danger: #b42318;
+        --ok: #16794b;
+        --shadow: 0 18px 52px rgba(35, 50, 80, 0.12);
+      }
+
+      * { box-sizing: border-box; }
+      html { min-height: 100%; }
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background: linear-gradient(180deg, #eef3fb 0%, var(--bg) 45%, #f8fafc 100%);
+        color: var(--text);
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      button, input { font: inherit; }
+      button { cursor: pointer; }
+      code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    }
+
+    @layer layout {
+      .page {
+        width: min(920px, calc(100% - 28px));
+        margin: 0 auto;
+        padding: 44px 0 64px;
+      }
+      .header { margin-bottom: 22px; }
+      .header h1 {
+        margin: 0 0 10px;
+        font-size: clamp(26px, 4vw, 40px);
+        letter-spacing: -0.03em;
+      }
+      .header p {
+        max-width: 760px;
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.8;
+      }
+      .panel {
+        padding: 24px;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: color-mix(in srgb, var(--panel) 96%, transparent);
+        box-shadow: var(--shadow);
+      }
+      .stack { display: grid; gap: 18px; }
+      .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+      .details { margin-top: 20px; }
+    }
+
+    @layer components {
+      .dropzone {
+        min-height: 250px;
+        display: grid;
+        place-items: center;
+        padding: 30px;
+        border: 2px dashed #9eb0cd;
+        border-radius: 18px;
+        background: #f9fbff;
+        text-align: center;
+        transition: 0.18s ease;
+      }
+      .dropzone strong {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 20px;
+      }
+      .dropzone span {
+        display: block;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+      .file-button, .primary, .secondary {
+        min-height: 44px;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        padding: 10px 16px;
+        font-weight: 700;
+      }
+      .file-button, .primary {
+        background: var(--accent);
+        color: #fff;
+      }
+      .file-button:hover, .primary:hover { background: var(--accent-dark); }
+      .secondary {
+        background: #fff;
+        border-color: var(--line);
+        color: var(--text);
+      }
+      .secondary:hover { background: #f5f7fb; }
+      .file-button { display: inline-flex; align-items: center; justify-content: center; margin-top: 16px; }
+      .file-button input { display: none; }
+      .option {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        color: var(--text);
+        line-height: 1.6;
+      }
+      .option input { margin-top: 5px; }
+      .status {
+        min-height: 52px;
+        padding: 14px 16px;
+        border-radius: 12px;
+        background: var(--soft);
+        color: #244071;
+        line-height: 1.6;
+        overflow-wrap: anywhere;
+      }
+      .note {
+        padding: 15px 16px;
+        border-left: 4px solid #d49b24;
+        border-radius: 10px;
+        background: #fff8e6;
+        color: #664b13;
+        line-height: 1.7;
+      }
+      details {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #fff;
+      }
+      summary {
+        padding: 14px 16px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .details-body {
+        padding: 0 16px 16px;
+        color: var(--muted);
+        line-height: 1.8;
+      }
+      .details-body ul { margin: 0; padding-left: 1.2em; }
+    }
+
+    @layer states {
+      .dropzone.is-dragover {
+        border-color: var(--accent);
+        background: #eef3ff;
+        transform: translateY(-2px);
+      }
+      .status.is-error { background: #fff0ef; color: var(--danger); }
+      .status.is-ok { background: #edf9f3; color: var(--ok); }
+      button:disabled { opacity: 0.5; cursor: not-allowed; }
+    }
+
+    @layer responsive {
+      @media (max-width: 640px) {
+        .page { padding-top: 24px; }
+        .panel { padding: 16px; border-radius: 16px; }
+        .dropzone { min-height: 220px; padding: 22px 14px; }
+        .actions > * { width: 100%; }
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="header">
+      <h1>HTML簡易暗号化ツール</h1>
+      <p>HTMLファイルをドラッグ＆ドロップすると、ランダムな120〜128文字のBase64キーを生成し、AES-GCMで暗号化した単一HTMLを保存します。処理はブラウザ内だけで行います。</p>
+    </header>
+
+    <section class="panel stack">
+      <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="HTMLファイルを選択">
+        <div>
+          <strong>HTMLファイルをドロップ</strong>
+          <span>または下のボタンから選択してください。</span>
+          <label class="file-button">
+            HTMLを選択
+            <input id="fileInput" type="file" accept=".html,.htm,text/html">
+          </label>
+        </div>
+      </div>
+
+      <label class="option">
+        <input id="cleanupOption" type="checkbox" checked>
+        <span>復号後、CSSをConstructable Stylesheetへ移し、元の<code>&lt;style&gt;</code>・スタイルシート<code>&lt;link&gt;</code>・<code>&lt;script&gt;</code>・インラインイベント属性をDOMから削除します。</span>
+      </label>
+
+      <div class="note">この方式は、HTML単体で自動復号できるよう復号材料も同じファイル内に保持します。そのため、本格的な秘密保持ではなく、ソースを直接読みにくくする簡易的な難読化・改変検知向けです。</div>
+
+      <div id="status" class="status" aria-live="polite">HTMLファイルを選択してください。</div>
+
+      <div class="actions">
+        <button id="downloadButton" class="primary" type="button" disabled>暗号化HTMLを保存</button>
+        <button id="clearButton" class="secondary" type="button">リセット</button>
+      </div>
+    </section>
+
+    <details class="details">
+      <summary>処理内容</summary>
+      <div class="details-body">
+        <ul>
+          <li>90〜96バイトの乱数をBase64化し、120〜128文字のランダムキーを生成します。</li>
+          <li>ランダムキーをSHA-256で32バイト化し、元HTMLをAES-GCMで暗号化します。</li>
+          <li>暗号本文などを固定プレースホルダーへ置換した生成HTML全体を正規化し、そのSHA-256ハッシュからキー暗号化用の鍵を導出します。</li>
+          <li>暗号本文を保持する要素は、復号開始直後にDOMから削除します。</li>
+          <li>復号後は復号HTMLの一時URLへ同一タブで置き換えるため、復号ローダーもDOMに残りません。</li>
+        </ul>
+      </div>
+    </details>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const dropzone = document.getElementById("dropzone");
+      const fileInput = document.getElementById("fileInput");
+      const cleanupOption = document.getElementById("cleanupOption");
+      const status = document.getElementById("status");
+      const downloadButton = document.getElementById("downloadButton");
+      const clearButton = document.getElementById("clearButton");
+
+      let generatedBlobUrl = "";
+      let generatedFilename = "";
+
+      const enc = new TextEncoder();
+
+      function bytesToBase64(bytes) {
+        let binary = "";
+        const chunkSize = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+        }
+        return btoa(binary);
+      }
+
+      function base64ToBytes(value) {
+        const binary = atob(value);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        return bytes;
+      }
+
+      function randomBytes(length) {
+        const bytes = new Uint8Array(length);
+        crypto.getRandomValues(bytes);
+        return bytes;
+      }
+
+      async function sha256Bytes(value) {
+        const source = typeof value === "string" ? enc.encode(value) : value;
+        return new Uint8Array(await crypto.subtle.digest("SHA-256", source));
+      }
+
+      async function importAesKey(rawBytes) {
+        return crypto.subtle.importKey("raw", rawBytes, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+      }
+
+      async function aesEncrypt(plainBytes, rawKeyBytes) {
+        const iv = randomBytes(12);
+        const key = await importAesKey(rawKeyBytes);
+        const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plainBytes));
+        return { iv, encrypted };
+      }
+
+      function normalizeHashSource(value) {
+        return value.replace(/\r\n?/g, "\n");
+      }
+
+      function escapeScriptText(value) {
+        return value.replace(/<\/script/gi, "<\\/script");
+      }
+
+      function cleanupScriptSource() {
+        return String.raw`<script>
+(function () {
+  "use strict";
+
+  const selfScript = document.currentScript;
+
+  function escapeCssString(value) {
+    return String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  }
+
+  function absolutizeCssUrls(cssText, cssUrl) {
+    const baseUrl = new URL(cssUrl, document.baseURI);
+    return cssText.replace(/url\(\s*(['"]?)(?!data:|blob:|#|[a-z][a-z0-9+.-]*:|\/\/)([^'")]+)\1\s*\)/gi, function (_, quote, url) {
+      try {
+        return 'url("' + escapeCssString(new URL(url.trim(), baseUrl).href) + '")';
+      } catch (_) {
+        return _;
+      }
+    });
+  }
+
+  function wrapMedia(cssText, mediaText) {
+    const media = String(mediaText || "").trim();
+    return !media || media.toLowerCase() === "all" ? cssText : "@media " + media + " {\n" + cssText + "\n}";
+  }
+
+  function isStylesheetLink(link) {
+    return (link.getAttribute("rel") || "").toLowerCase().split(/\s+/).includes("stylesheet");
+  }
+
+  function shouldMigrateStylesheet(link) {
+    const rel = (link.getAttribute("rel") || "").toLowerCase().split(/\s+/);
+    return rel.includes("stylesheet") && !rel.includes("alternate") && !link.disabled;
+  }
+
+  async function fetchCssFromLink(link) {
+    if (!link.href) return null;
+    try {
+      const res = await fetch(link.href, { cache: "force-cache", credentials: "same-origin" });
+      if (!res.ok) return null;
+      let cssText = await res.text();
+      cssText = cssText.replace(/@import\s+[^;]+;/gi, rule => "/* Removed unsupported import: " + rule + " */");
+      return wrapMedia(absolutizeCssUrls(cssText, link.href), link.media && link.media.mediaText);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function collectInlineStyles() {
+    const cssTexts = [];
+    document.querySelectorAll("style").forEach(style => {
+      if (style.textContent && !style.disabled) cssTexts.push(wrapMedia(style.textContent, style.media && style.media.mediaText));
+    });
+    return cssTexts;
+  }
+
+  async function collectLinkedStyles() {
+    const cssTexts = [];
+    for (const link of document.querySelectorAll("link[rel~='stylesheet']")) {
+      if (!shouldMigrateStylesheet(link)) continue;
+      const cssText = await fetchCssFromLink(link);
+      if (cssText) cssTexts.push(cssText);
+    }
+    return cssTexts;
+  }
+
+  function removeInlineEventHandlers() {
+    document.querySelectorAll("*").forEach(el => {
+      for (const attr of Array.from(el.attributes)) {
+        if (/^on/i.test(attr.name)) el.removeAttribute(attr.name);
+      }
+    });
+  }
+
+  function removeDangerousUrls() {
+    const attrs = ["href", "src", "action", "formaction", "xlink:href"];
+    document.querySelectorAll("*").forEach(el => {
+      for (const name of attrs) {
+        const value = el.getAttribute(name);
+        if (!value) continue;
+        const normalized = value.trim().replace(/[\u0000-\u001F\u007F\s]+/g, "");
+        if (/^javascript:/i.test(normalized)) el.removeAttribute(name);
+      }
+    });
+  }
+
+  function removeCssAndScriptsFromDom() {
+    removeInlineEventHandlers();
+    removeDangerousUrls();
+    document.querySelectorAll("style").forEach(node => node.remove());
+    document.querySelectorAll("link").forEach(link => { if (isStylesheetLink(link)) link.remove(); });
+    document.querySelectorAll("script").forEach(script => script.remove());
+    selfScript?.remove();
+  }
+
+  async function run() {
+    const cssTexts = [...collectInlineStyles(), ...(await collectLinkedStyles())];
+    try {
+      if (cssTexts.length && "adoptedStyleSheets" in document && typeof CSSStyleSheet !== "undefined") {
+        const sheet = new CSSStyleSheet();
+        sheet.replaceSync(cssTexts.join("\n\n"));
+        document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+      }
+    } catch (error) {
+      console.warn("Failed to migrate stylesheets:", error);
+    } finally {
+      removeCssAndScriptsFromDom();
+    }
+  }
+
+  if (document.readyState === "complete") run();
+  else addEventListener("load", run, { once: true });
+})();
+${"</scr" + "ipt>"}`;
+      }
+
+      function injectCleanupScript(html) {
+        const script = cleanupScriptSource();
+        if (/<\/body\s*>/i.test(html)) return html.replace(/<\/body\s*>/i, script + "\n</body>");
+        return html + "\n" + script;
+      }
+
+      function buildEncryptedHtml(payload) {
+        const p = payload || {
+          cipher: "__PAYLOAD_CIPHER__",
+          cipherIv: "__PAYLOAD_IV__",
+          wrappedKey: "__WRAPPED_KEY__",
+          wrappedIv: "__WRAPPED_IV__",
+          shellHash: "__SHELL_HASH__",
+          shellSource: "__SHELL_SOURCE__"
+        };
+
+        const runtime = String.raw`(() => {
+  "use strict";
+
+  const payloadNode = document.getElementById("__encrypted_payload__");
+  const bootScript = document.currentScript;
+
+  function fail(message) {
+    document.body.innerHTML = '<main style="max-width:720px;margin:60px auto;padding:24px;font-family:system-ui,sans-serif;line-height:1.7"><h1>復号できませんでした</h1><p>' + String(message).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) + '</p></main>';
+  }
+
+  function b64(value) {
+    const binary = atob(value);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+
+  async function hash(value) {
+    return new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value.replace(/\r\n?/g, "\n"))));
+  }
+
+  async function decrypt(cipherBytes, ivBytes, rawKeyBytes) {
+    const key = await crypto.subtle.importKey("raw", rawKeyBytes, { name: "AES-GCM" }, false, ["decrypt"]);
+    return new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: ivBytes }, key, cipherBytes));
+  }
+
+  (async () => {
+    if (!payloadNode) throw new Error("暗号データが見つかりません。");
+
+    const cipher = payloadNode.textContent.trim();
+    const cipherIv = payloadNode.dataset.cipherIv || "";
+    const wrappedKey = payloadNode.dataset.wrappedKey || "";
+    const wrappedIv = payloadNode.dataset.wrappedIv || "";
+    const shellHash = payloadNode.dataset.shellHash || "";
+    const shellSource = payloadNode.dataset.shellSource || "";
+
+    payloadNode.remove();
+
+    if (!shellSource) throw new Error("外枠の検証情報が見つかりません。");
+    const canonicalShellBytes = b64(shellSource);
+    const canonicalShell = new TextDecoder().decode(canonicalShellBytes);
+    canonicalShellBytes.fill(0);
+
+    const currentHash = btoa(String.fromCharCode(...await hash(canonicalShell)));
+    if (currentHash !== shellHash) throw new Error("生成HTMLの検証情報が一致しません。");
+    bootScript?.remove();
+
+    const wrappingKey = await hash(shellHash);
+    const rawLongKey = await decrypt(b64(wrappedKey), b64(wrappedIv), wrappingKey);
+    const contentKey = await crypto.subtle.digest("SHA-256", rawLongKey);
+    const plain = await decrypt(b64(cipher), b64(cipherIv), new Uint8Array(contentKey));
+    const htmlBase64 = new TextDecoder().decode(plain);
+    const htmlBytes = b64(htmlBase64);
+    const html = new TextDecoder().decode(htmlBytes);
+
+    rawLongKey.fill(0);
+    plain.fill(0);
+    htmlBytes.fill(0);
+
+    // 非同期処理後の document.write() は、環境によって現在の文書へ追記されることがあります。
+    // 復号HTMLをBlob文書として同一タブへ遷移し、ローダー文書を完全に破棄します。
+    const currentBase = new URL(".", location.href).href;
+    let navigableHtml = html;
+
+    if (!/<base\s/i.test(navigableHtml)) {
+      const baseTag = '<base href="' + currentBase.replace(/&/g, "&amp;").replace(/"/g, "&quot;") + '">';
+      if (/<head(?:\s[^>]*)?>/i.test(navigableHtml)) {
+        navigableHtml = navigableHtml.replace(/<head(?:\s[^>]*)?>/i, match => match + baseTag);
+      } else if (/<html(?:\s[^>]*)?>/i.test(navigableHtml)) {
+        navigableHtml = navigableHtml.replace(/<html(?:\s[^>]*)?>/i, match => match + '<head>' + baseTag + '</head>');
+      } else {
+        navigableHtml = '<!DOCTYPE html><html><head>' + baseTag + '</head><body>' + navigableHtml + '</body></html>';
+      }
+    }
+
+    const restoredBlob = new Blob([navigableHtml], { type: "text/html;charset=utf-8" });
+    const restoredUrl = URL.createObjectURL(restoredBlob);
+    location.replace(restoredUrl);
+  })().catch(error => fail(error && error.message ? error.message : error));
+})();`;
+
+        return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>読み込み中</title>
+<style>@layer base{html,body{min-height:100%;margin:0}body{display:grid;place-items:center;background:#f4f7fb;color:#172033;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.loader{padding:24px;text-align:center}.loader::before{content:"";display:block;width:34px;height:34px;margin:0 auto 16px;border:4px solid #cbd5e1;border-top-color:#2457d6;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}}</style>
+</head>
+<body>
+<div class="loader">サイトを復号しています。</div>
+<script id="__encrypted_payload__" type="application/octet-stream" data-cipher-iv="${p.cipherIv}" data-wrapped-key="${p.wrappedKey}" data-wrapped-iv="${p.wrappedIv}" data-shell-hash="${p.shellHash}" data-shell-source="${p.shellSource}">${p.cipher}<\/script>
+<script>${escapeScriptText(runtime)}<\/script>
+</body>
+</html>`;
+      }
+
+      async function createEncryptedHtml(sourceHtml, cleanupEnabled) {
+        if (!crypto?.subtle) throw new Error("このブラウザではWeb Crypto APIを利用できません。");
+
+        const preparedHtml = cleanupEnabled ? injectCleanupScript(sourceHtml) : sourceHtml;
+
+        // 90〜96バイトをBase64化すると、パディングを含め120〜128文字になります。
+        const longKeyLength = 90 + Math.floor(Math.random() * 7);
+        const longRandomKey = randomBytes(longKeyLength);
+        const contentKey = await sha256Bytes(longRandomKey);
+        // HTML本文をUTF-8のBase64文字列にしてから暗号化し、埋め込み時の記号解釈を避けます。
+        const preparedHtmlBase64 = bytesToBase64(enc.encode(preparedHtml));
+        const encryptedContent = await aesEncrypt(enc.encode(preparedHtmlBase64), contentKey);
+
+        // DOMのouterHTMLはブラウザによって再整形されるため、固定の外枠基準文字列をBase64で保持します。
+        const canonicalShell = normalizeHashSource(buildEncryptedHtml({
+          cipher: "__PAYLOAD_CIPHER__",
+          cipherIv: "__PAYLOAD_IV__",
+          wrappedKey: "__WRAPPED_KEY__",
+          wrappedIv: "__WRAPPED_IV__",
+          shellHash: "__SHELL_HASH__",
+          shellSource: "__SHELL_SOURCE__"
+        }));
+        const shellSource = bytesToBase64(enc.encode(canonicalShell));
+        const shellHashBytes = await sha256Bytes(canonicalShell);
+        const shellHash = bytesToBase64(shellHashBytes);
+
+        // 外枠ハッシュ自体をSHA-256し、長いランダムキーを包むAESキーとして使います。
+        const wrappingKey = await sha256Bytes(shellHash);
+        const wrapped = await aesEncrypt(longRandomKey, wrappingKey);
+
+        const finalHtml = buildEncryptedHtml({
+          cipher: bytesToBase64(encryptedContent.encrypted),
+          cipherIv: bytesToBase64(encryptedContent.iv),
+          wrappedKey: bytesToBase64(wrapped.encrypted),
+          wrappedIv: bytesToBase64(wrapped.iv),
+          shellHash,
+          shellSource
+        });
+
+        longRandomKey.fill(0);
+        contentKey.fill(0);
+        wrappingKey.fill(0);
+
+        return { html: finalHtml, keyLength: longKeyLength };
+      }
+
+      function setStatus(message, type = "") {
+        status.textContent = message;
+        status.className = "status" + (type ? " is-" + type : "");
+      }
+
+      function releaseGeneratedUrl() {
+        if (generatedBlobUrl) URL.revokeObjectURL(generatedBlobUrl);
+        generatedBlobUrl = "";
+        generatedFilename = "";
+        downloadButton.disabled = true;
+      }
+
+      async function processFile(file) {
+        releaseGeneratedUrl();
+
+        if (!file) return;
+        if (!/\.html?$/i.test(file.name) && file.type !== "text/html") {
+          setStatus("HTMLファイルを選択してください。", "error");
+          return;
+        }
+
+        setStatus("暗号化しています…");
+        downloadButton.disabled = true;
+
+        try {
+          const sourceHtml = await file.text();
+          if (!sourceHtml.trim()) throw new Error("ファイルが空です。");
+
+          const result = await createEncryptedHtml(sourceHtml, cleanupOption.checked);
+          const blob = new Blob([result.html], { type: "text/html;charset=utf-8" });
+          generatedBlobUrl = URL.createObjectURL(blob);
+          generatedFilename = file.name.replace(/\.html?$/i, "") + "_encrypted.html";
+          downloadButton.disabled = false;
+
+          const base64Chars = Math.ceil(result.keyLength / 3) * 4;
+          setStatus(`暗号化が完了しました。ランダムキーは${result.keyLength}バイト・Base64換算${base64Chars}文字です。`, "ok");
+        } catch (error) {
+          console.error(error);
+          setStatus(error && error.message ? error.message : "暗号化に失敗しました。", "error");
+        }
+      }
+
+      ["dragenter", "dragover"].forEach(type => {
+        dropzone.addEventListener(type, event => {
+          event.preventDefault();
+          dropzone.classList.add("is-dragover");
+        });
+      });
+
+      ["dragleave", "drop"].forEach(type => {
+        dropzone.addEventListener(type, event => {
+          event.preventDefault();
+          dropzone.classList.remove("is-dragover");
+        });
+      });
+
+      dropzone.addEventListener("drop", event => processFile(event.dataTransfer.files[0]));
+      dropzone.addEventListener("keydown", event => {
+        if (event.key === "Enter" || event.key === " ") fileInput.click();
+      });
+      fileInput.addEventListener("change", () => processFile(fileInput.files[0]));
+
+      downloadButton.addEventListener("click", () => {
+        if (!generatedBlobUrl) return;
+        const link = document.createElement("a");
+        link.href = generatedBlobUrl;
+        link.download = generatedFilename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      });
+
+      clearButton.addEventListener("click", () => {
+        releaseGeneratedUrl();
+        fileInput.value = "";
+        setStatus("HTMLファイルを選択してください。");
+      });
+
+      addEventListener("beforeunload", releaseGeneratedUrl);
+    })();
+  </script>
+</body>
+</html>
