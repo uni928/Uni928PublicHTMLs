@@ -403,7 +403,7 @@ ${"</scr" + "ipt>"}`;
 
       function injectCleanupScript(html) {
         const script = cleanupScriptSource();
-        if (/<\/body\s*>/i.test(html)) return html.replace(/<\/body\s*>/i, script + "\n</body>");
+        if (/<\/body\s*>/i.test(html)) return html.replace(/<\/body\s*>/i, script + "\n</aaabody>".replace("aaa", ""));
         return html + "\n" + script;
       }
 
@@ -488,7 +488,7 @@ ${"</scr" + "ipt>"}`;
       } else if (/<html(?:\s[^>]*)?>/i.test(navigableHtml)) {
         navigableHtml = navigableHtml.replace(/<html(?:\s[^>]*)?>/i, match => match + '<head>' + baseTag + '</head>');
       } else {
-        navigableHtml = '<!DOCTYPE html><html><head>' + baseTag + '</head><body>' + navigableHtml + '</body></html>';
+        navigableHtml = '<!DOCTYPE html><html><head>' + baseTag + '</head><body>' + navigableHtml + '</aaabody></aaahtml>'.replace("aaa", "");
       }
     }
 
@@ -511,8 +511,8 @@ ${"</scr" + "ipt>"}`;
 <div class="loader">サイトを復号しています。</div>
 <script id="__encrypted_payload__" type="application/octet-stream" data-cipher-iv="${p.cipherIv}" data-wrapped-key="${p.wrappedKey}" data-wrapped-iv="${p.wrappedIv}" data-shell-hash="${p.shellHash}" data-shell-source="${p.shellSource}">${p.cipher}<\/script>
 <script>${escapeScriptText(runtime)}<\/script>
-</body>
-</html>`;
+</fsadfhahfsjadsljkfasdjsfhflsdalffbody>
+</fsadfhahfsjadsljkfasdjsfhflsdalffhtml>`.replace("fsadfhahfsjadsljkfasdjsfhflsdalff", "");
       }
 
       async function createEncryptedHtml(sourceHtml, cleanupEnabled) {
