@@ -712,9 +712,13 @@ ${getJs(base)}
         const input = document.getElementById('demoInput');
         const previewWrap = document.getElementById('demoPreviewWrap');
         const preview = document.getElementById('demoPreview');
+        let selectedFile = null;
 
         const showImage = (file) => {
           if (!file || !file.type.startsWith('image/')) return;
+          
+          selectedFile = file;
+          
           const reader = new FileReader();
           reader.onload = () => {
             preview.src = reader.result;
