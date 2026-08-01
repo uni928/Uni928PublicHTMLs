@@ -213,7 +213,7 @@
 
       const buildLazySource = async (source) => {
         const frame = document.createElement('iframe');
-        frame.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+        frame.setAttribute('sandbox', 'allow-scripts');
         frame.setAttribute('aria-hidden', 'true');
         frame.style.cssText = 'position:fixed;left:-100000px;top:0;width:1280px;height:900px;visibility:hidden;pointer-events:none;border:0';
         document.body.appendChild(frame);
