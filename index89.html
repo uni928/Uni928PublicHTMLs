@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="複数のHTMLを取り込み、表示例とコードコピーを備えた一覧サイトを生成します。">
+  <title>複数HTML要素一覧サイト生成ツール</title>
+  <style>
+    @layer base, layout, dropzone, items, controls, responsive;
+
+    @layer base {
+      :root {
+        color-scheme: light;
+        --bg: #f4f7fb;
+        --panel: #ffffff;
+        --text: #172033;
+        --muted: #67748a;
+        --line: #dce4ef;
+        --accent: #6c63d9;
+        --accent-soft: #efedff;
+        --danger: #b42318;
+        --shadow: 0 16px 42px rgba(31, 46, 74, 0.09);
+      }
+
+      * { box-sizing: border-box; }
+      html { min-height: 100%; background: var(--bg); }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans JP", "Hiragino Sans", "Meiryo", sans-serif;
+        line-height: 1.6;
+      }
+      button, input, textarea { font: inherit; }
+      button { -webkit-tap-highlight-color: transparent; }
+    }
+
+    @layer layout {
+      .page {
+        width: min(100% - 28px, 980px);
+        margin: 0 auto;
+        padding: 30px 0 56px;
+      }
+      .hero { text-align: center; margin-bottom: 18px; }
+      .hero h1 { margin: 0; font-size: clamp(24px, 5vw, 36px); line-height: 1.25; }
+      .hero p { max-width: 760px; margin: 10px auto 0; color: var(--muted); font-size: 14px; }
+      .panel {
+        margin-top: 16px;
+        padding: 20px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        box-shadow: var(--shadow);
+      }
+      .panel-title { margin: 0 0 12px; font-size: 16px; }
+      .field { display: grid; gap: 7px; margin-top: 14px; }
+      .field:first-of-type { margin-top: 0; }
+      .field label { color: #334155; font-size: 13px; font-weight: 800; }
+      .text-input {
+        width: 100%;
+        min-height: 46px;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+        color: var(--text);
+        outline: none;
+      }
+      .text-input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(108, 99, 217, 0.12); }
+      .note { margin: 9px 0 0; color: var(--muted); font-size: 12px; }
+      .status { min-height: 24px; margin: 12px 0 0; color: #475569; font-size: 13px; text-align: center; }
+    }
+
+    @layer dropzone {
+      .dropzone {
+        display: grid;
+        place-items: center;
+        min-height: 210px;
+        padding: 24px;
+        border: 1.5px dashed rgba(108, 99, 217, 0.35);
+        border-radius: 18px;
+        background: linear-gradient(180deg, #fff, #faf9ff);
+        text-align: center;
+        cursor: pointer;
+        transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease;
+      }
+      .dropzone:hover, .dropzone.is-dragging {
+        border-color: var(--accent);
+        box-shadow: 0 12px 28px rgba(108, 99, 217, 0.12);
+        transform: translateY(-1px);
+      }
+      .dropzone strong { display: block; font-size: 17px; }
+      .dropzone span { display: block; margin-top: 7px; color: var(--muted); font-size: 13px; }
+      .dropzone input { display: none; }
+    }
+
+    @layer items {
+      .empty {
+        padding: 30px 16px;
+        border: 1px dashed var(--line);
+        border-radius: 16px;
+        color: var(--muted);
+        text-align: center;
+      }
+      .item-list { display: grid; gap: 10px; }
+      .item {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        padding: 13px;
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: #fbfcff;
+      }
+      .item-main { min-width: 0; }
+      .item-name {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid transparent;
+        border-radius: 9px;
+        background: transparent;
+        color: var(--text);
+        font-weight: 800;
+        outline: none;
+      }
+      .item-name:focus { border-color: var(--accent); background: #fff; }
+      .item-meta { margin: 3px 10px 0; color: var(--muted); font-size: 11px; }
+      .item-actions { display: flex; gap: 7px; }
+      .mini-button {
+        min-height: 38px;
+        padding: 7px 11px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fff;
+        color: #334155;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .mini-button:hover { background: #f7f8fc; }
+      .mini-button.danger { color: var(--danger); }
+    }
+
+    @layer controls {
+      .button-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+      .primary-button, .secondary-button {
+        min-height: 50px;
+        padding: 12px 16px;
+        border-radius: 14px;
+        font-weight: 800;
+        cursor: pointer;
+      }
+      .primary-button {
+        border: 1px solid #5f56ca;
+        background: linear-gradient(135deg, #756ce3, #6157ca);
+        color: #fff;
+        box-shadow: 0 10px 24px rgba(97, 87, 202, 0.24);
+      }
+      .secondary-button { border: 1px solid var(--line); background: #fff; color: #334155; }
+      .primary-button:disabled, .secondary-button:disabled { opacity: .5; cursor: not-allowed; }
+    }
+
+    @layer responsive {
+      @media (max-width: 640px) {
+        .page { width: min(100% - 20px, 980px); padding-top: 20px; }
+        .panel { padding: 16px; border-radius: 18px; }
+        .item { grid-template-columns: 1fr; }
+        .item-actions { justify-content: flex-end; }
+        .button-row { grid-template-columns: 1fr; }
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <h1>複数HTML要素一覧サイト生成ツール</h1>
+      <p>HTMLファイルを複数取り込み、項目一覧・表示例・コードコピーを備えた1ファイルHTMLを生成します。</p>
+    </header>
+
+    <section class="panel">
+      <h2 class="panel-title">出力サイトの設定</h2>
+      <div class="field">
+        <label for="siteTitle">サイト名</label>
+        <input id="siteTitle" class="text-input" type="text" value="HTML要素一覧" maxlength="100">
+      </div>
+      <div class="field">
+        <label for="siteDescription">説明文</label>
+        <input id="siteDescription" class="text-input" type="text" value="項目を選択すると、表示例とコードを確認できます。" maxlength="200">
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title">HTMLを追加</h2>
+      <label id="dropzone" class="dropzone">
+        <span>
+          <strong>HTMLを複数ドラッグ＆ドロップ</strong>
+          <span>クリックして複数選択もできます。完全なHTMLとHTML断片の両方に対応します。</span>
+        </span>
+        <input id="fileInput" type="file" accept=".html,.htm,text/html" multiple>
+      </label>
+      <p class="note">生成時は各HTMLを個別にgzip圧縮し、個別のBase64文字列として出力HTMLへ埋め込みます。</p>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title">取り込み済みHTML</h2>
+      <div id="itemContainer" class="empty">まだHTMLが追加されていません。</div>
+    </section>
+
+    <section class="panel">
+      <div class="button-row">
+        <button id="previewButton" class="secondary-button" type="button" disabled>プレビュー</button>
+        <button id="downloadButton" class="primary-button" type="button" disabled>一覧サイトを生成して保存</button>
+        <button id="clearButton" class="secondary-button" type="button" disabled>すべて削除</button>
+      </div>
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const state = { items: [] };
+      const dropzone = document.getElementById('dropzone');
+      const fileInput = document.getElementById('fileInput');
+      const itemContainer = document.getElementById('itemContainer');
+      const previewButton = document.getElementById('previewButton');
+      const downloadButton = document.getElementById('downloadButton');
+      const clearButton = document.getElementById('clearButton');
+      const siteTitle = document.getElementById('siteTitle');
+      const siteDescription = document.getElementById('siteDescription');
+      const status = document.getElementById('status');
+
+      const escapeHtml = (value) => String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+
+      const safeFileName = (value) => String(value || 'html-elements')
+        .trim()
+        .replace(/[\\/:*?"<>|]+/g, '-')
+        .replace(/\\s+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'html-elements';
+
+      const readFileText = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(reader.error || new Error('ファイルを読み込めませんでした。'));
+        reader.readAsText(file);
+      });
+
+      const deriveTitle = (source, fileName) => {
+        try {
+          const doc = new DOMParser().parseFromString(source, 'text/html');
+          const title = doc.querySelector('title')?.textContent?.trim();
+          const h1 = doc.querySelector('h1')?.textContent?.trim();
+          return title || h1 || fileName.replace(/\\.(html?|xhtml)$/i, '');
+        } catch (_) {
+          return fileName.replace(/\\.(html?|xhtml)$/i, '');
+        }
+      };
+
+      const addFiles = async (files) => {
+        const htmlFiles = [...files].filter((file) => /\.html?$/i.test(file.name) || file.type === 'text/html');
+        if (!htmlFiles.length) {
+          status.textContent = 'HTMLファイルが見つかりませんでした。';
+          return;
+        }
+
+        status.textContent = `${htmlFiles.length}件を読み込んでいます。`;
+        for (const file of htmlFiles) {
+          try {
+            const source = await readFileText(file);
+            state.items.push({
+              id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+              name: deriveTitle(source, file.name),
+              fileName: file.name,
+              source
+            });
+          } catch (error) {
+            status.textContent = `${file.name}の読み込みに失敗しました。`;
+          }
+        }
+        renderItems();
+        status.textContent = `${htmlFiles.length}件を追加しました。`;
+        fileInput.value = '';
+      };
+
+      const moveItem = (index, direction) => {
+        const target = index + direction;
+        if (target < 0 || target >= state.items.length) return;
+        [state.items[index], state.items[target]] = [state.items[target], state.items[index]];
+        renderItems();
+      };
+
+      const renderItems = () => {
+        const hasItems = state.items.length > 0;
+        previewButton.disabled = !hasItems;
+        downloadButton.disabled = !hasItems;
+        clearButton.disabled = !hasItems;
+
+        if (!hasItems) {
+          itemContainer.className = 'empty';
+          itemContainer.textContent = 'まだHTMLが追加されていません。';
+          return;
+        }
+
+        itemContainer.className = 'item-list';
+        itemContainer.innerHTML = state.items.map((item, index) => `
+          <div class="item" data-id="${escapeHtml(item.id)}">
+            <div class="item-main">
+              <input class="item-name" type="text" value="${escapeHtml(item.name)}" maxlength="120" aria-label="項目名">
+              <div class="item-meta">${escapeHtml(item.fileName)} / ${item.source.length.toLocaleString()}文字</div>
+            </div>
+            <div class="item-actions">
+              <button class="mini-button" type="button" data-action="up" ${index === 0 ? 'disabled' : ''}>上へ</button>
+              <button class="mini-button" type="button" data-action="down" ${index === state.items.length - 1 ? 'disabled' : ''}>下へ</button>
+              <button class="mini-button danger" type="button" data-action="remove">削除</button>
+            </div>
+          </div>`).join('');
+
+        itemContainer.querySelectorAll('.item').forEach((row, index) => {
+          const nameInput = row.querySelector('.item-name');
+          nameInput.addEventListener('input', () => {
+            state.items[index].name = nameInput.value;
+          });
+          row.querySelector('[data-action="up"]').addEventListener('click', () => moveItem(index, -1));
+          row.querySelector('[data-action="down"]').addEventListener('click', () => moveItem(index, 1));
+          row.querySelector('[data-action="remove"]').addEventListener('click', () => {
+            state.items.splice(index, 1);
+            renderItems();
+            status.textContent = '項目を削除しました。';
+          });
+        });
+      };
+
+      const bytesToBase64 = (bytes) => {
+        let binary = '';
+        const chunkSize = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+        }
+        return btoa(binary);
+      };
+
+      const gzipToBase64 = async (text) => {
+        if (!('CompressionStream' in window)) {
+          throw new Error('このブラウザはgzip圧縮に対応していません。最新版のChromeまたはEdgeをご利用ください。');
+        }
+        const input = new TextEncoder().encode(text);
+        const stream = new Blob([input]).stream().pipeThrough(new CompressionStream('gzip'));
+        const compressed = new Uint8Array(await new Response(stream).arrayBuffer());
+        return bytesToBase64(compressed);
+      };
+
+      const jsonForScript = (value) => JSON.stringify(value)
+        .replace(/</g, '\\u003c')
+        .replace(/>/g, '\\u003e')
+        .replace(/&/g, '\\u0026')
+        .replace(/\u2028/g, '\\u2028')
+        .replace(/\u2029/g, '\\u2029');
+
+      const createOutputHtml = (payload) => {
+        const dataJson = jsonForScript(payload);
+        const scriptClose = '</scr' + 'ipt>';
+        return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="${escapeHtml(payload.description)}">
+  <title>${escapeHtml(payload.title)}</title>
+  <style>
+    @layer base, layout, editor, navigation, preview, code, responsive;
+    @layer base {
+      :root { color-scheme: light; --bg:#f4f7fb; --panel:#fff; --text:#172033; --muted:#68758a; --line:#dce4ef; --accent:#6c63d9; --accent-soft:#efedff; --shadow:0 16px 42px rgba(31,46,74,.09); }
+      * { box-sizing:border-box; }
+      .hidden { display:none; }
+      html { min-height:100%; background:var(--bg); }
+      body { margin:0; min-height:100vh; color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP","Hiragino Sans","Meiryo",sans-serif; line-height:1.6; }
+      button, textarea { font:inherit; }
+    }
+    @layer layout {
+      .page { width:min(100% - 28px,1100px); margin:0 auto; padding:28px 0 56px; }
+      .hero { position:relative; text-align:center; margin-bottom:18px; }
+      .hero-actions { display:flex; justify-content:flex-end; margin-bottom:10px; }
+      .hero h1 { margin:0; font-size:clamp(24px,5vw,36px); line-height:1.25; }
+      .hero p { max-width:760px; margin:10px auto 0; color:var(--muted); font-size:14px; }
+      .panel { margin-top:16px; padding:20px; background:var(--panel); border:1px solid var(--line); border-radius:22px; box-shadow:var(--shadow); }
+      .panel-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+      .panel-title { margin:0; font-size:16px; }
+      .status { min-height:24px; margin:10px 0 0; color:#475569; font-size:13px; text-align:center; }
+    }
+
+    @layer editor {
+      /* 再編集画面 */
+      .editor-grid { display:grid; gap:14px; }
+      .editor-field { display:grid; gap:7px; }
+      .editor-field label { color:#334155; font-size:13px; font-weight:800; }
+      .editor-input { width:100%; min-height:46px; padding:10px 12px; border:1px solid var(--line); border-radius:12px; background:#fff; color:var(--text); outline:none; }
+      .editor-input:focus { border-color:var(--accent); box-shadow:0 0 0 4px rgba(108,99,217,.12); }
+      .editor-dropzone { display:grid; place-items:center; min-height:150px; padding:20px; border:1.5px dashed rgba(108,99,217,.35); border-radius:16px; background:#faf9ff; text-align:center; cursor:pointer; }
+      .editor-dropzone input { display:none; }
+      .editor-list { display:grid; gap:10px; }
+      .editor-item { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; padding:12px; border:1px solid var(--line); border-radius:14px; background:#fbfcff; }
+      .editor-item-actions { display:flex; gap:6px; }
+      .small-button, .edit-button, .editor-action { min-height:40px; padding:8px 12px; border:1px solid var(--line); border-radius:11px; background:#fff; color:#334155; font-weight:800; cursor:pointer; }
+      .edit-button { background:var(--accent-soft); color:#5148bd; }
+      .editor-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+      .editor-action.primary { border-color:#5f56ca; background:linear-gradient(135deg,#756ce3,#6157ca); color:#fff; }
+      .editor-empty { padding:24px; border:1px dashed var(--line); border-radius:14px; color:var(--muted); text-align:center; }
+    }
+    @layer navigation {
+      /* タイトルと縮小表示を組み合わせた項目カード */
+      .item-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; }
+      .item-button { display:grid; grid-template-rows:auto 150px; gap:10px; min-width:0; padding:12px; border:1px solid var(--line); border-radius:16px; background:#fff; color:#334155; text-align:left; cursor:pointer; box-shadow:0 7px 20px rgba(31,46,74,.06); transition:border-color .18s ease,transform .18s ease,box-shadow .18s ease; }
+      .item-button:hover { transform:translateY(-2px); box-shadow:0 11px 25px rgba(31,46,74,.11); }
+      .item-button.is-active { border-color:var(--accent); background:var(--accent-soft); box-shadow:0 0 0 3px rgba(108,99,217,.12),0 11px 25px rgba(31,46,74,.10); }
+      .item-card-title { display:block; min-width:0; overflow:hidden; color:#27344a; font-size:14px; font-weight:800; line-height:1.45; text-overflow:ellipsis; white-space:nowrap; }
+      .item-button.is-active .item-card-title { color:#5148bd; }
+      .item-thumbnail { position:relative; display:block; overflow:hidden; border:1px solid var(--line); border-radius:11px; background:#fff; pointer-events:none; }
+      .item-thumbnail iframe { position:absolute; top:50%; left:50%; display:block; width:960px; height:720px; border:0; transform:translate(-50%,-50%) scale(.2); transform-origin:center center; pointer-events:none; }
+      .item-thumbnail-loading { display:grid; place-items:center; width:100%; height:100%; padding:10px; color:var(--muted); font-size:12px; text-align:center; }
+    }
+    @layer preview {
+      .preview-frame { display:block; width:100%; min-height:440px; border:1px solid var(--line); border-radius:16px; background:#fff; }
+      .loading { display:grid; place-items:center; min-height:260px; color:var(--muted); }
+    }
+    @layer code {
+      .copy-actions { display:flex; flex-wrap:nowrap; gap:6px; width:100%; overflow-x:auto; padding-bottom:2px; }
+      .copy-button { flex:0 0 auto; min-height:34px; padding:6px 9px; border:1px solid #5f56ca; border-radius:9px; background:linear-gradient(135deg,#756ce3,#6157ca); color:#fff; font-size:11px; line-height:1.25; font-weight:800; white-space:nowrap; cursor:pointer; }
+      .copy-button.is-hidden { display:none; }
+      .copy-button.is-done { border-color:#079669; background:linear-gradient(135deg,#10b981,#059669); }
+      .code-output { width:100%; min-height:360px; resize:vertical; padding:15px; border:1px solid #25324a; border-radius:14px; background:#0f172a; color:#e2e8f0; font:12px/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; tab-size:2; white-space:pre; outline:none; }
+    }
+    @layer responsive {
+      @media (max-width:640px) { .page{width:min(100% - 20px,1100px);padding-top:20px}.panel{padding:16px;border-radius:18px}.panel-head{align-items:flex-start;flex-direction:column}.copy-actions{width:100%}.copy-button{width:auto}.preview-frame{min-height:360px}.item-list{grid-template-columns:1fr}.item-button{grid-template-rows:auto 180px}.editor-item{grid-template-columns:1fr}.editor-item-actions{justify-content:flex-end}.editor-actions{grid-template-columns:1fr}.hero-actions{justify-content:center} }
+    }
+  </style>
+</head>
+<body>
+  <main id="editorMode" class="page hidden">
+    <header class="hero">
+      <h1>HTML要素一覧を編集</h1>
+      <p>埋め込まれたHTMLを復元して、項目やサイト情報を再編集できます。</p>
+    </header>
+    <section class="panel editor-grid">
+      <h2 class="panel-title">サイト設定</h2>
+      <div class="editor-field"><label for="editSiteTitle">サイト名</label><input id="editSiteTitle" class="editor-input" type="text" maxlength="100"></div>
+      <div class="editor-field"><label for="editSiteDescription">説明文</label><input id="editSiteDescription" class="editor-input" type="text" maxlength="200"></div>
+    </section>
+    <section class="panel">
+      <h2 class="panel-title">HTMLを追加</h2>
+      <label id="editDropzone" class="editor-dropzone">HTMLをドラッグ＆ドロップ、またはクリックして選択<input id="editFileInput" type="file" accept=".html,.htm,text/html" multiple></label>
+    </section>
+    <section class="panel">
+      <h2 class="panel-title">項目</h2>
+      <div id="editItemList" class="editor-empty">読み込んでいます。</div>
+    </section>
+    <section class="panel">
+      <div class="editor-actions">
+        <button id="editPreviewButton" class="editor-action" type="button">プレビュー</button>
+        <button id="editSaveButton" class="editor-action primary" type="button">編集後のHTMLを保存</button>
+        <button id="editCancelButton" class="editor-action" type="button">表示画面へ戻る</button>
+      </div>
+      <p id="editStatus" class="status" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+  <main id="viewerMode" class="page">
+    <header class="hero">
+      <div class="hero-actions"><button id="editButton" class="edit-button" type="button">編集する</button></div>
+      <h1 id="siteHeading">${escapeHtml(payload.title)}</h1>
+      <p id="siteLead">${escapeHtml(payload.description)}</p>
+    </header>
+    <section class="panel">
+      <h2 class="panel-title">項目一覧</h2>
+      <div id="itemList" class="item-list"></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2 id="previewTitle" class="panel-title">表示例</h2></div>
+      <div id="previewMount" class="loading">読み込んでいます。</div>
+    </section>
+    <section class="panel">
+      <div class="panel-head">
+        <h2 id="codeTitle" class="panel-title">コードをコピー</h2>
+        <div class="copy-actions">
+          <button class="copy-button" type="button" data-copy-type="full">コードをコピー</button>
+          <button class="copy-button" type="button" data-copy-type="css">CSSをコピー</button>
+          <button class="copy-button" type="button" data-copy-type="element">要素をコピー</button>
+          <button class="copy-button" type="button" data-copy-type="javascript">JavaScriptをコピー</button>
+          <button class="copy-button" type="button" data-copy-type="lazy">ズボラ版要素をコピーに挑戦</button>
+          <button class="copy-button" type="button" data-action="download-css">CSSをダウンロード</button>
+          <button id="copyLinkedElementButton" class="copy-button is-hidden" type="button" data-copy-type="linked-element">CSS読み込みを含めた要素をコピー</button>
+        </div>
+      </div>
+      <textarea id="codeOutput" class="code-output" readonly spellcheck="false"></textarea>
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+  <script id="embeddedData" type="application/json">${dataJson}` + scriptClose + `
+  <script>
+    (() => {
+      let DATA = JSON.parse(document.getElementById('embeddedData').textContent);
+      const cache = new Map();
+      const itemList = document.getElementById('itemList');
+      const previewMount = document.getElementById('previewMount');
+      const previewTitle = document.getElementById('previewTitle');
+      const codeTitle = document.getElementById('codeTitle');
+      const codeOutput = document.getElementById('codeOutput');
+      const copyButtons = [...document.querySelectorAll('[data-copy-type]')];
+      const downloadCssButton = document.querySelector('[data-action="download-css"]');
+      const copyLinkedElementButton = document.getElementById('copyLinkedElementButton');
+      const status = document.getElementById('status');
+      const editorMode = document.getElementById('editorMode');
+      const viewerMode = document.getElementById('viewerMode');
+      const editButton = document.getElementById('editButton');
+      const editSiteTitle = document.getElementById('editSiteTitle');
+      const editSiteDescription = document.getElementById('editSiteDescription');
+      const editItemList = document.getElementById('editItemList');
+      const editFileInput = document.getElementById('editFileInput');
+      const editDropzone = document.getElementById('editDropzone');
+      const editPreviewButton = document.getElementById('editPreviewButton');
+      const editSaveButton = document.getElementById('editSaveButton');
+      const editCancelButton = document.getElementById('editCancelButton');
+      const editStatus = document.getElementById('editStatus');
+      const siteHeading = document.getElementById('siteHeading');
+      const siteLead = document.getElementById('siteLead');
+      const editState = { items: [] };
+      let selectedIndex = 0;
+
+      const base64ToBytes = (base64) => {
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        return bytes;
+      };
+
+      const decodeItem = async (index) => {
+        if (cache.has(index)) return cache.get(index);
+        if (!('DecompressionStream' in window)) throw new Error('このブラウザはgzip展開に対応していません。');
+        const bytes = base64ToBytes(DATA.items[index].data);
+        const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+        const text = await new Response(stream).text();
+        cache.set(index, text);
+        return text;
+      };
+
+      const asPreviewDocument = (source) => {
+        if (/<!doctype\s+html|<html[\s>]/i.test(source)) return source;
+        return '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:16px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP",sans-serif}</style></head><body>' + source + '</body></html>';
+      };
+
+      const splitSource = (source) => {
+        const parser = new DOMParser();
+        const isDocument = /<!doctype\s+html|<html[\s>]|<head[\s>]|<body[\s>]/i.test(source);
+        const doc = parser.parseFromString(isDocument ? source : '<!DOCTYPE html><html><head></head><body>' + source + '</body></html>', 'text/html');
+
+        const css = [...doc.querySelectorAll('style')]
+          .map((style) => style.textContent.trim())
+          .filter(Boolean)
+          .join('\\n\\n');
+
+        const javascript = [...doc.querySelectorAll('script')]
+          .map((script) => {
+            const code = script.textContent.trim();
+            if (script.src) return '// 外部スクリプト: ' + script.src + (code ? '\\n' + code : '');
+            return code;
+          })
+          .filter(Boolean)
+          .join('\\n\\n');
+
+        const bodyClone = doc.body.cloneNode(true);
+        bodyClone.querySelectorAll('script, style').forEach((node) => node.remove());
+        const element = bodyClone.innerHTML.trim();
+
+        return { full: source, css, element, javascript };
+      };
+
+      const buildLazySource = async (source) => {
+        const frame = document.createElement('iframe');
+        frame.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+        frame.setAttribute('aria-hidden', 'true');
+        frame.style.cssText = 'position:fixed;left:-100000px;top:0;width:1280px;height:900px;visibility:hidden;pointer-events:none;border:0';
+        document.body.appendChild(frame);
+
+        const waitForLoad = new Promise((resolve, reject) => {
+          const timer = window.setTimeout(() => reject(new Error('要素の解析がタイムアウトしました。')), 5000);
+          frame.addEventListener('load', () => {
+            window.clearTimeout(timer);
+            window.setTimeout(resolve, 120);
+          }, { once:true });
+        });
+
+        frame.srcdoc = asPreviewDocument(source);
+
+        try {
+          await waitForLoad;
+          const doc = frame.contentDocument;
+          const win = frame.contentWindow;
+          if (!doc || !win || !doc.body) throw new Error('HTMLを解析できませんでした。');
+
+          const ignored = new Set(['SCRIPT', 'STYLE', 'LINK', 'META', 'TITLE', 'TEMPLATE', 'NOSCRIPT']);
+          const roots = [...doc.body.children].filter((node) => !ignored.has(node.tagName));
+          if (!roots.length) throw new Error('コピーできる表示要素が見つかりませんでした。');
+
+          const wrapperNeeded = roots.length > 1;
+          const sourceRoot = wrapperNeeded ? doc.body : roots[0];
+          const cloneRoot = wrapperNeeded ? document.createElement('div') : roots[0].cloneNode(true);
+          if (wrapperNeeded) roots.forEach((root) => cloneRoot.appendChild(root.cloneNode(true)));
+
+          const sourceElements = wrapperNeeded
+            ? roots.flatMap((root) => [root, ...root.querySelectorAll('*')])
+            : [sourceRoot, ...sourceRoot.querySelectorAll('*')];
+          const cloneElements = [cloneRoot, ...cloneRoot.querySelectorAll('*')];
+
+          const cssTextFromComputed = (computed) => {
+            const declarations = [];
+            for (let i = 0; i < computed.length; i++) {
+              const name = computed[i];
+              const value = computed.getPropertyValue(name);
+              if (!value) continue;
+              declarations.push(name + ':' + value.trim());
+            }
+            return declarations.join(';');
+          };
+
+          const mergeStyle = (baseText, extraText) => {
+            const holder = document.createElement('div');
+            holder.setAttribute('style', baseText || '');
+            String(extraText || '').split(';').forEach((part) => {
+              const colon = part.indexOf(':');
+              if (colon < 1) return;
+              const name = part.slice(0, colon).trim();
+              const value = part.slice(colon + 1).trim();
+              if (name && value) holder.style.setProperty(name, value);
+            });
+            return holder.getAttribute('style') || '';
+          };
+
+          const stateRules = [];
+          const collectRules = (rules) => {
+            [...rules].forEach((rule) => {
+              if (rule.cssRules) {
+                try { collectRules(rule.cssRules); } catch (_) {}
+                return;
+              }
+              if (!rule.selectorText || !rule.style) return;
+              const selectors = rule.selectorText.split(',').map((selector) => selector.trim());
+              selectors.forEach((selector) => {
+                const match = selector.match(/:(hover|active|focus|focus-visible)(?![\\w-])/);
+                if (!match) return;
+                const state = match[1];
+                const baseSelector = selector
+                  .replace(/:focus-visible/g, '')
+                  .replace(/:hover/g, '')
+                  .replace(/:active/g, '')
+                  .replace(/:focus/g, '')
+                  .trim();
+                if (!baseSelector || /::/.test(baseSelector)) return;
+                stateRules.push({ state, selector: baseSelector, css: rule.style.cssText });
+              });
+            });
+          };
+
+          [...doc.styleSheets].forEach((sheet) => {
+            try { collectRules(sheet.cssRules); } catch (_) {}
+          });
+
+          sourceElements.forEach((sourceElement, index) => {
+            const cloneElement = cloneElements[index];
+            if (!cloneElement) return;
+
+            const normalStyle = cssTextFromComputed(win.getComputedStyle(sourceElement));
+            cloneElement.setAttribute('style', normalStyle);
+
+            if (sourceElement instanceof win.HTMLInputElement) {
+              if (sourceElement.type === 'checkbox' || sourceElement.type === 'radio') {
+                if (sourceElement.checked) cloneElement.setAttribute('checked', '');
+                else cloneElement.removeAttribute('checked');
+              } else cloneElement.setAttribute('value', sourceElement.value);
+            }
+            if (sourceElement instanceof win.HTMLTextAreaElement) cloneElement.textContent = sourceElement.value;
+            if (sourceElement instanceof win.HTMLSelectElement) {
+              [...cloneElement.options].forEach((option, optionIndex) => {
+                option.toggleAttribute('selected', optionIndex === sourceElement.selectedIndex);
+              });
+            }
+            if (sourceElement instanceof win.HTMLCanvasElement) {
+              try {
+                const image = document.createElement('img');
+                image.src = sourceElement.toDataURL();
+                image.alt = sourceElement.getAttribute('aria-label') || '';
+                image.setAttribute('style', normalStyle);
+                cloneElement.replaceWith(image);
+                cloneElements[index] = image;
+              } catch (_) {}
+            }
+          });
+
+          sourceElements.forEach((sourceElement, index) => {
+            const cloneElement = cloneElements[index];
+            if (!cloneElement || cloneElement.nodeType !== 1) return;
+            const normalStyle = cloneElement.getAttribute('style') || '';
+            const states = { hover:'', active:'', focus:'' };
+
+            stateRules.forEach((rule) => {
+              try {
+                if (!sourceElement.matches(rule.selector)) return;
+                const key = rule.state === 'focus-visible' ? 'focus' : rule.state;
+                states[key] = mergeStyle(states[key], rule.css);
+              } catch (_) {}
+            });
+
+            const styleFor = (state) => mergeStyle(normalStyle, states[state]);
+            const setStyleCode = (style) => "this.setAttribute('style', " + JSON.stringify(style) + ")";
+
+            if (states.hover) {
+              cloneElement.setAttribute('onmouseover', setStyleCode(styleFor('hover')));
+              cloneElement.setAttribute('onmouseout', setStyleCode(normalStyle));
+              cloneElement.setAttribute('onmouseleave', setStyleCode(normalStyle));
+            }
+            if (states.active) {
+              cloneElement.setAttribute('onmousedown', setStyleCode(styleFor('active')));
+              cloneElement.setAttribute('onmouseup', setStyleCode(states.hover ? styleFor('hover') : normalStyle));
+            }
+            if (states.focus) {
+              cloneElement.setAttribute('onfocus', setStyleCode(styleFor('focus')));
+              cloneElement.setAttribute('onblur', setStyleCode(normalStyle));
+            }
+          });
+
+          cloneRoot.querySelectorAll('script, style, link[rel~="stylesheet"], meta, title, template, noscript').forEach((node) => node.remove());
+          cloneRoot.querySelectorAll('[id]').forEach((node) => {
+            if (node.id && doc.querySelectorAll('#' + CSS.escape(node.id)).length > 1) node.removeAttribute('id');
+          });
+
+          return cloneRoot.outerHTML;
+        } finally {
+          frame.remove();
+        }
+      };
+
+      const renderSelection = async (index) => {
+        selectedIndex = index;
+        copyLinkedElementButton.classList.add('is-hidden');
+        [...itemList.children].forEach((button, buttonIndex) => button.classList.toggle('is-active', buttonIndex === index));
+        const item = DATA.items[index];
+        previewTitle.textContent = '表示例：' + item.name;
+        codeTitle.textContent = 'コードをコピー：' + item.name;
+        previewMount.className = 'loading';
+        previewMount.textContent = '読み込んでいます。';
+        codeOutput.value = '';
+        try {
+          const source = await decodeItem(index);
+          codeOutput.value = source;
+          const iframe = document.createElement('iframe');
+          iframe.className = 'preview-frame';
+          iframe.setAttribute('sandbox', 'allow-forms allow-modals allow-popups allow-scripts allow-same-origin');
+          iframe.srcdoc = asPreviewDocument(source);
+          previewMount.className = '';
+          previewMount.replaceChildren(iframe);
+          status.textContent = '';
+        } catch (error) {
+          previewMount.className = 'loading';
+          previewMount.textContent = error.message || '読み込みに失敗しました。';
+          status.textContent = previewMount.textContent;
+        }
+      };
+
+      const writeClipboard = async (text) => {
+        if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        const ok = document.execCommand('copy');
+        textarea.remove();
+        if (!ok) throw new Error('コピーできませんでした。');
+      };
+
+      const safeCssFileName = (value, index) => {
+        const base = String(value || 'item-' + (index + 1))
+          .replace(/\\.(html?|xhtml)$/i, '')
+          .replace(/[\\/:*?"<>|]+/g, '-')
+          .replace(/\\s+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 70);
+        return (base || 'item-' + (index + 1)) + '.css';
+      };
+
+      const downloadCssText = (css, fileName) => {
+        const url = URL.createObjectURL(new Blob([css], { type:'text/css;charset=utf-8' }));
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = fileName;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      };
+
+      const fitThumbnail = (iframe, thumbnail) => {
+        const applyFit = () => {
+          try {
+            const doc = iframe.contentDocument;
+            if (!doc || !doc.documentElement || !doc.body) return;
+
+            const root = doc.documentElement;
+            const body = doc.body;
+            const ignoredTags = new Set(['SCRIPT', 'STYLE', 'LINK', 'META', 'TITLE', 'TEMPLATE']);
+            const visibleChildren = [...body.children].filter((element) => !ignoredTags.has(element.tagName));
+
+            let contentWidth = Math.max(root.scrollWidth, body.scrollWidth, 1);
+            let contentHeight = Math.max(root.scrollHeight, body.scrollHeight, 1);
+
+            if (visibleChildren.length) {
+              let maxRight = 0;
+              let maxBottom = 0;
+              visibleChildren.forEach((element) => {
+                const rect = element.getBoundingClientRect();
+                if (rect.width > 0 && rect.height > 0) {
+                  maxRight = Math.max(maxRight, rect.right);
+                  maxBottom = Math.max(maxBottom, rect.bottom);
+                }
+              });
+              if (maxRight > 0) contentWidth = Math.min(contentWidth, Math.max(maxRight, 1));
+              if (maxBottom > 0) contentHeight = Math.min(contentHeight, Math.max(maxBottom, 1));
+            }
+
+            contentWidth = Math.max(120, Math.ceil(contentWidth));
+            contentHeight = Math.max(80, Math.ceil(contentHeight));
+
+            const availableWidth = Math.max(1, thumbnail.clientWidth - 4);
+            const availableHeight = Math.max(1, thumbnail.clientHeight - 4);
+            const scale = Math.min(availableWidth / contentWidth, availableHeight / contentHeight);
+
+            iframe.style.width = contentWidth + 'px';
+            iframe.style.height = contentHeight + 'px';
+            iframe.style.transform = 'translate(-50%,-50%) scale(' + scale + ')';
+          } catch (_) {
+            iframe.style.width = '960px';
+            iframe.style.height = '720px';
+            iframe.style.transform = 'translate(-50%,-50%) scale(.2)';
+          }
+        };
+
+        iframe.addEventListener('load', () => {
+          requestAnimationFrame(() => requestAnimationFrame(applyFit));
+          window.setTimeout(applyFit, 300);
+        });
+
+        if ('ResizeObserver' in window) {
+          const observer = new ResizeObserver(applyFit);
+          observer.observe(thumbnail);
+        }
+      };
+
+      const renderItemCard = async (item, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'item-button';
+        button.setAttribute('aria-label', item.name + 'を表示');
+
+        const title = document.createElement('span');
+        title.className = 'item-card-title';
+        title.textContent = item.name;
+
+        const thumbnail = document.createElement('span');
+        thumbnail.className = 'item-thumbnail';
+        const loading = document.createElement('span');
+        loading.className = 'item-thumbnail-loading';
+        loading.textContent = '見た目を読み込んでいます。';
+        thumbnail.appendChild(loading);
+
+        button.append(title, thumbnail);
+        button.addEventListener('click', () => renderSelection(index));
+        itemList.appendChild(button);
+
+        try {
+          const source = await decodeItem(index);
+          const iframe = document.createElement('iframe');
+          iframe.tabIndex = -1;
+          iframe.setAttribute('aria-hidden', 'true');
+          iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+          iframe.srcdoc = asPreviewDocument(source);
+          thumbnail.replaceChildren(iframe);
+          fitThumbnail(iframe, thumbnail);
+        } catch (_) {
+          loading.textContent = '表示例を読み込めませんでした。';
+        }
+      };
+
+
+      const bytesToBase64Local = (bytes) => {
+        let binary = '';
+        for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+        return btoa(binary);
+      };
+
+      const gzipText = async (text) => {
+        if (!('CompressionStream' in window)) throw new Error('このブラウザはgzip圧縮に対応していません。');
+        const stream = new Blob([new TextEncoder().encode(text)]).stream().pipeThrough(new CompressionStream('gzip'));
+        return bytesToBase64Local(new Uint8Array(await new Response(stream).arrayBuffer()));
+      };
+
+      const deriveTitle = (source, fileName) => {
+        const doc = new DOMParser().parseFromString(source, 'text/html');
+        return doc.querySelector('title')?.textContent?.trim() || doc.querySelector('h1')?.textContent?.trim() || fileName.replace(/\\.(html?|xhtml)$/i, '');
+      };
+
+      const readFileText = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(reader.error || new Error('読み込みに失敗しました。'));
+        reader.readAsText(file);
+      });
+
+      const renderEditorItems = () => {
+        if (!editState.items.length) {
+          editItemList.className = 'editor-empty';
+          editItemList.textContent = 'HTMLがありません。';
+          return;
+        }
+        editItemList.className = 'editor-list';
+        editItemList.innerHTML = editState.items.map((item, index) => '<div class="editor-item"><input class="editor-input" type="text" value="' + item.name.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '" maxlength="120"><div class="editor-item-actions"><button class="small-button" data-action="up" ' + (index===0?'disabled':'') + '>上へ</button><button class="small-button" data-action="down" ' + (index===editState.items.length-1?'disabled':'') + '>下へ</button><button class="small-button" data-action="remove">削除</button></div></div>').join('');
+        [...editItemList.children].forEach((row,index) => {
+          row.querySelector('input').addEventListener('input', (event) => editState.items[index].name = event.target.value);
+          row.querySelector('[data-action="up"]').addEventListener('click', () => { if(index>0){ [editState.items[index-1],editState.items[index]]=[editState.items[index],editState.items[index-1]]; renderEditorItems(); } });
+          row.querySelector('[data-action="down"]').addEventListener('click', () => { if(index<editState.items.length-1){ [editState.items[index+1],editState.items[index]]=[editState.items[index],editState.items[index+1]]; renderEditorItems(); } });
+          row.querySelector('[data-action="remove"]').addEventListener('click', () => { editState.items.splice(index,1); renderEditorItems(); });
+        });
+      };
+
+      const addEditorFiles = async (files) => {
+        const htmlFiles = [...files].filter((file) => /\.html?$/i.test(file.name) || file.type === 'text/html');
+        for (const file of htmlFiles) {
+          const source = await readFileText(file);
+          editState.items.push({ name: deriveTitle(source,file.name), fileName:file.name, source });
+        }
+        renderEditorItems();
+        editFileInput.value = '';
+        editStatus.textContent = htmlFiles.length + '件を追加しました。';
+      };
+
+      const buildEditedPayload = async () => {
+        if (!editState.items.length) throw new Error('HTMLを1件以上追加してください。');
+        const items = [];
+        for (let index=0; index<editState.items.length; index++) {
+          const item = editState.items[index];
+          editStatus.textContent = (index+1) + ' / ' + editState.items.length + '件を圧縮しています。';
+          items.push({ name:item.name.trim() || '項目' + (index+1), fileName:item.fileName || 'item-' + (index+1) + '.html', data:await gzipText(item.source) });
+        }
+        return { title:editSiteTitle.value.trim() || 'HTML要素一覧', description:editSiteDescription.value.trim() || '項目を選択すると、表示例とコードを確認できます。', items };
+      };
+
+      const resetViewer = () => {
+        cache.clear();
+        itemList.replaceChildren();
+        previewMount.className = 'loading';
+        previewMount.textContent = '読み込んでいます。';
+        codeOutput.value = '';
+        selectedIndex = 0;
+        siteHeading.textContent = DATA.title;
+        siteLead.textContent = DATA.description;
+        document.title = DATA.title;
+        DATA.items.forEach((item,index) => renderItemCard(item,index));
+        if (DATA.items.length) renderSelection(0);
+      };
+
+      const showViewer = () => {
+        editorMode.classList.add('hidden');
+        viewerMode.classList.remove('hidden');
+        window.scrollTo({top:0,behavior:'smooth'});
+      };
+
+      const showEditor = async () => {
+        editButton.disabled = true;
+        editStatus.textContent = '編集データを展開しています。';
+        try {
+          editSiteTitle.value = DATA.title;
+          editSiteDescription.value = DATA.description;
+          editState.items = [];
+          for (let index=0; index<DATA.items.length; index++) {
+            editState.items.push({ name:DATA.items[index].name, fileName:DATA.items[index].fileName, source:await decodeItem(index) });
+          }
+          renderEditorItems();
+          viewerMode.classList.add('hidden');
+          editorMode.classList.remove('hidden');
+          editStatus.textContent = '再編集できます。';
+          window.scrollTo({top:0,behavior:'smooth'});
+        } catch (error) {
+          status.textContent = error.message || '編集データを展開できませんでした。';
+        } finally { editButton.disabled = false; }
+      };
+
+      const applyEditedPreview = async () => {
+        DATA = await buildEditedPayload();
+        document.getElementById('embeddedData').textContent = JSON.stringify(DATA).replace(/</g,'\\u003c').replace(/>/g,'\\u003e').replace(/&/g,'\\u0026');
+        resetViewer();
+        showViewer();
+      };
+
+      const downloadEdited = async () => {
+        DATA = await buildEditedPayload();
+        const clone = document.documentElement.cloneNode(true);
+        clone.querySelector('#embeddedData').textContent = JSON.stringify(DATA).replace(/</g,'\\u003c').replace(/>/g,'\\u003e').replace(/&/g,'\\u0026');
+        clone.querySelector('#editorMode').classList.add('hidden');
+        clone.querySelector('#viewerMode').classList.remove('hidden');
+        clone.querySelector('#itemList').replaceChildren();
+        clone.querySelector('#previewMount').className = 'loading';
+        clone.querySelector('#previewMount').textContent = '読み込んでいます。';
+        clone.querySelector('#codeOutput').textContent = '';
+        clone.querySelector('#editItemList').replaceChildren();
+        clone.querySelector('#editStatus').textContent = '';
+        const html = '<!DOCTYPE html>\\n' + clone.outerHTML;
+        const url = URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = (DATA.title || 'HTML要素一覧').replace(/[\\/:*?"<>|]+/g,'-') + '.html';
+        document.body.appendChild(anchor); anchor.click(); anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(url),1000);
+        editStatus.textContent = '編集後のHTMLを保存しました。';
+      };
+
+      editButton.addEventListener('click', showEditor);
+      editCancelButton.addEventListener('click', showViewer);
+      editPreviewButton.addEventListener('click', async () => { try { await applyEditedPreview(); } catch(error){ editStatus.textContent = error.message || 'プレビューできませんでした。'; } });
+      editSaveButton.addEventListener('click', async () => { try { await downloadEdited(); } catch(error){ editStatus.textContent = error.message || '保存できませんでした。'; } });
+      editFileInput.addEventListener('change', () => addEditorFiles(editFileInput.files));
+      ['dragenter','dragover'].forEach((type) => editDropzone.addEventListener(type,(event) => event.preventDefault()));
+      editDropzone.addEventListener('drop',(event) => { event.preventDefault(); addEditorFiles(event.dataTransfer.files); });
+
+      DATA.items.forEach((item, index) => renderItemCard(item, index));
+
+      downloadCssButton.addEventListener('click', async () => {
+        try {
+          const source = await decodeItem(selectedIndex);
+          const parts = splitSource(source);
+          if (!parts.css) throw new Error('CSSが見つかりませんでした。');
+          const cssFileName = safeCssFileName(DATA.items[selectedIndex].name || DATA.items[selectedIndex].fileName, selectedIndex);
+          downloadCssText(parts.css, cssFileName);
+          copyLinkedElementButton.classList.remove('is-hidden');
+          downloadCssButton.classList.add('is-done');
+          status.textContent = cssFileName + 'をダウンロードしました。同じ階層へ置いてください。';
+          window.setTimeout(() => downloadCssButton.classList.remove('is-done'), 1400);
+        } catch (error) {
+          status.textContent = error.message || 'CSSをダウンロードできませんでした。';
+        }
+      });
+
+      copyButtons.forEach((button) => {
+        button.addEventListener('click', async () => {
+          try {
+            const source = await decodeItem(selectedIndex);
+            const parts = splitSource(source);
+            const type = button.dataset.copyType;
+            const labels = { full:'コード', css:'CSS', element:'要素', javascript:'JavaScript', lazy:'ズボラ版要素', 'linked-element':'CSS読み込みを含めた要素' };
+            let text = '';
+            if (type === 'lazy') {
+              text = await buildLazySource(source);
+            } else if (type === 'linked-element') {
+              const cssFileName = safeCssFileName(DATA.items[selectedIndex].name || DATA.items[selectedIndex].fileName, selectedIndex);
+              const escapedCssFileName = cssFileName.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+              text = '<link rel="stylesheet" href="' + escapedCssFileName + '">\\n' + parts.element;
+            } else {
+              text = parts[type] ?? '';
+            }
+            if (!text) throw new Error(labels[type] + 'が見つかりませんでした。');
+            await writeClipboard(text);
+            copyButtons.forEach((item) => item.classList.remove('is-done'));
+            button.classList.add('is-done');
+            status.textContent = labels[type] + 'をコピーしました。';
+            window.setTimeout(() => button.classList.remove('is-done'), 1400);
+          } catch (error) {
+            status.textContent = error.message || 'コピーに失敗しました。';
+          }
+        });
+      });
+
+      renderSelection(0);
+    })();
+  ` + scriptClose + `
+</body>
+</html>`;
+      };
+
+      const downloadText = (text, fileName) => {
+        const blob = new Blob([text], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = fileName;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      };
+
+      const buildPayload = async () => {
+        const compressedItems = [];
+        for (let index = 0; index < state.items.length; index++) {
+          const item = state.items[index];
+          const data = await gzipToBase64(item.source);
+          compressedItems.push({ name: item.name.trim() || `項目${index + 1}`, fileName: item.fileName, data });
+          status.textContent = `${index + 1} / ${state.items.length}件を圧縮しました。`;
+        }
+        return { title: siteTitle.value.trim() || 'HTML要素一覧', description: siteDescription.value.trim() || '項目を選択すると、表示例とコードを確認できます。', items: compressedItems };
+      };
+
+      previewButton.addEventListener('click', async () => {
+        if (!state.items.length) return;
+        previewButton.disabled = downloadButton.disabled = clearButton.disabled = true;
+        status.textContent = `0 / ${state.items.length}件を圧縮しています。`;
+        try {
+          const payload = await buildPayload();
+          const url = URL.createObjectURL(new Blob([createOutputHtml(payload)], { type:'text/html;charset=utf-8' }));
+          const opened = window.open(url, '_blank', 'noopener');
+          if (!opened) throw new Error('プレビューを開けませんでした。ポップアップを許可してください。');
+          setTimeout(() => URL.revokeObjectURL(url), 60000);
+          status.textContent = 'プレビューを別タブで開きました。';
+        } catch (error) { status.textContent = error.message || 'プレビューに失敗しました。'; }
+        finally { previewButton.disabled = downloadButton.disabled = clearButton.disabled = state.items.length === 0; }
+      });
+
+      downloadButton.addEventListener('click', async () => {
+        if (!state.items.length) return;
+        previewButton.disabled = downloadButton.disabled = clearButton.disabled = true;
+        status.textContent = `0 / ${state.items.length}件を圧縮しています。`;
+        try {
+          const payload = await buildPayload();
+          downloadText(createOutputHtml(payload), `${safeFileName(payload.title)}.html`);
+          status.textContent = `生成しました。${payload.items.length}個のBase64データを個別に埋め込んでいます。`;
+        } catch (error) { status.textContent = error.message || '生成に失敗しました。'; }
+        finally { previewButton.disabled = downloadButton.disabled = clearButton.disabled = state.items.length === 0; }
+      });
+
+      clearButton.addEventListener('click', () => {
+        state.items.length = 0;
+        renderItems();
+        status.textContent = 'すべて削除しました。';
+      });
+
+      fileInput.addEventListener('change', () => addFiles(fileInput.files));
+      ['dragenter', 'dragover'].forEach((type) => dropzone.addEventListener(type, (event) => {
+        event.preventDefault();
+        dropzone.classList.add('is-dragging');
+      }));
+      ['dragleave', 'drop'].forEach((type) => dropzone.addEventListener(type, (event) => {
+        event.preventDefault();
+        dropzone.classList.remove('is-dragging');
+      }));
+      dropzone.addEventListener('drop', (event) => addFiles(event.dataTransfer.files));
+    })();
+  </script>
+</body>
+</html>
