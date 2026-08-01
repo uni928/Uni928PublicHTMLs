@@ -1,0 +1,43 @@
+<button class="sample-button" type="button">
+  ボタン部品
+</button>
+
+<p class="click-result" aria-live="polite"></p>
+
+<style>
+@layer component-button {
+  /* ボタン部品 */
+  .sample-button {
+    padding: 12px 18px;
+    border: 0;
+    border-radius: 10px;
+    background: #2563eb;
+    color: #fff;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .sample-button:hover {
+    background: #1d4ed8;
+  }
+
+  .click-result {
+    min-height: 1.5em;
+    margin-bottom: 0;
+  }
+}
+</style>
+
+<script>
+(() => {
+  const part = document.currentScript.closest("html-part");
+  const button = part.querySelector(".sample-button");
+  const result = part.querySelector(".click-result");
+
+  button.addEventListener("click", () => {
+    result.textContent = `クリックされました: ${new Date().toLocaleTimeString()}`;
+  });
+
+  console.log("button.html のスクリプトが実行されました");
+})();
+</script>

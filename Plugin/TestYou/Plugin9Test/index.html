@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HTML Part Plugin Demo</title>
+
+  <style>
+    @layer base, demo;
+
+    /* 基本表示 */
+    @layer base {
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 32px;
+        font-family: system-ui, sans-serif;
+        background: #f5f7fb;
+        color: #172033;
+      }
+    }
+
+    /* デモページ固有 */
+    @layer demo {
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+      }
+    }
+  </style>
+
+  <script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin9.js"></script>
+</head>
+<body>
+  <main>
+    <h1>HTML部品の連鎖読み込み</h1>
+    <html-part src="./panel/panel.html"></html-part>
+  </main>
+</body>
+</html>

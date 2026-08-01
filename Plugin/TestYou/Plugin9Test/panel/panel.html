@@ -1,0 +1,27 @@
+<section class="sample-panel">
+  <h2>パネル部品</h2>
+  <p>このパネル自身が、さらに下の階層にあるボタン部品を読み込みます。</p>
+
+  <html-part src="./button/button.html"></html-part>
+</section>
+
+<style>
+@layer component-panel {
+  /* パネル部品 */
+  .sample-panel {
+    padding: 24px;
+    border: 1px solid #d8deea;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 12px 30px rgb(21 32 51 / 10%);
+  }
+}
+</style>
+
+<script>
+(() => {
+  const panel = document.currentScript.closest("html-part");
+  panel.querySelector(".sample-panel").dataset.initialized = "true";
+  console.log("panel.html のスクリプトが実行されました");
+})();
+</script>
