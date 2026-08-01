@@ -756,7 +756,7 @@
           codeOutput.value = source;
           const iframe = document.createElement('iframe');
           iframe.className = 'preview-frame';
-          iframe.setAttribute('sandbox', 'allow-forms allow-modals allow-popups allow-scripts allow-same-origin');
+          iframe.setAttribute('sandbox', 'allow-forms');
           iframe.srcdoc = asPreviewDocument(source);
           previewMount.className = '';
           previewMount.replaceChildren(iframe);
