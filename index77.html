@@ -4356,6 +4356,56 @@ background:
           transition: none;
         }
       }
+
+      /* スマホ表示：細すぎる文字を補正し、可読性を安定させます。 */
+      @media (max-width: 680px) {
+        body {
+          -webkit-text-size-adjust: 100%;
+          text-size-adjust: 100%;
+          font-weight: 500;
+          text-rendering: auto;
+          -webkit-font-smoothing: auto;
+          -moz-osx-font-smoothing: auto;
+        }
+
+        .hero h1,
+        .card h2,
+        .copy-area h2 {
+          font-weight: 700;
+        }
+
+        .hero p,
+        .info,
+        .card p,
+        .copy-area p,
+        pre,
+        label,
+        input {
+          font-weight: 500;
+        }
+
+        .btn,
+        .quick-copy-panel__toggle,
+        .quick-copy-panel__button {
+          font-weight: 700;
+          font-synthesis: weight style;
+          text-rendering: auto;
+          -webkit-font-smoothing: auto;
+          -moz-osx-font-smoothing: auto;
+        }
+
+        .btn-sm {
+          font-size: 13px;
+        }
+
+        .btn-md {
+          font-size: 14px;
+        }
+
+        .btn-lg {
+          font-size: 16px;
+        }
+      }
     }
 
 </style>
