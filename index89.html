@@ -130,7 +130,7 @@
 
       .panel-header {
         display: flex;
-        align-items: center;
+        align-items: ;
         justify-content: space-between;
         gap: 12px;
         min-height: 64px;
@@ -684,7 +684,7 @@
             <option value="center">中央寄せ</option>
             <option value="right">右寄せ</option>
           `;
-          select.value = previousValues[index] || "left";
+          select.value = previousValues[index] || "center";
 
           row.append(label, select);
           templateAlignments.append(row);
