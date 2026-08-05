@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Markdown形式の表をPNG画像に変換し、元のMarkdownをPNGの透明度へ埋め込んで再編集できるツールです。">
+  <meta name="description" content="Markdown形式の表をPNG画像に変換し、元のMarkdownと画像設定をPNGのRGBA各1bitへ埋め込んで再編集できるツールです。">
   <title>Markdown表を画像化・再編集</title>
   <style>
     @layer base, layout, components, preview, responsive;
@@ -369,7 +369,7 @@
       <p class="eyebrow">Markdown table to PNG</p>
       <h1>Markdownの表を、再編集できる画像へ</h1>
       <p class="lead">
-        Markdown形式の表をnoteなどへ貼り付けやすいPNG画像に変換します。元のMarkdownは、表の外側にある白い余白の各ピクセルの透明度へ埋め込みます。
+        Markdown形式の表をnoteなどへ貼り付けやすいPNG画像に変換します。元のMarkdownと画像設定は、表の外側にある白い余白のRGBA各チャンネルの最下位1bitへ埋め込みます。
       </p>
     </section>
 
@@ -459,10 +459,10 @@
     <details class="notes">
       <summary>埋め込み方式と注意点</summary>
       <ul>
-        <li>PNGの上側余白から順に、1ピクセルにつき1バイトを透明度（Alpha 0〜255）へ保存します。</li>
+        <li>PNGの上側余白から順に、1ピクセルにつきR・G・B・Aへ各1bit、合計4bitを保存します。</li>
         <li>識別文字、データ長、簡易チェック値、UTF-8のMarkdown本文と画像設定を格納します。</li>
         <li>RGBは白のままなので、白背景では通常の余白に見えます。</li>
-        <li>note等へ投稿した後の画像は、変換や透過削除で復元できなくなる場合があります。元のPNGを保管してください。</li>
+        <li>note等へ投稿した後の画像は、再圧縮や色変換で復元できなくなる場合があります。元のPNGを保管してください。</li>
         <li>スクリーンショット、JPEG変換、画像編集、最適化サービスを通すと、埋め込み情報は失われます。</li>
       </ul>
     </details>
@@ -473,8 +473,9 @@
       "use strict";
 
       const MAGIC_V1 = new Uint8Array([77, 68, 84, 66, 76, 49, 0, 1]); // MDTBL1: Markdownのみ
-      const MAGIC_V2 = new Uint8Array([77, 68, 84, 66, 76, 50, 0, 2]); // MDTBL2: Markdown + 画像設定
-      const HEADER_SIZE = MAGIC_V2.length + 8;
+      const MAGIC_V2 = new Uint8Array([77, 68, 84, 66, 76, 50, 0, 2]); // MDTBL2: Alpha 8bit・Markdown + 画像設定
+      const MAGIC_V3 = new Uint8Array([77, 68, 84, 66, 76, 51, 0, 3]); // MDTBL3: RGBA各1bit・Markdown + 画像設定
+      const HEADER_SIZE = MAGIC_V3.length + 8;
       const encoder = new TextEncoder();
       const decoder = new TextDecoder("utf-8", { fatal: true });
 
@@ -736,15 +737,15 @@
 
       function makePayload(markdown) {
         const bodyObject = {
-          formatVersion: 2,
+          formatVersion: 3,
           markdown,
           settings: collectSettings()
         };
         const body = encoder.encode(JSON.stringify(bodyObject));
         const payload = new Uint8Array(HEADER_SIZE + body.length);
-        payload.set(MAGIC_V2, 0);
-        writeUint32(payload, MAGIC_V2.length, body.length);
-        writeUint32(payload, MAGIC_V2.length + 4, checksum(body));
+        payload.set(MAGIC_V3, 0);
+        writeUint32(payload, MAGIC_V3.length, body.length);
+        writeUint32(payload, MAGIC_V3.length + 4, checksum(body));
         payload.set(body, HEADER_SIZE);
         return payload;
       }
@@ -895,7 +896,8 @@
         const columnWidths = estimateColumnWidths(measure, table, contentMaxWidth, cellPadding, fontSize);
         const tableWidth = Math.ceil(columnWidths.reduce((a, b) => a + b, 0));
         const logicalWidth = Math.ceil(tableWidth + outerPadding * 2);
-        const metadataRows = Math.ceil(payload.length / Math.max(1, logicalWidth * scale * scale));
+        const requiredPixels = payload.length * 2; // RGBA各1bitで1ピクセル4bit＝1バイトにつき2ピクセル
+        const metadataRows = Math.ceil(requiredPixels / Math.max(1, logicalWidth * scale * scale));
         const metadataHeight = Math.max(1, metadataRows);
         const visibleTopPadding = outerPadding;
 
@@ -973,20 +975,23 @@
         context.lineWidth = 1.5;
         context.strokeRect(startX + 0.75, metadataHeight + visibleTopPadding + 0.75, tableWidth - 1.5, tableHeight - 1.5);
 
-        // 透明度へMarkdownを1ピクセル1バイトで格納する。
+        // 上側の白い余白へ、R・G・B・Aの最下位1bitを使って4bit/ピクセルで格納する。
+        // 各チャンネルは254または255になるため、見た目はほぼ完全な白を維持できる。
         const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-        for (let index = 0; index < payload.length; index += 1) {
-          const pixelIndex = index * 4;
-          imageData.data[pixelIndex] = 255;
-          imageData.data[pixelIndex + 1] = 255;
-          imageData.data[pixelIndex + 2] = 255;
-          imageData.data[pixelIndex + 3] = payload[index];
+        let bitIndex = 0;
+        for (const byte of payload) {
+          for (let shift = 7; shift >= 0; shift -= 1) {
+            const channelIndex = bitIndex;
+            const bit = (byte >>> shift) & 1;
+            imageData.data[channelIndex] = (imageData.data[channelIndex] & 0xfe) | bit;
+            bitIndex += 1;
+          }
         }
         context.putImageData(imageData, 0, 0);
         context.setTransform(1, 0, 0, 1, 0, 0);
 
         sizeMeta.textContent = `画像: ${canvas.width.toLocaleString("ja-JP")} × ${canvas.height.toLocaleString("ja-JP")}px`;
-        capacityMeta.textContent = `埋め込み: ${payload.length.toLocaleString("ja-JP")}バイト（上側 ${metadataHeight}px相当）`;
+        capacityMeta.textContent = `埋め込み: ${payload.length.toLocaleString("ja-JP")}バイト（RGBA各1bit・上側 ${metadataHeight}px相当）`;
       }
 
       function canvasToBlob() {
@@ -1038,6 +1043,57 @@
       function decodeFromImageData(imageData, width, height) {
         const data = imageData.data;
         const maxPixels = width * height;
+
+        const decodeRgbaLsbBytes = byteCount => {
+          const requiredChannels = byteCount * 8;
+          if (requiredChannels > data.length) throw new Error("埋め込み情報が見つかりません。");
+          const bytes = new Uint8Array(byteCount);
+          let channelIndex = 0;
+          for (let byteIndex = 0; byteIndex < byteCount; byteIndex += 1) {
+            let value = 0;
+            for (let bit = 0; bit < 8; bit += 1) {
+              value = (value << 1) | (data[channelIndex] & 1);
+              channelIndex += 1;
+            }
+            bytes[byteIndex] = value;
+          }
+          return bytes;
+        };
+
+        const decodeV3 = () => {
+          if (maxPixels < HEADER_SIZE * 2) throw new Error("埋め込み情報が見つかりません。");
+          const header = decodeRgbaLsbBytes(HEADER_SIZE);
+          if (!matchesMagic(header, MAGIC_V3)) return null;
+
+          const bodyLength = readUint32(header, MAGIC_V3.length);
+          const expectedChecksum = readUint32(header, MAGIC_V3.length + 4);
+          const totalLength = HEADER_SIZE + bodyLength;
+          if (bodyLength > 20_000_000 || totalLength * 2 > maxPixels) {
+            throw new Error("埋め込みデータの長さが不正です。");
+          }
+
+          const payload = decodeRgbaLsbBytes(totalLength);
+          const body = payload.slice(HEADER_SIZE);
+          if (checksum(body) !== expectedChecksum) {
+            throw new Error("埋め込み情報が破損しています。画像変換や編集が行われた可能性があります。");
+          }
+
+          try {
+            const parsed = JSON.parse(decoder.decode(body));
+            if (!parsed || typeof parsed.markdown !== "string") throw new Error();
+            return {
+              markdown: parsed.markdown,
+              settings: parsed.settings && typeof parsed.settings === "object" ? parsed.settings : null
+            };
+          } catch {
+            throw new Error("PNG内の再編集情報を読み取れませんでした。");
+          }
+        };
+
+        const v3 = decodeV3();
+        if (v3) return v3;
+
+        // 旧形式（V1/V2）はAlpha値へ1バイトずつ保存していたため、互換読込を残す。
         const getAlpha = index => data[index * 4 + 3];
         if (maxPixels < HEADER_SIZE) throw new Error("埋め込み情報が見つかりません。");
 
@@ -1047,7 +1103,7 @@
         const isV2 = matchesMagic(header, MAGIC_V2);
         const isV1 = matchesMagic(header, MAGIC_V1);
         if (!isV2 && !isV1) {
-          throw new Error("このサイトで保存した元のPNGではないか、透過情報が失われています。");
+          throw new Error("このサイトで保存した元のPNGではないか、埋め込み情報が失われています。");
         }
 
         const magicLength = isV2 ? MAGIC_V2.length : MAGIC_V1.length;
