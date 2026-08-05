@@ -130,7 +130,7 @@
 
       .panel-header {
         display: flex;
-        align-items: ;
+        align-items: center;
         justify-content: space-between;
         gap: 12px;
         min-height: 64px;
@@ -705,14 +705,17 @@
         const rowCount = clamp(templateRows.value, 2, 50);
         const columnCount = clamp(templateColumns.value, 1, 20);
         const alignments = Array.from(templateAlignments.querySelectorAll("select"), select => select.value);
-        const textRow = `| ${Array(columnCount).fill("テキスト").join(" | ")} |`;
+        const headerRow = `| ${Array.from({ length: columnCount }, (_, index) => `項目${index + 1}`).join(" | ")} |`;
         const separatorCells = Array.from({ length: columnCount }, (_, index) => {
           if (alignments[index] === "center") return ":---:";
           if (alignments[index] === "right") return "---:";
           return ":---";
         });
         const separatorRow = `| ${separatorCells.join(" | ")} |`;
-        return [textRow, separatorRow, ...Array(rowCount - 1).fill(textRow)].join("\n");
+        const bodyRows = Array.from({ length: rowCount - 1 }, (_, rowIndex) =>
+          `| ${Array.from({ length: columnCount }, (_, columnIndex) => `要素${rowIndex + 1}-${columnIndex + 1}`).join(" | ")} |`
+        );
+        return [headerRow, separatorRow, ...bodyRows].join("\n");
       }
 
       function insertTemplate() {
