@@ -289,6 +289,45 @@
         color: var(--accent-dark);
       }
 
+      /* components: ひな形挿入パネル */
+      .template-panel {
+        display: none;
+        width: 100%;
+        margin-top: 2px;
+        padding: 16px;
+        border: 1px solid #c8d9ff;
+        border-radius: 14px;
+        background: #f8fbff;
+      }
+
+      .template-panel.show { display: block; }
+
+      .template-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 180px));
+        gap: 12px;
+      }
+
+      .template-alignments {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .template-alignment-row {
+        display: grid;
+        grid-template-columns: minmax(72px, auto) minmax(0, 220px);
+        align-items: center;
+        gap: 10px;
+      }
+
+      .template-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
       .notes {
         margin-top: 18px;
         padding: 18px 20px;
@@ -347,12 +386,15 @@
         .toolbar { position: sticky; bottom: 8px; z-index: 10; }
         .btn { flex: 1 1 145px; }
         .btn-primary { flex-basis: 100%; order: -1; }
+        .template-grid { grid-template-columns: 1fr 1fr; }
       }
 
       @media (max-width: 520px) {
         .settings-grid { grid-template-columns: 1fr; }
         .panel-header { align-items: flex-start; flex-direction: column; gap: 3px; }
         .canvas-stage { padding: 10px; }
+        .template-grid { grid-template-columns: 1fr; }
+        .template-alignment-row { grid-template-columns: 1fr; gap: 4px; }
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -378,7 +420,24 @@
       <button id="copyImageButton" class="btn btn-soft" type="button">画像をコピー</button>
       <label class="btn file-button" for="imageInput">PNGを読み込んで再編集<input id="imageInput" type="file" accept="image/png"></label>
       <button id="sampleButton" class="btn" type="button">サンプルを入力</button>
-      <button id="clearButton" class="btn btn-danger" type="button">入力を消去</button>
+      <button id="templateButton" class="btn" type="button" aria-expanded="false" aria-controls="templatePanel">ひな形挿入</button>
+      <div id="templatePanel" class="template-panel" aria-hidden="true">
+        <div class="template-grid">
+          <div class="field">
+            <label for="templateRows">行数（見出しを含む）</label>
+            <input id="templateRows" type="number" min="2" max="50" value="4">
+          </div>
+          <div class="field">
+            <label for="templateColumns">列数</label>
+            <input id="templateColumns" type="number" min="1" max="20" value="3">
+          </div>
+        </div>
+        <div id="templateAlignments" class="template-alignments" aria-label="各列の文字寄せ"></div>
+        <div class="template-actions">
+          <button id="insertTemplateButton" class="btn btn-soft" type="button">ひな形を挿入</button>
+          <button id="closeTemplateButton" class="btn" type="button">閉じる</button>
+        </div>
+      </div>
     </section>
 
     <div id="status" class="status" role="status" aria-live="polite"></div>
@@ -487,6 +546,11 @@
       const capacityMeta = document.getElementById("capacityMeta");
       const imageInput = document.getElementById("imageInput");
       const dropZone = document.getElementById("dropZone");
+      const templateButton = document.getElementById("templateButton");
+      const templatePanel = document.getElementById("templatePanel");
+      const templateRows = document.getElementById("templateRows");
+      const templateColumns = document.getElementById("templateColumns");
+      const templateAlignments = document.getElementById("templateAlignments");
 
       const settings = {
         scale: document.getElementById("scaleInput"),
@@ -599,6 +663,66 @@
 | 見出し | **太字**に対応 | 見やすい |
 | 数値 | 1,250円 | 右寄せ |
 | 補足 | 改行は \\n で表現 | 画像として貼付 |`;
+
+      function updateTemplateAlignments() {
+        const columnCount = clamp(templateColumns.value, 1, 20);
+        const previousValues = Array.from(templateAlignments.querySelectorAll("select")).map(select => select.value);
+        templateAlignments.replaceChildren();
+
+        for (let index = 0; index < columnCount; index += 1) {
+          const row = document.createElement("div");
+          row.className = "template-alignment-row";
+
+          const label = document.createElement("label");
+          label.htmlFor = `templateAlignment${index}`;
+          label.textContent = `${index + 1}列目`;
+
+          const select = document.createElement("select");
+          select.id = `templateAlignment${index}`;
+          select.innerHTML = `
+            <option value="left">左寄せ</option>
+            <option value="center">中央寄せ</option>
+            <option value="right">右寄せ</option>
+          `;
+          select.value = previousValues[index] || "left";
+
+          row.append(label, select);
+          templateAlignments.append(row);
+        }
+      }
+
+      function setTemplatePanel(open) {
+        templatePanel.classList.toggle("show", open);
+        templatePanel.setAttribute("aria-hidden", String(!open));
+        templateButton.setAttribute("aria-expanded", String(open));
+        if (open) {
+          updateTemplateAlignments();
+          templateRows.focus();
+        }
+      }
+
+      function makeTemplateMarkdown() {
+        const rowCount = clamp(templateRows.value, 2, 50);
+        const columnCount = clamp(templateColumns.value, 1, 20);
+        const alignments = Array.from(templateAlignments.querySelectorAll("select"), select => select.value);
+        const textRow = `| ${Array(columnCount).fill("テキスト").join(" | ")} |`;
+        const separatorCells = Array.from({ length: columnCount }, (_, index) => {
+          if (alignments[index] === "center") return ":---:";
+          if (alignments[index] === "right") return "---:";
+          return ":---";
+        });
+        const separatorRow = `| ${separatorCells.join(" | ")} |`;
+        return [textRow, separatorRow, ...Array(rowCount - 1).fill(textRow)].join("\n");
+      }
+
+      function insertTemplate() {
+        updateTemplateAlignments();
+        input.value = makeTemplateMarkdown();
+        render();
+        input.focus();
+        setTemplatePanel(false);
+        showStatus("指定した条件の表ひな形を挿入しました。", "success");
+      }
 
       function showStatus(message, type = "info") {
         status.textContent = message;
@@ -1171,12 +1295,12 @@
         input.focus();
         showStatus("サンプル表を入力しました。", "success");
       });
-      document.getElementById("clearButton").addEventListener("click", () => {
-        input.value = "";
-        render();
-        input.focus();
-        showStatus("入力内容を消去しました。", "success");
+      templateButton.addEventListener("click", () => {
+        setTemplatePanel(!templatePanel.classList.contains("show"));
       });
+      templateColumns.addEventListener("input", updateTemplateAlignments);
+      document.getElementById("insertTemplateButton").addEventListener("click", insertTemplate);
+      document.getElementById("closeTemplateButton").addEventListener("click", () => setTemplatePanel(false));
       document.getElementById("resetSettingsButton").addEventListener("click", async () => {
         applySettings(BUILT_IN_DEFAULT_SETTINGS);
         render();
@@ -1222,6 +1346,7 @@
         render();
       }
 
+      updateTemplateAlignments();
       initialize();
     })();
   </script>
