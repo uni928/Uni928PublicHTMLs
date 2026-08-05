@@ -328,6 +328,46 @@
         margin-top: 14px;
       }
 
+      /* components: 行・列の並べ替えパネル */
+      .reorder-list {
+        display: grid;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .reorder-item {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 10px;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+      }
+
+      .reorder-label {
+        min-width: 0;
+        overflow: hidden;
+        font-size: 0.86rem;
+        font-weight: 700;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .reorder-controls {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 6px;
+      }
+
+      .btn-compact {
+        min-height: 36px;
+        padding: 0 10px;
+        font-size: 0.82rem;
+      }
+
       .notes {
         margin-top: 18px;
         padding: 18px 20px;
@@ -422,6 +462,8 @@
       <button id="sampleButton" class="btn" type="button">サンプルを入力</button>
       <button id="templateButton" class="btn" type="button" aria-expanded="false" aria-controls="templatePanel">ひな形挿入</button>
       <button id="alignmentButton" class="btn" type="button" aria-expanded="false" aria-controls="alignmentPanel">列の配置を変更</button>
+      <button id="rowReorderButton" class="btn" type="button" aria-expanded="false" aria-controls="rowReorderPanel">行を並べ替え</button>
+      <button id="columnReorderButton" class="btn" type="button" aria-expanded="false" aria-controls="columnReorderPanel">列を並べ替え</button>
       <div id="templatePanel" class="template-panel" aria-hidden="true">
         <div class="template-grid">
           <div class="field">
@@ -445,6 +487,20 @@
         <div class="template-actions">
           <button id="applyAlignmentButton" class="btn btn-soft" type="button">列の配置を変更</button>
           <button id="closeAlignmentButton" class="btn" type="button">閉じる</button>
+        </div>
+      </div>
+      <div id="rowReorderPanel" class="template-panel" aria-hidden="true">
+        <p class="panel-note">見出し行を含む各行を上下へ移動できます。削除と、選択行の直後への追加も行えます。</p>
+        <div id="rowReorderList" class="reorder-list" aria-label="行の並べ替え"></div>
+        <div class="template-actions">
+          <button id="closeRowReorderButton" class="btn" type="button">閉じる</button>
+        </div>
+      </div>
+      <div id="columnReorderPanel" class="template-panel" aria-hidden="true">
+        <p class="panel-note">各列を左右へ移動できます。削除と、選択列の右側への追加も行えます。</p>
+        <div id="columnReorderList" class="reorder-list" aria-label="列の並べ替え"></div>
+        <div class="template-actions">
+          <button id="closeColumnReorderButton" class="btn" type="button">閉じる</button>
         </div>
       </div>
     </section>
@@ -563,6 +619,12 @@
       const alignmentButton = document.getElementById("alignmentButton");
       const alignmentPanel = document.getElementById("alignmentPanel");
       const alignmentControls = document.getElementById("alignmentControls");
+      const rowReorderButton = document.getElementById("rowReorderButton");
+      const rowReorderPanel = document.getElementById("rowReorderPanel");
+      const rowReorderList = document.getElementById("rowReorderList");
+      const columnReorderButton = document.getElementById("columnReorderButton");
+      const columnReorderPanel = document.getElementById("columnReorderPanel");
+      const columnReorderList = document.getElementById("columnReorderList");
 
       const settings = {
         scale: document.getElementById("scaleInput"),
@@ -696,7 +758,7 @@
             <option value="center">中央寄せ</option>
             <option value="right">右寄せ</option>
           `;
-          select.value = previousValues[index] || "left";
+          select.value = previousValues[index] || "center";
 
           row.append(label, select);
           templateAlignments.append(row);
@@ -782,7 +844,7 @@
           alignmentControls.replaceChildren(
             ...tableSource.alignments.map((value, index) => makeAlignmentSelect(index, value))
           );
-          setTemplatePanel(false);
+          closeEditPanels("alignment");
         }
         alignmentPanel.classList.toggle("show", open);
         alignmentPanel.setAttribute("aria-hidden", String(!open));
@@ -813,6 +875,227 @@
         input.focus();
         setAlignmentPanel(false);
         showStatus("文章はそのままに、列の配置だけを変更しました。", "success");
+      }
+
+      function alignmentMarker(value) {
+        if (value === "center") return ":---:";
+        if (value === "right") return "---:";
+        return ":---";
+      }
+
+      function parseEditableTable(markdown) {
+        const lines = String(markdown || "").replace(/\r\n?/g, "\n").split("\n");
+        for (let index = 0; index < lines.length - 1; index += 1) {
+          if (!lines[index].includes("|") || !isSeparator(lines[index + 1])) continue;
+          const tableLines = [lines[index]];
+          let cursor = index + 2;
+          while (cursor < lines.length && lines[cursor].trim() && lines[cursor].includes("|")) {
+            tableLines.push(lines[cursor]);
+            cursor += 1;
+          }
+          const rows = tableLines.map(splitTableRow);
+          const columnCount = Math.max(
+            splitTableRow(lines[index + 1]).length,
+            ...rows.map(row => row.length)
+          );
+          return {
+            lines,
+            startIndex: index,
+            endIndex: cursor,
+            rows: rows.map(row => Array.from({ length: columnCount }, (_, columnIndex) => row[columnIndex] || "")),
+            alignments: Array.from(
+              { length: columnCount },
+              (_, columnIndex) => parseAlignment(splitTableRow(lines[index + 1])[columnIndex])
+            )
+          };
+        }
+        return null;
+      }
+
+      function writeEditableTable(table) {
+        const markdownRows = table.rows.map(row => `| ${row.join(" | ")} |`);
+        const separator = `| ${table.alignments.map(alignmentMarker).join(" | ")} |`;
+        table.lines.splice(
+          table.startIndex,
+          table.endIndex - table.startIndex,
+          markdownRows[0],
+          separator,
+          ...markdownRows.slice(1)
+        );
+        input.value = table.lines.join("\n");
+        render();
+      }
+
+      function closeEditPanels(except = "") {
+        if (except !== "template") setTemplatePanel(false);
+        if (except !== "alignment") setAlignmentPanel(false);
+        if (except !== "row") setRowReorderPanel(false);
+        if (except !== "column") setColumnReorderPanel(false);
+      }
+
+      function makeCompactButton(label, title, handler, disabled = false) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "btn btn-compact";
+        button.textContent = label;
+        button.title = title;
+        button.disabled = disabled;
+        button.addEventListener("click", handler);
+        return button;
+      }
+
+      function summarizeRow(row, fallback) {
+        const text = row.map(cell => cell.trim()).filter(Boolean).join(" / ");
+        return text || fallback;
+      }
+
+      function renderRowReorderList() {
+        const table = parseEditableTable(input.value);
+        if (!table) {
+          rowReorderList.replaceChildren();
+          showStatus("並べ替えできるMarkdown形式の表が見つかりません。", "error");
+          return false;
+        }
+        rowReorderList.replaceChildren();
+        table.rows.forEach((row, index) => {
+          const item = document.createElement("div");
+          item.className = "reorder-item";
+          const label = document.createElement("span");
+          label.className = "reorder-label";
+          label.textContent = `${index === 0 ? "見出し" : `${index}行目`}: ${summarizeRow(row, "空の行")}`;
+          label.title = label.textContent;
+          const controls = document.createElement("div");
+          controls.className = "reorder-controls";
+          controls.append(
+            makeCompactButton("↑", "上へ移動", () => moveRow(index, -1), index === 0),
+            makeCompactButton("↓", "下へ移動", () => moveRow(index, 1), index === table.rows.length - 1),
+            makeCompactButton("下に追加", "この行の直後へ空の行を追加", () => addRowAfter(index)),
+            makeCompactButton("削除", "この行を削除", () => deleteRow(index), table.rows.length <= 2)
+          );
+          item.append(label, controls);
+          rowReorderList.append(item);
+        });
+        return true;
+      }
+
+      function setRowReorderPanel(open) {
+        if (open) {
+          closeEditPanels("row");
+          if (!renderRowReorderList()) return;
+        }
+        rowReorderPanel.classList.toggle("show", open);
+        rowReorderPanel.setAttribute("aria-hidden", String(!open));
+        rowReorderButton.setAttribute("aria-expanded", String(open));
+        if (open) rowReorderList.querySelector("button:not(:disabled)")?.focus();
+      }
+
+      function moveRow(index, direction) {
+        const table = parseEditableTable(input.value);
+        if (!table) return;
+        const target = index + direction;
+        if (target < 0 || target >= table.rows.length) return;
+        [table.rows[index], table.rows[target]] = [table.rows[target], table.rows[index]];
+        writeEditableTable(table);
+        renderRowReorderList();
+      }
+
+      function addRowAfter(index) {
+        const table = parseEditableTable(input.value);
+        if (!table) return;
+        const nextNumber = Math.max(1, table.rows.length);
+        const row = Array.from({ length: table.alignments.length }, (_, columnIndex) => `要素${nextNumber}-${columnIndex + 1}`);
+        table.rows.splice(index + 1, 0, row);
+        writeEditableTable(table);
+        renderRowReorderList();
+      }
+
+      function deleteRow(index) {
+        const table = parseEditableTable(input.value);
+        if (!table || table.rows.length <= 2) {
+          showStatus("表には見出し行と1行以上の要素が必要です。", "error");
+          return;
+        }
+        table.rows.splice(index, 1);
+        writeEditableTable(table);
+        renderRowReorderList();
+      }
+
+      function renderColumnReorderList() {
+        const table = parseEditableTable(input.value);
+        if (!table) {
+          columnReorderList.replaceChildren();
+          showStatus("並べ替えできるMarkdown形式の表が見つかりません。", "error");
+          return false;
+        }
+        columnReorderList.replaceChildren();
+        table.alignments.forEach((alignment, index) => {
+          const item = document.createElement("div");
+          item.className = "reorder-item";
+          const label = document.createElement("span");
+          label.className = "reorder-label";
+          const header = table.rows[0][index]?.trim() || `項目${index + 1}`;
+          label.textContent = `${index + 1}列目: ${header}`;
+          label.title = label.textContent;
+          const controls = document.createElement("div");
+          controls.className = "reorder-controls";
+          controls.append(
+            makeCompactButton("←", "左へ移動", () => moveColumn(index, -1), index === 0),
+            makeCompactButton("→", "右へ移動", () => moveColumn(index, 1), index === table.alignments.length - 1),
+            makeCompactButton("右に追加", "この列の右側へ列を追加", () => addColumnAfter(index)),
+            makeCompactButton("削除", "この列を削除", () => deleteColumn(index), table.alignments.length <= 1)
+          );
+          item.append(label, controls);
+          columnReorderList.append(item);
+        });
+        return true;
+      }
+
+      function setColumnReorderPanel(open) {
+        if (open) {
+          closeEditPanels("column");
+          if (!renderColumnReorderList()) return;
+        }
+        columnReorderPanel.classList.toggle("show", open);
+        columnReorderPanel.setAttribute("aria-hidden", String(!open));
+        columnReorderButton.setAttribute("aria-expanded", String(open));
+        if (open) columnReorderList.querySelector("button:not(:disabled)")?.focus();
+      }
+
+      function moveColumn(index, direction) {
+        const table = parseEditableTable(input.value);
+        if (!table) return;
+        const target = index + direction;
+        if (target < 0 || target >= table.alignments.length) return;
+        table.rows.forEach(row => {
+          [row[index], row[target]] = [row[target], row[index]];
+        });
+        [table.alignments[index], table.alignments[target]] = [table.alignments[target], table.alignments[index]];
+        writeEditableTable(table);
+        renderColumnReorderList();
+      }
+
+      function addColumnAfter(index) {
+        const table = parseEditableTable(input.value);
+        if (!table) return;
+        const newColumnIndex = index + 1;
+        table.rows.forEach((row, rowIndex) => {
+          row.splice(newColumnIndex, 0, rowIndex === 0 ? `項目${newColumnIndex + 1}` : `要素${rowIndex}-${newColumnIndex + 1}`);
+        });
+        table.alignments.splice(newColumnIndex, 0, "center");
+        writeEditableTable(table);
+        renderColumnReorderList();
+      }
+
+      function deleteColumn(index) {
+        const table = parseEditableTable(input.value);
+        if (!table || table.alignments.length <= 1) {
+          showStatus("表には1列以上必要です。", "error");
+          return;
+        }
+        table.rows.forEach(row => row.splice(index, 1));
+        table.alignments.splice(index, 1);
+        writeEditableTable(table);
+        renderColumnReorderList();
       }
 
       function showStatus(message, type = "info") {
@@ -1388,17 +1671,25 @@
       });
       templateButton.addEventListener("click", () => {
         const open = !templatePanel.classList.contains("show");
-        setAlignmentPanel(false);
+        if (open) closeEditPanels("template");
         setTemplatePanel(open);
       });
       alignmentButton.addEventListener("click", () => {
         setAlignmentPanel(!alignmentPanel.classList.contains("show"));
+      });
+      rowReorderButton.addEventListener("click", () => {
+        setRowReorderPanel(!rowReorderPanel.classList.contains("show"));
+      });
+      columnReorderButton.addEventListener("click", () => {
+        setColumnReorderPanel(!columnReorderPanel.classList.contains("show"));
       });
       templateColumns.addEventListener("input", updateTemplateAlignments);
       document.getElementById("insertTemplateButton").addEventListener("click", insertTemplate);
       document.getElementById("closeTemplateButton").addEventListener("click", () => setTemplatePanel(false));
       document.getElementById("applyAlignmentButton").addEventListener("click", applyColumnAlignments);
       document.getElementById("closeAlignmentButton").addEventListener("click", () => setAlignmentPanel(false));
+      document.getElementById("closeRowReorderButton").addEventListener("click", () => setRowReorderPanel(false));
+      document.getElementById("closeColumnReorderButton").addEventListener("click", () => setColumnReorderPanel(false));
       document.getElementById("resetSettingsButton").addEventListener("click", async () => {
         applySettings(BUILT_IN_DEFAULT_SETTINGS);
         render();
