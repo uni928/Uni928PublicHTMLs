@@ -421,6 +421,7 @@
       <label class="btn file-button" for="imageInput">PNGを読み込んで再編集<input id="imageInput" type="file" accept="image/png"></label>
       <button id="sampleButton" class="btn" type="button">サンプルを入力</button>
       <button id="templateButton" class="btn" type="button" aria-expanded="false" aria-controls="templatePanel">ひな形挿入</button>
+      <button id="alignmentButton" class="btn" type="button" aria-expanded="false" aria-controls="alignmentPanel">列の配置を変更</button>
       <div id="templatePanel" class="template-panel" aria-hidden="true">
         <div class="template-grid">
           <div class="field">
@@ -436,6 +437,14 @@
         <div class="template-actions">
           <button id="insertTemplateButton" class="btn btn-soft" type="button">ひな形を挿入</button>
           <button id="closeTemplateButton" class="btn" type="button">閉じる</button>
+        </div>
+      </div>
+      <div id="alignmentPanel" class="template-panel" aria-hidden="true">
+        <p class="panel-note">現在の表を読み取り、文章や行数は変えずに各列の配置だけを変更します。</p>
+        <div id="alignmentControls" class="template-alignments" aria-label="各列の配置"></div>
+        <div class="template-actions">
+          <button id="applyAlignmentButton" class="btn btn-soft" type="button">列の配置を変更</button>
+          <button id="closeAlignmentButton" class="btn" type="button">閉じる</button>
         </div>
       </div>
     </section>
@@ -551,6 +560,9 @@
       const templateRows = document.getElementById("templateRows");
       const templateColumns = document.getElementById("templateColumns");
       const templateAlignments = document.getElementById("templateAlignments");
+      const alignmentButton = document.getElementById("alignmentButton");
+      const alignmentPanel = document.getElementById("alignmentPanel");
+      const alignmentControls = document.getElementById("alignmentControls");
 
       const settings = {
         scale: document.getElementById("scaleInput"),
@@ -684,7 +696,7 @@
             <option value="center">中央寄せ</option>
             <option value="right">右寄せ</option>
           `;
-          select.value = previousValues[index] || "center";
+          select.value = previousValues[index] || "left";
 
           row.append(label, select);
           templateAlignments.append(row);
@@ -725,6 +737,82 @@
         input.focus();
         setTemplatePanel(false);
         showStatus("指定した条件の表ひな形を挿入しました。", "success");
+      }
+
+      function findFirstTableSource(markdown) {
+        const lines = String(markdown || "").replace(/\r\n?/g, "\n").split("\n");
+        for (let index = 0; index < lines.length - 1; index += 1) {
+          if (!lines[index].includes("|") || !isSeparator(lines[index + 1])) continue;
+          return {
+            lines,
+            separatorIndex: index + 1,
+            alignments: splitTableRow(lines[index + 1]).map(parseAlignment)
+          };
+        }
+        return null;
+      }
+
+      function makeAlignmentSelect(index, value) {
+        const row = document.createElement("div");
+        row.className = "template-alignment-row";
+
+        const label = document.createElement("label");
+        label.htmlFor = `alignmentControl${index}`;
+        label.textContent = `${index + 1}列目`;
+
+        const select = document.createElement("select");
+        select.id = `alignmentControl${index}`;
+        select.innerHTML = `
+          <option value="left">左寄せ</option>
+          <option value="center">中央寄せ</option>
+          <option value="right">右寄せ</option>
+        `;
+        select.value = value || "left";
+        row.append(label, select);
+        return row;
+      }
+
+      function setAlignmentPanel(open) {
+        if (open) {
+          const tableSource = findFirstTableSource(input.value);
+          if (!tableSource) {
+            showStatus("配置を変更できるMarkdown形式の表が見つかりません。", "error");
+            return;
+          }
+          alignmentControls.replaceChildren(
+            ...tableSource.alignments.map((value, index) => makeAlignmentSelect(index, value))
+          );
+          setTemplatePanel(false);
+        }
+        alignmentPanel.classList.toggle("show", open);
+        alignmentPanel.setAttribute("aria-hidden", String(!open));
+        alignmentButton.setAttribute("aria-expanded", String(open));
+        if (open) alignmentControls.querySelector("select")?.focus();
+      }
+
+      function applyColumnAlignments() {
+        const tableSource = findFirstTableSource(input.value);
+        if (!tableSource) {
+          showStatus("配置を変更できるMarkdown形式の表が見つかりません。", "error");
+          setAlignmentPanel(false);
+          return;
+        }
+        const values = Array.from(alignmentControls.querySelectorAll("select"), select => select.value);
+        if (values.length !== tableSource.alignments.length) {
+          showStatus("表の列数が変わっています。パネルを開き直してください。", "error");
+          return;
+        }
+        const separatorCells = values.map(value => {
+          if (value === "center") return ":---:";
+          if (value === "right") return "---:";
+          return ":---";
+        });
+        tableSource.lines[tableSource.separatorIndex] = `| ${separatorCells.join(" | ")} |`;
+        input.value = tableSource.lines.join("\n");
+        render();
+        input.focus();
+        setAlignmentPanel(false);
+        showStatus("文章はそのままに、列の配置だけを変更しました。", "success");
       }
 
       function showStatus(message, type = "info") {
@@ -1299,11 +1387,18 @@
         showStatus("サンプル表を入力しました。", "success");
       });
       templateButton.addEventListener("click", () => {
-        setTemplatePanel(!templatePanel.classList.contains("show"));
+        const open = !templatePanel.classList.contains("show");
+        setAlignmentPanel(false);
+        setTemplatePanel(open);
+      });
+      alignmentButton.addEventListener("click", () => {
+        setAlignmentPanel(!alignmentPanel.classList.contains("show"));
       });
       templateColumns.addEventListener("input", updateTemplateAlignments);
       document.getElementById("insertTemplateButton").addEventListener("click", insertTemplate);
       document.getElementById("closeTemplateButton").addEventListener("click", () => setTemplatePanel(false));
+      document.getElementById("applyAlignmentButton").addEventListener("click", applyColumnAlignments);
+      document.getElementById("closeAlignmentButton").addEventListener("click", () => setAlignmentPanel(false));
       document.getElementById("resetSettingsButton").addEventListener("click", async () => {
         applySettings(BUILT_IN_DEFAULT_SETTINGS);
         render();
