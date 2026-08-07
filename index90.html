@@ -1,0 +1,1707 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="文章・コード・画像をChatGPTへ貼り付けやすく整えるブラウザ内ツール">
+  <title>TokenTrim｜ChatGPT送信圧縮ツール</title>
+  <style>
+    @layer base {
+      /* Base: product palette, readable defaults, and page-level reset. */
+      :root {
+        --ink: #10233b;
+        --ink-soft: #4f6279;
+        --muted: #8393a7;
+        --line: #dce5ed;
+        --paper: #f5f8fb;
+        --card: #ffffff;
+        --navy: #102b49;
+        --blue: #2368f2;
+        --cyan: #11b8c5;
+        --mint: #d9faef;
+        --shadow: 0 22px 60px rgba(26, 63, 96, 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        min-width: 320px;
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: Inter, "Noto Sans JP", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      button,
+      textarea,
+      input {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+      }
+    }
+
+    @layer components {
+      /* Components: the editorial shell and focused compression workspace. */
+      .site-shell {
+        position: relative;
+        min-height: 100vh;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 8% 6%, rgba(35, 104, 242, 0.07), transparent 28rem),
+          linear-gradient(180deg, #f8fbfd 0%, var(--paper) 50%, #f0f5f9 100%);
+      }
+
+      .ambient {
+        position: absolute;
+        pointer-events: none;
+        border-radius: 999px;
+      }
+
+      .ambient-one {
+        top: 22rem;
+        right: -18rem;
+        width: 36rem;
+        height: 36rem;
+        background: rgba(17, 184, 197, 0.06);
+      }
+
+      .ambient-two {
+        top: 66rem;
+        left: -22rem;
+        width: 42rem;
+        height: 42rem;
+        background: rgba(35, 104, 242, 0.045);
+      }
+
+      .topbar,
+      .page-content {
+        position: relative;
+        z-index: 1;
+        width: min(1160px, calc(100% - 48px));
+        margin-right: auto;
+        margin-left: auto;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 28px 0 18px;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 11px;
+        color: var(--ink);
+        text-decoration: none;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border: 1px solid rgba(16, 43, 73, 0.2);
+        border-radius: 11px;
+        background: var(--navy);
+        color: white;
+        font-family: Georgia, serif;
+        font-size: 20px;
+        font-style: italic;
+        box-shadow: 4px 4px 0 var(--cyan);
+      }
+
+      .brand strong,
+      .brand small {
+        display: block;
+      }
+
+      .brand strong {
+        letter-spacing: -0.03em;
+        font-size: 16px;
+      }
+
+      .brand small {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 10px;
+        letter-spacing: 0.08em;
+      }
+
+      .local-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        color: #597084;
+        font-size: 11px;
+        letter-spacing: 0.05em;
+      }
+
+      .status-dot,
+      .image-limit-dot {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #20b487;
+        box-shadow: 0 0 0 4px rgba(32, 180, 135, 0.12);
+      }
+
+      .page-content {
+        padding-bottom: 45px;
+      }
+
+      .hero-section {
+        max-width: 790px;
+        padding: 88px 0 58px;
+      }
+
+      .eyebrow,
+      .section-kicker {
+        color: var(--blue);
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.19em;
+      }
+
+      .eyebrow {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+      }
+
+      .eyebrow span {
+        width: 26px;
+        height: 2px;
+        background: var(--cyan);
+      }
+
+      .hero-section h1 {
+        margin: 17px 0 18px;
+        color: var(--ink);
+        font-size: clamp(42px, 7vw, 78px);
+        font-weight: 740;
+        letter-spacing: -0.075em;
+        line-height: 1.08;
+      }
+
+      .hero-section h1 em {
+        color: var(--blue);
+        font-family: Georgia, "Times New Roman", serif;
+        font-style: italic;
+        font-weight: 500;
+        letter-spacing: -0.09em;
+        white-space: nowrap;
+      }
+
+      .hero-copy {
+        max-width: 620px;
+        margin: 0;
+        color: var(--ink-soft);
+        font-size: 16px;
+        line-height: 1.95;
+      }
+
+      .hero-points {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 17px 28px;
+        margin-top: 28px;
+        color: #62758a;
+        font-size: 11px;
+      }
+
+      .hero-points span {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+      }
+
+      .hero-points i {
+        color: var(--cyan);
+        font-size: 10px;
+        font-style: normal;
+        font-weight: 800;
+      }
+
+      .workspace-card {
+        padding: 30px;
+        border: 1px solid rgba(193, 208, 221, 0.85);
+        border-radius: 25px;
+        background: rgba(255, 255, 255, 0.82);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(10px);
+      }
+
+      .workspace-header,
+      .results-heading {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 18px;
+      }
+
+      .section-kicker {
+        margin: 0 0 8px;
+      }
+
+      .workspace-header h2,
+      .results-heading h2,
+      .how-heading h2 {
+        margin: 0;
+        color: var(--ink);
+        font-size: 24px;
+        letter-spacing: -0.045em;
+      }
+
+      .quiet-button,
+      .clear-button {
+        border: 0;
+        background: transparent;
+        color: var(--blue);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .quiet-button:hover,
+      .clear-button:hover:not(:disabled) {
+        color: var(--cyan);
+      }
+
+      .workspace-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 17px;
+        margin-top: 26px;
+      }
+
+      .input-panel,
+      .output-panel {
+        min-width: 0;
+        padding: 17px;
+        border: 1px solid var(--line);
+        border-radius: 17px;
+        background: #fbfdff;
+      }
+
+      .output-panel {
+        border-color: #cbdcf8;
+        background: #f7faff;
+      }
+
+      .panel-label-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+        color: var(--ink-soft);
+        font-size: 11px;
+        font-weight: 750;
+      }
+
+      .panel-label-row span {
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 500;
+      }
+
+      .source-textarea,
+      .result-textarea {
+        display: block;
+        width: 100%;
+        height: 260px;
+        resize: vertical;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        outline: none;
+        background: white;
+        color: var(--ink);
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 12px;
+        line-height: 1.7;
+        padding: 14px;
+        transition: border-color 160ms ease, box-shadow 160ms ease;
+      }
+
+      .source-textarea:focus,
+      .result-textarea:focus {
+        border-color: #8aaffd;
+        box-shadow: 0 0 0 3px rgba(35, 104, 242, 0.1);
+      }
+
+      .source-textarea::placeholder,
+      .result-textarea::placeholder {
+        color: #a2afbc;
+        opacity: 1;
+      }
+
+      .result-textarea {
+        min-height: 260px;
+        border-color: #d4e1f6;
+        background: #ffffff;
+      }
+
+      .drop-zone {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 107px;
+        margin-top: 12px;
+        padding: 17px;
+        border: 1px dashed #aebfce;
+        border-radius: 12px;
+        background: #f5f9fc;
+        color: #70849a;
+        font-size: 11px;
+        text-align: center;
+        transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+      }
+
+      .drop-zone:hover,
+      .drop-zone.is-dragging {
+        border-color: var(--blue);
+        background: #eef5ff;
+        transform: translateY(-1px);
+      }
+
+      .drop-zone strong {
+        color: var(--ink-soft);
+        font-weight: 750;
+      }
+
+      .drop-zone small {
+        display: block;
+        margin-top: 6px;
+        color: #9aa9b8;
+        font-size: 9px;
+      }
+
+      .drop-zone input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      .upload-icon {
+        display: grid;
+        width: 27px;
+        height: 27px;
+        margin-bottom: 8px;
+        place-items: center;
+        border-radius: 9px;
+        background: var(--mint);
+        color: #0a9d88;
+        font-size: 18px;
+        font-weight: 300;
+        line-height: 1;
+      }
+
+      .file-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-top: 10px;
+      }
+
+      .file-chip {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        gap: 8px;
+        padding: 8px 9px;
+        border: 1px solid #e1e9f0;
+        border-radius: 9px;
+        background: white;
+        color: var(--ink-soft);
+        font-size: 10px;
+      }
+
+      .file-type,
+      .result-file-icon {
+        flex: 0 0 auto;
+        color: var(--blue);
+        font-size: 8px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+      }
+
+      .file-name,
+      .result-file-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .file-size {
+        flex: 0 0 auto;
+        margin-left: auto;
+        color: var(--muted);
+        font-size: 9px;
+      }
+
+      .file-chip button {
+        flex: 0 0 auto;
+        width: 19px;
+        height: 19px;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+        background: #edf2f6;
+        color: #7790a4;
+        font-size: 14px;
+        line-height: 1;
+      }
+
+      .file-chip button:hover {
+        background: #ffe4e6;
+        color: #dc5264;
+      }
+
+      .input-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        min-height: 32px;
+        margin-top: 10px;
+      }
+
+      .privacy-note {
+        color: #95a4b4;
+        font-size: 9px;
+      }
+
+      .lock-icon {
+        color: #36aa8a;
+        font-size: 13px;
+        margin-right: 3px;
+      }
+
+      .clear-button:disabled {
+        color: #b5c1cb;
+      }
+
+      .output-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .copy-button,
+      .download-button {
+        min-height: 31px;
+        padding: 0 12px;
+        border: 1px solid #c9daf3;
+        border-radius: 8px;
+        background: white;
+        color: var(--blue);
+        font-size: 10px;
+        font-weight: 750;
+      }
+
+      .copy-button:hover:not(:disabled),
+      .download-button:hover:not(:disabled) {
+        border-color: var(--blue);
+        background: #eef5ff;
+      }
+
+      .copy-button:disabled,
+      .download-button:disabled {
+        border-color: #e1e8f0;
+        color: #aebbc8;
+      }
+
+      .settings-strip {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px 20px;
+        margin-top: 18px;
+        padding: 13px 15px;
+        border: 1px solid #e1e9f0;
+        border-radius: 12px;
+        background: #f9fbfd;
+      }
+
+      .settings-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-right: 2px;
+      }
+
+      .sliders-icon {
+        color: var(--blue);
+        font-size: 19px;
+        transform: rotate(90deg);
+      }
+
+      .settings-title strong,
+      .settings-title small {
+        display: block;
+      }
+
+      .settings-title strong {
+        color: var(--ink-soft);
+        font-size: 10px;
+      }
+
+      .settings-title small {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 8px;
+      }
+
+      .toggle-option {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #7c8d9f;
+        font-size: 10px;
+      }
+
+      .toggle-option.is-on {
+        color: var(--ink-soft);
+        font-weight: 700;
+      }
+
+      .toggle {
+        position: relative;
+        width: 26px;
+        height: 15px;
+        border-radius: 20px;
+        background: #cad5df;
+        transition: background 160ms ease;
+      }
+
+      .toggle::after {
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: white;
+        content: "";
+        transition: transform 160ms ease;
+      }
+
+      .toggle-option.is-on .toggle {
+        background: var(--blue);
+      }
+
+      .toggle-option.is-on .toggle::after {
+        transform: translateX(11px);
+      }
+
+      .image-limit {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        margin-left: auto;
+        color: #7e8e9f;
+        font-size: 9px;
+      }
+
+      .image-limit-dot {
+        width: 5px;
+        height: 5px;
+        box-shadow: none;
+      }
+
+      .image-limit strong {
+        color: var(--ink-soft);
+        font-weight: 800;
+      }
+
+      .error-message {
+        margin: 14px 2px -2px;
+        color: #c4495b;
+        font-size: 11px;
+      }
+
+      .run-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 11px;
+        width: 100%;
+        min-height: 57px;
+        margin-top: 17px;
+        border: 0;
+        border-radius: 12px;
+        background: var(--navy);
+        color: white;
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        box-shadow: 0 9px 18px rgba(16, 43, 73, 0.18);
+        transition: background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+      }
+
+      .run-button:hover:not(:disabled) {
+        background: #173d65;
+        box-shadow: 0 12px 23px rgba(16, 43, 73, 0.23);
+        transform: translateY(-1px);
+      }
+
+      .run-button:disabled {
+        background: #b7c5d1;
+        box-shadow: none;
+      }
+
+      .run-icon {
+        display: grid;
+        width: 25px;
+        height: 25px;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--cyan);
+        color: white;
+        font-size: 18px;
+        font-weight: 400;
+        line-height: 1;
+      }
+
+      .run-shortcut {
+        margin-left: 5px;
+        padding: 4px 6px;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 5px;
+        color: #b7c9d9;
+        font-size: 8px;
+        letter-spacing: 0.12em;
+      }
+
+      .results-section {
+        padding: 78px 0 0;
+      }
+
+      .result-pill {
+        padding: 7px 10px;
+        border-radius: 99px;
+        background: #e6f8f2;
+        color: #15916f;
+        font-size: 10px;
+        font-weight: 750;
+      }
+
+      .result-pill.is-negative {
+        background: #fff0e3;
+        color: #c27235;
+      }
+
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 13px;
+        margin-top: 22px;
+      }
+
+      .metric-card {
+        min-height: 135px;
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.74);
+      }
+
+      .metric-card-accent {
+        border-color: #c8dafa;
+        background: #f5f9ff;
+      }
+
+      .metric-card-highlight {
+        border-color: #d9e9dd;
+        background: #f7fcf8;
+      }
+
+      .metric-label {
+        display: block;
+        color: var(--muted);
+        font-size: 10px;
+      }
+
+      .metric-card strong {
+        display: block;
+        margin-top: 9px;
+        color: var(--ink);
+        font-size: 29px;
+        letter-spacing: -0.06em;
+      }
+
+      .metric-card-accent strong {
+        color: var(--blue);
+      }
+
+      .metric-card-highlight strong {
+        color: #129879;
+      }
+
+      .metric-card small {
+        display: block;
+        margin-top: 6px;
+        color: #8d9dac;
+        font-size: 9px;
+      }
+
+      .file-results {
+        margin-top: 15px;
+        padding: 15px 17px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.67);
+      }
+
+      .file-results-title {
+        color: var(--ink-soft);
+        font-size: 10px;
+        font-weight: 800;
+      }
+
+      .file-results-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .file-result-row {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        gap: 9px;
+        padding-top: 8px;
+        border-top: 1px solid #edf1f4;
+        color: var(--ink-soft);
+        font-size: 10px;
+      }
+
+      .file-result-row:first-child {
+        padding-top: 0;
+        border-top: 0;
+      }
+
+      .result-file-icon.image {
+        color: #bc8d25;
+      }
+
+      .result-file-icon.unsupported {
+        color: #c17c83;
+      }
+
+      .result-file-note {
+        margin-left: auto;
+        color: var(--muted);
+        font-size: 9px;
+      }
+
+      .result-file-size {
+        flex: 0 0 auto;
+        padding-left: 8px;
+        color: #15916f;
+        font-size: 9px;
+        font-weight: 800;
+      }
+
+      .how-section {
+        display: grid;
+        grid-template-columns: 0.8fr 1.6fr;
+        gap: 54px;
+        padding: 114px 0 83px;
+      }
+
+      .how-heading h2 {
+        max-width: 260px;
+        line-height: 1.35;
+      }
+
+      .how-heading > p:last-child {
+        max-width: 265px;
+        margin: 13px 0 0;
+        color: var(--ink-soft);
+        font-size: 11px;
+        line-height: 1.8;
+      }
+
+      .process-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .process-card {
+        position: relative;
+        min-height: 190px;
+        padding: 17px;
+        border-top: 2px solid var(--blue);
+        background: rgba(255, 255, 255, 0.52);
+      }
+
+      .process-card:nth-child(2) {
+        border-color: var(--cyan);
+      }
+
+      .process-card:nth-child(3) {
+        border-color: #d5af36;
+      }
+
+      .process-number {
+        display: block;
+        margin-bottom: 32px;
+        color: var(--blue);
+        font-family: Georgia, serif;
+        font-size: 18px;
+        font-style: italic;
+      }
+
+      .process-card:nth-child(2) .process-number {
+        color: var(--cyan);
+      }
+
+      .process-card:nth-child(3) .process-number {
+        color: #b98d19;
+      }
+
+      .process-card h3 {
+        margin: 0;
+        color: var(--ink);
+        font-size: 13px;
+        letter-spacing: -0.02em;
+      }
+
+      .process-card p {
+        min-height: 55px;
+        margin: 8px 0 16px;
+        color: var(--ink-soft);
+        font-size: 10px;
+        line-height: 1.75;
+      }
+
+      .process-code {
+        color: #9aaaba;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 8px;
+        letter-spacing: 0.03em;
+      }
+
+      .site-footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding-top: 18px;
+        border-top: 1px solid #dce5ed;
+        color: #97a6b5;
+        font-size: 9px;
+      }
+
+      .site-footer span:first-child {
+        color: var(--ink-soft);
+        font-weight: 800;
+      }
+    }
+
+    @layer utilities {
+      /* Utilities: compact responsive rules keep the tool usable on narrow screens. */
+      .hidden {
+        display: none;
+      }
+
+      @media (max-width: 860px) {
+        .hero-section {
+          padding-top: 62px;
+        }
+
+        .how-section {
+          grid-template-columns: 1fr;
+          gap: 28px;
+        }
+
+        .how-heading h2,
+        .how-heading > p:last-child {
+          max-width: none;
+        }
+      }
+
+      @media (max-width: 680px) {
+        .topbar,
+        .page-content {
+          width: min(100% - 28px, 1160px);
+        }
+
+        .topbar {
+          padding-top: 20px;
+        }
+
+        .local-badge {
+          font-size: 9px;
+        }
+
+        .hero-section {
+          padding: 52px 0 38px;
+        }
+
+        .hero-section h1 {
+          font-size: clamp(39px, 13vw, 64px);
+        }
+
+        .hero-copy {
+          font-size: 14px;
+        }
+
+        .workspace-card {
+          padding: 17px;
+          border-radius: 18px;
+        }
+
+        .workspace-grid,
+        .metric-grid,
+        .process-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .workspace-header h2,
+        .results-heading h2,
+        .how-heading h2 {
+          font-size: 21px;
+        }
+
+        .source-textarea,
+        .result-textarea {
+          height: 220px;
+          min-height: 220px;
+        }
+
+        .settings-strip {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 11px;
+        }
+
+        .image-limit {
+          margin-left: 0;
+        }
+
+        .metric-card {
+          min-height: 112px;
+        }
+
+        .process-card {
+          min-height: auto;
+        }
+
+        .process-number {
+          margin-bottom: 16px;
+        }
+
+        .process-card p {
+          min-height: 0;
+        }
+
+        .site-footer {
+          flex-direction: column;
+          gap: 8px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+
+        *,
+        *::before,
+        *::after {
+          transition-duration: 0.01ms;
+        }
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="site-shell">
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="TokenTrim ホーム">
+        <span class="brand-mark">T</span>
+        <span>
+          <strong>TokenTrim</strong>
+          <small>送信前のテキスト圧縮</small>
+        </span>
+      </a>
+      <div class="local-badge"><span class="status-dot"></span>ブラウザ内で処理</div>
+    </header>
+
+    <div class="page-content" id="top">
+      <section class="hero-section">
+        <div class="eyebrow"><span></span>CHATGPT INPUT PREP</div>
+        <h1>送信する前に、<em>少し軽く。</em></h1>
+        <p class="hero-copy">文章・コード・画像をまとめて整理。余分な空白を詰め、画像はWebPへ変換して、ChatGPTへ貼り付ける文章を作ります。</p>
+        <div class="hero-points" aria-label="主な特徴">
+          <span><i>01</i>行ごとにtrim</span>
+          <span><i>02</i>JSON / HTMLを短縮</span>
+          <span><i>03</i>画像は28KB以内へ試行</span>
+        </div>
+      </section>
+
+      <section class="workspace-card" aria-label="圧縮ワークスペース">
+        <div class="workspace-header">
+          <div>
+            <p class="section-kicker">WORKSPACE</p>
+            <h2>入力をまとめる</h2>
+          </div>
+          <button class="quiet-button" id="sample-button" type="button">サンプルを入れる</button>
+        </div>
+
+        <div class="workspace-grid">
+          <div class="input-panel">
+            <div class="panel-label-row">
+              <label for="source-text">文章・コード</label>
+              <span id="input-count">0 文字</span>
+            </div>
+            <textarea id="source-text" class="source-textarea" spellcheck="false" placeholder="ここに文章、HTML、JSON、コードを貼り付けます。&#10;&#10;ファイルだけでも実行できます。"></textarea>
+
+            <div class="drop-zone" id="drop-zone" role="button" tabindex="0" aria-label="ファイルを追加">
+              <span class="upload-icon">↥</span>
+              <span><strong>ファイルをドロップ</strong> またはクリックして選択</span>
+              <small>テキスト・HTML・JSON・コード・画像（複数可）</small>
+              <input id="file-input" type="file" multiple>
+            </div>
+
+            <div class="file-list hidden" id="file-list" aria-label="追加したファイル"></div>
+
+            <div class="input-footer">
+              <span class="privacy-note"><span class="lock-icon">⌁</span>入力内容はこのブラウザから外へ送信しません</span>
+              <button type="button" class="clear-button" id="clear-button" disabled>すべて消去</button>
+            </div>
+          </div>
+
+          <div class="output-panel">
+            <div class="panel-label-row">
+              <label for="result-text">貼り付け用の結果</label>
+              <span id="output-count">実行後に表示</span>
+            </div>
+            <textarea id="result-text" class="result-textarea" readonly spellcheck="false" placeholder="実行すると、ここに圧縮済みの文章が表示されます。&#10;そのままChatGPTへ貼り付けできます。"></textarea>
+            <div class="output-actions">
+              <button type="button" class="copy-button" id="copy-button" disabled>□ コピー</button>
+              <button type="button" class="download-button" id="download-button" disabled>TXT保存</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-strip">
+          <div class="settings-title"><span class="sliders-icon">☷</span><span><strong>圧縮設定</strong><small>安全な機械的変換のみ</small></span></div>
+          <button type="button" class="toggle-option is-on" id="whitespace-toggle" aria-pressed="true"><span class="toggle"></span><span>空白を圧縮</span></button>
+          <button type="button" class="toggle-option is-on" id="comment-toggle" aria-pressed="true"><span class="toggle"></span><span>HTML / CSSコメントを削除</span></button>
+          <div class="image-limit"><span class="image-limit-dot"></span>画像上限 <strong>28,000 bytes</strong></div>
+        </div>
+
+        <p class="error-message hidden" id="error-message" role="alert"></p>
+        <button class="run-button" id="run-button" type="button" disabled>
+          <span class="run-icon">→</span>圧縮して文章化する<span class="run-shortcut">RUN</span>
+        </button>
+      </section>
+
+      <section class="results-section" aria-live="polite">
+        <div class="results-heading">
+          <div>
+            <p class="section-kicker">ESTIMATE</p>
+            <h2>変換の手応え</h2>
+          </div>
+          <span class="result-pill hidden" id="result-pill"></span>
+        </div>
+        <div class="metric-grid">
+          <article class="metric-card">
+            <span class="metric-label">入力の概算トークン</span>
+            <strong id="before-tokens">—</strong>
+            <small id="before-detail">実行すると計算します</small>
+          </article>
+          <article class="metric-card metric-card-accent">
+            <span class="metric-label">出力の概算トークン</span>
+            <strong id="after-tokens">—</strong>
+            <small id="after-detail">モデルにより実際の値は異なります</small>
+          </article>
+          <article class="metric-card metric-card-highlight">
+            <span class="metric-label">削減率の目安</span>
+            <strong id="reduction">—</strong>
+            <small id="reduction-detail">正確なトークン数ではありません</small>
+          </article>
+        </div>
+        <div class="file-results hidden" id="file-results">
+          <div class="file-results-title">ファイル別の処理</div>
+          <div class="file-results-list" id="file-results-list"></div>
+        </div>
+      </section>
+
+      <section class="how-section">
+        <div class="how-heading">
+          <p class="section-kicker">WHAT HAPPENS</p>
+          <h2>小さな整理を積み重ねます</h2>
+          <p>意味を理解して要約するのではなく、再現性のある変換だけをブラウザで実行します。</p>
+        </div>
+        <div class="process-grid">
+          <article class="process-card"><span class="process-number">01</span><h3>空白を整える</h3><p>行頭・行末の空白、重複した空行、連続スペースを整理します。</p><span class="process-code">trim / whitespace</span></article>
+          <article class="process-card"><span class="process-number">02</span><h3>構造を短くする</h3><p>JSONは1行化。HTMLやCSSはコメントとタグ間の不要な空白を減らします。</p><span class="process-code">JSON.stringify / markup</span></article>
+          <article class="process-card"><span class="process-number">03</span><h3>画像を再調整する</h3><p>WebPの品質と解像度を段階的に試し、28,000 bytes以内を目指します。</p><span class="process-code">quality → dimensions</span></article>
+        </div>
+      </section>
+
+      <footer class="site-footer"><span>TokenTrim</span><span>概算値です。正確なトークン数は利用モデルのTokenizerに依存します。</span></footer>
+    </div>
+  </main>
+
+  <script>
+    "use strict";
+    (() => {
+      const MAX_IMAGE_BYTES = 28000;
+      const MAX_IMAGE_EDGE = 1600;
+      const TEXT_EXTENSIONS = new Set([
+        "txt", "md", "markdown", "html", "htm", "css", "scss", "less", "js", "mjs", "cjs",
+        "jsx", "ts", "tsx", "json", "jsonl", "xml", "svg", "yaml", "yml", "csv", "tsv",
+        "log", "sql", "py", "rb", "php", "java", "kt", "go", "rs", "c", "h", "cpp", "hpp",
+        "cs", "bat", "sh", "vue", "svelte"
+      ]);
+
+      const state = {
+        files: [],
+        output: "",
+        processing: false,
+        dragOver: false,
+        compactWhitespace: true,
+        removeMarkupComments: true,
+        result: null
+      };
+
+      const $ = (selector) => document.querySelector(selector);
+      const sourceText = $("#source-text");
+      const resultText = $("#result-text");
+      const fileInput = $("#file-input");
+      const dropZone = $("#drop-zone");
+      const fileList = $("#file-list");
+      const runButton = $("#run-button");
+      const clearButton = $("#clear-button");
+      const copyButton = $("#copy-button");
+      const downloadButton = $("#download-button");
+      const errorMessage = $("#error-message");
+      const inputCount = $("#input-count");
+      const outputCount = $("#output-count");
+      const fileResults = $("#file-results");
+      const fileResultsList = $("#file-results-list");
+      const resultPill = $("#result-pill");
+
+      function extensionOf(name) {
+        const parts = name.toLowerCase().split(".");
+        return parts.length > 1 ? parts[parts.length - 1] : "";
+      }
+
+      function isTextLike(file) {
+        return file.type.startsWith("text/") || TEXT_EXTENSIONS.has(extensionOf(file.name));
+      }
+
+      function isImage(file) {
+        return file.type.startsWith("image/") && extensionOf(file.name) !== "svg";
+      }
+
+      function formatBytes(bytes) {
+        if (bytes < 1000) return bytes + " B";
+        if (bytes < 1000000) return (bytes / 1000).toFixed(bytes < 10000 ? 1 : 0) + " KB";
+        return (bytes / 1000000).toFixed(1) + " MB";
+      }
+
+      function formatNumber(value) {
+        return new Intl.NumberFormat("ja-JP").format(Math.max(0, Math.round(value)));
+      }
+
+      function normalizeText(value) {
+        return value.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+      }
+
+      function trimLines(value, removeEmptyLines) {
+        const lines = normalizeText(value).split("\n").map((line) => line.trim());
+        return (removeEmptyLines ? lines.filter(Boolean) : lines).join("\n");
+      }
+
+      function compactJson(value) {
+        try {
+          return JSON.stringify(JSON.parse(value));
+        } catch (_) {
+          return "";
+        }
+      }
+
+      function protectBlocks(value) {
+        const protectedBlocks = [];
+        const protectedText = value.replace(
+          /<(pre|textarea|script|style)\b[^>]*>[\s\S]*?<\/\1>/gi,
+          (block) => {
+            const marker = "\u0001" + protectedBlocks.length + "\u0002";
+            protectedBlocks.push(block);
+            return marker;
+          }
+        );
+        return { protectedBlocks, protectedText };
+      }
+
+      function restoreBlocks(value, protectedBlocks) {
+        return value.replace(/\u0001(\d+)\u0002/g, (_, index) => protectedBlocks[Number(index)] || "");
+      }
+
+      function compactMarkup(value, removeComments) {
+        const blocks = protectBlocks(normalizeText(value));
+        let compacted = blocks.protectedText
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .join("");
+        if (removeComments) compacted = compacted.replace(/<!--[\s\S]*?-->/g, "");
+        return restoreBlocks(compacted.replace(/>\s+</g, "><").replace(/[ \t]{2,}/g, " ").trim(), blocks.protectedBlocks);
+      }
+
+      function compactCss(value, removeComments, compactWhitespace) {
+        let compacted = trimLines(value, compactWhitespace);
+        if (removeComments) compacted = compacted.replace(/\/\*[\s\S]*?\*\//g, "");
+        if (compactWhitespace) {
+          compacted = compacted.replace(/[ \t]+/g, " ").replace(/\s*([{}:;,])\s*/g, "$1").trim();
+        }
+        return compacted;
+      }
+
+      function compactText(value, name) {
+        const extension = extensionOf(name);
+        const normalized = normalizeText(value);
+        const mayBeJson = extension === "json" || (name === "input.txt" && /^[\[{]/.test(normalized.trim()));
+        if (mayBeJson) {
+          const compactedJson = compactJson(normalized);
+          if (compactedJson) return compactedJson;
+        }
+        if (["html", "htm", "xml", "svg"].includes(extension)) {
+          return compactMarkup(normalized, state.removeMarkupComments);
+        }
+        if (["css", "scss", "less"].includes(extension)) {
+          return compactCss(normalized, state.removeMarkupComments, state.compactWhitespace);
+        }
+        const compacted = trimLines(normalized, state.compactWhitespace);
+        if (!state.compactWhitespace) return compacted;
+        return compacted.split("\n").map((line) => line.replace(/[ \t]+/g, " ")).filter(Boolean).join("\n");
+      }
+
+      function estimateAsciiTokens(length) {
+        return Math.ceil(length / 4);
+      }
+
+      function estimateTokens(value) {
+        let japaneseLike = 0;
+        let ascii = 0;
+        let other = 0;
+        for (const character of value) {
+          const codePoint = character.codePointAt(0) || 0;
+          if (
+            (codePoint >= 0x3040 && codePoint <= 0x30ff) ||
+            (codePoint >= 0x3400 && codePoint <= 0x9fff) ||
+            (codePoint >= 0xac00 && codePoint <= 0xd7af)
+          ) japaneseLike += 1;
+          else if (codePoint <= 0x7f) ascii += 1;
+          else other += 1;
+        }
+        return japaneseLike + estimateAsciiTokens(ascii) + Math.ceil(other / 2);
+      }
+
+      function estimateBase64Tokens(byteLength, mime) {
+        return estimateTokens("data:" + mime + ";base64,") + estimateAsciiTokens(4 * Math.ceil(byteLength / 3));
+      }
+
+      function dataUrlByteLength(dataUrl) {
+        const base64 = dataUrl.split(",")[1] || "";
+        const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+        return Math.max(0, Math.floor(base64.length * 3 / 4) - padding);
+      }
+
+      function loadImage(file) {
+        return new Promise((resolve, reject) => {
+          const objectUrl = URL.createObjectURL(file);
+          const image = new Image();
+          image.onload = () => {
+            URL.revokeObjectURL(objectUrl);
+            resolve(image);
+          };
+          image.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            reject(new Error("画像を読み込めませんでした。"));
+          };
+          image.src = objectUrl;
+        });
+      }
+
+      async function convertImageToWebp(file) {
+        const image = await loadImage(file);
+        const sourceWidth = image.naturalWidth || image.width;
+        const sourceHeight = image.naturalHeight || image.height;
+        let scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(sourceWidth, sourceHeight));
+        let best = null;
+        const qualities = [0.88, 0.76, 0.64, 0.52, 0.42, 0.32, 0.24, 0.16, 0.1, 0.06];
+
+        for (let attempt = 0; attempt < 12; attempt += 1) {
+          const width = Math.max(1, Math.round(sourceWidth * scale));
+          const height = Math.max(1, Math.round(sourceHeight * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const context = canvas.getContext("2d");
+          if (!context) throw new Error("画像変換用のCanvasを利用できませんでした。");
+          context.drawImage(image, 0, 0, width, height);
+
+          for (const quality of qualities) {
+            const dataUrl = canvas.toDataURL("image/webp", quality);
+            const bytes = dataUrlByteLength(dataUrl);
+            const candidate = { dataUrl, bytes, width, height, quality };
+            if (!best || bytes < best.bytes) best = candidate;
+            if (dataUrl.startsWith("data:image/webp") && bytes <= MAX_IMAGE_BYTES) return candidate;
+          }
+          scale *= 0.74;
+        }
+        if (!best) throw new Error("画像を変換できませんでした。");
+        return best;
+      }
+
+      function fileLabel(file) {
+        return file.type || extensionOf(file.name).toUpperCase() || "unknown";
+      }
+
+      function renderTextFile(name, mime, content) {
+        return "FILE:" + name + "\nTYPE:" + (mime || extensionOf(name) || "text") + "\nCONTENT:\n" + content;
+      }
+
+      function renderImageFile(name, image) {
+        const stem = name.replace(/\.[^.]+$/, "") || name;
+        return "FILE:" + stem + ".webp\nTYPE:image/webp\nBYTES:" + image.bytes + "\nSIZE:" + image.width + "x" + image.height + "\nDATA:" + image.dataUrl;
+      }
+
+      async function processFile(entry) {
+        const file = entry.file;
+        if (isImage(file)) {
+          const image = await convertImageToWebp(file);
+          const withinLimit = image.bytes <= MAX_IMAGE_BYTES;
+          return {
+            id: entry.id,
+            name: file.name,
+            kind: "image",
+            mime: file.type || "image/*",
+            originalBytes: file.size,
+            originalChars: 4 * Math.ceil(file.size / 3),
+            beforeTokens: estimateBase64Tokens(file.size, file.type || "image/*"),
+            outputText: renderImageFile(file.name, image),
+            outputBytes: image.bytes,
+            dimensions: image.width + " × " + image.height,
+            note: withinLimit ? "WebP / " + Math.round(image.quality * 100) + "% / " + formatBytes(image.bytes) : "28,000 bytes以内に収まりませんでした。"
+          };
+        }
+        if (isTextLike(file)) {
+          const original = await file.text();
+          const compacted = compactText(original, file.name);
+          return {
+            id: entry.id,
+            name: file.name,
+            kind: "text",
+            mime: fileLabel(file),
+            originalBytes: file.size,
+            originalChars: original.length,
+            beforeTokens: estimateTokens(original),
+            outputText: renderTextFile(file.name, file.type, compacted),
+            note: formatNumber(original.length) + "文字 → " + formatNumber(compacted.length) + "文字"
+          };
+        }
+        return {
+          id: entry.id,
+          name: file.name,
+          kind: "unsupported",
+          mime: fileLabel(file),
+          originalBytes: file.size,
+          originalChars: 0,
+          beforeTokens: 0,
+          outputText: "FILE:" + file.name + "\nTYPE:" + (file.type || "application/octet-stream") + "\nSIZE:" + file.size + "\nSTATUS:本文抽出対象外（PDF/DOCXなどはテキスト化してから追加してください）",
+          note: "本文抽出対象外"
+        };
+      }
+
+      function setHidden(element, hidden) {
+        element.classList.toggle("hidden", hidden);
+      }
+
+      function showError(message) {
+        errorMessage.textContent = message;
+        setHidden(errorMessage, !message);
+      }
+
+      function resetResult() {
+        state.output = "";
+        state.result = null;
+        resultText.value = "";
+        outputCount.textContent = "実行後に表示";
+        copyButton.disabled = true;
+        downloadButton.disabled = true;
+        setHidden(resultPill, true);
+        setHidden(fileResults, true);
+      }
+
+      function updateInputState() {
+        inputCount.textContent = formatNumber(sourceText.value.length) + " 文字";
+        const canRun = sourceText.value.trim().length > 0 || state.files.length > 0;
+        runButton.disabled = !canRun || state.processing;
+        clearButton.disabled = !canRun && !sourceText.value;
+      }
+
+      function renderFiles() {
+        fileList.innerHTML = "";
+        setHidden(fileList, state.files.length === 0);
+        state.files.forEach((entry) => {
+          const row = document.createElement("div");
+          row.className = "file-chip";
+          const type = document.createElement("span");
+          type.className = "file-type";
+          type.textContent = isImage(entry.file) ? "IMG" : isTextLike(entry.file) ? "TXT" : "FILE";
+          const name = document.createElement("span");
+          name.className = "file-name";
+          name.title = entry.file.name;
+          name.textContent = entry.file.name;
+          const size = document.createElement("span");
+          size.className = "file-size";
+          size.textContent = formatBytes(entry.file.size);
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.textContent = "×";
+          remove.setAttribute("aria-label", entry.file.name + "を削除");
+          remove.addEventListener("click", () => {
+            state.files = state.files.filter((item) => item.id !== entry.id);
+            resetResult();
+            renderFiles();
+            updateInputState();
+          });
+          row.append(type, name, size, remove);
+          fileList.appendChild(row);
+        });
+      }
+
+      function addFiles(fileListValue) {
+        const nextFiles = Array.from(fileListValue).map((file, index) => ({
+          id: file.name + "-" + file.lastModified + "-" + Date.now() + "-" + index,
+          file
+        }));
+        if (!nextFiles.length) return;
+        state.files = state.files.concat(nextFiles);
+        resetResult();
+        renderFiles();
+        updateInputState();
+        showError("");
+      }
+
+      function renderFileResults(files) {
+        fileResultsList.innerHTML = "";
+        files.forEach((file) => {
+          const row = document.createElement("div");
+          row.className = "file-result-row";
+          const icon = document.createElement("span");
+          icon.className = "result-file-icon " + file.kind;
+          icon.textContent = file.kind === "image" ? "IMG" : file.kind === "text" ? "TXT" : "—";
+          const name = document.createElement("span");
+          name.className = "result-file-name";
+          name.textContent = file.name;
+          const note = document.createElement("span");
+          note.className = "result-file-note";
+          note.textContent = file.note || "";
+          row.append(icon, name, note);
+          if (file.kind === "image" && file.outputBytes !== undefined) {
+            const size = document.createElement("span");
+            size.className = "result-file-size";
+            size.textContent = formatBytes(file.outputBytes);
+            row.appendChild(size);
+          }
+          fileResultsList.appendChild(row);
+        });
+        setHidden(fileResults, files.length === 0);
+      }
+
+      async function runCompression() {
+        if (runButton.disabled || state.processing) return;
+        state.processing = true;
+        runButton.disabled = true;
+        runButton.innerHTML = '<span class="run-icon">…</span>圧縮しています<span class="run-shortcut">RUN</span>';
+        showError("");
+        try {
+          const parts = [];
+          const processed = [];
+          let beforeTokens = estimateTokens(sourceText.value);
+          let beforeChars = sourceText.value.length;
+          if (sourceText.value.trim()) {
+            parts.push("TEXT:\n" + compactText(sourceText.value, "input.txt"));
+          }
+          for (const entry of state.files) {
+            const processedFile = await processFile(entry);
+            processed.push(processedFile);
+            beforeTokens += processedFile.beforeTokens;
+            beforeChars += processedFile.originalChars;
+            parts.push(processedFile.outputText);
+          }
+          const output = parts.join("\n\n").trim();
+          state.output = output;
+          state.result = {
+            beforeTokens,
+            afterTokens: estimateTokens(output),
+            beforeChars,
+            afterChars: output.length,
+            files: processed
+          };
+          resultText.value = output;
+          outputCount.textContent = formatNumber(output.length) + " 文字";
+          copyButton.disabled = !output;
+          downloadButton.disabled = !output;
+          const reduction = beforeTokens ? Math.round((1 - state.result.afterTokens / beforeTokens) * 100) : 0;
+          resultPill.textContent = reduction >= 0 ? "圧縮できました" : "入力より増えました";
+          resultPill.classList.toggle("is-negative", reduction < 0);
+          setHidden(resultPill, false);
+          $("#before-tokens").textContent = formatNumber(beforeTokens);
+          $("#after-tokens").textContent = formatNumber(state.result.afterTokens);
+          $("#reduction").textContent = (reduction > 0 ? "−" : "") + Math.abs(reduction) + "%";
+          $("#before-detail").textContent = formatNumber(beforeChars) + " 文字相当";
+          $("#after-detail").textContent = formatNumber(output.length) + " 文字";
+          $("#reduction-detail").textContent = "文字種別から算出した推定値";
+          renderFileResults(processed);
+        } catch (error) {
+          showError(error instanceof Error ? error.message : "処理に失敗しました。");
+        } finally {
+          state.processing = false;
+          runButton.innerHTML = '<span class="run-icon">→</span>圧縮して文章化する<span class="run-shortcut">RUN</span>';
+          updateInputState();
+        }
+      }
+
+      function updateToggle(button, isOn) {
+        button.classList.toggle("is-on", isOn);
+        button.setAttribute("aria-pressed", String(isOn));
+      }
+
+      sourceText.addEventListener("input", () => {
+        resetResult();
+        showError("");
+        updateInputState();
+      });
+
+      $("#sample-button").addEventListener("click", () => {
+        sourceText.value = "  ChatGPTに送る前の文章です。  \n\n\n  行頭と行末の空白、余分な空行を整理します。  \n  JSONやHTMLを貼り付けた場合も、可能な範囲で短くします。  ";
+        state.files = [];
+        resetResult();
+        renderFiles();
+        showError("");
+        updateInputState();
+      });
+
+      $("#clear-button").addEventListener("click", () => {
+        sourceText.value = "";
+        state.files = [];
+        resetResult();
+        renderFiles();
+        showError("");
+        updateInputState();
+      });
+
+      fileInput.addEventListener("change", () => {
+        addFiles(fileInput.files);
+        fileInput.value = "";
+      });
+
+      dropZone.addEventListener("click", () => fileInput.click());
+      dropZone.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          fileInput.click();
+        }
+      });
+      dropZone.addEventListener("dragenter", (event) => {
+        event.preventDefault();
+        state.dragOver = true;
+        dropZone.classList.add("is-dragging");
+      });
+      dropZone.addEventListener("dragover", (event) => event.preventDefault());
+      dropZone.addEventListener("dragleave", (event) => {
+        if (event.currentTarget === event.target) {
+          state.dragOver = false;
+          dropZone.classList.remove("is-dragging");
+        }
+      });
+      dropZone.addEventListener("drop", (event) => {
+        event.preventDefault();
+        state.dragOver = false;
+        dropZone.classList.remove("is-dragging");
+        if (event.dataTransfer.files.length) addFiles(event.dataTransfer.files);
+      });
+
+      $("#whitespace-toggle").addEventListener("click", (event) => {
+        state.compactWhitespace = !state.compactWhitespace;
+        updateToggle(event.currentTarget, state.compactWhitespace);
+        if (state.output) resetResult();
+      });
+
+      $("#comment-toggle").addEventListener("click", (event) => {
+        state.removeMarkupComments = !state.removeMarkupComments;
+        updateToggle(event.currentTarget, state.removeMarkupComments);
+        if (state.output) resetResult();
+      });
+
+      runButton.addEventListener("click", runCompression);
+
+      copyButton.addEventListener("click", async () => {
+        if (!state.output) return;
+        try {
+          await navigator.clipboard.writeText(state.output);
+          copyButton.textContent = "✓ コピー済み";
+          window.setTimeout(() => { copyButton.textContent = "□ コピー"; }, 1800);
+        } catch (_) {
+          showError("コピーに失敗しました。結果欄を選択して手動でコピーしてください。");
+        }
+      });
+
+      downloadButton.addEventListener("click", () => {
+        if (!state.output) return;
+        const blob = new Blob([state.output], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = "token-trim-output.txt";
+        anchor.click();
+        URL.revokeObjectURL(url);
+      });
+
+      updateInputState();
+    })();
+  </script>
+</body>
+</html>
