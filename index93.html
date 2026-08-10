@@ -373,7 +373,7 @@
     <div class="example">
       <strong>変数名について</strong><br>
       <span class="muted">
-        <code>decodedRegexPatternFromBase64_XXXXXXXX</code> の形式で、入力した正規表現と言語から8桁の識別子を付けます。一般的な <code>regex</code> や <code>pattern</code> 単体より衝突しにくい設計です。
+        <code>decodedRegexPatternFromBase64_XXXXXXXX</code> の形式で、入力した正規表現と言語から8桁の識別子を付けます。一般的な <code>regex</code> や <code>pattern</code> 単体より衝突しにくい設計です。元の正規表現は、安全にコメント化できる場合のみ生成コードの末尾へ付与します。
       </span>
     </div>
   </section>
@@ -421,8 +421,50 @@ function createVariableName(text, language) {
   return `decodedRegexPatternFromBase64_${suffix}`;
 }
 
+/** コメントへ安全に載せにくい制御文字が含まれていないか確認する */
+function canAppendRegexComment(text) {
+  return !/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/u.test(text);
+}
+
+/** 言語ごとの単一行コメント記号を返す */
+function getLineCommentPrefix(language) {
+  switch (language) {
+    case "python":
+    case "powershell":
+    case "ruby":
+      return "#";
+
+    case "javascript":
+    case "php":
+    case "csharp":
+    case "java":
+      return "//";
+
+    default:
+      return null;
+  }
+}
+
+/** 元の正規表現を、各行が必ずコメントになる形へ変換する */
+function createRegexComment(text, language) {
+  if (!canAppendRegexComment(text)) {
+    return "";
+  }
+
+  const commentPrefix = getLineCommentPrefix(language);
+
+  if (!commentPrefix) {
+    return "";
+  }
+
+  const commentLines = text.split(/\r\n|\r|\n|\u2028|\u2029/u);
+  return commentLines
+    .map(line => `${commentPrefix} Regex: ${line}`)
+    .join("\n");
+}
+
 /** 言語別に、復号結果を変数へ代入する完成コードを生成する */
-function createCode(base64, language, variableName) {
+function createCode(base64, language, variableName, originalRegex) {
   switch (language) {
     case "python":
       return `import base64\n\n${variableName} = base64.b64decode("${base64}").decode("utf-8")`;
@@ -450,6 +492,18 @@ function createCode(base64, language, variableName) {
   }
 }
 
+/** 完成コードの末尾へ、安全な場合だけ元の正規表現コメントを付ける */
+function createCodeWithRegexComment(base64, language, variableName, originalRegex) {
+  const generatedCode = createCode(base64, language, variableName, originalRegex);
+  const regexComment = createRegexComment(originalRegex, language);
+
+  if (!regexComment) {
+    return generatedCode;
+  }
+
+  return `${generatedCode}\n\n${regexComment}`;
+}
+
 /** 変換処理 */
 function convertRegex() {
   const text = regexInput.value;
@@ -466,9 +520,11 @@ function convertRegex() {
     const base64 = stringToBase64(text);
     const variableName = createVariableName(text, language);
 
-    output.value = createCode(base64, language, variableName);
+    output.value = createCodeWithRegexComment(base64, language, variableName, text);
     variableNamePreview.textContent = `変数名: ${language === "php" || language === "powershell" ? "$" : ""}${variableName}`;
-    info.textContent = "Base64復号と変数代入まで生成しました。";
+    info.textContent = canAppendRegexComment(text)
+      ? "Base64復号・変数代入・元の正規表現コメントまで生成しました。"
+      : "Base64復号と変数代入を生成しました。安全性を優先し、元の正規表現コメントは省略しました。";
   } catch (error) {
     console.error(error);
     output.value = "";
