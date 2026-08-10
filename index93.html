@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>正規表現 Base64 コード変換</title>
+
+<style>
+@layer reset, base, components, utilities;
+
+/* ========================================
+   reset
+   ブラウザ標準スタイルを簡単に統一
+======================================== */
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  body,
+  h1,
+  p {
+    margin: 0;
+  }
+
+  button,
+  textarea,
+  select {
+    font: inherit;
+  }
+}
+
+/* ========================================
+   base
+   ページ全体の基本デザイン
+======================================== */
+@layer base {
+  :root {
+    font-family:
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+
+    color-scheme: light;
+  }
+
+  body {
+    min-height: 100vh;
+    padding: 24px;
+    background: #f3f4f6;
+    color: #1f2937;
+  }
+
+  button {
+    cursor: pointer;
+  }
+}
+
+/* ========================================
+   components
+   各UIパーツ
+======================================== */
+@layer components {
+  .app {
+    width: min(900px, 100%);
+    margin: 0 auto;
+  }
+
+  .header {
+    margin-bottom: 20px;
+  }
+
+  .title {
+    font-size: clamp(24px, 5vw, 34px);
+    line-height: 1.3;
+  }
+
+  .description {
+    margin-top: 8px;
+    color: #6b7280;
+    line-height: 1.7;
+  }
+
+  .card {
+    padding: 20px;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    background: #fff;
+  }
+
+  .field + .field {
+    margin-top: 18px;
+  }
+
+  .label {
+    display: block;
+    margin-bottom: 7px;
+    font-weight: 700;
+  }
+
+  .textarea {
+    display: block;
+    width: 100%;
+    min-height: 170px;
+    padding: 12px 14px;
+
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+
+    background: #fff;
+    color: #111827;
+
+    font-family:
+      "SFMono-Regular",
+      Consolas,
+      "Liberation Mono",
+      monospace;
+
+    font-size: 14px;
+    line-height: 1.6;
+
+    resize: vertical;
+  }
+
+  .textarea:focus,
+  .select:focus {
+    outline: 2px solid #93c5fd;
+    outline-offset: 2px;
+    border-color: #60a5fa;
+  }
+
+  .select {
+    width: 100%;
+    padding: 10px 12px;
+
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+
+    background: #fff;
+    color: #111827;
+  }
+
+  .buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .button {
+    padding: 10px 18px;
+
+    border: 0;
+    border-radius: 9px;
+
+    background: #2563eb;
+    color: #fff;
+
+    font-weight: 700;
+  }
+
+  .button:hover {
+    background: #1d4ed8;
+  }
+
+  .button-secondary {
+    background: #e5e7eb;
+    color: #1f2937;
+  }
+
+  .button-secondary:hover {
+    background: #d1d5db;
+  }
+
+  .output {
+    min-height: 130px;
+    background: #111827;
+    color: #e5e7eb;
+  }
+
+  .info {
+    margin-top: 8px;
+    min-height: 1.5em;
+    color: #059669;
+    font-size: 14px;
+  }
+
+  .example {
+    margin-top: 20px;
+    padding: 15px;
+
+    border-radius: 9px;
+    background: #f8fafc;
+
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  .example code {
+    font-family:
+      "SFMono-Regular",
+      Consolas,
+      "Liberation Mono",
+      monospace;
+  }
+}
+
+/* ========================================
+   utilities
+   小さな補助スタイル
+======================================== */
+@layer utilities {
+  .muted {
+    color: #6b7280;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<main class="app">
+
+  <header class="header">
+    <h1 class="title">正規表現 → Base64 コード変換</h1>
+
+    <p class="description">
+      正規表現をBase64化し、プログラムへ直接貼り付けられる形式に変換します。
+    </p>
+  </header>
+
+  <section class="card">
+
+    <div class="field">
+      <label class="label" for="regexInput">
+        正規表現
+      </label>
+
+      <textarea
+        id="regexInput"
+        class="textarea"
+        placeholder="例：^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+      ></textarea>
+    </div>
+
+    <div class="field">
+      <label class="label" for="language">
+        言語
+      </label>
+
+      <select id="language" class="select">
+        <option value="python">Python</option>
+        <option value="javascript">JavaScript</option>
+        <option value="php">PHP</option>
+        <option value="csharp">C#</option>
+        <option value="java">Java</option>
+        <option value="powershell">PowerShell</option>
+        <option value="ruby">Ruby</option>
+      </select>
+    </div>
+
+    <div class="buttons">
+      <button
+        id="convertButton"
+        class="button"
+        type="button"
+      >
+        Base64コードに変換
+      </button>
+
+      <button
+        id="copyButton"
+        class="button button-secondary"
+        type="button"
+      >
+        コピー
+      </button>
+
+      <button
+        id="clearButton"
+        class="button button-secondary"
+        type="button"
+      >
+        クリア
+      </button>
+    </div>
+
+    <div class="field">
+      <label class="label" for="output">
+        変換結果
+      </label>
+
+      <textarea
+        id="output"
+        class="textarea output"
+        readonly
+      ></textarea>
+
+      <p id="info" class="info"></p>
+    </div>
+
+    <div class="example">
+      <strong>Pythonでの出力例</strong><br>
+
+      <code>
+        base64.b64decode("44GT44KT44Gr44Gh44Gv").decode("utf-8")
+      </code>
+
+      <p class="muted">
+        ※ Pythonでは別途 <code>import base64</code> が必要です。
+      </p>
+    </div>
+
+  </section>
+
+</main>
+
+<script>
+"use strict";
+
+const regexInput = document.getElementById("regexInput");
+const languageSelect = document.getElementById("language");
+const output = document.getElementById("output");
+
+const convertButton = document.getElementById("convertButton");
+const copyButton = document.getElementById("copyButton");
+const clearButton = document.getElementById("clearButton");
+
+const info = document.getElementById("info");
+
+
+/**
+ * Unicode文字列をUTF-8としてBase64化する
+ */
+function stringToBase64(text) {
+  const bytes = new TextEncoder().encode(text);
+
+  let binary = "";
+
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary);
+}
+
+
+/**
+ * 言語別の復号コードを生成する
+ */
+function createCode(base64, language) {
+
+  switch (language) {
+
+    case "python":
+      return `base64.b64decode("${base64}").decode("utf-8")`;
+
+
+    case "javascript":
+      return `new TextDecoder("utf-8").decode(Uint8Array.from(atob("${base64}"), c => c.charCodeAt(0)))`;
+
+
+    case "php":
+      return `base64_decode("${base64}")`;
+
+
+    case "csharp":
+      return `System.Text.Encoding.UTF8.GetString(System.Convert.FromBase64String("${base64}"))`;
+
+
+    case "java":
+      return `new String(java.util.Base64.getDecoder().decode("${base64}"), java.nio.charset.StandardCharsets.UTF_8)`;
+
+
+    case "powershell":
+      return `[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String("${base64}"))`;
+
+
+    case "ruby":
+      return `Base64.decode64("${base64}").force_encoding("UTF-8")`;
+
+
+    default:
+      return base64;
+  }
+}
+
+
+/**
+ * 変換処理
+ */
+function convertRegex() {
+
+  const text = regexInput.value;
+
+  if (!text) {
+    output.value = "";
+    info.textContent = "正規表現を入力してください。";
+    return;
+  }
+
+  try {
+
+    const base64 = stringToBase64(text);
+
+    output.value = createCode(
+      base64,
+      languageSelect.value
+    );
+
+    info.textContent = "変換しました。";
+
+  } catch (error) {
+
+    console.error(error);
+
+    output.value = "";
+    info.textContent = "変換中にエラーが発生しました.";
+  }
+}
+
+
+/**
+ * クリップボードへコピー
+ */
+async function copyOutput() {
+
+  if (!output.value) {
+    info.textContent = "コピーする内容がありません。";
+    return;
+  }
+
+  try {
+
+    await navigator.clipboard.writeText(output.value);
+
+    info.textContent = "コピーしました。";
+
+  } catch (error) {
+
+    output.select();
+
+    document.execCommand("copy");
+
+    info.textContent = "コピーしました。";
+  }
+}
+
+
+/**
+ * 入力内容をクリア
+ */
+function clearAll() {
+
+  regexInput.value = "";
+  output.value = "";
+
+  info.textContent = "";
+
+  regexInput.focus();
+}
+
+
+/**
+ * イベント
+ */
+convertButton.addEventListener(
+  "click",
+  convertRegex
+);
+
+copyButton.addEventListener(
+  "click",
+  copyOutput
+);
+
+clearButton.addEventListener(
+  "click",
+  clearAll
+);
+
+
+/**
+ * 言語を変更したら自動的に再変換
+ */
+languageSelect.addEventListener(
+  "change",
+  () => {
+
+    if (regexInput.value) {
+      convertRegex();
+    }
+
+  }
+);
+
+
+/**
+ * Ctrl + Enterでも変換
+ */
+regexInput.addEventListener(
+  "keydown",
+  event => {
+
+    if (event.ctrlKey && event.key === "Enter") {
+
+      event.preventDefault();
+
+      convertRegex();
+    }
+
+  }
+);
+
+</script>
+
+</body>
+</html>
