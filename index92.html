@@ -1,0 +1,1480 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="文章・コード・画像をChatGPTへ貼り付けやすく整えるブラウザ内ツール">
+  <title>TokenTrim｜ChatGPT送信圧縮ツール</title>
+  <style>
+    @layer base {
+      /* Base: reset, palette, typography */
+      :root {
+        --ink:#10233b; --soft:#4f6279; --muted:#8393a7; --line:#dce5ed;
+        --paper:#f5f8fb; --card:#fff; --navy:#102b49; --blue:#2368f2;
+        --cyan:#11b8c5; --mint:#d9faef; --shadow:0 18px 44px rgba(26,63,96,.1);
+      }
+      * { box-sizing:border-box; }
+      html { scroll-behavior:smooth; }
+      body {
+        min-width:320px; margin:0; background:var(--paper); color:var(--ink);
+        font-family:Inter,"Noto Sans JP","Hiragino Kaku Gothic ProN",Meiryo,sans-serif;
+      }
+      button, textarea, input { font:inherit; }
+      button { cursor:pointer; }
+      button:disabled { cursor:not-allowed; }
+    }
+
+    @layer components {
+      /* Components: layout and controls */
+      .site-shell { min-height:100vh; background:linear-gradient(#f8fbfd,var(--paper)); }
+      .ambient { display:none; }
+      .topbar,.page-content { width:min(1160px,calc(100% - 48px)); margin:auto; }
+      .topbar,.workspace-header,.results-heading,.site-footer {
+        display:flex; align-items:center; justify-content:space-between; gap:16px;
+      }
+      .topbar { padding:24px 0 16px; }
+      .brand,.local-badge,.hero-points span,.settings-title,.toggle-option,.image-limit {
+        display:inline-flex; align-items:center;
+      }
+      .brand { gap:10px; color:var(--ink); text-decoration:none; }
+      .brand-mark {
+        display:grid; place-items:center; width:34px; height:34px; border-radius:10px;
+        background:var(--navy); color:#fff; font:italic 20px Georgia,serif;
+      }
+      .brand strong,.brand small,.settings-title strong,.settings-title small { display:block; }
+      .brand strong { font-size:16px; }
+      .brand small,.settings-title small { margin-top:2px; color:var(--muted); font-size:9px; }
+      .local-badge { gap:7px; color:#597084; font-size:11px; }
+      .status-dot,.image-limit-dot {
+        width:7px; height:7px; border-radius:50%; background:#20b487;
+      }
+
+      .page-content { padding-bottom:40px; }
+      .hero-section { max-width:790px; padding:72px 0 48px; }
+      .eyebrow,.section-kicker {
+        margin:0; color:var(--blue); font-size:10px; font-weight:800; letter-spacing:.16em;
+      }
+      .eyebrow { display:flex; align-items:center; gap:9px; }
+      .eyebrow span { width:26px; height:2px; background:var(--cyan); }
+      .hero-section h1 {
+        margin:16px 0; font-size:clamp(42px,7vw,76px); line-height:1.08; letter-spacing:-.07em;
+      }
+      .hero-section h1 em { color:var(--blue); font:italic 500 1em Georgia,serif; white-space:nowrap; }
+      .hero-copy { max-width:620px; margin:0; color:var(--soft); font-size:16px; line-height:1.9; }
+      .hero-points { display:flex; flex-wrap:wrap; gap:14px 24px; margin-top:24px; color:#62758a; font-size:11px; }
+      .hero-points span { gap:7px; }
+      .hero-points i { color:var(--cyan); font-style:normal; font-weight:800; }
+
+      .workspace-card {
+        padding:28px; border:1px solid var(--line); border-radius:20px;
+        background:var(--card); box-shadow:var(--shadow);
+      }
+      .workspace-header,.results-heading { align-items:flex-end; }
+      .workspace-header h2,.results-heading h2,.how-heading h2 {
+        margin:0; font-size:24px; letter-spacing:-.04em;
+      }
+      .section-kicker { margin-bottom:8px; }
+      .quiet-button,.clear-button {
+        border:0; background:transparent; color:var(--blue); font-size:11px; font-weight:700;
+      }
+
+      .workspace-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:24px; }
+      .input-panel,.output-panel {
+        min-width:0; padding:16px; border:1px solid var(--line); border-radius:14px; background:#fbfdff;
+      }
+      .output-panel { background:#f7faff; }
+      .panel-label-row,.input-footer,.output-actions,.file-chip,.file-result-row {
+        display:flex; align-items:center; gap:10px;
+      }
+      .panel-label-row,.input-footer { justify-content:space-between; }
+      .panel-label-row { margin-bottom:10px; color:var(--soft); font-size:11px; font-weight:700; }
+      .panel-label-row span { color:var(--muted); font-size:10px; font-weight:500; }
+
+      .source-textarea,.result-textarea {
+        display:block; width:100%; height:260px; padding:14px; resize:vertical;
+        border:1px solid var(--line); border-radius:10px; outline:none; background:#fff; color:var(--ink);
+        font:12px/1.7 "SFMono-Regular",Consolas,"Liberation Mono",monospace;
+      }
+      .source-textarea:focus,.result-textarea:focus { border-color:#8aaffd; box-shadow:0 0 0 3px rgba(35,104,242,.1); }
+      .source-textarea::placeholder,.result-textarea::placeholder { color:#a2afbc; opacity:1; }
+
+      .drop-zone {
+        position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center;
+        min-height:100px; margin-top:12px; padding:16px; border:1px dashed #aebfce;
+        border-radius:11px; background:#f5f9fc; color:#70849a; font-size:11px; text-align:center;
+      }
+      .drop-zone:hover,.drop-zone.is-dragging { border-color:var(--blue); background:#eef5ff; }
+      .drop-zone small { margin-top:5px; color:#9aa9b8; font-size:9px; }
+      .drop-zone input { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+      .upload-icon {
+        display:grid; place-items:center; width:27px; height:27px; margin-bottom:8px;
+        border-radius:8px; background:var(--mint); color:#0a9d88; font-size:18px;
+      }
+
+      .file-list,.file-results-list { display:flex; flex-direction:column; gap:7px; margin-top:10px; }
+      .file-chip { min-width:0; padding:8px 9px; border:1px solid #e1e9f0; border-radius:8px; background:#fff; font-size:10px; }
+      .file-type,.result-file-icon { flex:0 0 auto; color:var(--blue); font-size:8px; font-weight:800; }
+      .file-name,.result-file-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .file-size,.result-file-note { margin-left:auto; color:var(--muted); font-size:9px; }
+      .file-chip button {
+        width:19px; height:19px; padding:0; border:0; border-radius:50%; background:#edf2f6; color:#7790a4;
+      }
+
+      .input-footer { min-height:32px; margin-top:10px; }
+      .privacy-note { color:#95a4b4; font-size:9px; }
+      .lock-icon { color:#36aa8a; font-size:13px; margin-right:3px; }
+      .clear-button:disabled { color:#b5c1cb; }
+      .output-actions { justify-content:flex-end; margin-top:12px; }
+      .copy-button,.download-button {
+        min-height:31px; padding:0 12px; border:1px solid #c9daf3; border-radius:8px;
+        background:#fff; color:var(--blue); font-size:10px; font-weight:700;
+      }
+
+      .settings-strip {
+        display:flex; align-items:center; flex-wrap:wrap; gap:12px 20px;
+        margin-top:18px; padding:13px 15px; border:1px solid #e1e9f0; border-radius:11px; background:#f9fbfd;
+      }
+      .settings-title { gap:8px; }
+      .settings-title strong { color:var(--soft); font-size:10px; }
+      .sliders-icon { color:var(--blue); font-size:19px; transform:rotate(90deg); }
+      .toggle-option { gap:7px; padding:0; border:0; background:transparent; color:#7c8d9f; font-size:10px; }
+      .toggle-option.is-on { color:var(--soft); font-weight:700; }
+      .toggle { position:relative; width:26px; height:15px; border-radius:20px; background:#cad5df; }
+      .toggle::after {
+        position:absolute; top:3px; left:3px; width:9px; height:9px; border-radius:50%;
+        background:#fff; content:"";
+      }
+      .toggle-option.is-on .toggle { background:var(--blue); }
+      .toggle-option.is-on .toggle::after { transform:translateX(11px); }
+      .image-limit { gap:7px; margin-left:auto; color:#7e8e9f; font-size:9px; }
+      .image-limit-dot { width:5px; height:5px; }
+
+      .error-message { margin:14px 2px -2px; color:#c4495b; font-size:11px; }
+      .run-button {
+        display:flex; align-items:center; justify-content:center; gap:11px; width:100%; min-height:55px;
+        margin-top:17px; border:0; border-radius:11px; background:var(--navy); color:#fff; font-size:13px; font-weight:800;
+      }
+      .run-button:disabled { background:#b7c5d1; }
+      .run-icon {
+        display:grid; place-items:center; width:25px; height:25px; border-radius:50%;
+        background:var(--cyan); color:#fff; font-size:18px;
+      }
+      .run-shortcut { padding:4px 6px; border:1px solid rgba(255,255,255,.25); border-radius:5px; color:#b7c9d9; font-size:8px; }
+
+      .results-section { padding-top:70px; }
+      .result-pill { padding:7px 10px; border-radius:99px; background:#e6f8f2; color:#15916f; font-size:10px; font-weight:700; }
+      .result-pill.is-negative { background:#fff0e3; color:#c27235; }
+      .metric-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:13px; margin-top:22px; }
+      .metric-card { min-height:130px; padding:20px; border:1px solid var(--line); border-radius:13px; background:#fff; }
+      .metric-card-accent { background:#f5f9ff; }
+      .metric-card-highlight { background:#f7fcf8; }
+      .metric-label,.metric-card small { display:block; color:var(--muted); font-size:10px; }
+      .metric-card strong { display:block; margin-top:9px; font-size:29px; letter-spacing:-.05em; }
+      .metric-card-accent strong { color:var(--blue); }
+      .metric-card-highlight strong { color:#129879; }
+      .metric-card small { margin-top:6px; font-size:9px; }
+
+      .file-results { margin-top:15px; padding:15px 17px; border:1px solid var(--line); border-radius:13px; background:#fff; }
+      .file-results-title { color:var(--soft); font-size:10px; font-weight:800; }
+      .file-result-row { min-width:0; padding-top:8px; border-top:1px solid #edf1f4; font-size:10px; }
+      .file-result-row:first-child { padding-top:0; border-top:0; }
+      .result-file-icon.image { color:#bc8d25; }
+      .result-file-icon.unsupported { color:#c17c83; }
+      .result-file-size { color:#15916f; font-size:9px; font-weight:800; }
+
+      .how-section { display:grid; grid-template-columns:.8fr 1.6fr; gap:48px; padding:100px 0 75px; }
+      .how-heading > p:last-child { max-width:265px; color:var(--soft); font-size:11px; line-height:1.8; }
+      .process-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+      .process-card { padding:17px; border-top:2px solid var(--blue); background:#fff; }
+      .process-number { display:block; margin-bottom:24px; color:var(--blue); font:italic 18px Georgia,serif; }
+      .process-card h3 { margin:0; font-size:13px; }
+      .process-card p { margin:8px 0 16px; color:var(--soft); font-size:10px; line-height:1.75; }
+      .process-code { color:#9aaaba; font:8px "SFMono-Regular",Consolas,monospace; }
+      .site-footer { padding-top:18px; border-top:1px solid var(--line); color:#97a6b5; font-size:9px; }
+      .site-footer span:first-child { color:var(--soft); font-weight:800; }
+    }
+
+    @layer utilities {
+      /* Utilities: visibility and responsive adjustments */
+      .hidden { display:none; }
+
+      @media (max-width:860px) {
+        .hero-section { padding-top:56px; }
+        .how-section { grid-template-columns:1fr; gap:28px; }
+      }
+
+      @media (max-width:680px) {
+        .topbar,.page-content { width:calc(100% - 28px); }
+        .hero-section { padding:46px 0 34px; }
+        .hero-section h1 { font-size:clamp(39px,13vw,64px); }
+        .workspace-card { padding:17px; }
+        .workspace-grid,.metric-grid,.process-grid { grid-template-columns:1fr; }
+        .source-textarea,.result-textarea { height:220px; }
+        .settings-strip { align-items:flex-start; flex-direction:column; }
+        .image-limit { margin-left:0; }
+        .site-footer { align-items:flex-start; flex-direction:column; gap:8px; }
+      }
+
+      @media (prefers-reduced-motion:reduce) {
+        /* Reduced motion: remove smooth scrolling and transitions */
+        html { scroll-behavior:auto; }
+        *,*::before,*::after { transition:none; }
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="site-shell">
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="TokenTrim ホーム">
+        <span class="brand-mark">T</span>
+        <span>
+          <strong>TokenTrim</strong>
+          <small>送信前のテキスト圧縮</small>
+        </span>
+      </a>
+      <div class="local-badge"><span class="status-dot"></span>ブラウザ内で処理</div>
+    </header>
+
+    <div class="page-content" id="top">
+      <section class="hero-section">
+        <div class="eyebrow"><span></span>CHATGPT INPUT PREP</div>
+        <h1>送信する前に、<em>少し軽く。</em></h1>
+        <p class="hero-copy">文章・コード・画像をまとめて整理。余分な空白を詰め、画像はWebPへ変換して、ChatGPTへ貼り付ける文章を作ります。 <a href="https://uni928.github.io/Uni928PublicHTMLs/index90.html">旧版はこちら</a></p>
+        <div class="hero-points" aria-label="主な特徴">
+          <span><i>01</i>行ごとにtrim</span>
+          <span><i>02</i>JSON / HTMLを短縮</span>
+          <span><i>03</i>画像は28KB以内へ試行</span>
+        </div>
+      </section>
+
+      <section class="workspace-card" aria-label="圧縮ワークスペース">
+        <div class="workspace-header">
+          <div>
+            <p class="section-kicker">WORKSPACE</p>
+            <h2>入力をまとめる</h2>
+          </div>
+          <button class="quiet-button" id="sample-button" type="button">サンプルを入れる</button>
+        </div>
+
+        <div class="workspace-grid">
+          <div class="input-panel">
+            <div class="panel-label-row">
+              <label for="source-text">文章・コード</label>
+              <span id="input-count">0 文字</span>
+            </div>
+            <textarea id="source-text" class="source-textarea" spellcheck="false" placeholder="ここに文章、HTML、JSON、コードを貼り付けます。&#10;&#10;ファイルだけでも実行できます。"></textarea>
+
+            <div class="drop-zone" id="drop-zone" role="button" tabindex="0" aria-label="ファイルを追加">
+              <span class="upload-icon">↥</span>
+              <span><strong>ファイルをドロップ</strong> またはクリックして選択</span>
+              <small>テキスト・HTML・JSON・コード・画像（複数可）</small>
+              <input id="file-input" type="file" multiple>
+            </div>
+
+            <div class="file-list hidden" id="file-list" aria-label="追加したファイル"></div>
+
+            <div class="input-footer">
+              <span class="privacy-note"><span class="lock-icon">⌁</span>入力内容はこのブラウザから外へ送信しません</span>
+              <button type="button" class="clear-button" id="clear-button" disabled>すべて消去</button>
+            </div>
+          </div>
+
+          <div class="output-panel">
+            <div class="panel-label-row">
+              <label for="result-text">貼り付け用の結果</label>
+              <span id="output-count">実行後に表示</span>
+            </div>
+            <textarea id="result-text" class="result-textarea" readonly spellcheck="false" placeholder="実行すると、ここに圧縮済みの文章が表示されます。&#10;そのままChatGPTへ貼り付けできます。"></textarea>
+            <div class="output-actions">
+              <button type="button" class="copy-button" id="copy-button" disabled>□ コピー</button>
+              <button type="button" class="download-button" id="download-button" disabled>TXT保存</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-strip">
+          <div class="settings-title"><span class="sliders-icon">☷</span><span><strong>圧縮設定</strong><small>安全な機械的変換のみ</small></span></div>
+          <button type="button" class="toggle-option is-on" id="whitespace-toggle" aria-pressed="true"><span class="toggle"></span><span>空白を圧縮</span></button>
+          <button type="button" class="toggle-option is-on" id="comment-toggle" aria-pressed="true"><span class="toggle"></span><span>HTML / CSSコメントを削除</span></button>
+          <div class="image-limit"><span class="image-limit-dot"></span>画像上限 <strong>28,000 bytes</strong></div>
+        </div>
+
+        <p class="error-message hidden" id="error-message" role="alert"></p>
+        <button class="run-button" id="run-button" type="button" disabled>
+          <span class="run-icon">→</span>圧縮して文章化する<span class="run-shortcut">RUN</span>
+        </button>
+      </section>
+
+      <section class="results-section" aria-live="polite">
+        <div class="results-heading">
+          <div>
+            <p class="section-kicker">ESTIMATE</p>
+            <h2>変換の手応え</h2>
+          </div>
+          <span class="result-pill hidden" id="result-pill"></span>
+        </div>
+        <div class="metric-grid">
+          <article class="metric-card">
+            <span class="metric-label">入力の概算トークン</span>
+            <strong id="before-tokens">—</strong>
+            <small id="before-detail">実行すると計算します</small>
+          </article>
+          <article class="metric-card metric-card-accent">
+            <span class="metric-label">出力の概算トークン</span>
+            <strong id="after-tokens">—</strong>
+            <small id="after-detail">モデルにより実際の値は異なります</small>
+          </article>
+          <article class="metric-card metric-card-highlight">
+            <span class="metric-label">削減率の目安</span>
+            <strong id="reduction">—</strong>
+            <small id="reduction-detail">正確なトークン数ではありません</small>
+          </article>
+        </div>
+        <div class="file-results hidden" id="file-results">
+          <div class="file-results-title">ファイル別の処理</div>
+          <div class="file-results-list" id="file-results-list"></div>
+        </div>
+      </section>
+
+      <section class="how-section">
+        <div class="how-heading">
+          <p class="section-kicker">WHAT HAPPENS</p>
+          <h2>小さな整理を積み重ねます</h2>
+          <p>意味を理解して要約するのではなく、再現性のある変換だけをブラウザで実行します。</p>
+        </div>
+        <div class="process-grid">
+          <article class="process-card"><span class="process-number">01</span><h3>空白を整える</h3><p>行頭・行末の空白、重複した空行、連続スペースを整理します。</p><span class="process-code">trim / whitespace</span></article>
+          <article class="process-card"><span class="process-number">02</span><h3>構造を短くする</h3><p>JSONは1行化。HTMLやCSSはコメントとタグ間の不要な空白を減らします。</p><span class="process-code">JSON.stringify / markup</span></article>
+          <article class="process-card"><span class="process-number">03</span><h3>画像を再調整する</h3><p>WebPの品質と解像度を段階的に試し、28,000 bytes以内を目指します。</p><span class="process-code">quality → dimensions</span></article>
+        </div>
+      </section>
+
+      <footer class="site-footer"><span>TokenTrim</span><span>概算値です。正確なトークン数は利用モデルのTokenizerに依存します。</span></footer>
+    </div>
+  </main>
+
+  <script>
+    "use strict";
+    (() => {
+      const MAX_IMAGE_BYTES = 28000;
+      const MAX_IMAGE_EDGE = 1600;
+      const TEXT_EXTENSIONS = new Set([
+        "txt", "md", "markdown", "html", "htm", "css", "scss", "less", "js", "mjs", "cjs",
+        "jsx", "ts", "tsx", "json", "jsonl", "xml", "svg", "yaml", "yml", "csv", "tsv",
+        "log", "sql", "py", "rb", "php", "java", "kt", "go", "rs", "c", "h", "cpp", "hpp",
+        "cs", "bat", "sh", "vue", "svelte"
+      ]);
+      const INDENT_SENSITIVE_EXTENSIONS = new Set(["py", "yaml", "yml", "haml", "pug"]);
+      // Nesting: brace-based source files that benefit from reconstructed indentation.
+      const NESTABLE_CODE_EXTENSIONS = new Set([
+        "js", "mjs", "cjs", "jsx", "ts", "tsx", "java", "kt", "go", "rs",
+        "c", "h", "cpp", "hpp", "cs", "rb", "php", "sql", "bat", "sh", "vue", "svelte"
+      ]);
+      const VOID_HTML_TAGS = new Set([
+        "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"
+      ]);
+      const FILE_BLOCK_HEADER = /^\s*(?:(?:#{1,6}\s*)?(?:FILE|ファイル|FILENAME|ファイル名|PATH|パス)\s*[:：]\s*|(?:[-=]{2,}\s*))(.+?)(?:\s*[-=]{2,})?\s*$/i;
+      const FILE_NAME_PATTERN = /(?:^|[/\\])[^/\\:*?"<>|\s]+\.[A-Za-z0-9][A-Za-z0-9._-]{0,15}$/;
+
+      const state = {
+        files: [],
+        output: "",
+        processing: false,
+        dragOver: false,
+        compactWhitespace: true,
+        removeMarkupComments: true,
+        result: null
+      };
+
+      const $ = (selector) => document.querySelector(selector);
+      const sourceText = $("#source-text");
+      const resultText = $("#result-text");
+      const fileInput = $("#file-input");
+      const dropZone = $("#drop-zone");
+      const fileList = $("#file-list");
+      const runButton = $("#run-button");
+      const clearButton = $("#clear-button");
+      const copyButton = $("#copy-button");
+      const downloadButton = $("#download-button");
+      const errorMessage = $("#error-message");
+      const inputCount = $("#input-count");
+      const outputCount = $("#output-count");
+      const fileResults = $("#file-results");
+      const fileResultsList = $("#file-results-list");
+      const resultPill = $("#result-pill");
+
+      function extensionOf(name) {
+        const parts = name.toLowerCase().split(".");
+        return parts.length > 1 ? parts[parts.length - 1] : "";
+      }
+
+      function isTextLike(file) {
+        return file.type.startsWith("text/") || TEXT_EXTENSIONS.has(extensionOf(file.name));
+      }
+
+      function isImage(file) {
+        return file.type.startsWith("image/") && extensionOf(file.name) !== "svg";
+      }
+
+      function formatBytes(bytes) {
+        if (bytes < 1000) return bytes + " B";
+        if (bytes < 1000000) return (bytes / 1000).toFixed(bytes < 10000 ? 1 : 0) + " KB";
+        return (bytes / 1000000).toFixed(1) + " MB";
+      }
+
+      function formatNumber(value) {
+        return new Intl.NumberFormat("ja-JP").format(Math.max(0, Math.round(value)));
+      }
+
+      function normalizeText(value) {
+        return value.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+      }
+
+      function trimLines(value, removeEmptyLines) {
+        const lines = normalizeText(value).split("\n").map((line) => line.trim());
+        return (removeEmptyLines ? lines.filter(Boolean) : lines).join("\n");
+      }
+
+      function trimIndentSensitiveLines(value, removeEmptyLines) {
+        const lines = normalizeText(value).split("\n").map((line) => line.replace(/[ \t]+$/g, ""));
+        return (removeEmptyLines ? lines.filter((line) => line.trim().length > 0) : lines).join("\n").trimEnd();
+      }
+
+      function safeTrimFileLines(value, name = "") {
+        const extension = extensionOf(name);
+        const normalized = normalizeText(value);
+        const kind = detectTextKind(normalized, name);
+        if (kind === "markup") return normalized;
+        if (INDENT_SENSITIVE_EXTENSIONS.has(extension)) {
+          return trimIndentSensitiveLines(normalized, state.compactWhitespace);
+        }
+        return normalized
+          .split("\n")
+          .map((line) => line.trim())
+          .filter((line) => !state.compactWhitespace || line.length > 0)
+          .join("\n");
+      }
+
+      function mimeFromName(name, fallback = "text/plain") {
+        const extension = extensionOf(name);
+        const known = {
+          html: "text/html", htm: "text/html", css: "text/css", js: "text/javascript", mjs: "text/javascript",
+          json: "application/json", jsonl: "application/json", xml: "application/xml", svg: "image/svg+xml",
+          md: "text/markdown", markdown: "text/markdown", csv: "text/csv", tsv: "text/tab-separated-values",
+          py: "text/x-python", yaml: "text/yaml", yml: "text/yaml", txt: "text/plain", log: "text/plain"
+        };
+        return known[extension] || fallback;
+      }
+
+      function dataUrlToFile(dataUrl, name) {
+        const match = /^data:([^;,]+)?(?:;charset=[^;,]+)?;base64,([A-Za-z0-9+/=\s]+)$/i.exec(dataUrl.trim());
+        if (!match) return null;
+        try {
+          const binary = atob(match[2].replace(/\s+/g, ""));
+          const bytes = new Uint8Array(binary.length);
+          for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+          return new File([bytes], name, { type: match[1] || "application/octet-stream", lastModified: Date.now() });
+        } catch (_) {
+          return null;
+        }
+      }
+
+      function cleanDeclaredFileName(value) {
+        const cleaned = value.trim()
+          .replace(/^['"`\[【(<]+|['"`\]】)>]+$/g, "")
+          .replace(/\s+(?:file|ファイル)$/i, "")
+          .trim();
+        if (!cleaned || cleaned.length > 240) return "";
+        return FILE_NAME_PATTERN.test(cleaned) ? cleaned : "";
+      }
+
+      function filenameFromFenceInfo(info) {
+        const value = (info || "").trim();
+        if (!value) return "";
+        const attribute = /(?:filename|file|name|path)\s*=\s*["']?([^"'\s]+\.[A-Za-z0-9][A-Za-z0-9._-]{0,15})/i.exec(value);
+        if (attribute) return cleanDeclaredFileName(attribute[1]);
+        const colon = /(?:^|\s)(?:file|filename|path)?\s*[:：]\s*([^\s]+\.[A-Za-z0-9][A-Za-z0-9._-]{0,15})/i.exec(value);
+        if (colon) return cleanDeclaredFileName(colon[1]);
+        const tokens = value.split(/\s+/);
+        for (let index = tokens.length - 1; index >= 0; index -= 1) {
+          const candidate = cleanDeclaredFileName(tokens[index]);
+          if (candidate) return candidate;
+        }
+        return "";
+      }
+
+      function standaloneFilename(line) {
+        const raw = (line || "").trim()
+          .replace(/^(?:#{1,6}|[-*+>])\s+/, "")
+          .replace(/^\*\*|\*\*$/g, "")
+          .replace(/^`|`$/g, "")
+          .replace(/^[【\[(（]|[】\])）]$/g, "")
+          .replace(/\s*[:：]\s*$/, "")
+          .trim();
+        return cleanDeclaredFileName(raw);
+      }
+
+      function findFenceClose(lines, openIndex, token) {
+        const closePattern = new RegExp("^\\s*" + token[0] + "{" + token.length + ",}\\s*$");
+        let index = openIndex + 1;
+        while (index < lines.length && !closePattern.test(lines[index])) index += 1;
+        return index < lines.length ? index : -1;
+      }
+
+      function parseDeclaredFileBlock(lines, startIndex) {
+        const header = FILE_BLOCK_HEADER.exec(lines[startIndex] || "");
+        if (!header) return null;
+        const name = cleanDeclaredFileName(header[1]);
+        if (!name) return null;
+
+        let index = startIndex + 1;
+        let mime = mimeFromName(name);
+        let contentStart = -1;
+        let dataUrl = "";
+        let sawMetadata = false;
+        while (index < lines.length) {
+          const line = lines[index];
+          const nextHeader = FILE_BLOCK_HEADER.exec(line);
+          if (nextHeader && cleanDeclaredFileName(nextHeader[1])) break;
+          const typeMatch = /^\s*(?:TYPE|MIME|種類)\s*[:：]\s*(.+)$/i.exec(line);
+          if (typeMatch) { mime = typeMatch[1].trim() || mime; sawMetadata = true; index += 1; continue; }
+          if (/^\s*(?:CONTENT|本文|内容|CODE|コード)\s*[:：]?\s*$/i.test(line)) {
+            contentStart = index + 1;
+            index += 1;
+            const fence = /^\s*(```+|~~~+)/.exec(lines[index] || "");
+            if (fence) {
+              const closeIndex = findFenceClose(lines, index, fence[1]);
+              if (closeIndex < 0) return null;
+              const content = lines.slice(index + 1, closeIndex).join("\n");
+              return { start: startIndex, end: closeIndex + 1, file: new File([content], name, { type: mimeFromName(name, mime), lastModified: Date.now() }) };
+            }
+            break;
+          }
+          const dataMatch = /^\s*DATA\s*[:：]\s*(data:[^\s]+)$/i.exec(line);
+          if (dataMatch) { dataUrl = dataMatch[1]; index += 1; break; }
+          if (!line.trim()) { index += 1; continue; }
+          const fence = /^\s*(```+|~~~+)(.*)$/.exec(line);
+          if (fence) {
+            const closeIndex = findFenceClose(lines, index, fence[1]);
+            if (closeIndex < 0) return null;
+            const content = lines.slice(index + 1, closeIndex).join("\n");
+            return { start: startIndex, end: closeIndex + 1, file: new File([content], name, { type: mimeFromName(name, mime), lastModified: Date.now() }) };
+          }
+          // FILE:/ファイル名: のような明示ヘッダーなら、CONTENT: がなくても本文開始とみなす。
+          contentStart = index;
+          break;
+        }
+
+        if (contentStart >= 0) {
+          let end = contentStart;
+          while (end < lines.length) {
+            const nextHeader = FILE_BLOCK_HEADER.exec(lines[end]);
+            if (end > contentStart && nextHeader && cleanDeclaredFileName(nextHeader[1])) break;
+            end += 1;
+          }
+          const content = lines.slice(contentStart, end).join("\n").replace(/\n+$/, "");
+          if (content || sawMetadata) return { start: startIndex, end, file: new File([content], name, { type: mimeFromName(name, mime), lastModified: Date.now() }) };
+        }
+        if (dataUrl) {
+          const file = dataUrlToFile(dataUrl, name);
+          return file ? { start: startIndex, end: index, file } : null;
+        }
+        return null;
+      }
+
+      function parseNamedFence(lines, startIndex) {
+        const header = FILE_BLOCK_HEADER.exec(lines[startIndex] || "");
+        if (!header) return null;
+        const name = cleanDeclaredFileName(header[1]);
+        if (!name) return null;
+        const fenceLine = lines[startIndex + 1] || "";
+        const fence = /^\s*(```+|~~~+)/.exec(fenceLine);
+        if (!fence) return null;
+        const closeIndex = findFenceClose(lines, startIndex + 1, fence[1]);
+        if (closeIndex < 0) return null;
+        const content = lines.slice(startIndex + 2, closeIndex).join("\n");
+        return { start: startIndex, end: closeIndex + 1, file: new File([content], name, { type: mimeFromName(name), lastModified: Date.now() }) };
+      }
+
+      function parseFilenameFence(lines, startIndex) {
+        const name = standaloneFilename(lines[startIndex] || "");
+        if (!name) return null;
+        let fenceIndex = startIndex + 1;
+        while (fenceIndex < lines.length && !lines[fenceIndex].trim() && fenceIndex <= startIndex + 2) fenceIndex += 1;
+        const fence = /^\s*(```+|~~~+)(?:[^\n]*)$/.exec(lines[fenceIndex] || "");
+        if (!fence) return null;
+        const closeIndex = findFenceClose(lines, fenceIndex, fence[1]);
+        if (closeIndex < 0) return null;
+        const content = lines.slice(fenceIndex + 1, closeIndex).join("\n");
+        return { start: startIndex, end: closeIndex + 1, file: new File([content], name, { type: mimeFromName(name), lastModified: Date.now() }) };
+      }
+
+      function parseFenceWithFilename(lines, startIndex) {
+        const fence = /^\s*(```+|~~~+)(.*)$/.exec(lines[startIndex] || "");
+        if (!fence) return null;
+        const name = filenameFromFenceInfo(fence[2]);
+        if (!name) return null;
+        const closeIndex = findFenceClose(lines, startIndex, fence[1]);
+        if (closeIndex < 0) return null;
+        const content = lines.slice(startIndex + 1, closeIndex).join("\n");
+        return { start: startIndex, end: closeIndex + 1, file: new File([content], name, { type: mimeFromName(name), lastModified: Date.now() }) };
+      }
+
+      function parseXmlFileBlock(lines, startIndex) {
+        const open = /^\s*<file\b[^>]*(?:name|path|filename)\s*=\s*["']([^"']+)["'][^>]*>\s*$/i.exec(lines[startIndex] || "");
+        if (!open) return null;
+        const name = cleanDeclaredFileName(open[1]);
+        if (!name) return null;
+        let index = startIndex + 1;
+        while (index < lines.length && !/^\s*<\/file>\s*$/i.test(lines[index])) index += 1;
+        if (index >= lines.length) return null;
+        const content = lines.slice(startIndex + 1, index).join("\n");
+        return { start: startIndex, end: index + 1, file: new File([content], name, { type: mimeFromName(name), lastModified: Date.now() }) };
+      }
+
+      function extractDeclaredFilesFromSource() {
+        const normalized = normalizeText(sourceText.value);
+        const lines = normalized.split("\n");
+        const files = [];
+        const remove = new Set();
+        for (let index = 0; index < lines.length; index += 1) {
+          const parsed = parseXmlFileBlock(lines, index)
+            || parseFenceWithFilename(lines, index)
+            || (FILE_BLOCK_HEADER.test(lines[index]) ? (parseNamedFence(lines, index) || parseDeclaredFileBlock(lines, index)) : null)
+            || parseFilenameFence(lines, index);
+          if (!parsed) continue;
+          files.push(parsed.file);
+          for (let lineIndex = parsed.start; lineIndex < parsed.end; lineIndex += 1) remove.add(lineIndex);
+          index = parsed.end - 1;
+        }
+        if (!files.length) return 0;
+        const remaining = lines.filter((_, index) => !remove.has(index));
+        sourceText.value = remaining
+          .join("\n")
+          .replace(/^[ \t]*\n+|\n+[ \t]*$/g, "")
+          .replace(/\n[ \t]*\n(?:[ \t]*\n)*/g, "\n");
+        addFiles(files);
+        return files.length;
+      }
+
+      function compactJson(value) {
+        try {
+          return JSON.stringify(JSON.parse(value));
+        } catch (_) {
+          return "";
+        }
+      }
+
+      // Nesting: keep structured JSON readable so the model can follow its hierarchy.
+      function nestJson(value) {
+        try {
+          return JSON.stringify(JSON.parse(value), null, 2);
+        } catch (_) {
+          return value.trim();
+        }
+      }
+
+      // Nesting: reconstruct indentation from braces while ignoring strings and comments.
+      function nestBraceCode(value, splitSemicolons = false) {
+        const normalized = normalizeText(value).trim();
+        if (!normalized) return "";
+
+        const lines = [];
+        let buffer = "";
+        let depth = 0;
+        let quote = "";
+        let escaped = false;
+        let lineComment = false;
+        let blockComment = false;
+
+        const pushLine = (text, lineDepth = depth) => {
+          const trimmed = text.trim();
+          if (!trimmed) return;
+          lines.push("  ".repeat(Math.max(0, lineDepth)) + trimmed);
+        };
+        const flush = () => {
+          pushLine(buffer, depth);
+          buffer = "";
+        };
+
+        for (let index = 0; index < normalized.length; index += 1) {
+          const character = normalized[index];
+          const next = normalized[index + 1] || "";
+
+          if (lineComment) {
+            buffer += character;
+            if (character === "\n") {
+              lineComment = false;
+              flush();
+            }
+            continue;
+          }
+          if (blockComment) {
+            buffer += character;
+            if (character === "*" && next === "/") {
+              buffer += "/";
+              index += 1;
+              blockComment = false;
+            }
+            continue;
+          }
+          if (quote) {
+            buffer += character;
+            if (escaped) escaped = false;
+            else if (character === "\\") escaped = true;
+            else if (character === quote) quote = "";
+            if (character === "\n" && quote !== "`") flush();
+            continue;
+          }
+
+          if (character === "/" && next === "/") {
+            buffer += "//";
+            index += 1;
+            lineComment = true;
+            continue;
+          }
+          if (character === "/" && next === "*") {
+            buffer += "/*";
+            index += 1;
+            blockComment = true;
+            continue;
+          }
+          if (["'", '"', "`"].includes(character)) {
+            quote = character;
+            escaped = false;
+            buffer += character;
+            continue;
+          }
+          if (
+            /^}[,;,)\]]*$/.test(buffer.trim()) &&
+            !/[\s;,\)\]]/.test(character)
+          ) {
+            flush();
+          }
+          if (character === "{") {
+            pushLine(buffer + "{", depth);
+            buffer = "";
+            depth += 1;
+            continue;
+          }
+          if (character === "}") {
+            flush();
+            depth = Math.max(0, depth - 1);
+            buffer = "}";
+            continue;
+          }
+          if (splitSemicolons && character === ";") {
+            pushLine(buffer + ";", depth);
+            buffer = "";
+            continue;
+          }
+          if (character === "\n") {
+            flush();
+            continue;
+          }
+          buffer += character;
+        }
+        flush();
+        return lines.join("\n");
+      }
+
+      // Nesting: format HTML/XML tags without treating comparison signs as tags.
+      function nestMarkup(value) {
+        const normalized = normalizeText(value).trim();
+        if (!normalized) return "";
+
+        const tokens = [];
+        let text = "";
+        const pushText = () => {
+          if (text) tokens.push({ type: "text", value: text });
+          text = "";
+        };
+
+        for (let index = 0; index < normalized.length;) {
+          if (normalized[index] !== "<") {
+            text += normalized[index];
+            index += 1;
+            continue;
+          }
+
+          const next = normalized[index + 1] || "";
+          if (!/[A-Za-z/!?]/.test(next)) {
+            text += "<";
+            index += 1;
+            continue;
+          }
+
+          if (normalized.startsWith("<!--", index)) {
+            const commentEnd = normalized.indexOf("-->", index + 4);
+            if (commentEnd < 0) {
+              text += normalized.slice(index);
+              break;
+            }
+            pushText();
+            tokens.push({ type: "tag", value: normalized.slice(index, commentEnd + 3) });
+            index = commentEnd + 3;
+            continue;
+          }
+
+          let quote = "";
+          let end = index + 1;
+          for (; end < normalized.length; end += 1) {
+            const character = normalized[end];
+            if (quote) {
+              if (character === quote && normalized[end - 1] !== "\\") quote = "";
+            } else if (["'", '"'].includes(character)) {
+              quote = character;
+            } else if (character === ">") {
+              break;
+            }
+          }
+          if (end >= normalized.length) {
+            text += normalized.slice(index);
+            break;
+          }
+          pushText();
+          tokens.push({ type: "tag", value: normalized.slice(index, end + 1) });
+          index = end + 1;
+        }
+        pushText();
+
+        const lines = [];
+        let depth = 0;
+        const push = (value, lineDepth = depth) => {
+          const trimmed = value.trim();
+          if (trimmed) lines.push("  ".repeat(Math.max(0, lineDepth)) + trimmed);
+        };
+
+        for (const token of tokens) {
+          if (token.type === "text") {
+            push(token.value.replace(/\s+/g, " "), depth);
+            continue;
+          }
+          const tag = token.value.trim();
+          const closing = /^<\//.test(tag);
+          const commentOrDeclaration = /^<!--|^<!|^<\?/.test(tag);
+          const selfClosing = /\/\s*>$/.test(tag);
+          const nameMatch = /^<\/?([A-Za-z][\w:-]*)/.exec(tag);
+          const tagName = nameMatch ? nameMatch[1].toLowerCase() : "";
+          if (closing) depth = Math.max(0, depth - 1);
+          push(tag, depth);
+          if (!closing && !commentOrDeclaration && !selfClosing && !VOID_HTML_TAGS.has(tagName)) depth += 1;
+        }
+        return lines.join("\n");
+      }
+
+      function protectBlocks(value) {
+        const protectedBlocks = [];
+        const protectedText = value.replace(
+          /<(pre|textarea|script|style)\b[^>]*>[\s\S]*?<\/\1>/gi,
+          (block) => {
+            const marker = "\u0001" + protectedBlocks.length + "\u0002";
+            protectedBlocks.push(block);
+            return marker;
+          }
+        );
+        return { protectedBlocks, protectedText };
+      }
+
+      function restoreBlocks(value, protectedBlocks) {
+        return value.replace(/\u0001(\d+)\u0002/g, (_, index) => protectedBlocks[Number(index)] || "");
+      }
+
+      function compactMarkup(value, removeComments) {
+        const blocks = protectBlocks(normalizeText(value));
+        let compacted = blocks.protectedText
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .join("");
+        if (removeComments) compacted = compacted.replace(/<!--[\s\S]*?-->/g, "");
+        return restoreBlocks(compacted.replace(/>\s+</g, "><").replace(/[ \t]{2,}/g, " ").trim(), blocks.protectedBlocks);
+      }
+
+      function compactCss(value, removeComments, compactWhitespace) {
+        let compacted = trimLines(value, compactWhitespace);
+        if (removeComments) compacted = compacted.replace(/\/\*[\s\S]*?\*\//g, "");
+        if (compactWhitespace) {
+          compacted = compacted.replace(/[ \t]+/g, " ").replace(/\s*([{}:;,])\s*/g, "$1").trim();
+        }
+        return compacted;
+      }
+
+      function detectTextKind(value, name = "") {
+        const extension = extensionOf(name);
+        const trimmed = normalizeText(value).trim();
+
+        if (extension === "json") return "json";
+        if (["html", "htm", "xml", "svg"].includes(extension)) return "markup";
+        if (["css", "scss", "less"].includes(extension)) return "css";
+        if (NESTABLE_CODE_EXTENSIONS.has(extension)) return "code";
+
+        if (/^[\[{]/.test(trimmed) && compactJson(trimmed)) return "json";
+        if (/<!doctype\s+html\b|<html\b|<head\b|<body\b|<!--[\s\S]*?-->|<\/?[a-z][^>]*>/i.test(trimmed)) return "markup";
+        if (
+          /(?:^|\n)\s*(?:const|let|var|function|class|if|for|while|switch|try|catch|import|export|return)\b/m.test(trimmed) &&
+          /[{}]/.test(trimmed)
+        ) return "code";
+        if (
+          /\/\*[\s\S]*?\*\//.test(trimmed) ||
+          /(^|[}\s])(?:@[\w-]+|[#.:\[\]*a-z][^{}]*)\{[\s\S]*?:[\s\S]*?\}/i.test(trimmed)
+        ) return "css";
+
+        return "text";
+      }
+
+      function languageToName(language) {
+        const normalized = (language || "").trim().toLowerCase().replace(/^language-/, "");
+        const aliases = {
+          html: "block.html", htm: "block.html", xml: "block.xml", svg: "block.svg",
+          css: "block.css", scss: "block.scss", less: "block.less",
+          json: "block.json", jsonl: "block.jsonl",
+          javascript: "block.js", js: "block.js", jsx: "block.jsx",
+          typescript: "block.ts", ts: "block.ts", tsx: "block.tsx",
+          python: "block.py", py: "block.py", yaml: "block.yaml", yml: "block.yml",
+          bash: "block.sh", shell: "block.sh", sh: "block.sh",
+          csharp: "block.cs", cs: "block.cs", java: "block.java", php: "block.php",
+          markdown: "block.md", md: "block.md"
+        };
+        return aliases[normalized] || "block.txt";
+      }
+
+      function compactCodeFence(content, info) {
+        const language = ((info || "").trim().split(/\s+/)[0] || "").replace(/^language-/, "");
+        const pseudoName = languageToName(language);
+        return compactText(content, pseudoName, false);
+      }
+
+      function compactHtmlFragment(fragment) {
+        const normalized = normalizeText(fragment).trim();
+        if (!normalized) return "";
+        if (/^<style\b/i.test(normalized) && /<\/style>\s*$/i.test(normalized)) {
+          return normalized.replace(/^(<style\b[^>]*>)[\s\S]*?(<\/style>)$/i, (all, open, close) => {
+            const body = all.slice(open.length, all.length - close.length);
+            return open + compactCss(body, state.removeMarkupComments, state.compactWhitespace) + close;
+          });
+        }
+        if (/^<script\b/i.test(normalized) && /<\/script>\s*$/i.test(normalized)) {
+          return normalized.replace(/^(<script\b[^>]*>)[\s\S]*?(<\/script>)$/i, (all, open, close) => {
+            const body = all.slice(open.length, all.length - close.length);
+            return open + trimIndentSensitiveLines(body, true).trim() + close;
+          });
+        }
+        return compactMarkup(normalized, state.removeMarkupComments);
+      }
+
+      function protectMixedCode(value) {
+        const blocks = [];
+        const stash = (content) => {
+          const marker = "\u0003" + blocks.length + "\u0004";
+          blocks.push(content);
+          return marker;
+        };
+        let text = normalizeText(value);
+
+        // Fenced code: language hint decides the compactor.
+        text = text.replace(/(^|\n)[ \t]*(```+|~~~+)([^\n]*)\n([\s\S]*?)\n[ \t]*\2(?=\n|$)/g, (all, lead, fence, info, body) => {
+          return lead + stash(compactCodeFence(body, info));
+        });
+
+        // HTML special blocks are protected before generic HTML fragments.
+        text = text.replace(/<(script|style|pre|textarea)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, (block) => stash(compactHtmlFragment(block)));
+        text = text.replace(/<!--\s*[\s\S]*?-->|<!doctype\s+html\b[^>]*>/gi, (block) => stash(compactHtmlFragment(block)));
+
+        // Paired HTML tags inside ordinary prose: everything between the tags is HTML.
+        // Repeat a few times so nested fragments are progressively captured.
+        for (let pass = 0; pass < 4; pass += 1) {
+          const before = text;
+          text = text.replace(/<([a-z][a-z0-9:-]*)\b[^>]*>(?:(?!<\/\1\s*>)[\s\S])*?<\/\1\s*>/gi, (block) => stash(compactHtmlFragment(block)));
+          if (text === before) break;
+        }
+
+        // Remaining individual HTML tags are still code, not prose.
+        text = text.replace(/<\/?[a-z][a-z0-9:-]*\b[^>]*\/?>/gi, (tag) => stash(compactHtmlFragment(tag)));
+        return { text, blocks };
+      }
+
+      function joinProseLinesSafely(lines) {
+        let joined = "";
+        for (const rawLine of lines) {
+          const line = rawLine.trim().replace(/[ \t]{2,}/g, " ");
+          if (!line) continue;
+          if (!joined) { joined = line; continue; }
+          const previous = joined[joined.length - 1] || "";
+          const next = line[0] || "";
+          const markerBoundary = /[\u0003\u0004]/.test(previous + next);
+          const asciiWordBoundary = /[A-Za-z0-9_$)]/.test(previous) && /[A-Za-z0-9_$(]/.test(next);
+          const englishPunctuationBoundary = /[,;:.!?]/.test(previous) && /[A-Za-z0-9_$]/.test(next);
+          joined += (!markerBoundary && (asciiWordBoundary || englishPunctuationBoundary)) ? " " + line : line;
+        }
+        return joined;
+      }
+
+      function compactMixedText(value) {
+        const protectedCode = protectMixedCode(value);
+        let compacted = joinProseLinesSafely(protectedCode.text.split("\n")).trim();
+        compacted = compacted.replace(/\u0003(\d+)\u0004/g, (_, index) => protectedCode.blocks[Number(index)] || "");
+        return compacted.replace(/[ \t]{2,}/g, " ").replace(/\n{2,}/g, "\n").trim();
+      }
+
+      function compactText(value, name, allowMixed = true) {
+        const normalized = normalizeText(value);
+        const kind = detectTextKind(normalized, name);
+        const extension = extensionOf(name || "");
+
+        if (kind === "json") {
+          return state.compactWhitespace ? nestJson(normalized) : compactJson(normalized) || normalized.trim();
+        }
+        if (kind === "markup") {
+          const compacted = compactMarkup(normalized, state.removeMarkupComments);
+          return state.compactWhitespace ? nestMarkup(compacted) : compacted;
+        }
+        if (kind === "css") {
+          const compacted = compactCss(normalized, state.removeMarkupComments, state.compactWhitespace);
+          return state.compactWhitespace ? nestBraceCode(compacted, true) : compacted;
+        }
+        if (kind === "code") {
+          const compacted = trimLines(normalized, state.compactWhitespace);
+          if (!state.compactWhitespace) return compacted;
+          const compressed = compacted
+            .split("\n")
+            .map((line) => line.replace(/[ \t]+/g, " ").trim())
+            .filter(Boolean)
+            .join("\n")
+            .replace(/\n{2,}/g, "\n")
+            .trim();
+          return nestBraceCode(compressed);
+        }
+        if (INDENT_SENSITIVE_EXTENSIONS.has(extension)) {
+          return trimIndentSensitiveLines(normalized, state.compactWhitespace);
+        }
+        if (allowMixed && (!extension || extension === "txt" || extension === "md" || extension === "markdown")) {
+          return compactMixedText(normalized);
+        }
+
+        const compacted = trimLines(normalized, state.compactWhitespace);
+        if (!state.compactWhitespace) return compacted;
+        const compressed = compacted
+          .split("\n")
+          .map((line) => line.replace(/[ \t]+/g, " ").trim())
+          .filter(Boolean)
+          .join("\n")
+          .replace(/\n{2,}/g, "\n")
+          .trim();
+        if (kind === "code" || NESTABLE_CODE_EXTENSIONS.has(extension)) return nestBraceCode(compressed);
+        return compressed;
+      }
+
+      function compactFinalOutput(value) {
+        // Nesting: do not strip leading indentation from the generated code.
+        return normalizeText(value).trim();
+      }
+
+      function estimateAsciiTokens(length) {
+        return Math.ceil(length / 4);
+      }
+
+      function estimateTokens(value) {
+        let japaneseLike = 0;
+        let ascii = 0;
+        let other = 0;
+        for (const character of value) {
+          const codePoint = character.codePointAt(0) || 0;
+          if (
+            (codePoint >= 0x3040 && codePoint <= 0x30ff) ||
+            (codePoint >= 0x3400 && codePoint <= 0x9fff) ||
+            (codePoint >= 0xac00 && codePoint <= 0xd7af)
+          ) japaneseLike += 1;
+          else if (codePoint <= 0x7f) ascii += 1;
+          else other += 1;
+        }
+        return japaneseLike + estimateAsciiTokens(ascii) + Math.ceil(other / 2);
+      }
+
+      function estimateBase64Tokens(byteLength, mime) {
+        return estimateTokens("data:" + mime + ";base64,") + estimateAsciiTokens(4 * Math.ceil(byteLength / 3));
+      }
+
+      function dataUrlByteLength(dataUrl) {
+        const base64 = dataUrl.split(",")[1] || "";
+        const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+        return Math.max(0, Math.floor(base64.length * 3 / 4) - padding);
+      }
+
+      function loadImage(file) {
+        return new Promise((resolve, reject) => {
+          const objectUrl = URL.createObjectURL(file);
+          const image = new Image();
+          image.onload = () => {
+            URL.revokeObjectURL(objectUrl);
+            resolve(image);
+          };
+          image.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            reject(new Error("画像を読み込めませんでした。"));
+          };
+          image.src = objectUrl;
+        });
+      }
+
+      async function convertImageToWebp(file) {
+        const image = await loadImage(file);
+        const sourceWidth = image.naturalWidth || image.width;
+        const sourceHeight = image.naturalHeight || image.height;
+        let scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(sourceWidth, sourceHeight));
+        let best = null;
+        const qualities = [0.88, 0.76, 0.64, 0.52, 0.42, 0.32, 0.24, 0.16, 0.1, 0.06];
+
+        for (let attempt = 0; attempt < 12; attempt += 1) {
+          const width = Math.max(1, Math.round(sourceWidth * scale));
+          const height = Math.max(1, Math.round(sourceHeight * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const context = canvas.getContext("2d");
+          if (!context) throw new Error("画像変換用のCanvasを利用できませんでした。");
+          context.drawImage(image, 0, 0, width, height);
+
+          for (const quality of qualities) {
+            const dataUrl = canvas.toDataURL("image/webp", quality);
+            const bytes = dataUrlByteLength(dataUrl);
+            const candidate = { dataUrl, bytes, width, height, quality };
+            if (!best || bytes < best.bytes) best = candidate;
+            if (dataUrl.startsWith("data:image/webp") && bytes <= MAX_IMAGE_BYTES) return candidate;
+          }
+          scale *= 0.74;
+        }
+        if (!best) throw new Error("画像を変換できませんでした。");
+        return best;
+      }
+
+      function fileLabel(file) {
+        return file.type || extensionOf(file.name).toUpperCase() || "unknown";
+      }
+
+      function renderTextFile(name, mime, content) {
+        return "FILE:" + name + "\nTYPE:" + (mime || extensionOf(name) || "text") + "\nCONTENT:\n" + content;
+      }
+
+      function renderImageFile(name, image) {
+        const stem = name.replace(/\.[^.]+$/, "") || name;
+        return "FILE:" + stem + ".webp\nTYPE:image/webp\nBYTES:" + image.bytes + "\nSIZE:" + image.width + "x" + image.height + "\nDATA:" + image.dataUrl;
+      }
+
+      async function processFile(entry) {
+        const file = entry.file;
+        if (isImage(file)) {
+          const image = await convertImageToWebp(file);
+          const withinLimit = image.bytes <= MAX_IMAGE_BYTES;
+          return {
+            id: entry.id,
+            name: file.name,
+            kind: "image",
+            mime: file.type || "image/*",
+            originalBytes: file.size,
+            originalChars: 4 * Math.ceil(file.size / 3),
+            beforeTokens: estimateBase64Tokens(file.size, file.type || "image/*"),
+            outputText: renderImageFile(file.name, image),
+            outputBytes: image.bytes,
+            dimensions: image.width + " × " + image.height,
+            note: withinLimit ? "WebP / " + Math.round(image.quality * 100) + "% / " + formatBytes(image.bytes) : "28,000 bytes以内に収まりませんでした。"
+          };
+        }
+        if (isTextLike(file)) {
+          const original = await file.text();
+          const safelyTrimmed = safeTrimFileLines(original, file.name);
+          const compacted = compactText(safelyTrimmed, file.name);
+          return {
+            id: entry.id,
+            name: file.name,
+            kind: "text",
+            mime: fileLabel(file),
+            originalBytes: file.size,
+            originalChars: original.length,
+            beforeTokens: estimateTokens(original),
+            outputText: renderTextFile(file.name, file.type, compacted),
+            note: formatNumber(original.length) + "文字 → " + formatNumber(compacted.length) + "文字"
+          };
+        }
+        return {
+          id: entry.id,
+          name: file.name,
+          kind: "unsupported",
+          mime: fileLabel(file),
+          originalBytes: file.size,
+          originalChars: 0,
+          beforeTokens: 0,
+          outputText: "FILE:" + file.name + "\nTYPE:" + (file.type || "application/octet-stream") + "\nSIZE:" + file.size + "\nSTATUS:本文抽出対象外（PDF/DOCXなどはテキスト化してから追加してください）",
+          note: "本文抽出対象外"
+        };
+      }
+
+      function setHidden(element, hidden) {
+        element.classList.toggle("hidden", hidden);
+      }
+
+      function showError(message) {
+        errorMessage.textContent = message;
+        setHidden(errorMessage, !message);
+      }
+
+      function resetResult() {
+        state.output = "";
+        state.result = null;
+        resultText.value = "";
+        outputCount.textContent = "実行後に表示";
+        copyButton.disabled = true;
+        downloadButton.disabled = true;
+        setHidden(resultPill, true);
+        setHidden(fileResults, true);
+      }
+
+      function updateInputState() {
+        inputCount.textContent = formatNumber(sourceText.value.length) + " 文字";
+        const canRun = sourceText.value.trim().length > 0 || state.files.length > 0;
+        runButton.disabled = !canRun || state.processing;
+        clearButton.disabled = !canRun && !sourceText.value;
+      }
+
+      function renderFiles() {
+        fileList.innerHTML = "";
+        setHidden(fileList, state.files.length === 0);
+        state.files.forEach((entry) => {
+          const row = document.createElement("div");
+          row.className = "file-chip";
+          const type = document.createElement("span");
+          type.className = "file-type";
+          type.textContent = isImage(entry.file) ? "IMG" : isTextLike(entry.file) ? "TXT" : "FILE";
+          const name = document.createElement("span");
+          name.className = "file-name";
+          name.title = entry.file.name;
+          name.textContent = entry.file.name;
+          const size = document.createElement("span");
+          size.className = "file-size";
+          size.textContent = formatBytes(entry.file.size);
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.textContent = "×";
+          remove.setAttribute("aria-label", entry.file.name + "を削除");
+          remove.addEventListener("click", () => {
+            state.files = state.files.filter((item) => item.id !== entry.id);
+            resetResult();
+            renderFiles();
+            updateInputState();
+          });
+          row.append(type, name, size, remove);
+          fileList.appendChild(row);
+        });
+      }
+
+      function addFiles(fileListValue) {
+        const nextFiles = Array.from(fileListValue).map((file, index) => ({
+          id: file.name + "-" + file.lastModified + "-" + Date.now() + "-" + index,
+          file
+        }));
+        if (!nextFiles.length) return;
+        state.files = state.files.concat(nextFiles);
+        resetResult();
+        renderFiles();
+        updateInputState();
+        showError("");
+      }
+
+      function renderFileResults(files) {
+        fileResultsList.innerHTML = "";
+        files.forEach((file) => {
+          const row = document.createElement("div");
+          row.className = "file-result-row";
+          const icon = document.createElement("span");
+          icon.className = "result-file-icon " + file.kind;
+          icon.textContent = file.kind === "image" ? "IMG" : file.kind === "text" ? "TXT" : "—";
+          const name = document.createElement("span");
+          name.className = "result-file-name";
+          name.textContent = file.name;
+          const note = document.createElement("span");
+          note.className = "result-file-note";
+          note.textContent = file.note || "";
+          row.append(icon, name, note);
+          if (file.kind === "image" && file.outputBytes !== undefined) {
+            const size = document.createElement("span");
+            size.className = "result-file-size";
+            size.textContent = formatBytes(file.outputBytes);
+            row.appendChild(size);
+          }
+          fileResultsList.appendChild(row);
+        });
+        setHidden(fileResults, files.length === 0);
+      }
+
+      async function runCompression() {
+        if (state.processing) return;
+        extractDeclaredFilesFromSource();
+        updateInputState();
+        if (runButton.disabled) return;
+        state.processing = true;
+        runButton.disabled = true;
+        runButton.innerHTML = '<span class="run-icon">…</span>圧縮しています<span class="run-shortcut">RUN</span>';
+        showError("");
+        try {
+          const parts = [];
+          const processed = [];
+          let beforeTokens = estimateTokens(sourceText.value);
+          let beforeChars = sourceText.value.length;
+          if (sourceText.value.trim()) {
+            parts.push("TEXT:\n" + compactText(sourceText.value, "input.txt"));
+          }
+          for (const entry of state.files) {
+            const processedFile = await processFile(entry);
+            processed.push(processedFile);
+            beforeTokens += processedFile.beforeTokens;
+            beforeChars += processedFile.originalChars;
+            parts.push(processedFile.outputText);
+          }
+          const output = compactFinalOutput(parts.join("\n"));
+          state.output = output;
+          state.result = {
+            beforeTokens,
+            afterTokens: estimateTokens(output),
+            beforeChars,
+            afterChars: output.length,
+            files: processed
+          };
+          resultText.value = output;
+          outputCount.textContent = formatNumber(output.length) + " 文字";
+          copyButton.disabled = !output;
+          downloadButton.disabled = !output;
+          const reduction = beforeTokens ? Math.round((1 - state.result.afterTokens / beforeTokens) * 100) : 0;
+          resultPill.textContent = reduction >= 0 ? "圧縮できました" : "入力より増えました";
+          resultPill.classList.toggle("is-negative", reduction < 0);
+          setHidden(resultPill, false);
+          $("#before-tokens").textContent = formatNumber(beforeTokens);
+          $("#after-tokens").textContent = formatNumber(state.result.afterTokens);
+          $("#reduction").textContent = (reduction > 0 ? "−" : "") + Math.abs(reduction) + "%";
+          $("#before-detail").textContent = formatNumber(beforeChars) + " 文字相当";
+          $("#after-detail").textContent = formatNumber(output.length) + " 文字";
+          $("#reduction-detail").textContent = "文字種別から算出した推定値";
+          renderFileResults(processed);
+        } catch (error) {
+          showError(error instanceof Error ? error.message : "処理に失敗しました。");
+        } finally {
+          state.processing = false;
+          runButton.innerHTML = '<span class="run-icon">→</span>圧縮して文章化する<span class="run-shortcut">RUN</span>';
+          updateInputState();
+        }
+      }
+
+      function updateToggle(button, isOn) {
+        button.classList.toggle("is-on", isOn);
+        button.setAttribute("aria-pressed", String(isOn));
+      }
+
+      sourceText.addEventListener("input", () => {
+        resetResult();
+        showError("");
+        updateInputState();
+      });
+      sourceText.addEventListener("paste", () => {
+        window.setTimeout(() => {
+          extractDeclaredFilesFromSource();
+          updateInputState();
+        }, 0);
+      });
+      sourceText.addEventListener("blur", () => {
+        extractDeclaredFilesFromSource();
+        updateInputState();
+      });
+
+      $("#sample-button").addEventListener("click", () => {
+        sourceText.value = "  ChatGPTに送る前の文章です。  \n\n\n  行頭と行末の空白、余分な空行を整理します。  \n  JSONやHTMLを貼り付けた場合も、可能な範囲で短くします。  ";
+        state.files = [];
+        resetResult();
+        renderFiles();
+        showError("");
+        updateInputState();
+      });
+
+      $("#clear-button").addEventListener("click", () => {
+        sourceText.value = "";
+        state.files = [];
+        resetResult();
+        renderFiles();
+        showError("");
+        updateInputState();
+      });
+
+      fileInput.addEventListener("change", () => {
+        addFiles(fileInput.files);
+        fileInput.value = "";
+      });
+
+      dropZone.addEventListener("click", () => fileInput.click());
+      dropZone.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          fileInput.click();
+        }
+      });
+      dropZone.addEventListener("dragenter", (event) => {
+        event.preventDefault();
+        state.dragOver = true;
+        dropZone.classList.add("is-dragging");
+      });
+      dropZone.addEventListener("dragover", (event) => event.preventDefault());
+      dropZone.addEventListener("dragleave", (event) => {
+        if (event.currentTarget === event.target) {
+          state.dragOver = false;
+          dropZone.classList.remove("is-dragging");
+        }
+      });
+      dropZone.addEventListener("drop", (event) => {
+        event.preventDefault();
+        state.dragOver = false;
+        dropZone.classList.remove("is-dragging");
+        if (event.dataTransfer.files.length) addFiles(event.dataTransfer.files);
+      });
+
+      $("#whitespace-toggle").addEventListener("click", (event) => {
+        state.compactWhitespace = !state.compactWhitespace;
+        updateToggle(event.currentTarget, state.compactWhitespace);
+        if (state.output) resetResult();
+      });
+
+      $("#comment-toggle").addEventListener("click", (event) => {
+        state.removeMarkupComments = !state.removeMarkupComments;
+        updateToggle(event.currentTarget, state.removeMarkupComments);
+        if (state.output) resetResult();
+      });
+
+      runButton.addEventListener("click", runCompression);
+
+      copyButton.addEventListener("click", async () => {
+        if (!state.output) return;
+        try {
+          await navigator.clipboard.writeText(state.output);
+          copyButton.textContent = "✓ コピー済み";
+          window.setTimeout(() => { copyButton.textContent = "□ コピー"; }, 1800);
+        } catch (_) {
+          showError("コピーに失敗しました。結果欄を選択して手動でコピーしてください。");
+        }
+      });
+
+      downloadButton.addEventListener("click", () => {
+        if (!state.output) return;
+        const blob = new Blob([state.output], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = "token-trim-output.txt";
+        anchor.click();
+        URL.revokeObjectURL(url);
+      });
+
+      updateInputState();
+    })();
+  </script>
+</body>
+</html>
