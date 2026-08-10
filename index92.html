@@ -888,7 +888,7 @@
           const name = tagName.toLowerCase();
           const formattedBody = name === "script"
             ? compactFunctionCode(body)
-            : nestBraceCode(compactCss(body, state.removeMarkupComments, state.compactWhitespace), true);
+            : compactCssOneRule(body);
           const marker = "\u0005" + specialBlocks.length + "\u0006";
           specialBlocks.push("<" + tagName + attrs + ">\n" + formattedBody + "\n</" + tagName + ">");
           return marker;
@@ -1011,6 +1011,121 @@
         return compacted;
       }
 
+
+      // AI向け: CSSは通常ルールを「1セレクタ=1行」にし、
+      // @media / @supports / @layer 等のコンテナ境界だけ改行して残す。
+      function compactCssOneRule(value) {
+        const css = compactCss(value, state.removeMarkupComments, state.compactWhitespace);
+        if (!state.compactWhitespace || !css) return css;
+
+        const containerAtRules = /^(?:@media|@supports|@layer|@container|@document|@scope|@keyframes|-webkit-keyframes|-moz-keyframes)\b/i;
+
+        const findMatchingBrace = (source, openIndex) => {
+          let depth = 0;
+          let quote = "";
+          let escaped = false;
+          for (let index = openIndex; index < source.length; index += 1) {
+            const character = source[index];
+
+            if (quote) {
+              if (escaped) escaped = false;
+              else if (character === "\\") escaped = true;
+              else if (character === quote) quote = "";
+              continue;
+            }
+
+            if (character === "'" || character === '"') {
+              quote = character;
+              escaped = false;
+              continue;
+            }
+
+            if (character === "{") depth += 1;
+            else if (character === "}") {
+              depth -= 1;
+              if (depth === 0) return index;
+            }
+          }
+          return -1;
+        };
+
+        const formatBlock = (source) => {
+          const lines = [];
+          let index = 0;
+
+          while (index < source.length) {
+            while (index < source.length && /\s/.test(source[index])) index += 1;
+            if (index >= source.length) break;
+
+            let quote = "";
+            let escaped = false;
+            let delimiterIndex = -1;
+            let delimiter = "";
+
+            for (let cursor = index; cursor < source.length; cursor += 1) {
+              const character = source[cursor];
+
+              if (quote) {
+                if (escaped) escaped = false;
+                else if (character === "\\") escaped = true;
+                else if (character === quote) quote = "";
+                continue;
+              }
+
+              if (character === "'" || character === '"') {
+                quote = character;
+                escaped = false;
+                continue;
+              }
+
+              if (character === "{" || character === ";") {
+                delimiterIndex = cursor;
+                delimiter = character;
+                break;
+              }
+            }
+
+            if (delimiterIndex < 0) {
+              const tail = source.slice(index).trim();
+              if (tail) lines.push(tail);
+              break;
+            }
+
+            if (delimiter === ";") {
+              const statement = source.slice(index, delimiterIndex + 1).trim();
+              if (statement) lines.push(statement);
+              index = delimiterIndex + 1;
+              continue;
+            }
+
+            const header = source.slice(index, delimiterIndex).trim();
+            const closeIndex = findMatchingBrace(source, delimiterIndex);
+            if (closeIndex < 0) {
+              const tail = source.slice(index).trim();
+              if (tail) lines.push(tail);
+              break;
+            }
+
+            const body = source.slice(delimiterIndex + 1, closeIndex).trim();
+
+            if (containerAtRules.test(header)) {
+              lines.push(header + "{");
+              const nested = formatBlock(body);
+              if (nested) lines.push(nested);
+              lines.push("}");
+            } else {
+              lines.push(header + "{" + body + "}");
+            }
+
+            index = closeIndex + 1;
+          }
+
+          return lines.join("\n");
+        };
+
+        return formatBlock(css);
+      }
+
       function detectTextKind(value, name = "") {
         const extension = extensionOf(name);
         const trimmed = normalizeText(value).trim();
@@ -1062,7 +1177,7 @@
         if (/^<style\b/i.test(normalized) && /<\/style>\s*$/i.test(normalized)) {
           return normalized.replace(/^(<style\b[^>]*>)[\s\S]*?(<\/style>)$/i, (all, open, close) => {
             const body = all.slice(open.length, all.length - close.length);
-            return open + compactCss(body, state.removeMarkupComments, state.compactWhitespace) + close;
+            return open + "\n" + compactCssOneRule(body) + "\n" + close;
           });
         }
         if (/^<script\b/i.test(normalized) && /<\/script>\s*$/i.test(normalized)) {
@@ -1141,8 +1256,7 @@
           return state.compactWhitespace ? nestMarkup(compacted) : compacted;
         }
         if (kind === "css") {
-          const compacted = compactCss(normalized, state.removeMarkupComments, state.compactWhitespace);
-          return state.compactWhitespace ? nestBraceCode(compacted, true) : compacted;
+          return compactCssOneRule(normalized);
         }
         if (kind === "code") {
           const compacted = trimLines(normalized, state.compactWhitespace);
