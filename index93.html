@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -463,32 +464,34 @@ function createRegexComment(text, language) {
     .join("\n");
 }
 
-/** 言語別に、復号結果を変数へ代入する完成コードを生成する */
+/** 言語別に、復号結果を変数へ代入し、再編集用の固定名へ参照を渡す完成コードを生成する */
 function createCode(base64, language, variableName, originalRegex) {
+  const editableAliasName = "decodedRegexPatternFromBase64";
+
   switch (language) {
     case "python":
-      return `import base64\n\n${variableName} = base64.b64decode("${base64}").decode("utf-8")`;
+      return `import base64\n\n${variableName} = base64.b64decode("${base64}").decode("utf-8")\n${editableAliasName} = ${variableName}`;
 
     case "javascript":
-      return `const ${variableName} = new TextDecoder("utf-8").decode(\n  Uint8Array.from(atob("${base64}"), character => character.charCodeAt(0))\n);`;
+      return `const ${variableName} = new TextDecoder("utf-8").decode(\n  Uint8Array.from(atob("${base64}"), character => character.charCodeAt(0))\n);\nconst ${editableAliasName} = ${variableName};`;
 
     case "php":
-      return `$${variableName} = base64_decode("${base64}");`;
+      return `$${variableName} = base64_decode("${base64}");\n$${editableAliasName} = $${variableName};`;
 
     case "csharp":
-      return `var ${variableName} = System.Text.Encoding.UTF8.GetString(\n    System.Convert.FromBase64String("${base64}")\n);`;
+      return `var ${variableName} = System.Text.Encoding.UTF8.GetString(\n    System.Convert.FromBase64String("${base64}")\n);\nvar ${editableAliasName} = ${variableName};`;
 
     case "java":
-      return `String ${variableName} = new String(\n    java.util.Base64.getDecoder().decode("${base64}"),\n    java.nio.charset.StandardCharsets.UTF_8\n);`;
+      return `String ${variableName} = new String(\n    java.util.Base64.getDecoder().decode("${base64}"),\n    java.nio.charset.StandardCharsets.UTF_8\n);\nString ${editableAliasName} = ${variableName};`;
 
     case "powershell":
-      return `$${variableName} = [System.Text.Encoding]::UTF8.GetString(\n    [System.Convert]::FromBase64String("${base64}")\n)`;
+      return `$${variableName} = [System.Text.Encoding]::UTF8.GetString(\n    [System.Convert]::FromBase64String("${base64}")\n)\n$${editableAliasName} = $${variableName}`;
 
     case "ruby":
-      return `require "base64"\n\n${variableName} = Base64.decode64("${base64}").force_encoding("UTF-8")`;
+      return `require "base64"\n\n${variableName} = Base64.decode64("${base64}").force_encoding("UTF-8")\n${editableAliasName} = ${variableName}`;
 
     default:
-      return `${variableName} = "${base64}"`;
+      return `${variableName} = "${base64}"\n${editableAliasName} = ${variableName}`;
   }
 }
 
@@ -523,8 +526,8 @@ function convertRegex() {
     output.value = createCodeWithRegexComment(base64, language, variableName, text);
     variableNamePreview.textContent = `変数名: ${language === "php" || language === "powershell" ? "$" : ""}${variableName}`;
     info.textContent = canAppendRegexComment(text)
-      ? "Base64復号・変数代入・元の正規表現コメントまで生成しました。"
-      : "Base64復号と変数代入を生成しました。安全性を優先し、元の正規表現コメントは省略しました。";
+      ? "Base64復号・固有変数への代入・再編集用変数への代入・元の正規表現コメントまで生成しました。"
+      : "Base64復号・固有変数への代入・再編集用変数への代入を生成しました。安全性を優先し、元の正規表現コメントは省略しました。";
   } catch (error) {
     console.error(error);
     output.value = "";
