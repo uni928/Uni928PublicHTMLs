@@ -89,6 +89,10 @@
       .toc-list li { counter-increment: toc; border-bottom: 1px solid var(--line); }
       .toc-list a { display: flex; gap: 14px; padding: 13px 2px; color: var(--text); text-decoration: none; font-weight: 700; }
       .toc-list a::before { content: counter(toc) "."; flex: 0 0 2.2em; color: var(--muted); }
+      .toc-title { min-width: 0; }
+      .toc-page { display: none; flex: 0 0 auto; margin-left: auto; padding-left: 16px; font-variant-numeric: tabular-nums; color: var(--muted); }
+      .print-measure-root { position: fixed; left: -200vw; top: 0; width: 178mm; visibility: hidden; pointer-events: none; }
+      .print-measure-root .document-section { width: 178mm; padding-top: 10px; }
       .document-section { padding-top: 10px; }
       .document-section > h1 { margin: 0 0 28px; font-size: clamp(1.8rem, 5vw, 2.8rem); line-height: 1.25; letter-spacing: -.035em; }
       .document h2 { margin: 34px 0 14px; padding-bottom: 8px; border-bottom: 2px solid var(--accent-soft); font-size: clamp(1.2rem, 3vw, 1.55rem); line-height: 1.45; }
@@ -125,6 +129,8 @@
         .panel { border: 0; border-radius: 0; box-shadow: none; }
         .document { padding: 0; }
         .viewer-actions, .back-to-toc { display: none; }
+        .toc-page { display: inline-block; }
+        .print-measure-root { display: none; }
         .toc { break-after: page; page-break-after: always; }
         .document-section:not(:last-child) { break-after: page; page-break-after: always; }
         .document-section { break-inside: auto; page-break-inside: auto; }
@@ -677,7 +683,14 @@
         const li = document.createElement("li");
         const a = document.createElement("a");
         a.href = "#view-section-" + (index + 1);
-        a.textContent = sectionDisplayTitle(section, index);
+        const titleSpan = document.createElement("span");
+        titleSpan.className = "toc-title";
+        titleSpan.textContent = sectionDisplayTitle(section, index);
+        const pageSpan = document.createElement("span");
+        pageSpan.className = "toc-page";
+        pageSpan.dataset.sectionIndex = String(index);
+        pageSpan.textContent = "";
+        a.append(titleSpan, pageSpan);
         li.appendChild(a);
         tocList.appendChild(li);
       });
@@ -702,6 +715,79 @@
       });
     }
 
+    function getPrintPageHeightPx(measureRoot) {
+      const probe = document.createElement("div");
+      probe.style.height = "265mm";
+      probe.style.width = "1px";
+      measureRoot.appendChild(probe);
+      const height = probe.getBoundingClientRect().height;
+      probe.remove();
+      return height;
+    }
+
+    function countPrintedPages(sectionNode, pageHeight) {
+      const sectionRect = sectionNode.getBoundingClientRect();
+      if (!sectionRect.height || !pageHeight) return 1;
+
+      const blocks = Array.from(sectionNode.querySelectorAll("h1, h2, h3, h4, h5, h6, p, li, blockquote, pre, .table-wrap, img, hr"));
+      let page = 1;
+      let pageTop = sectionRect.top;
+      let pageBottom = pageTop + pageHeight;
+
+      blocks.forEach(function (block) {
+        const rect = block.getBoundingClientRect();
+        if (!rect.height) return;
+
+        const avoidInside = block.matches("pre, .table-wrap, blockquote, img");
+        const avoidAfter = block.matches("h1, h2, h3");
+        const next = avoidAfter ? block.nextElementSibling : null;
+        const nextRect = next ? next.getBoundingClientRect() : null;
+        const requiredBottom = nextRect ? nextRect.bottom : rect.bottom;
+
+        if ((avoidInside && rect.height <= pageHeight && rect.bottom > pageBottom) ||
+            (avoidAfter && nextRect && requiredBottom > pageBottom && rect.top >= pageTop)) {
+          page += 1;
+          pageTop += pageHeight;
+          pageBottom += pageHeight;
+        }
+
+        while (rect.bottom > pageBottom + 0.5) {
+          page += 1;
+          pageTop += pageHeight;
+          pageBottom += pageHeight;
+        }
+      });
+
+      return Math.max(page, Math.ceil(sectionRect.height / pageHeight), 1);
+    }
+
+    function updatePrintTocPageNumbers() {
+      const sectionNodes = Array.from(documentContent.querySelectorAll(".document-section"));
+      const pageNodes = Array.from(documentContent.querySelectorAll(".toc-page"));
+      if (!sectionNodes.length || pageNodes.length !== sectionNodes.length) return;
+
+      const measureRoot = document.createElement("div");
+      measureRoot.className = "document print-measure-root";
+      measureRoot.setAttribute("aria-hidden", "true");
+      document.body.appendChild(measureRoot);
+
+      const pageHeight = getPrintPageHeightPx(measureRoot);
+      let startPage = 2; // 目次が1ページ目
+
+      sectionNodes.forEach(function (sectionNode, index) {
+        const clone = sectionNode.cloneNode(true);
+        const back = clone.querySelector(".back-to-toc");
+        if (back) back.remove();
+        measureRoot.appendChild(clone);
+
+        pageNodes[index].textContent = String(startPage);
+        startPage += countPrintedPages(clone, pageHeight);
+        clone.remove();
+      });
+
+      measureRoot.remove();
+    }
+
     function showViewer() {
       applyMarkdownTitles();
       if (!hasDocumentContent()) {
@@ -710,6 +796,7 @@
         return false;
       }
       buildViewerContent();
+      updatePrintTocPageNumbers();
       const savedData = readInitialData();
       const dateText = savedData.createdAt || new Intl.DateTimeFormat("ja-JP", {
         year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit"
@@ -791,7 +878,12 @@
     document.getElementById("saveEditorButton").addEventListener("click", function () { downloadSelf("editor"); });
     document.getElementById("viewButton").addEventListener("click", showViewer);
     document.getElementById("editButton").addEventListener("click", showEditor);
-    document.getElementById("printButton").addEventListener("click", function () { window.print(); });
+    document.getElementById("printButton").addEventListener("click", function () {
+      updatePrintTocPageNumbers();
+      window.print();
+    });
+
+    window.addEventListener("beforeprint", updatePrintTocPageNumbers);
 
     noteEditButton.addEventListener("click", function () {
       const willOpen = notePanel.classList.contains("hidden");
