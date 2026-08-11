@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="複数セクションのMarkdown文章から、目次付きの閲覧・印刷用資料を作成できます。">
+  <title>目次付きMarkdown資料を作成</title>
+  <style>
+    @layer base, layout, editor, viewer, print, responsive;
+
+    @layer base {
+      /* 基本色・共通要素 */
+      :root {
+        color-scheme: light;
+        --bg: #f4f7fb;
+        --panel: #ffffff;
+        --text: #1e293b;
+        --muted: #64748b;
+        --line: #dbe4f0;
+        --accent: #2563eb;
+        --accent-dark: #1d4ed8;
+        --accent-soft: #eaf2ff;
+        --danger: #b91c1c;
+        --danger-soft: #fef2f2;
+        --shadow: 0 18px 48px rgba(30, 41, 59, 0.10);
+      }
+      * { box-sizing: border-box; }
+      html { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+      body { margin: 0; min-height: 100vh; background: linear-gradient(180deg, rgba(255,255,255,.78), transparent 340px), var(--bg); }
+      button, input, textarea { font: inherit; }
+      button { cursor: pointer; }
+      button:disabled { cursor: not-allowed; opacity: .45; }
+      a { color: var(--accent); overflow-wrap: anywhere; }
+      .hidden { display: none !important; }
+    }
+
+    @layer layout {
+      /* 画面全体・共通パネル */
+      .app { width: min(920px, calc(100% - 28px)); margin: 0 auto; padding: 28px 0 52px; }
+      .hero { margin-bottom: 18px; text-align: center; }
+      .hero h1 { margin: 0; font-size: clamp(1.7rem, 4vw, 2.6rem); letter-spacing: -.04em; }
+      .hero p { max-width: 760px; margin: 10px auto 0; color: var(--muted); line-height: 1.8; }
+      .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow); }
+      .primary-button, .secondary-button, .danger-button { min-height: 46px; border: 0; border-radius: 14px; padding: 0 16px; font-weight: 800; }
+      .primary-button { background: var(--accent); color: #fff; }
+      .primary-button:hover { background: var(--accent-dark); }
+      .secondary-button { background: var(--accent-soft); color: var(--accent-dark); }
+      .danger-button { background: var(--danger-soft); color: var(--danger); }
+    }
+
+    @layer editor {
+      /* セクション編集UI */
+      .editor-panel { padding: 20px; }
+      .section-panel { margin-bottom: 20px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: #f8fafc; }
+      .section-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+      .section-panel-head h2 { margin: 0; font-size: 1.05rem; }
+      .section-panel-head small { color: var(--muted); }
+      .section-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+      .section-item { width: 100%; min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--text); text-align: left; }
+      .section-item:hover { border-color: #a9c4ef; }
+      .section-item.is-active { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 2px rgba(37,99,235,.08); }
+      .section-number { flex: 0 0 auto; color: var(--muted); font-weight: 800; }
+      .section-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+      .section-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+      .section-controls button { min-height: 40px; padding: 0 13px; }
+      .field-label { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-weight: 800; }
+      .field-label small { color: var(--muted); font-weight: 500; }
+      .title-input, .text-input { width: 100%; border: 1px solid var(--line); border-radius: 14px; background: #fff; color: var(--text); outline: none; }
+      .title-input:focus, .text-input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(37,99,235,.12); }
+      .title-input { padding: 12px 14px; margin-bottom: 16px; }
+      .text-input { min-height: 430px; padding: 16px; resize: vertical; line-height: 1.75; }
+      .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+      .controls .primary-button { flex: 1 1 300px; }
+      .helper { margin-top: 14px; padding: 14px 16px; border-radius: 14px; background: #f8fafc; color: var(--muted); line-height: 1.7; font-size: .94rem; }
+      .status { min-height: 24px; margin-top: 12px; color: var(--muted); font-size: .93rem; }
+      .status.error { color: var(--danger); }
+      .note-panel { margin-top: 14px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: #f8fafc; }
+      .note-panel .text-input { min-height: 120px; background: #fff; }
+    }
+
+    @layer viewer {
+      /* 閲覧画面・目次・各セクション */
+      .document { position: relative; padding: clamp(24px, 5vw, 48px); }
+      .viewer-actions { position: sticky; top: 10px; z-index: 5; display: flex; justify-content: flex-end; gap: 8px; margin: -8px -8px 22px; pointer-events: none; }
+      .viewer-actions button { min-height: 42px; pointer-events: auto; box-shadow: 0 4px 16px rgba(30,41,59,.10); }
+      .toc { padding-bottom: 28px; }
+      .toc h1 { margin: 0 0 22px; font-size: clamp(1.9rem, 5vw, 2.8rem); letter-spacing: -.035em; }
+      .toc-list { margin: 0; padding: 0; list-style: none; counter-reset: toc; }
+      .toc-list li { counter-increment: toc; border-bottom: 1px solid var(--line); }
+      .toc-list a { display: flex; gap: 14px; padding: 13px 2px; color: var(--text); text-decoration: none; font-weight: 700; }
+      .toc-list a::before { content: counter(toc) "."; flex: 0 0 2.2em; color: var(--muted); }
+      .document-section { padding-top: 10px; }
+      .document-section > h1 { margin: 0 0 28px; font-size: clamp(1.8rem, 5vw, 2.8rem); line-height: 1.25; letter-spacing: -.035em; }
+      .document h2 { margin: 34px 0 14px; padding-bottom: 8px; border-bottom: 2px solid var(--accent-soft); font-size: clamp(1.2rem, 3vw, 1.55rem); line-height: 1.45; }
+      .document p, .document li, .document blockquote { font-size: clamp(1rem, 2.2vw, 1.08rem); line-height: 1.9; }
+      .document p { margin: 0 0 18px; }
+      .document ul { margin: 0 0 22px; padding-left: 1.5em; }
+      .document li + li { margin-top: 8px; }
+      .document blockquote { margin: 20px 0; padding: 15px 18px; border-left: 5px solid var(--accent); border-radius: 0 12px 12px 0; background: var(--accent-soft); }
+      .link-card { margin: 20px 0; }
+      .link-card a { display: block; padding: 16px 18px; border: 1px solid #bfd2f5; border-radius: 14px; background: var(--accent-soft); text-decoration: none; font-weight: 700; }
+      .meta { margin-top: 36px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: .86rem; }
+      .document h3 { margin: 28px 0 12px; font-size: 1.2rem; }
+      .document h4, .document h5, .document h6 { margin: 24px 0 10px; line-height: 1.5; }
+      .document ol { margin: 0 0 22px; padding-left: 1.7em; }
+      .document pre { overflow-x: auto; margin: 20px 0; padding: 16px; border-radius: 14px; background: #0f172a; color: #e2e8f0; line-height: 1.65; }
+      .document code { padding: .14em .38em; border-radius: 6px; background: #eef2f7; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .92em; }
+      .document pre code { padding: 0; background: transparent; color: inherit; }
+      .document hr { margin: 30px 0; border: 0; border-top: 1px solid var(--line); }
+      .table-wrap { overflow-x: auto; margin: 20px 0; }
+      .document table { width: 100%; border-collapse: collapse; background: #fff; }
+      .document th, .document td { padding: 11px 13px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+      .document th { background: #f8fafc; }
+      .document img { display: block; max-width: 100%; height: auto; margin: 20px auto; border-radius: 12px; }
+      .task-item { list-style: none; margin-left: -1.3em; }
+      .back-to-toc { display: inline-block; margin-top: 30px; font-size: .9rem; }
+    }
+
+    @layer print {
+      /* 印刷時は「目次末尾」「各セクション末尾」で改ページ */
+      @media print {
+        @page { margin: 16mm; }
+        html, body { background: #fff; }
+        .app { width: auto; margin: 0; padding: 0; }
+        .panel { border: 0; border-radius: 0; box-shadow: none; }
+        .document { padding: 0; }
+        .viewer-actions, .back-to-toc { display: none; }
+        .toc { break-after: page; page-break-after: always; }
+        .document-section:not(:last-child) { break-after: page; page-break-after: always; }
+        .document-section { break-inside: auto; page-break-inside: auto; }
+        .document h1, .document h2, .document h3 { break-after: avoid-page; page-break-after: avoid; }
+        .document pre, .document table, .document blockquote, .document img { break-inside: avoid; page-break-inside: avoid; }
+        a { color: inherit; text-decoration: none; }
+      }
+    }
+
+    @layer responsive {
+      /* スマートフォン向け調整 */
+      @media (max-width: 620px) {
+        .app { width: min(100% - 16px, 920px); padding-top: 10px; }
+        .editor-panel, .document { padding: 18px; border-radius: 18px; }
+        .text-input { min-height: 55vh; }
+        .note-panel .text-input { min-height: 120px; }
+        .controls { flex-direction: column; }
+        .controls button { width: 100%; }
+        .section-panel-head { align-items: flex-start; flex-direction: column; }
+        .section-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .section-controls button { width: 100%; }
+        .viewer-actions { position: static; margin: 0 0 16px; flex-wrap: wrap; }
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="editorMode" class="app">
+    <header class="hero">
+      <h1>目次付きMarkdown資料を作成</h1>
+      <p>セクションごとにタイトルとMarkdown文章を編集し、自動目次付きの閲覧・印刷用HTMLとして保存できます。</p>
+    </header>
+
+    <section class="panel editor-panel" aria-labelledby="editorTitle">
+      <div class="section-panel" aria-label="セクションパネル">
+        <div class="section-panel-head">
+          <h2>セクション</h2>
+          <small>選択中のセクションに下のタイトルと文章が紐づきます</small>
+        </div>
+        <ol id="sectionList" class="section-list"></ol>
+        <div class="section-controls">
+          <button id="addSectionButton" class="primary-button" type="button">セクションを追加</button>
+          <button id="moveUpButton" class="secondary-button" type="button">↑ 上へ移動</button>
+          <button id="moveDownButton" class="secondary-button" type="button">↓ 下へ移動</button>
+          <button id="deleteSectionButton" class="danger-button" type="button">削除</button>
+        </div>
+      </div>
+
+      <div class="field-label">
+        <label for="pageTitle" id="editorTitle">ページタイトル</label>
+        <small id="selectedSectionLabel">セクション1</small>
+      </div>
+      <input id="pageTitle" class="title-input" type="text" placeholder="例：概要、作業手順、参考資料">
+
+      <div class="field-label">
+        <label for="sourceText">Markdown文章</label>
+        <small id="charCount">0文字</small>
+      </div>
+      <textarea id="sourceText" class="text-input" placeholder="ここに選択中セクションのMarkdown文章を入力してください。"></textarea>
+
+      <div class="controls">
+        <button id="saveButton" class="primary-button" type="button">閲覧用サイトとして保存</button>
+        <button id="saveEditorButton" class="secondary-button" type="button">保存</button>
+        <button id="viewButton" class="secondary-button" type="button">この画面で閲覧</button>
+        <button id="noteEditButton" class="secondary-button" type="button" aria-expanded="false" aria-controls="notePanel">特記事項編集</button>
+        <button id="sampleButton" class="secondary-button" type="button">入力例を入れる</button>
+      </div>
+
+      <div id="notePanel" class="note-panel hidden">
+        <div class="field-label">
+          <label for="noteText">特記事項</label>
+          <small>資料全体の編集者名などを入力できます</small>
+        </div>
+        <textarea id="noteText" class="text-input" placeholder="例：編集者：〇〇"></textarea>
+      </div>
+
+      <div class="helper">印刷時は、目次の末尾と各セクションの末尾で必ず改ページします。セクション内は文章量に応じて通常どおり複数ページに跨ります。</div>
+      <div id="status" class="status" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <main id="viewerMode" class="app hidden">
+    <article class="panel document">
+      <div class="viewer-actions">
+        <button id="printButton" class="primary-button" type="button">印刷</button>
+        <button id="editButton" class="secondary-button" type="button">編集する</button>
+      </div>
+      <div id="documentContent"></div>
+      <footer id="viewMeta" class="meta"></footer>
+    </article>
+  </main>
+
+  <script id="initialData" type="application/json">{"sections":[{"id":"section-1","title":"","source":""}],"createdAt":"","note":"","startMode":"auto"}</script>
+  <script>
+  window.addEventListener("DOMContentLoaded", function () {
+    "use strict";
+
+    const editorMode = document.getElementById("editorMode");
+    const viewerMode = document.getElementById("viewerMode");
+    const sectionList = document.getElementById("sectionList");
+    const titleInput = document.getElementById("pageTitle");
+    const sourceText = document.getElementById("sourceText");
+    const noteText = document.getElementById("noteText");
+    const notePanel = document.getElementById("notePanel");
+    const noteEditButton = document.getElementById("noteEditButton");
+    const charCount = document.getElementById("charCount");
+    const selectedSectionLabel = document.getElementById("selectedSectionLabel");
+    const status = document.getElementById("status");
+    const documentContent = document.getElementById("documentContent");
+    const viewMeta = document.getElementById("viewMeta");
+    const moveUpButton = document.getElementById("moveUpButton");
+    const moveDownButton = document.getElementById("moveDownButton");
+    const deleteSectionButton = document.getElementById("deleteSectionButton");
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function safeUrl(value) {
+      try {
+        const url = new URL(value, location.href);
+        return ["http:", "https:", "mailto:"].includes(url.protocol) ? url.href : "#";
+      } catch (error) {
+        return "#";
+      }
+    }
+
+    function parseInlineMarkdown(text) {
+      const codeTokens = [];
+      let value = String(text).replace(/`([^`]+)`/g, function (_, code) {
+        const token = "@@CODE" + codeTokens.length + "@@";
+        codeTokens.push("<code>" + escapeHtml(code) + "</code>");
+        return token;
+      });
+
+      value = escapeHtml(value);
+      value = value.replace(/!\[([^\]]*)\]\(([^\s)]+)(?:\s+["']([^"']*)["'])?\)/g, function (_, alt, url, title) {
+        const titleAttr = title ? ' title="' + escapeHtml(title) + '"' : "";
+        return '<img src="' + escapeHtml(safeUrl(url)) + '" alt="' + alt + '"' + titleAttr + ">";
+      });
+      value = value.replace(/\[([^\]]+)\]\(([^\s)]+)(?:\s+["']([^"']*)["'])?\)/g, function (_, label, url, title) {
+        const titleAttr = title ? ' title="' + escapeHtml(title) + '"' : "";
+        return '<a href="' + escapeHtml(safeUrl(url)) + '" target="_blank" rel="noopener noreferrer"' + titleAttr + '>' + label + "</a>";
+      });
+      value = value.replace(/(^|[\s(])((?:https?:\/\/)[^\s<]+)/g, function (_, prefix, url) {
+        return prefix + '<a href="' + escapeHtml(safeUrl(url)) + '" target="_blank" rel="noopener noreferrer">' + url + "</a>";
+      });
+      value = value.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+      value = value.replace(/__([^_]+)__/g, "<strong>$1</strong>");
+      value = value.replace(/~~([^~]+)~~/g, "<del>$1</del>");
+      value = value.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+      value = value.replace(/(^|[^_])_([^_\n]+)_/g, "$1<em>$2</em>");
+      value = value.replace(/  $/g, "<br>");
+      codeTokens.forEach(function (html, index) {
+        value = value.replace("@@CODE" + index + "@@", html);
+      });
+      return value;
+    }
+
+    function splitTableRow(line) {
+      return line.trim().replace(/^\||\|$/g, "").split("|").map(function (cell) { return cell.trim(); });
+    }
+
+    function isTableDivider(line) {
+      const cells = splitTableRow(line);
+      if (!line.includes("|") || !cells.length) return false;
+
+      return cells.every(function (cell) {
+        return cell === "" || /^:?-+:?$/.test(cell);
+      });
+    }
+
+    function isTableCandidate(line) {
+      if (!line || !line.includes("|")) return false;
+      const cells = splitTableRow(line);
+      return cells.length >= 2;
+    }
+
+    function parseMarkdownToHtml(markdown) {
+      const normalized = String(markdown).replace(/\r\n?/g, "\n").trim();
+      if (!normalized) return "<p>Markdown文章が入力されていません。</p>";
+
+      const lines = normalized.split("\n");
+      const output = [];
+      let paragraph = [];
+      let listType = "";
+      let listItems = [];
+      let quoteLines = [];
+      let inCode = false;
+      let codeLanguage = "";
+      let codeLines = [];
+
+      function flushParagraph() {
+        if (!paragraph.length) return;
+        output.push("<p>" + paragraph.map(parseInlineMarkdown).join("\n") + "</p>");
+        paragraph = [];
+      }
+
+      function flushList() {
+        if (!listItems.length) return;
+        const tag = listType || "ul";
+        output.push("<" + tag + ">" + listItems.map(function (item) {
+          const task = item.match(/^\[([ xX])\]\s+(.+)$/);
+          if (task) {
+            return "<li class=\"task-item\"><input type=\"checkbox\" disabled" + (task[1].toLowerCase() === "x" ? " checked" : "") + "> " + parseInlineMarkdown(task[2]) + "</li>";
+          }
+          return "<li>" + parseInlineMarkdown(item) + "</li>";
+        }).join("") + "</" + tag + ">");
+        listItems = [];
+        listType = "";
+      }
+
+      function flushQuote() {
+        if (!quoteLines.length) return;
+        output.push("<blockquote>" + quoteLines.map(parseInlineMarkdown).join("<br>") + "</blockquote>");
+        quoteLines = [];
+      }
+
+      function flushAll() {
+        flushParagraph();
+        flushList();
+        flushQuote();
+      }
+
+      for (let index = 0; index < lines.length; index++) {
+        const raw = lines[index];
+        const trimmed = raw.trim();
+
+        if (inCode) {
+          if (/^```/.test(trimmed)) {
+            output.push('<pre><code' + (codeLanguage ? ' class="language-' + escapeHtml(codeLanguage) + '"' : "") + '>' + escapeHtml(codeLines.join("\n")) + "</code></pre>");
+            inCode = false;
+            codeLanguage = "";
+            codeLines = [];
+          } else {
+            codeLines.push(raw);
+          }
+          continue;
+        }
+
+        const fence = trimmed.match(/^```\s*([\w-]*)\s*$/);
+        if (fence) {
+          flushAll();
+          inCode = true;
+          codeLanguage = fence[1] || "";
+          continue;
+        }
+
+        if (!trimmed) {
+          flushAll();
+          continue;
+        }
+
+        if (isTableCandidate(raw)) {
+          const nextLine = index + 1 < lines.length ? lines[index + 1] : "";
+          const hasFollowingTableLine = isTableCandidate(nextLine);
+          const looksExplicit = /^\s*\|.*\|\s*$/.test(raw);
+
+          if (hasFollowingTableLine || looksExplicit) {
+            flushAll();
+
+            const headers = splitTableRow(raw);
+            const secondLineIsDivider = isTableDivider(nextLine);
+            const dividerCells = secondLineIsDivider ? splitTableRow(nextLine) : [];
+            const aligns = headers.map(function (_, i) {
+              const cell = dividerCells[i] || "";
+              if (/^:-+:$/.test(cell)) return "center";
+              if (/^-+:$/.test(cell)) return "right";
+              return "left";
+            });
+
+            const rows = [];
+            index += secondLineIsDivider ? 2 : 1;
+            while (index < lines.length && isTableCandidate(lines[index]) && lines[index].trim()) {
+              rows.push(splitTableRow(lines[index]));
+              index++;
+            }
+            index--;
+
+            let html = '<div class="table-wrap"><table><thead><tr>';
+            headers.forEach(function (cell, i) {
+              html += '<th style="text-align:' + aligns[i] + '">' + parseInlineMarkdown(cell) + "</th>";
+            });
+            html += "</tr></thead><tbody>";
+            rows.forEach(function (row) {
+              html += "<tr>";
+              headers.forEach(function (_, i) {
+                html += '<td style="text-align:' + aligns[i] + '">' + parseInlineMarkdown(row[i] || "") + "</td>";
+              });
+              html += "</tr>";
+            });
+            html += "</tbody></table></div>";
+            output.push(html);
+            continue;
+          }
+        }
+
+        const heading = trimmed.match(/^(#{1,6})\s+(.+)$/);
+        if (heading) {
+          flushAll();
+          const level = heading[1].length;
+          output.push("<h" + level + ">" + parseInlineMarkdown(heading[2]) + "</h" + level + ">");
+          continue;
+        }
+
+        if (/^(?:-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
+          flushAll();
+          output.push("<hr>");
+          continue;
+        }
+
+        const quote = trimmed.match(/^>\s?(.*)$/);
+        if (quote) {
+          flushParagraph();
+          flushList();
+          quoteLines.push(quote[1]);
+          continue;
+        }
+
+        const unordered = trimmed.match(/^[-+*]\s+(.+)$/);
+        const ordered = trimmed.match(/^\d+[.)]\s+(.+)$/);
+        if (unordered || ordered) {
+          flushParagraph();
+          flushQuote();
+          const nextType = ordered ? "ol" : "ul";
+          if (listType && listType !== nextType) flushList();
+          listType = nextType;
+          listItems.push((unordered || ordered)[1]);
+          continue;
+        }
+
+        flushList();
+        flushQuote();
+        paragraph.push(raw);
+      }
+
+      if (inCode) {
+        output.push('<pre><code' + (codeLanguage ? ' class="language-' + escapeHtml(codeLanguage) + '"' : "") + '>' + escapeHtml(codeLines.join("\n")) + "</code></pre>");
+      }
+      flushAll();
+      return output.join("\n");
+    }
+
+    function parseTextToHtml(text) {
+      return parseMarkdownToHtml(text);
+    }
+
+    function parseTextToMarkdown(text) {
+      return String(text).replace(/\r\n?/g, "\n").trim();
+    }
+
+    function encodeStoredText(value) {
+      return String(value)
+        .replace(/`/g, "jfasofklasflkd")
+        .replace(/<\//g, "<gsafnasdfhags/");
+    }
+
+    function decodeStoredText(value) {
+      return String(value)
+        .replace(/<gsafnasdfhags\//g, "</")
+        .replace(/jfasofklasflkd/g, String.fromCharCode(96));
+    }
+
+
+    function createSection(title, source) {
+      return {
+        id: "section-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8),
+        title: typeof title === "string" ? title : "",
+        source: typeof source === "string" ? source : ""
+      };
+    }
+
+    function normalizeSections(value) {
+      if (!Array.isArray(value) || !value.length) return [createSection("", "")];
+      return value.map(function (section) {
+        return {
+          id: typeof section.id === "string" && section.id ? section.id : createSection("", "").id,
+          title: typeof section.title === "string" ? section.title : "",
+          source: typeof section.source === "string" ? section.source : ""
+        };
+      });
+    }
+
+    function readInitialData() {
+      try {
+        const raw = decodeStoredText(document.getElementById("initialData").textContent || "");
+        const parsed = JSON.parse(raw);
+        const legacySections = typeof parsed.title === "string" || typeof parsed.source === "string"
+          ? [{ id: "section-legacy", title: parsed.title || "", source: parsed.source || "" }]
+          : null;
+        return {
+          sections: normalizeSections(legacySections || parsed.sections),
+          createdAt: typeof parsed.createdAt === "string" ? parsed.createdAt : "",
+          note: typeof parsed.note === "string" ? parsed.note : "",
+          startMode: parsed.startMode === "editor" ? "editor" : "auto"
+        };
+      } catch (error) {
+        return { sections: [createSection("", "")], createdAt: "", note: "", startMode: "auto" };
+      }
+    }
+
+    let sections = [];
+    let selectedIndex = 0;
+
+    function getSelectedSection() {
+      return sections[selectedIndex];
+    }
+
+    function updateCount() {
+      charCount.textContent = sourceText.value.length.toLocaleString("ja-JP") + "文字";
+    }
+
+    function showStatus(message, isError) {
+      status.textContent = message;
+      status.classList.toggle("error", Boolean(isError));
+    }
+
+    function syncInputsToSection() {
+      const section = getSelectedSection();
+      if (!section) return;
+      section.title = titleInput.value;
+      section.source = sourceText.value;
+    }
+
+    function applyMarkdownTitleToSection(section) {
+      if (!section || section.title.trim()) return;
+      const normalized = section.source.replace(/\r\n?/g, "\n");
+      const lines = normalized.split("\n");
+      const firstLine = lines[0] || "";
+      const match = firstLine.match(/^#\s+(.+?)\s*$/);
+      if (!match) return;
+      section.title = match[1].trim();
+      lines.shift();
+      while (lines.length && !lines[0].trim()) lines.shift();
+      section.source = lines.join("\n").trim();
+    }
+
+    function applyMarkdownTitles() {
+      syncInputsToSection();
+      sections.forEach(applyMarkdownTitleToSection);
+      loadSelectedSection();
+    }
+
+    function sectionDisplayTitle(section, index) {
+      return section.title.trim() || "無題のセクション " + (index + 1);
+    }
+
+    function renderSectionList() {
+      sectionList.replaceChildren();
+      sections.forEach(function (section, index) {
+        const li = document.createElement("li");
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "section-item" + (index === selectedIndex ? " is-active" : "");
+        button.setAttribute("aria-current", index === selectedIndex ? "true" : "false");
+        const number = document.createElement("span");
+        number.className = "section-number";
+        number.textContent = String(index + 1);
+        const name = document.createElement("span");
+        name.className = "section-name";
+        name.textContent = sectionDisplayTitle(section, index);
+        button.append(number, name);
+        button.addEventListener("click", function () { selectSection(index); });
+        li.appendChild(button);
+        sectionList.appendChild(li);
+      });
+      moveUpButton.disabled = selectedIndex <= 0;
+      moveDownButton.disabled = selectedIndex >= sections.length - 1;
+      deleteSectionButton.disabled = sections.length <= 1;
+      selectedSectionLabel.textContent = "セクション" + (selectedIndex + 1) + " / " + sections.length;
+    }
+
+    function loadSelectedSection() {
+      const section = getSelectedSection();
+      titleInput.value = section ? section.title : "";
+      sourceText.value = section ? section.source : "";
+      updateCount();
+      renderSectionList();
+    }
+
+    function selectSection(index) {
+      syncInputsToSection();
+      if (index < 0 || index >= sections.length) return;
+      selectedIndex = index;
+      loadSelectedSection();
+    }
+
+    function addSection() {
+      syncInputsToSection();
+      const insertIndex = selectedIndex + 1;
+      sections.splice(insertIndex, 0, createSection("", ""));
+      selectedIndex = insertIndex;
+      loadSelectedSection();
+      titleInput.focus();
+      showStatus("セクションを追加しました。");
+    }
+
+    function moveSection(offset) {
+      syncInputsToSection();
+      const target = selectedIndex + offset;
+      if (target < 0 || target >= sections.length) return;
+      const moved = sections.splice(selectedIndex, 1)[0];
+      sections.splice(target, 0, moved);
+      selectedIndex = target;
+      loadSelectedSection();
+      showStatus("セクションの順番を変更しました。");
+    }
+
+    function deleteSection() {
+      if (sections.length <= 1) return;
+      const title = sectionDisplayTitle(getSelectedSection(), selectedIndex);
+      if (!window.confirm("「" + title + "」を削除しますか？")) return;
+      sections.splice(selectedIndex, 1);
+      selectedIndex = Math.min(selectedIndex, sections.length - 1);
+      loadSelectedSection();
+      showStatus("セクションを削除しました。");
+    }
+
+    function hasDocumentContent() {
+      syncInputsToSection();
+      return sections.some(function (section) { return section.title.trim() || section.source.trim(); });
+    }
+
+    function showEditor() {
+      viewerMode.classList.add("hidden");
+      editorMode.classList.remove("hidden");
+      document.title = "目次付きMarkdown資料を作成";
+      loadSelectedSection();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function buildViewerContent() {
+      documentContent.replaceChildren();
+
+      const toc = document.createElement("nav");
+      toc.id = "tableOfContents";
+      toc.className = "toc";
+      toc.setAttribute("aria-label", "目次");
+      const tocTitle = document.createElement("h1");
+      tocTitle.textContent = "目次";
+      const tocList = document.createElement("ol");
+      tocList.className = "toc-list";
+
+      sections.forEach(function (section, index) {
+        const li = document.createElement("li");
+        const a = document.createElement("a");
+        a.href = "#view-section-" + (index + 1);
+        a.textContent = sectionDisplayTitle(section, index);
+        li.appendChild(a);
+        tocList.appendChild(li);
+      });
+      toc.append(tocTitle, tocList);
+      documentContent.appendChild(toc);
+
+      sections.forEach(function (section, index) {
+        const sectionNode = document.createElement("section");
+        sectionNode.className = "document-section";
+        sectionNode.id = "view-section-" + (index + 1);
+        const h1 = document.createElement("h1");
+        h1.textContent = sectionDisplayTitle(section, index);
+        const body = document.createElement("div");
+        body.className = "section-body";
+        body.innerHTML = parseTextToHtml(section.source);
+        const back = document.createElement("a");
+        back.className = "back-to-toc";
+        back.href = "#tableOfContents";
+        back.textContent = "↑ 目次へ戻る";
+        sectionNode.append(h1, body, back);
+        documentContent.appendChild(sectionNode);
+      });
+    }
+
+    function showViewer() {
+      applyMarkdownTitles();
+      if (!hasDocumentContent()) {
+        showStatus("文章またはタイトルを1文字以上入力してください。", true);
+        sourceText.focus();
+        return false;
+      }
+      buildViewerContent();
+      const savedData = readInitialData();
+      const dateText = savedData.createdAt || new Intl.DateTimeFormat("ja-JP", {
+        year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit"
+      }).format(new Date());
+      viewMeta.replaceChildren();
+      if (noteText.value.trim()) {
+        const noteLine = document.createElement("div");
+        noteLine.style.whiteSpace = "pre-wrap";
+        noteLine.style.marginTop = "6px";
+        noteLine.textContent = noteText.value.trim();
+        viewMeta.appendChild(noteLine);
+      }
+      const createdLine = document.createElement("div");
+      createdLine.textContent = "作成日時：" + dateText;
+      viewMeta.appendChild(createdLine);
+      editorMode.classList.add("hidden");
+      viewerMode.classList.remove("hidden");
+      document.title = sectionDisplayTitle(sections[0], 0) + " - 目次付き資料";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return true;
+    }
+
+    function makeFileName() {
+      syncInputsToSection();
+      const base = sectionDisplayTitle(sections[0], 0);
+      const safe = base.replace(/[\/:*?"<>|]/g, "_").replace(/\s+/g, " ").trim().slice(0, 60);
+      return (safe || "目次付き資料") + ".html";
+    }
+
+    function buildSelfHtml(startMode) {
+      applyMarkdownTitles();
+      const clone = document.documentElement.cloneNode(true);
+      const dataNode = clone.querySelector("#initialData");
+      const data = {
+        sections: sections.map(function (section) { return { id: section.id, title: section.title, source: section.source }; }),
+        createdAt: new Intl.DateTimeFormat("ja-JP", {
+          year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit"
+        }).format(new Date()),
+        note: noteText.value,
+        startMode: startMode === "editor" ? "editor" : "auto"
+      };
+      dataNode.textContent = encodeStoredText(JSON.stringify(data));
+      clone.querySelector("#editorMode").classList.add("hidden");
+      clone.querySelector("#viewerMode").classList.remove("hidden");
+      clone.querySelector("#sectionList").replaceChildren();
+      clone.querySelector("#pageTitle").value = "";
+      clone.querySelector("#sourceText").textContent = "";
+      clone.querySelector("#noteText").textContent = "";
+      clone.querySelector("#status").textContent = "";
+      clone.querySelector("#documentContent").replaceChildren();
+      clone.querySelector("#viewMeta").replaceChildren();
+      return "<!DOCTYPE html>\n" + clone.outerHTML;
+    }
+
+    function downloadSelf(startMode) {
+      if (!hasDocumentContent()) {
+        showStatus("文章またはタイトルを1文字以上入力してください。", true);
+        sourceText.focus();
+        return;
+      }
+      const html = buildSelfHtml(startMode);
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = makeFileName();
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      showStatus(startMode === "editor" ? "入力画面から開始するHTMLを保存しました。" : "閲覧画面から開始するHTMLを保存しました。");
+    }
+
+    document.getElementById("addSectionButton").addEventListener("click", addSection);
+    moveUpButton.addEventListener("click", function () { moveSection(-1); });
+    moveDownButton.addEventListener("click", function () { moveSection(1); });
+    deleteSectionButton.addEventListener("click", deleteSection);
+    document.getElementById("saveButton").addEventListener("click", function () { downloadSelf("auto"); });
+    document.getElementById("saveEditorButton").addEventListener("click", function () { downloadSelf("editor"); });
+    document.getElementById("viewButton").addEventListener("click", showViewer);
+    document.getElementById("editButton").addEventListener("click", showEditor);
+    document.getElementById("printButton").addEventListener("click", function () { window.print(); });
+
+    noteEditButton.addEventListener("click", function () {
+      const willOpen = notePanel.classList.contains("hidden");
+      notePanel.classList.toggle("hidden", !willOpen);
+      noteEditButton.setAttribute("aria-expanded", String(willOpen));
+      if (willOpen) noteText.focus();
+    });
+
+    titleInput.addEventListener("input", function () {
+      syncInputsToSection();
+      renderSectionList();
+    });
+    sourceText.addEventListener("input", function () {
+      syncInputsToSection();
+      updateCount();
+    });
+
+    document.getElementById("sampleButton").addEventListener("click", function () {
+      sections = [
+        createSection("旅行の概要", "## 集合場所\n\n東京駅の丸の内南口に、午前9時までに集合します。\n\n> 雨天の場合は予定を変更します。"),
+        createSection("持ち物", "- スマートフォン\n- 充電器\n- 飲み物\n- 折りたたみ傘"),
+        createSection("参考情報", "参考：[JR東日本](https://www.jreast.co.jp/)\n\n## メモ\n\n各自、前日までに交通経路を確認してください。")
+      ];
+      selectedIndex = 0;
+      loadSelectedSection();
+      showStatus("3セクションの入力例を入れました。");
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        downloadSelf("editor");
+      }
+    });
+
+    const initialData = readInitialData();
+    sections = initialData.sections;
+    selectedIndex = 0;
+    noteText.value = initialData.note;
+    if (noteText.value.trim()) {
+      notePanel.classList.remove("hidden");
+      noteEditButton.setAttribute("aria-expanded", "true");
+    }
+    loadSelectedSection();
+
+    const initialHasContent = sections.some(function (section) { return section.title.length + section.source.length >= 1; });
+    if (initialData.startMode !== "editor" && initialHasContent) {
+      showViewer();
+    } else {
+      showEditor();
+    }
+  });
+  </script>
+</body>
+</html>
