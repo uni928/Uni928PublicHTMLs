@@ -31,7 +31,7 @@
       button { cursor: pointer; }
       button:disabled { cursor: not-allowed; opacity: .45; }
       a { color: var(--accent); overflow-wrap: anywhere; }
-      .hidden { display: none !important; }
+      .hidden { display: none; }
     }
 
     @layer layout {
@@ -79,12 +79,19 @@
     }
 
     @layer viewer {
-      /* 閲覧画面・目次・各セクション */
+      /* 閲覧画面・目次・各セクション。画面上では1ページずつ表示します。 */
       .document { position: relative; padding: clamp(24px, 5vw, 48px); }
       .viewer-actions { position: sticky; top: 10px; z-index: 5; display: flex; justify-content: flex-end; gap: 8px; margin: -8px -8px 22px; pointer-events: none; }
       .viewer-actions button { min-height: 42px; pointer-events: auto; box-shadow: 0 4px 16px rgba(30,41,59,.10); }
+      .viewer-page { display: block; }
+      .viewer-page.is-hidden { display: none; }
+      .viewer-only { display: block; }
       .toc { padding-bottom: 28px; }
       .toc h1 { margin: 0 0 22px; font-size: clamp(1.9rem, 5vw, 2.8rem); letter-spacing: -.035em; }
+      .toc-description { margin: -8px 0 20px; color: var(--muted); line-height: 1.7; }
+      .toc-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 22px; }
+      .toc-actions button { flex: 1 1 240px; min-height: 46px; }
+      .resume-status { flex-basis: 100%; margin: -2px 0 0; color: var(--muted); font-size: .9rem; line-height: 1.6; }
       .toc-list { margin: 0; padding: 0; list-style: none; counter-reset: toc; }
       .toc-list li { counter-increment: toc; border-bottom: 1px solid var(--line); }
       .toc-list a { display: flex; gap: 14px; padding: 13px 2px; color: var(--text); text-decoration: none; font-weight: 700; }
@@ -117,18 +124,21 @@
       .document th { background: #f8fafc; }
       .document img { display: block; max-width: 100%; height: auto; margin: 20px auto; border-radius: 12px; }
       .task-item { list-style: none; margin-left: -1.3em; }
-      .back-to-toc { display: inline-block; margin-top: 30px; font-size: .9rem; }
+      .section-navigation { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 32px; padding-top: 18px; border-top: 1px solid var(--line); }
+      .section-navigation button { min-height: 42px; }
+      .section-navigation .previous-button { margin-right: auto; }
     }
 
     @layer print {
-      /* 印刷時は「目次末尾」「各セクション末尾」で改ページ */
+      /* 印刷時は全ページを連続表示し、画面用の操作部品は印刷しません。 */
       @media print {
         @page { margin: 16mm; }
         html, body { background: #fff; }
         .app { width: auto; margin: 0; padding: 0; }
         .panel { border: 0; border-radius: 0; box-shadow: none; }
         .document { padding: 0; }
-        .viewer-actions, .back-to-toc { display: none; }
+        .viewer-actions, .viewer-only, .back-to-toc { display: none; }
+        .viewer-page.is-hidden { display: block; }
         .toc-page { display: inline-block; }
         .print-measure-root { display: none; }
         .toc { break-after: page; page-break-after: always; }
@@ -141,7 +151,7 @@
     }
 
     @layer responsive {
-      /* スマートフォン向け調整 */
+      /* スマートフォン向け調整。目次操作とセクション移動を縦方向にします。 */
       @media (max-width: 620px) {
         .app { width: min(100% - 16px, 920px); padding-top: 10px; }
         .editor-panel, .document { padding: 18px; border-radius: 18px; }
@@ -153,6 +163,11 @@
         .section-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .section-controls button { width: 100%; }
         .viewer-actions { position: static; margin: 0 0 16px; flex-wrap: wrap; }
+        .toc-actions { flex-direction: column; }
+        .toc-actions button { width: 100%; }
+        .section-navigation { align-items: stretch; flex-direction: column; }
+        .section-navigation .previous-button { margin-right: 0; }
+        .section-navigation button { width: 100%; }
       }
     }
   </style>
@@ -539,6 +554,215 @@
 
     let sections = [];
     let selectedIndex = 0;
+    let activeViewerPage = { type: "toc", index: -1 };
+    let markdownHash = "";
+    let resumeRecord = null;
+    let resumeLookupState = "unknown";
+    let resumeDbPromise = null;
+    let progressSaveTimer = null;
+    let progressInterval = null;
+    let tocResumeButton = null;
+    let tocResumeStatus = null;
+    let resumeLookupToken = 0;
+
+    const RESUME_DB_NAME = "markdown-reader-progress";
+    const RESUME_DB_VERSION = 1;
+    const RESUME_STORE_NAME = "reading-progress";
+    const PROGRESS_INTERVAL_MS = 2000;
+
+    function getResumeKey() {
+      return "document:" + String(location.href).split("#")[0];
+    }
+
+    function getScrollTop() {
+      return Math.max(0, Math.round(window.scrollY || document.documentElement.scrollTop || 0));
+    }
+
+    function getHashInput() {
+      return JSON.stringify(sections.map(function (section) {
+        return {
+          title: String(section.title || "").trim(),
+          source: String(section.source || "").replace(/\r\n?/g, "\n").trim()
+        };
+      }));
+    }
+
+    function fallbackHash(value) {
+      let hash = 2166136261;
+      const input = String(value);
+      for (let index = 0; index < input.length; index++) {
+        hash ^= input.charCodeAt(index);
+        hash = Math.imul(hash, 16777619);
+      }
+      return "fnv1a-" + (hash >>> 0).toString(16).padStart(8, "0");
+    }
+
+    async function calculateMarkdownHash() {
+      const input = getHashInput();
+      try {
+        if (window.crypto && window.crypto.subtle && window.TextEncoder) {
+          const bytes = new TextEncoder().encode(input);
+          const digest = await window.crypto.subtle.digest("SHA-256", bytes);
+          return "sha256-" + Array.from(new Uint8Array(digest)).map(function (byte) {
+            return byte.toString(16).padStart(2, "0");
+          }).join("");
+        }
+      } catch (error) {
+        // file:// や古いブラウザーなどで Web Crypto が使えない場合は下の互換ハッシュを使います。
+      }
+      return fallbackHash(input);
+    }
+
+    function openResumeDatabase() {
+      if (resumeDbPromise) return resumeDbPromise;
+      if (!window.indexedDB) return Promise.reject(new Error("IndexedDB is unavailable."));
+
+      resumeDbPromise = new Promise(function (resolve, reject) {
+        const request = window.indexedDB.open(RESUME_DB_NAME, RESUME_DB_VERSION);
+        request.onupgradeneeded = function () {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(RESUME_STORE_NAME)) {
+            db.createObjectStore(RESUME_STORE_NAME, { keyPath: "key" });
+          }
+        };
+        request.onsuccess = function () {
+          const db = request.result;
+          db.onversionchange = function () { db.close(); };
+          resolve(db);
+        };
+        request.onerror = function () {
+          resumeDbPromise = null;
+          reject(request.error || new Error("IndexedDB could not be opened."));
+        };
+        request.onblocked = function () {
+          resumeDbPromise = null;
+          reject(new Error("IndexedDB open request was blocked."));
+        };
+      });
+      return resumeDbPromise;
+    }
+
+    function readReadingProgress() {
+      return openResumeDatabase().then(function (db) {
+        return new Promise(function (resolve, reject) {
+          const transaction = db.transaction(RESUME_STORE_NAME, "readonly");
+          const request = transaction.objectStore(RESUME_STORE_NAME).get(getResumeKey());
+          request.onsuccess = function () { resolve(request.result || null); };
+          request.onerror = function () { reject(request.error || new Error("Progress could not be read.")); };
+        });
+      });
+    }
+
+    function writeReadingProgress(record) {
+      return openResumeDatabase().then(function (db) {
+        return new Promise(function (resolve, reject) {
+          const transaction = db.transaction(RESUME_STORE_NAME, "readwrite");
+          transaction.oncomplete = function () { resolve(); };
+          transaction.onerror = function () { reject(transaction.error || new Error("Progress could not be saved.")); };
+          transaction.onabort = function () { reject(transaction.error || new Error("Progress save was aborted.")); };
+          transaction.objectStore(RESUME_STORE_NAME).put(record);
+        });
+      });
+    }
+
+    function isValidResumeRecord(record) {
+      return Boolean(record &&
+        record.markdownHash === markdownHash &&
+        record.pageType === "section" &&
+        Number.isInteger(record.sectionIndex) &&
+        record.sectionIndex >= 0 &&
+        record.sectionIndex < sections.length &&
+        Number.isFinite(record.scrollTop));
+    }
+
+    function renderResumeControls() {
+      if (!tocResumeButton || !tocResumeStatus) return;
+
+      const valid = isValidResumeRecord(resumeRecord);
+      tocResumeButton.disabled = resumeLookupState === "unavailable" || !valid;
+      if (resumeLookupState === "unavailable") {
+        tocResumeStatus.textContent = "この環境ではIndexedDBを利用できないため、続きから読む機能は使えません。";
+      } else if (resumeLookupState === "stale") {
+        tocResumeStatus.textContent = "文章が更新されたため、前回の続きは無効です。最初のセクションから読み始めてください。";
+      } else if (valid) {
+        tocResumeStatus.textContent = "前回のセクションと位置情報を復元できます。";
+      } else {
+        tocResumeStatus.textContent = "読み進めると、ページと位置情報が定期的に保存されます。";
+      }
+    }
+
+    async function refreshResumeState() {
+      const lookupToken = ++resumeLookupToken;
+      resumeRecord = null;
+      resumeLookupState = "unknown";
+      renderResumeControls();
+
+      try {
+        const record = await readReadingProgress();
+        if (lookupToken !== resumeLookupToken) return;
+        if (record && record.markdownHash !== markdownHash) {
+          resumeLookupState = "stale";
+        } else if (isValidResumeRecord(record)) {
+          resumeRecord = record;
+          resumeLookupState = "available";
+        } else {
+          resumeLookupState = "missing";
+        }
+      } catch (error) {
+        if (lookupToken !== resumeLookupToken) return;
+        resumeLookupState = "unavailable";
+      }
+      renderResumeControls();
+    }
+
+    function makeProgressRecord() {
+      if (viewerMode.classList.contains("hidden") || !markdownHash || activeViewerPage.type !== "section" || !sections[activeViewerPage.index]) return null;
+      return {
+        key: getResumeKey(),
+        pageType: "section",
+        sectionIndex: activeViewerPage.index,
+        scrollTop: getScrollTop(),
+        markdownHash: markdownHash,
+        updatedAt: Date.now()
+      };
+    }
+
+    function saveReadingProgressNow() {
+      const record = makeProgressRecord();
+      if (!record) return Promise.resolve();
+      resumeRecord = record;
+      resumeLookupState = "available";
+      renderResumeControls();
+      return writeReadingProgress(record).catch(function () {
+        resumeLookupState = "unavailable";
+        renderResumeControls();
+      });
+    }
+
+    function scheduleReadingProgressSave() {
+      if (!makeProgressRecord() || progressSaveTimer) return;
+      progressSaveTimer = window.setTimeout(function () {
+        progressSaveTimer = null;
+        saveReadingProgressNow();
+      }, 450);
+    }
+
+    function flushReadingProgressSave() {
+      if (progressSaveTimer) {
+        window.clearTimeout(progressSaveTimer);
+        progressSaveTimer = null;
+      }
+      return saveReadingProgressNow();
+    }
+
+    function startProgressTracking() {
+      if (progressInterval) return;
+      progressInterval = window.setInterval(function () {
+        if (!viewerMode.classList.contains("hidden") && activeViewerPage.type === "section") {
+          scheduleReadingProgressSave();
+        }
+      }, PROGRESS_INTERVAL_MS);
+    }
 
     function getSelectedSection() {
       return sections[selectedIndex];
@@ -660,6 +884,7 @@
     }
 
     function showEditor() {
+      flushReadingProgressSave();
       viewerMode.classList.add("hidden");
       editorMode.classList.remove("hidden");
       document.title = "目次付きMarkdown資料を作成";
@@ -669,13 +894,43 @@
 
     function buildViewerContent() {
       documentContent.replaceChildren();
+      tocResumeButton = null;
+      tocResumeStatus = null;
 
       const toc = document.createElement("nav");
       toc.id = "tableOfContents";
-      toc.className = "toc";
+      toc.className = "toc viewer-page";
+      toc.dataset.viewerPage = "toc";
       toc.setAttribute("aria-label", "目次");
       const tocTitle = document.createElement("h1");
       tocTitle.textContent = "目次";
+
+      const tocDescription = document.createElement("p");
+      tocDescription.className = "toc-description viewer-only";
+      tocDescription.textContent = "読みたいセクションを選択すると、そのセクションのページから読み始められます。";
+
+      const tocActions = document.createElement("div");
+      tocActions.className = "toc-actions viewer-only";
+      const firstButton = document.createElement("button");
+      firstButton.id = "startFirstSectionButton";
+      firstButton.type = "button";
+      firstButton.className = "primary-button";
+      firstButton.textContent = "最初のセクションから読む";
+      firstButton.addEventListener("click", function () { openSectionPage(0, 0); });
+
+      tocResumeButton = document.createElement("button");
+      tocResumeButton.id = "resumeReadingButton";
+      tocResumeButton.type = "button";
+      tocResumeButton.className = "secondary-button";
+      tocResumeButton.textContent = "前回の続きから読む";
+      tocResumeButton.disabled = true;
+      tocResumeButton.addEventListener("click", openResumePage);
+
+      tocResumeStatus = document.createElement("p");
+      tocResumeStatus.className = "resume-status";
+      tocResumeStatus.setAttribute("aria-live", "polite");
+      tocActions.append(firstButton, tocResumeButton, tocResumeStatus);
+
       const tocList = document.createElement("ol");
       tocList.className = "toc-list";
 
@@ -683,6 +938,11 @@
         const li = document.createElement("li");
         const a = document.createElement("a");
         a.href = "#view-section-" + (index + 1);
+        a.dataset.sectionIndex = String(index);
+        a.addEventListener("click", function (event) {
+          event.preventDefault();
+          openSectionPage(index, 0);
+        });
         const titleSpan = document.createElement("span");
         titleSpan.className = "toc-title";
         titleSpan.textContent = sectionDisplayTitle(section, index);
@@ -694,25 +954,98 @@
         li.appendChild(a);
         tocList.appendChild(li);
       });
-      toc.append(tocTitle, tocList);
+      toc.append(tocTitle, tocDescription, tocActions, tocList);
       documentContent.appendChild(toc);
 
       sections.forEach(function (section, index) {
         const sectionNode = document.createElement("section");
-        sectionNode.className = "document-section";
+        sectionNode.className = "document-section viewer-page is-hidden";
+        sectionNode.dataset.viewerPage = "section";
+        sectionNode.dataset.sectionIndex = String(index);
         sectionNode.id = "view-section-" + (index + 1);
         const h1 = document.createElement("h1");
         h1.textContent = sectionDisplayTitle(section, index);
+        h1.tabIndex = -1;
         const body = document.createElement("div");
         body.className = "section-body";
         body.innerHTML = parseTextToHtml(section.source);
-        const back = document.createElement("a");
-        back.className = "back-to-toc";
-        back.href = "#tableOfContents";
-        back.textContent = "↑ 目次へ戻る";
-        sectionNode.append(h1, body, back);
+
+        const navigation = document.createElement("div");
+        navigation.className = "section-navigation viewer-only";
+        const backButton = document.createElement("button");
+        backButton.type = "button";
+        backButton.className = "secondary-button";
+        backButton.textContent = "↑ 目次へ戻る";
+        backButton.addEventListener("click", openTocPage);
+
+        const previousButton = document.createElement("button");
+        previousButton.type = "button";
+        previousButton.className = "secondary-button previous-button";
+        previousButton.textContent = "← 前のセクション";
+        previousButton.disabled = index <= 0;
+        previousButton.addEventListener("click", function () {
+          if (index > 0) openSectionPage(index - 1, 0);
+        });
+
+        const nextButton = document.createElement("button");
+        nextButton.type = "button";
+        nextButton.className = "primary-button";
+        nextButton.textContent = index >= sections.length - 1 ? "目次へ戻る" : "次のセクション →";
+        nextButton.addEventListener("click", function () {
+          if (index >= sections.length - 1) {
+            openTocPage();
+          } else {
+            openSectionPage(index + 1, 0);
+          }
+        });
+
+        navigation.append(backButton, previousButton, nextButton);
+        sectionNode.append(h1, body, navigation);
         documentContent.appendChild(sectionNode);
       });
+    }
+
+    function setActiveViewerPage(type, index, scrollTop) {
+      if (type === "section" && (!Number.isInteger(index) || index < 0 || index >= sections.length)) return;
+
+      activeViewerPage = { type: type, index: type === "section" ? index : -1 };
+      documentContent.querySelectorAll(".viewer-page").forEach(function (page) {
+        const isActive = page.dataset.viewerPage === type &&
+          (type !== "section" || Number(page.dataset.sectionIndex) === index);
+        page.classList.toggle("is-hidden", !isActive);
+        page.setAttribute("aria-hidden", String(!isActive));
+      });
+
+      const title = type === "section"
+        ? sectionDisplayTitle(sections[index], index)
+        : "目次";
+      document.title = title + " - 目次付き資料";
+
+      const nextScrollTop = Number.isFinite(scrollTop) ? Math.max(0, scrollTop) : 0;
+      window.scrollTo({ top: nextScrollTop, behavior: "auto" });
+      renderResumeControls();
+    }
+
+    function openTocPage() {
+      flushReadingProgressSave();
+      setActiveViewerPage("toc", -1, 0);
+    }
+
+    function openSectionPage(index, scrollTop) {
+      if (!Number.isInteger(index) || index < 0 || index >= sections.length) return;
+      flushReadingProgressSave();
+      setActiveViewerPage("section", index, Number.isFinite(scrollTop) ? scrollTop : 0);
+      const heading = document.getElementById("view-section-" + (index + 1)).querySelector("h1");
+      if (heading) heading.focus({ preventScroll: true });
+      scheduleReadingProgressSave();
+    }
+
+    function openResumePage() {
+      if (!isValidResumeRecord(resumeRecord)) {
+        refreshResumeState();
+        return;
+      }
+      openSectionPage(resumeRecord.sectionIndex, resumeRecord.scrollTop);
     }
 
     function getPrintPageHeightPx(measureRoot) {
@@ -776,8 +1109,8 @@
 
       sectionNodes.forEach(function (sectionNode, index) {
         const clone = sectionNode.cloneNode(true);
-        const back = clone.querySelector(".back-to-toc");
-        if (back) back.remove();
+        clone.classList.remove("is-hidden");
+        clone.querySelectorAll(".viewer-only").forEach(function (element) { element.remove(); });
         measureRoot.appendChild(clone);
 
         pageNodes[index].textContent = String(startPage);
@@ -788,15 +1121,17 @@
       measureRoot.remove();
     }
 
-    function showViewer() {
+    async function showViewer() {
       applyMarkdownTitles();
       if (!hasDocumentContent()) {
         showStatus("文章またはタイトルを1文字以上入力してください。", true);
         sourceText.focus();
         return false;
       }
+      markdownHash = await calculateMarkdownHash();
       buildViewerContent();
       updatePrintTocPageNumbers();
+      await refreshResumeState();
       const savedData = readInitialData();
       const dateText = savedData.createdAt || new Intl.DateTimeFormat("ja-JP", {
         year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit"
@@ -814,8 +1149,8 @@
       viewMeta.appendChild(createdLine);
       editorMode.classList.add("hidden");
       viewerMode.classList.remove("hidden");
-      document.title = sectionDisplayTitle(sections[0], 0) + " - 目次付き資料";
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      startProgressTracking();
+      openTocPage();
       return true;
     }
 
@@ -884,6 +1219,11 @@
     });
 
     window.addEventListener("beforeprint", updatePrintTocPageNumbers);
+    window.addEventListener("scroll", scheduleReadingProgressSave, { passive: true });
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "hidden") flushReadingProgressSave();
+    });
+    window.addEventListener("pagehide", flushReadingProgressSave);
 
     noteEditButton.addEventListener("click", function () {
       const willOpen = notePanel.classList.contains("hidden");
