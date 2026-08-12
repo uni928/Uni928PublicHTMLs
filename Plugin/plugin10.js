@@ -1,6 +1,6 @@
 /*
  * plugin10.js
- * VERSION: 10.1.0-window-name
+ * VERSION: 10.2.0-indexeddb
  * 画像保持＋円形マスクによるページ間遷移プラグイン
  *
  * ページ側には次の1行だけを記述します。
@@ -15,8 +15,10 @@
   window.__pageTransitionPlugin10 = true;
 
   const CONFIG = Object.freeze({
-    windowNamePrefix: '__UNI928_PAGE_TRANSITION_V10__:',
-    maxWindowNameChars: 1800000,
+    databaseName: 'uni928-page-transition-v10',
+    databaseVersion: 1,
+    objectStoreName: 'frames',
+    frameKey: 'latest',
     captureLibraryUrl: 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
     captureTimeout: 3500,
     revealDuration: 2200,
@@ -185,45 +187,83 @@
       }), CONFIG.captureTimeout);
 
       let image = canvas.toDataURL('image/jpeg', CONFIG.imageQuality);
-      for (const quality of [0.62, 0.48, 0.36]) {
-        if (image.length <= CONFIG.maxWindowNameChars) {
-          break;
-        }
-        image = canvas.toDataURL('image/jpeg', quality);
-      }
       return { image, width, height, scrollX, scrollY };
     } catch (error) {
       return { image: fallbackSnapshot(), width, height, scrollX, scrollY, fallback: true };
     }
   }
 
-  /* transfer: Web Storage／IndexedDBを使わず、同一タブのwindow.nameで一度だけ渡します。 */
-  function writeWindowTransfer(value) {
-    const serialized = CONFIG.windowNamePrefix + JSON.stringify(value);
-    if (serialized.length > CONFIG.maxWindowNameChars) {
-      return false;
-    }
-    try {
-      window.name = serialized;
-      return window.name === serialized;
-    } catch (error) {
-      return false;
-    }
+  /* transfer: 遷移画像をIndexedDBに保存し、遷移完了時に削除します。 */
+  function openDatabase() {
+    return new Promise((resolve, reject) => {
+      if (!window.indexedDB) {
+        reject(new Error('IndexedDB is unavailable'));
+        return;
+      }
+      const request = window.indexedDB.open(CONFIG.databaseName, CONFIG.databaseVersion);
+      request.onupgradeneeded = () => {
+        if (!request.result.objectStoreNames.contains(CONFIG.objectStoreName)) {
+          request.result.createObjectStore(CONFIG.objectStoreName);
+        }
+      };
+      request.onerror = () => reject(request.error || new Error('IndexedDB open failed'));
+      request.onsuccess = () => resolve(request.result);
+    });
   }
 
-  function readWindowTransfer() {
-    const currentName = window.name || '';
-    if (!currentName.startsWith(CONFIG.windowNamePrefix)) {
-      return null;
-    }
-    try {
-      const value = JSON.parse(currentName.slice(CONFIG.windowNamePrefix.length));
-      window.name = '';
-      return value;
-    } catch (error) {
-      window.name = '';
-      return null;
-    }
+  async function writeFrame(value) {
+    const database = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction(CONFIG.objectStoreName, 'readwrite');
+      transaction.oncomplete = () => {
+        database.close();
+        resolve();
+      };
+      transaction.onabort = () => {
+        database.close();
+        reject(transaction.error || new Error('IndexedDB write aborted'));
+      };
+      transaction.onerror = () => {
+        database.close();
+        reject(transaction.error || new Error('IndexedDB write failed'));
+      };
+      transaction.objectStore(CONFIG.objectStoreName).put(value, CONFIG.frameKey);
+    });
+  }
+
+  async function readFrameFromDatabase() {
+    const database = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction(CONFIG.objectStoreName, 'readonly');
+      const request = transaction.objectStore(CONFIG.objectStoreName).get(CONFIG.frameKey);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error || new Error('IndexedDB read failed'));
+      transaction.oncomplete = () => database.close();
+      transaction.onabort = () => {
+        database.close();
+        reject(transaction.error || new Error('IndexedDB read aborted'));
+      };
+    });
+  }
+
+  async function deleteFrameFromDatabase() {
+    const database = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction(CONFIG.objectStoreName, 'readwrite');
+      transaction.oncomplete = () => {
+        database.close();
+        resolve();
+      };
+      transaction.onabort = () => {
+        database.close();
+        reject(transaction.error || new Error('IndexedDB delete aborted'));
+      };
+      transaction.onerror = () => {
+        database.close();
+        reject(transaction.error || new Error('IndexedDB delete failed'));
+      };
+      transaction.objectStore(CONFIG.objectStoreName).delete(CONFIG.frameKey);
+    });
   }
 
   async function saveFrame(targetUrl, pointer) {
@@ -236,28 +276,16 @@
       createdAt: Date.now()
     };
 
-    if (!writeWindowTransfer(value)) {
-      const compactValue = {
-        ...value,
-        image: fallbackSnapshot(),
-        fallback: true
-      };
-      if (!writeWindowTransfer(compactValue)) {
-        throw new Error('The captured image is too large for window.name');
-      }
-      return compactValue;
-    }
+    await writeFrame(value);
     return value;
   }
 
   async function readFrame() {
-    return readWindowTransfer();
+    return readFrameFromDatabase();
   }
 
   function clearFrame() {
-    if ((window.name || '').startsWith(CONFIG.windowNamePrefix)) {
-      window.name = '';
-    }
+    return deleteFrameFromDatabase().catch(() => {});
   }
 
   function shouldHandleLink(link, event) {
