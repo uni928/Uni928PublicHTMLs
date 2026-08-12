@@ -13,14 +13,14 @@
       test: /(?:^|\.)syosetu\.org$/i,
       site: 'hameln',
       body: ['#honbun', '#novel_honbun', '.novel_view', '.novel_view_body', '[id*="honbun"]', '[class*="honbun"]', '#main'],
-      work: ['h1', '.title', '[class*="title"]'],
+      work: ['a[href="./"]', 'a[href="../"]', 'a[rel="bookmark"]', 'h1', '.title', '[class*="title"]'],
       page: ['h1', 'h2', '.novel_subtitle'],
       known: true
     },
     {
       test: /kakuyomu\.jp$/i,
       body: ['.widget-episodeBody', '.widget-episodeBody__content', '[data-episode-body]', '[data-testid*="episode"]', '.episode-body'],
-      work: ['a[href*="/works/"]', '[data-work-title]', '.widget-workTitle'],
+      work: ['[data-work-title]', '.widget-workTitle', 'a[href*="/works/"]'],
       page: ['.widget-episodeTitle', '[data-episode-title]', 'h1'],
       known: true
     },
@@ -182,6 +182,18 @@
     };
   }
 
+  function elementTitle(element) {
+    return cleanTitle(
+      element?.getAttribute('data-novel-title') ||
+      element?.getAttribute('data-work-title') ||
+      element?.getAttribute('title') ||
+      element?.getAttribute('aria-label') ||
+      element?.innerText ||
+      element?.textContent ||
+      ''
+    );
+  }
+
   function getPageTitle(rule) {
     if (rule?.site === 'hameln') {
       const parsed = parseHamelnTitle(document.title);
@@ -194,19 +206,13 @@
   }
 
   function getNovelTitle(rule, pageTitle) {
+    const workElement = firstMatching(rule?.work);
+    const explicit = elementTitle(workElement);
+    if (explicit && explicit !== pageTitle && explicit.length <= 140) return explicit;
     if (rule?.site === 'hameln') {
       const parsed = parseHamelnTitle(document.title);
       if (parsed?.novelTitle) return parsed.novelTitle;
     }
-    const workElement = firstMatching(rule?.work);
-    const explicit = cleanTitle(
-      workElement?.getAttribute('data-novel-title') ||
-      workElement?.getAttribute('data-work-title') ||
-      workElement?.innerText ||
-      workElement?.textContent ||
-      ''
-    );
-    if (explicit && explicit !== pageTitle && explicit.length <= 140) return explicit;
 
     const dataElement = one('[data-novel-title], [data-work-title]');
     const dataTitle = cleanTitle(dataElement?.getAttribute('data-novel-title') || dataElement?.getAttribute('data-work-title') || '');
@@ -224,7 +230,7 @@
   }
 
   function extractPageInfo(value) {
-    const source = text(value, 240).replace(/\s+/g, ' ').trim();
+    const source = text(value, 500000).replace(/\s+/g, ' ').trim();
     const match = source.match(/(\d{1,6})\s*\/\s*(\d{1,6})/) ||
       source.match(/(?:第\s*)?(\d{1,6})\s*ページ目?\b/i) ||
       source.match(/(?:第\s*)?(\d{1,6})\s*(?:話|章|回|episode|chapter)\b/i);
@@ -232,25 +238,27 @@
     return { value: match[0].trim(), number: Number(match[1]) };
   }
 
-  function getPageInfo(pageTitle) {
+  function getPageInfo(pageTitle, body) {
     const dataElement = one('[data-page-info], [data-page-number], [data-page-count], [aria-label*="ページ"]');
     const pageElements = [
       firstMatching(['.page-info', '.page-number', '.pager', '.pagination', '[class*="page-info"]', '[class*="pagination"]']),
       dataElement
     ];
     const candidates = [
-      pageTitle,
       dataElement?.getAttribute('data-page-info'),
       dataElement?.getAttribute('data-page-number'),
       dataElement?.getAttribute('data-page-count'),
       ...pageElements.map((element) => element?.innerText || element?.textContent || ''),
+      document.body?.innerText || document.body?.textContent || '',
+      body?.value,
+      pageTitle,
       document.title
     ];
     for (const candidate of candidates) {
       const info = extractPageInfo(candidate);
-      if (info) return info.value;
+      if (info) return info;
     }
-    return '';
+    return null;
   }
 
   function getPageNumber(pageTitle) {
@@ -288,15 +296,16 @@
     if (!rule) return null;
     const body = findBody(rule);
     const pageTitle = getPageTitle(rule);
-    const pageInfo = getPageInfo(pageTitle);
+    const pageInfo = getPageInfo(pageTitle, body);
     if (!isLikelyNovel(rule, body, pageTitle)) return null;
 
     const canonical = one('link[rel="canonical"]')?.href || location.href;
     return {
       novelTitle: getNovelTitle(rule, pageTitle),
       pageTitle: pageTitle || '本文',
-      pageInfo,
-      pageNumber: getPageNumber(pageInfo || pageTitle),
+      pageInfo: pageInfo?.value || '',
+      pageNumberInfo: pageInfo?.number || null,
+      pageNumber: pageInfo?.number || getPageNumber(pageTitle),
       text: body.value,
       sourceUrl: canonical,
       sourceHost: location.hostname,

@@ -74,7 +74,7 @@ function safeNumber(value) {
 }
 
 function extractPageInfo(value) {
-  const source = cleanText(value, 240).replace(/\s+/g, ' ');
+  const source = cleanText(value, 500000).replace(/\s+/g, ' ');
   const match = source.match(/(\d{1,6})\s*\/\s*(\d{1,6})/) ||
     source.match(/(?:第\s*)?(\d{1,6})\s*ページ目?/i) ||
     source.match(/(?:第\s*)?(\d{1,6})\s*(?:話|章|回|episode|chapter)\b/i);
@@ -82,6 +82,8 @@ function extractPageInfo(value) {
 }
 
 function pageInfoNumber(page) {
+  const explicitNumber = safeNumber(page?.pageNumberInfo);
+  if (explicitNumber) return explicitNumber;
   const rememberedInfo = extractPageInfo(page?.pageInfo);
   if (rememberedInfo?.number) return rememberedInfo.number;
   if (!page?.pageInfo && page?.numberSource !== 'capture-order') {
@@ -113,11 +115,13 @@ function normalizePage(page, fallbackNumber) {
   const text = cleanText(page?.text, 500000);
   const sourceUrl = canonicalizeUrl(page?.sourceUrl || page?.url || '');
   const requestedNumber = safeNumber(page?.number || page?.pageNumber);
-  const pageInfo = cleanText(page?.pageInfo || page?.pageNumberInfo || extractPageInfo(page?.title || page?.pageTitle)?.value, 120);
+  const pageInfo = cleanText(page?.pageInfo || extractPageInfo(page?.title || page?.pageTitle)?.value, 120);
+  const pageNumberInfo = safeNumber(page?.pageNumberInfo) || extractPageInfo(pageInfo)?.number || null;
   return {
     number: requestedNumber || fallbackNumber,
     numberSource: page?.numberSource || (requestedNumber ? 'page-info' : 'capture-order'),
     pageInfo,
+    pageNumberInfo,
     title: cleanText(page?.title || page?.pageTitle, 240),
     text,
     sourceUrl,
@@ -148,7 +152,7 @@ function normalizeRecord(record) {
   pages.sort(comparePages);
   const sourceHost = siteKeyFromUrl(record?.sourceHost || pages[0]?.sourceUrl || '');
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     title,
     pages,
     sourceHost,
@@ -217,7 +221,8 @@ async function upsertNovelPage(page) {
 
   const pageTitle = cleanText(page?.pageTitle, 240);
   const incomingPageInfo = cleanText(page?.pageInfo || extractPageInfo(page?.pageTitle)?.value, 120);
-  const requestedNumber = safeNumber(page?.pageNumber) || pageInfoNumber({ pageInfo: incomingPageInfo, title: page?.pageTitle, sourceUrl });
+  const incomingPageNumberInfo = safeNumber(page?.pageNumberInfo) || extractPageInfo(incomingPageInfo)?.number || null;
+  const requestedNumber = safeNumber(page?.pageNumber) || incomingPageNumberInfo || pageInfoNumber({ pageInfo: incomingPageInfo, title: page?.pageTitle, sourceUrl });
   let target = current.pages.find((item) => item.sourceUrl && sourceUrl && item.sourceUrl === sourceUrl);
   if (!target && requestedNumber) {
     target = current.pages.find((item) => pageInfoNumber(item) === requestedNumber &&
@@ -235,6 +240,7 @@ async function upsertNovelPage(page) {
       number,
       numberSource: requestedNumber ? 'page-info' : 'capture-order',
       pageInfo: incomingPageInfo,
+      pageNumberInfo: incomingPageNumberInfo,
       title: '',
       text: '',
       sourceUrl,
@@ -250,6 +256,7 @@ async function upsertNovelPage(page) {
   }
   target.title = pageTitle || target.title || ('第' + target.number + 'ページ');
   target.pageInfo = incomingPageInfo || target.pageInfo || '';
+  target.pageNumberInfo = incomingPageNumberInfo || target.pageNumberInfo || null;
   target.text = text;
   target.sourceUrl = sourceUrl;
   target.capturedAt = Date.now();

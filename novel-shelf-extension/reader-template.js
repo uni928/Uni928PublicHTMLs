@@ -18,6 +18,8 @@ export function safeFileBase(value) {
 }
 
 function pageInfoNumber(page) {
+  const explicitNumber = Number(page?.pageNumberInfo);
+  if (Number.isInteger(explicitNumber) && explicitNumber > 0) return explicitNumber;
   const pageInfo = String(page?.pageInfo || '');
   const infoMatch = pageInfo.match(/(\d{1,6})\s*\/\s*(\d{1,6})/) ||
     pageInfo.match(/(?:第\s*)?(\d{1,6})\s*ページ目?/i) ||
@@ -54,7 +56,7 @@ function sortedPages(value) {
 
 export function recordToJson(record) {
   return JSON.stringify({
-    schemaVersion: Number(record?.schemaVersion) || 1,
+    schemaVersion: Number(record?.schemaVersion) || 3,
     title: String(record?.title || '無題の小説'),
     sourceHost: String(record?.sourceHost || ''),
     pages: sortedPages(record?.pages),
@@ -70,6 +72,7 @@ export function buildReaderHtml(novel) {
     .map((page, index) => ({
       number: Number(page.number) || index + 1,
       pageInfo: String(page.pageInfo || ''),
+      pageNumberInfo: Number(page.pageNumberInfo) || null,
       title: String(page.title || ''),
       text: String(page.text || ''),
       sourceUrl: String(page.sourceUrl || '')
