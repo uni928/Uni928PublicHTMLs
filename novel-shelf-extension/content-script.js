@@ -11,6 +11,7 @@
     },
     {
       test: /(?:^|\.)syosetu\.org$/i,
+      site: 'hameln',
       body: ['#honbun', '#novel_honbun', '.novel_view', '.novel_view_body', '[id*="honbun"]', '[class*="honbun"]', '#main'],
       work: ['h1', '.title', '[class*="title"]'],
       page: ['h1', 'h2', '.novel_subtitle'],
@@ -171,7 +172,21 @@
       .trim();
   }
 
+  function parseHamelnTitle(value) {
+    const source = cleanTitle(value);
+    const parts = source.split(/\s+-\s+/).map(cleanTitle).filter(Boolean);
+    if (parts.length < 3) return null;
+    return {
+      pageTitle: parts.slice(0, -2).join(' - '),
+      novelTitle: parts.slice(-2).join(' - ')
+    };
+  }
+
   function getPageTitle(rule) {
+    if (rule?.site === 'hameln') {
+      const parsed = parseHamelnTitle(document.title);
+      if (parsed?.pageTitle) return parsed.pageTitle;
+    }
     const element = firstMatching(rule?.page) || one('h1, h2');
     const value = cleanTitle(element?.innerText || element?.textContent || '');
     if (value && value.length <= 240) return value;
@@ -179,6 +194,10 @@
   }
 
   function getNovelTitle(rule, pageTitle) {
+    if (rule?.site === 'hameln') {
+      const parsed = parseHamelnTitle(document.title);
+      if (parsed?.novelTitle) return parsed.novelTitle;
+    }
     const workElement = firstMatching(rule?.work);
     const explicit = cleanTitle(
       workElement?.getAttribute('data-novel-title') ||
@@ -196,12 +215,42 @@
     const documentTitle = cleanTitle(meta('og:title') || document.title || '');
     const parts = documentTitle.split(/\s+(?:\||｜|[-–—])\s+/).map(cleanTitle).filter(Boolean);
     const chapterLike = (value) => /(?:第\s*\d+\s*[話章回]|序章|終章|prologue|epilogue|chapter|episode)/i.test(value);
-    const nonChapter = parts.find((part) => !chapterLike(part) && part !== pageTitle);
+    const nonChapter = parts.find((part) => !chapterLike(part) && !extractPageInfo(part) && part !== pageTitle);
     if (nonChapter) return nonChapter;
     if (documentTitle && documentTitle !== pageTitle) return documentTitle;
 
     const heading = cleanTitle(one('h1')?.innerText || one('h1')?.textContent || '');
     return heading || location.hostname || '無題の小説';
+  }
+
+  function extractPageInfo(value) {
+    const source = text(value, 240).replace(/\s+/g, ' ').trim();
+    const match = source.match(/(\d{1,6})\s*\/\s*(\d{1,6})/) ||
+      source.match(/(?:第\s*)?(\d{1,6})\s*ページ目?\b/i) ||
+      source.match(/(?:第\s*)?(\d{1,6})\s*(?:話|章|回|episode|chapter)\b/i);
+    if (!match) return null;
+    return { value: match[0].trim(), number: Number(match[1]) };
+  }
+
+  function getPageInfo(pageTitle) {
+    const dataElement = one('[data-page-info], [data-page-number], [data-page-count], [aria-label*="ページ"]');
+    const pageElements = [
+      firstMatching(['.page-info', '.page-number', '.pager', '.pagination', '[class*="page-info"]', '[class*="pagination"]']),
+      dataElement
+    ];
+    const candidates = [
+      pageTitle,
+      dataElement?.getAttribute('data-page-info'),
+      dataElement?.getAttribute('data-page-number'),
+      dataElement?.getAttribute('data-page-count'),
+      ...pageElements.map((element) => element?.innerText || element?.textContent || ''),
+      document.title
+    ];
+    for (const candidate of candidates) {
+      const info = extractPageInfo(candidate);
+      if (info) return info.value;
+    }
+    return '';
   }
 
   function getPageNumber(pageTitle) {
@@ -214,6 +263,8 @@
       const number = Number(String(candidate || '').match(/\d+/)?.[0]);
       if (Number.isInteger(number) && number > 0) return number;
     }
+    const pageInfo = extractPageInfo(pageTitle) || extractPageInfo(document.title);
+    if (pageInfo?.number) return pageInfo.number;
     const fromTitle = String(pageTitle || '').match(/(?:第\s*)?(\d{1,6})\s*[話章回ページ]/i) ||
       String(document.title || '').match(/(?:第\s*)?(\d{1,6})\s*[話章回ページ]/i);
     if (fromTitle) return Number(fromTitle[1]);
@@ -237,13 +288,15 @@
     if (!rule) return null;
     const body = findBody(rule);
     const pageTitle = getPageTitle(rule);
+    const pageInfo = getPageInfo(pageTitle);
     if (!isLikelyNovel(rule, body, pageTitle)) return null;
 
     const canonical = one('link[rel="canonical"]')?.href || location.href;
     return {
       novelTitle: getNovelTitle(rule, pageTitle),
       pageTitle: pageTitle || '本文',
-      pageNumber: getPageNumber(pageTitle),
+      pageInfo,
+      pageNumber: getPageNumber(pageInfo || pageTitle),
       text: body.value,
       sourceUrl: canonical,
       sourceHost: location.hostname,

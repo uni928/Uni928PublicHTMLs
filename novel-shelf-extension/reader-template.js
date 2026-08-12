@@ -18,12 +18,18 @@ export function safeFileBase(value) {
 }
 
 function pageInfoNumber(page) {
-  if (page?.numberSource !== 'capture-order') {
+  const pageInfo = String(page?.pageInfo || '');
+  const infoMatch = pageInfo.match(/(\d{1,6})\s*\/\s*(\d{1,6})/) ||
+    pageInfo.match(/(?:第\s*)?(\d{1,6})\s*ページ目?/i) ||
+    pageInfo.match(/(?:第\s*)?(\d{1,6})\s*(?:話|章|回|episode|chapter)\b/i);
+  if (infoMatch) return Number(infoMatch[1]);
+  if (!page?.pageInfo && page?.numberSource !== 'capture-order') {
     const direct = Number(page?.number || page?.pageNumber);
     if (Number.isInteger(direct) && direct > 0) return direct;
   }
   const value = String(page?.title || '') + ' ' + String(page?.sourceUrl || '');
-  const match = value.match(/(?:第\s*)?(\d{1,6})\s*(?:話|章|回|ページ|page|episode|chapter)(?:\D|$)/i) ||
+  const match = value.match(/(\d{1,6})\s*\/\s*(\d{1,6})/) ||
+    value.match(/(?:第\s*)?(\d{1,6})\s*(?:ページ目?|話|章|回|page|episode|chapter)(?:\D|$)/i) ||
     value.match(/(?:episode|chapter|page|story|read|novel)[^\d]{0,8}(\d{1,6})(?:\D|$)/i);
   return match ? Number(match[1]) : null;
 }
@@ -63,6 +69,7 @@ export function buildReaderHtml(novel) {
   const pages = sortedPages(novel?.pages)
     .map((page, index) => ({
       number: Number(page.number) || index + 1,
+      pageInfo: String(page.pageInfo || ''),
       title: String(page.title || ''),
       text: String(page.text || ''),
       sourceUrl: String(page.sourceUrl || '')
@@ -400,7 +407,9 @@ export function buildReaderHtml(novel) {
       const label = String(page.title || '本文');
       pageTitle.textContent = label;
       brandTitle.textContent = DATA.title;
-      pageMeta.textContent = 'ページ ' + String(page.number || currentIndex + 1) + ' ／ 全' + pages.length + 'ページ';
+      pageMeta.textContent = page.pageInfo
+        ? 'ページ情報 ' + page.pageInfo + ' ／ 保存 ' + String(currentIndex + 1) + '/' + pages.length + 'ページ'
+        : 'ページ ' + String(page.number || currentIndex + 1) + ' ／ 全' + pages.length + 'ページ';
       pageInput.value = String(page.number || currentIndex + 1);
       sourceLink.textContent = page.sourceUrl || '';
       sourceLink.href = page.sourceUrl || '#';
