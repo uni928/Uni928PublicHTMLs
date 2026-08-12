@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "小説棚 - 作品別JSON保存＆閲覧出力",
+  "version": "1.0.0",
+  "description": "閲覧中の小説を作品別に自動保存し、ライトテーマのローカル閲覧サイトへ出力します。",
+  "minimum_chrome_version": "114",
+  "permissions": [
+    "storage",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "小説棚を開く"
+  },
+  "side_panel": {
+    "default_path": "panel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-script.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "commands": {
+    "open-panel": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y",
+        "mac": "MacCtrl+Shift+Y"
+      },
+      "description": "小説棚の出力パネルを開く"
+    }
+  }
+}
