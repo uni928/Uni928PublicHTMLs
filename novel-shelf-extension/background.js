@@ -75,7 +75,7 @@ function safeNumber(value) {
 
 function extractPageInfo(value) {
   const source = cleanText(value, 500000).replace(/\s+/g, ' ');
-  const match = source.match(/(\d{1,6})\s*\/\s*(\d{1,6})/) ||
+  const match = source.match(/(\d{1,6})\s*[\/／]\s*(\d{1,6})/) ||
     source.match(/(?:第\s*)?(\d{1,6})\s*ページ目?/i) ||
     source.match(/(?:第\s*)?(\d{1,6})\s*(?:話|章|回|episode|chapter)\b/i);
   return match ? { value: match[0].trim(), number: Number(match[1]) } : null;
@@ -91,7 +91,7 @@ function pageInfoNumber(page) {
     if (direct) return direct;
   }
   const value = String(page?.title || '') + ' ' + String(page?.sourceUrl || '');
-  const match = value.match(/(\d{1,6})\s*\/\s*(\d{1,6})/) ||
+  const match = value.match(/(\d{1,6})\s*[\/／]\s*(\d{1,6})/) ||
     value.match(/(?:第\s*)?(\d{1,6})\s*(?:ページ目?|話|章|回|page|episode|chapter)(?:\D|$)/i) ||
     value.match(/(?:episode|chapter|page|story|read|novel)[^\d]{0,8}(\d{1,6})(?:\D|$)/i);
   return match ? Number(match[1]) : null;
@@ -286,8 +286,8 @@ async function upsertNovelPage(page) {
   target.sourceUrl = sourceUrl;
   target.capturedAt = Date.now();
   const titleWasPageName = current.pages.some((item) => item.title && item.title === current.title);
-  if (!current.title || current.title === '無題の小説' ||
-      (sourceSite === 'syosetu.org' && titleWasPageName)) current.title = novelTitle;
+  if ((!current.title || current.title === '無題の小説' ||
+      (sourceSite === 'syosetu.org' && titleWasPageName)) && novelTitle !== '無題の小説') current.title = novelTitle;
   current.sourceHost = current.sourceHost || sourceSite;
   current.sourceUrls = Array.from(new Set([...(current.sourceUrls || []), sourceUrl].filter(Boolean))).slice(0, 100);
   current.pages.sort(comparePages);

@@ -51,6 +51,7 @@
   let lastFingerprint = '';
   let scanTimer = 0;
   let captureRetryTimers = [];
+  let captureRunActive = false;
   let lastScanAt = 0;
 
   function text(value, maxLength) {
@@ -196,10 +197,26 @@
 
   function hamelnNovelLinkTitle() {
     try {
-      const elements = document.querySelectorAll('a[href], [role="link"]');
+      const elements = [];
+      document.querySelectorAll('p').forEach((paragraph) => {
+        const paragraphText = text(paragraph.innerText || paragraph.textContent || '');
+        if (!/作\s*[:：]/.test(paragraphText)) return;
+        paragraph.querySelectorAll('a[href], [role="link"]').forEach((element) => elements.push(element));
+      });
+      document.querySelectorAll('a[href], [role="link"]').forEach((element) => elements.push(element));
       for (const element of elements) {
         const href = String(element.getAttribute?.('href') || '').trim();
-        if (href === './' || href === '.' || href.startsWith('./?')) {
+        let isNovelLink = href === './' || href === '.' || href.startsWith('./?');
+        if (!isNovelLink && href) {
+          try {
+            const target = new URL(href, location.href);
+            const currentDirectory = new URL('./', location.href);
+            isNovelLink = target.origin === currentDirectory.origin && target.pathname === currentDirectory.pathname;
+          } catch {
+            isNovelLink = false;
+          }
+        }
+        if (isNovelLink) {
           const value = elementTitle(element);
           if (value) return value;
         }
@@ -227,6 +244,9 @@
       if (linkedTitle && linkedTitle !== pageTitle && linkedTitle.length <= 140) return linkedTitle;
       const parsed = parseHamelnTitle(document.title);
       if (parsed?.novelTitle && parsed.novelTitle !== pageTitle) return parsed.novelTitle;
+      const dataTitle = elementTitle(one('[data-novel-title], [data-work-title]'));
+      if (dataTitle && dataTitle !== pageTitle) return dataTitle;
+      return '無題の小説';
     }
     const workElement = firstMatching(rule?.work);
     const explicit = elementTitle(workElement);
@@ -249,7 +269,7 @@
 
   function extractPageInfo(value) {
     const source = text(value, 500000).replace(/\s+/g, ' ').trim();
-    const match = source.match(/(\d{1,6})\s*\/\s*(\d{1,6})/) ||
+    const match = source.match(/(\d{1,6})\s*[\/／]\s*(\d{1,6})/) ||
       source.match(/(?:第\s*)?(\d{1,6})\s*ページ目?\b/i) ||
       source.match(/(?:第\s*)?(\d{1,6})\s*(?:話|章|回|episode|chapter)\b/i);
     if (!match) return null;
@@ -355,14 +375,20 @@
   function clearCaptureRetryTimers() {
     captureRetryTimers.forEach((timer) => window.clearTimeout(timer));
     captureRetryTimers = [];
+    captureRunActive = false;
   }
 
   function startCaptureRetries(firstDelay, onFirstCapture) {
     clearCaptureRetryTimers();
+    captureRunActive = true;
     [0, 500, 1000, 2000, 4000, 7000, 12000].forEach((offset, index) => {
       const timer = window.setTimeout(() => {
         const page = scan(index > 0);
         if (index === 0 && onFirstCapture) onFirstCapture(page);
+        if (index === 6) {
+          captureRetryTimers = [];
+          captureRunActive = false;
+        }
       }, Math.max(0, Number(firstDelay) || 0) + offset);
       captureRetryTimers.push(timer);
     });
@@ -370,7 +396,7 @@
 
   function scheduleScan(delay) {
     window.clearTimeout(scanTimer);
-    clearCaptureRetryTimers();
+    if (captureRunActive) return;
     scanTimer = window.setTimeout(() => {
       scanTimer = 0;
       startCaptureRetries(0);

@@ -21,7 +21,7 @@ function pageInfoNumber(page) {
   const explicitNumber = Number(page?.pageNumberInfo);
   if (Number.isInteger(explicitNumber) && explicitNumber > 0) return explicitNumber;
   const pageInfo = String(page?.pageInfo || '');
-  const infoMatch = pageInfo.match(/(\d{1,6})\s*\/\s*(\d{1,6})/) ||
+  const infoMatch = pageInfo.match(/(\d{1,6})\s*[\/／]\s*(\d{1,6})/) ||
     pageInfo.match(/(?:第\s*)?(\d{1,6})\s*ページ目?/i) ||
     pageInfo.match(/(?:第\s*)?(\d{1,6})\s*(?:話|章|回|episode|chapter)\b/i);
   if (infoMatch) return Number(infoMatch[1]);
@@ -30,7 +30,7 @@ function pageInfoNumber(page) {
     if (Number.isInteger(direct) && direct > 0) return direct;
   }
   const value = String(page?.title || '') + ' ' + String(page?.sourceUrl || '');
-  const match = value.match(/(\d{1,6})\s*\/\s*(\d{1,6})/) ||
+  const match = value.match(/(\d{1,6})\s*[\/／]\s*(\d{1,6})/) ||
     value.match(/(?:第\s*)?(\d{1,6})\s*(?:ページ目?|話|章|回|page|episode|chapter)(?:\D|$)/i) ||
     value.match(/(?:episode|chapter|page|story|read|novel)[^\d]{0,8}(\d{1,6})(?:\D|$)/i);
   return match ? Number(match[1]) : null;
