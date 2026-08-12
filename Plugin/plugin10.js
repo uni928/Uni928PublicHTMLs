@@ -1,10 +1,13 @@
 /*
  * plugin10.js
- * VERSION: 10.2.0-indexeddb
+ * VERSION: 10.5.0-cdn-early-reveal-scroll
  * 画像保持＋円形マスクによるページ間遷移プラグイン
+ * html2canvas はオンラインCDNから読み込みます。
  *
  * ページ側には次の1行だけを記述します。
  * <script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin10.js"></script>
+ * html2canvasをプラグインより先に読み込む場合は次の1行を追加できます。
+ * <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
  */
 (() => {
   'use strict';
@@ -14,12 +17,20 @@
   }
   window.__pageTransitionPlugin10 = true;
 
+  const transitionHashPrefix = '#page-transition-v10=';
+  const hasIncomingFrame = window.location.hash.startsWith(transitionHashPrefix);
+  const prefersReducedMotion = window.matchMedia
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // 前画面データがある場合は、DOMの描画より先に次画面を隠します。
+  // このスクリプトは<head>内で読み込むと、初回表示のちらつきを最小化できます。
+  if (hasIncomingFrame && !prefersReducedMotion && document.documentElement) {
+    document.documentElement.classList.add('page-transition-pending');
+  }
+
   const CONFIG = Object.freeze({
-    databaseName: 'uni928-page-transition-v10',
-    databaseVersion: 1,
-    objectStoreName: 'frames',
-    frameKey: 'latest',
-    captureLibraryUrl: 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
+    captureLibraryUrl: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+    frameHashKey: 'page-transition-v10',
     captureTimeout: 3500,
     revealDuration: 2200,
     maxDevicePixelRatio: 1.5,
@@ -36,6 +47,11 @@
   const style = document.createElement('style');
   style.textContent = String.raw`
     @layer page-transition-plugin {
+      /* 保持画像を全面に被せるまで、遷移先の描画を隠します。 */
+      .page-transition-pending body {
+        visibility: hidden;
+      }
+
       .page-transition-capturing {
         cursor: progress;
       }
@@ -48,6 +64,7 @@
         width: 100vw;
         height: 100vh;
         pointer-events: none;
+        visibility: visible;
       }
 
       .page-transition-status {
@@ -121,18 +138,34 @@
     }
 
     state.captureLibraryPromise = new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = CONFIG.captureLibraryUrl;
-      script.async = true;
-      script.onload = () => {
+      const existingScript = Array.from(document.scripts).find((script) => {
+        try {
+          return new URL(script.src, document.baseURI).href === CONFIG.captureLibraryUrl;
+        } catch (error) {
+          return false;
+        }
+      });
+      const script = existingScript || document.createElement('script');
+
+      const resolveLibrary = () => {
         if (typeof window.html2canvas === 'function') {
           resolve(window.html2canvas);
         } else {
           reject(new Error('html2canvas was not initialized'));
         }
       };
-      script.onerror = () => reject(new Error('html2canvas could not be loaded'));
-      (document.head || document.documentElement).appendChild(script);
+
+      script.addEventListener('load', resolveLibrary, { once: true });
+      script.addEventListener('error', () => reject(new Error('html2canvas could not be loaded')), { once: true });
+
+      if (!existingScript) {
+        script.src = CONFIG.captureLibraryUrl;
+        script.async = true;
+        script.dataset.pageTransitionDependency = 'html2canvas';
+        (document.head || document.documentElement).appendChild(script);
+      } else if (typeof window.html2canvas === 'function') {
+        resolveLibrary();
+      }
     });
 
     return state.captureLibraryPromise;
@@ -163,8 +196,8 @@
   async function captureViewport() {
     const width = Math.max(1, window.innerWidth);
     const height = Math.max(1, window.innerHeight);
-    const scrollX = window.scrollX;
-    const scrollY = window.scrollY;
+    const scrollX = Math.max(0, Number(window.scrollX ?? window.pageXOffset ?? document.documentElement.scrollLeft ?? 0));
+    const scrollY = Math.max(0, Number(window.scrollY ?? window.pageYOffset ?? document.documentElement.scrollTop ?? 0));
     const devicePixelRatio = Math.min(window.devicePixelRatio || 1, CONFIG.maxDevicePixelRatio);
 
     try {
@@ -180,8 +213,8 @@
         y: scrollY,
         width,
         height,
-        windowWidth: Math.max(width, document.documentElement.scrollWidth),
-        windowHeight: Math.max(height, document.documentElement.scrollHeight),
+        windowWidth: Math.max(width, document.documentElement.scrollWidth, scrollX + width),
+        windowHeight: Math.max(height, document.documentElement.scrollHeight, scrollY + height),
         scrollX,
         scrollY
       }), CONFIG.captureTimeout);
@@ -193,77 +226,43 @@
     }
   }
 
-  /* transfer: 遷移画像をIndexedDBに保存し、遷移完了時に削除します。 */
-  function openDatabase() {
-    return new Promise((resolve, reject) => {
-      if (!window.indexedDB) {
-        reject(new Error('IndexedDB is unavailable'));
-        return;
-      }
-      const request = window.indexedDB.open(CONFIG.databaseName, CONFIG.databaseVersion);
-      request.onupgradeneeded = () => {
-        if (!request.result.objectStoreNames.contains(CONFIG.objectStoreName)) {
-          request.result.createObjectStore(CONFIG.objectStoreName);
-        }
-      };
-      request.onerror = () => reject(request.error || new Error('IndexedDB open failed'));
-      request.onsuccess = () => resolve(request.result);
-    });
+  function encodeBase64(text) {
+    const bytes = new TextEncoder().encode(text);
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let index = 0; index < bytes.length; index += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+    }
+    return btoa(binary);
   }
 
-  async function writeFrame(value) {
-    const database = await openDatabase();
-    return new Promise((resolve, reject) => {
-      const transaction = database.transaction(CONFIG.objectStoreName, 'readwrite');
-      transaction.oncomplete = () => {
-        database.close();
-        resolve();
-      };
-      transaction.onabort = () => {
-        database.close();
-        reject(transaction.error || new Error('IndexedDB write aborted'));
-      };
-      transaction.onerror = () => {
-        database.close();
-        reject(transaction.error || new Error('IndexedDB write failed'));
-      };
-      transaction.objectStore(CONFIG.objectStoreName).put(value, CONFIG.frameKey);
-    });
+  function decodeBase64(value) {
+    const binary = atob(value);
+    const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
   }
 
-  async function readFrameFromDatabase() {
-    const database = await openDatabase();
-    return new Promise((resolve, reject) => {
-      const transaction = database.transaction(CONFIG.objectStoreName, 'readonly');
-      const request = transaction.objectStore(CONFIG.objectStoreName).get(CONFIG.frameKey);
-      request.onsuccess = () => resolve(request.result || null);
-      request.onerror = () => reject(request.error || new Error('IndexedDB read failed'));
-      transaction.oncomplete = () => database.close();
-      transaction.onabort = () => {
-        database.close();
-        reject(transaction.error || new Error('IndexedDB read aborted'));
-      };
-    });
+  function createTransitionUrl(targetUrl, frame) {
+    const destination = new URL(targetUrl, window.location.href);
+    const payload = encodeBase64(JSON.stringify(frame));
+    destination.hash = `${CONFIG.frameHashKey}=${payload}`;
+    return destination.href;
   }
 
-  async function deleteFrameFromDatabase() {
-    const database = await openDatabase();
-    return new Promise((resolve, reject) => {
-      const transaction = database.transaction(CONFIG.objectStoreName, 'readwrite');
-      transaction.oncomplete = () => {
-        database.close();
-        resolve();
-      };
-      transaction.onabort = () => {
-        database.close();
-        reject(transaction.error || new Error('IndexedDB delete aborted'));
-      };
-      transaction.onerror = () => {
-        database.close();
-        reject(transaction.error || new Error('IndexedDB delete failed'));
-      };
-      transaction.objectStore(CONFIG.objectStoreName).delete(CONFIG.frameKey);
-    });
+  function readFrameFromLocation() {
+    const hash = window.location.hash;
+    const prefix = `#${CONFIG.frameHashKey}=`;
+    if (!hash.startsWith(prefix)) {
+      return null;
+    }
+
+    try {
+      const encodedPayload = decodeURIComponent(hash.slice(prefix.length));
+      const frame = JSON.parse(decodeBase64(encodedPayload));
+      return frame && typeof frame === 'object' ? frame : null;
+    } catch (error) {
+      return null;
+    }
   }
 
   async function saveFrame(targetUrl, pointer) {
@@ -276,16 +275,30 @@
       createdAt: Date.now()
     };
 
-    await writeFrame(value);
-    return value;
+    return {
+      ...value,
+      transitionUrl: createTransitionUrl(targetUrl, value)
+    };
   }
 
   async function readFrame() {
-    return readFrameFromDatabase();
+    return readFrameFromLocation();
   }
 
   function clearFrame() {
-    return deleteFrameFromDatabase().catch(() => {});
+    document.documentElement.classList.remove('page-transition-pending');
+
+    if (!window.location.hash.startsWith(`#${CONFIG.frameHashKey}=`)) {
+      return;
+    }
+
+    try {
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.hash = '';
+      window.history.replaceState(null, document.title, cleanUrl.href);
+    } catch (error) {
+      // file:// 環境で History API が制限される場合も、遷移自体は完了させます。
+    }
   }
 
   function shouldHandleLink(link, event) {
@@ -297,7 +310,11 @@
     }
     const url = new URL(link.href, document.baseURI);
     const current = new URL(window.location.href);
-    if (!/^https?:$/.test(url.protocol) || url.origin !== current.origin) {
+    const isLocalFileNavigation = url.protocol === 'file:' && current.protocol === 'file:';
+    if (!/^(https?:|file:)$/.test(url.protocol)) {
+      return false;
+    }
+    if (!isLocalFileNavigation && url.origin !== current.origin) {
       return false;
     }
     url.hash = '';
@@ -319,13 +336,15 @@
       y: hasMousePoint && Number.isFinite(event.clientY) ? event.clientY : linkRect.top + linkRect.height / 2
     };
 
+    let destinationUrl = link.href;
     try {
-      await saveFrame(link.href, pointer);
+      const frame = await saveFrame(link.href, pointer);
+      destinationUrl = frame.transitionUrl;
     } catch (error) {
-      clearFrame();
+      // キャプチャに失敗した場合は、画像なしで通常遷移します。
     }
     hideStatus(status);
-    window.location.href = link.href;
+    window.location.href = destinationUrl;
   }
 
   function revealFrame(frame) {
@@ -351,18 +370,23 @@
         return;
       }
       canvas.className = 'page-transition-canvas';
+      canvas.style.visibility = 'visible';
       canvas.width = Math.ceil(width * dpr);
       canvas.height = Math.ceil(height * dpr);
       canvas.setAttribute('aria-hidden', 'true');
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
       context.drawImage(image, 0, 0, width, height);
-      document.body.appendChild(canvas);
+      document.documentElement.appendChild(canvas);
+      // 保持画像を全面に配置した後、遷移先を背面に表示します。
+      document.documentElement.classList.remove('page-transition-pending');
 
       const startedAt = performance.now();
       const animate = (now) => {
         const progress = clamp((now - startedAt) / CONFIG.revealDuration, 0, 1);
         const eased = 1 - Math.pow(1 - progress, 3);
         const radius = maximumRadius * eased;
+        context.clearRect(0, 0, width, height);
+        context.drawImage(image, 0, 0, width, height);
         context.save();
         context.globalCompositeOperation = 'destination-out';
         context.beginPath();
@@ -372,8 +396,11 @@
         if (progress < 1) {
           window.requestAnimationFrame(animate);
         } else {
-          canvas.remove();
-          clearFrame();
+          // 円が完全に広がった画像を1フレーム表示してから保持画像を破棄します。
+          window.requestAnimationFrame(() => {
+            canvas.remove();
+            clearFrame();
+          });
         }
       };
       window.requestAnimationFrame(animate);
@@ -399,7 +426,7 @@
 
   function exposeApi() {
     window.PageTransition10 = Object.freeze({
-      version: '10.1.0-window-name',
+      version: '10.5.0-cdn-early-reveal-scroll',
       go(url, options = {}) {
         const link = document.createElement('a');
         link.href = url;
@@ -423,13 +450,11 @@
   function boot() {
     installLinkHandler();
     exposeApi();
+    const frame = readFrameFromLocation();
+    revealFrame(frame);
     loadCaptureLibrary().catch(() => {});
-    readFrame().then(revealFrame).catch(() => clearFrame());
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', boot, { once: true });
-  } else {
-    boot();
-  }
+  // DOMContentLoadedを待たず、スクリプト実行直後に復元を開始します。
+  boot();
 })();
