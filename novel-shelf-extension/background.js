@@ -7,6 +7,24 @@ const DEFAULT_SETTINGS = {
 
 let mutationQueue = Promise.resolve();
 
+function wait(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+async function storageSetWithRetry(values) {
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      await chrome.storage.local.set(values);
+      return;
+    } catch (error) {
+      lastError = error;
+      if (attempt < 2) await wait(150 * (attempt + 1));
+    }
+  }
+  throw lastError || new Error('保存に失敗しました');
+}
+
 function queueMutation(task) {
   const next = mutationQueue.then(task, task);
   mutationQueue = next.catch(() => undefined);
@@ -190,7 +208,7 @@ async function saveRecord(key, record) {
   const summary = summaryFromRecord(record, key);
   const nextIndex = [summary, ...index.filter((item) => item.key !== key)]
     .sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0));
-  await chrome.storage.local.set({ [key]: record, [INDEX_KEY]: nextIndex });
+  await storageSetWithRetry({ [key]: record, [INDEX_KEY]: nextIndex });
   return summary;
 }
 

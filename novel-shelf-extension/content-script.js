@@ -53,6 +53,9 @@
   let captureRetryTimers = [];
   let captureRunActive = false;
   let lastScanAt = 0;
+  let lastCaptureSavePromise = Promise.resolve(false);
+
+  const CAPTURE_RETRY_OFFSETS = [0, 350, 800, 1500, 2800, 5000, 9000];
 
   function text(value, maxLength) {
     const result = String(value || '')
@@ -361,19 +364,42 @@
     return [page.sourceUrl, page.novelTitle, page.pageTitle, page.text.length, page.text.slice(0, 160)].join('|');
   }
 
-  function scan(sendEvenIfSame) {
+  function retryCapturedPage(page, attempt) {
+    const retryAttempt = Number(attempt) || 0;
+    return new Promise((resolve) => {
+      const retry = () => {
+        if (retryAttempt >= 2) {
+          resolve(false);
+          return;
+        }
+        const delay = retryAttempt === 0 ? 350 : 1000;
+        window.setTimeout(() => retryCapturedPage(page, retryAttempt + 1).then(resolve), delay);
+      };
+      try {
+        chrome.runtime.sendMessage({ type: 'novelPageCaptured', page }, (response) => {
+          const messageError = chrome.runtime.lastError;
+          if (!messageError && response?.ok) {
+            resolve(true);
+            return;
+          }
+          retry();
+        });
+      } catch {
+        retry();
+      }
+    });
+  }
+
+  function scan(sendEvenIfSame, force) {
     const now = Date.now();
-    if (!sendEvenIfSame && now - lastScanAt < 700) return null;
+    if (!force && !sendEvenIfSame && now - lastScanAt < 700) return null;
     lastScanAt = now;
+    lastCaptureSavePromise = Promise.resolve(false);
     const page = extractPage();
     const nextFingerprint = fingerprint(page);
     if (!page || (!sendEvenIfSame && nextFingerprint === lastFingerprint)) return page;
     lastFingerprint = nextFingerprint;
-    try {
-      chrome.runtime.sendMessage({ type: 'novelPageCaptured', page });
-    } catch {
-      // 拡張機能が更新・停止された場合はページ側では何もしません。
-    }
+    lastCaptureSavePromise = retryCapturedPage(page, 0);
     return page;
   }
 
@@ -386,11 +412,11 @@
   function startCaptureRetries(firstDelay, onFirstCapture) {
     clearCaptureRetryTimers();
     captureRunActive = true;
-    [0, 500, 1000, 2000, 4000, 7000, 12000].forEach((offset, index) => {
+    CAPTURE_RETRY_OFFSETS.forEach((offset, index) => {
       const timer = window.setTimeout(() => {
-        const page = scan(index > 0);
-        if (index === 0 && onFirstCapture) onFirstCapture(page);
-        if (index === 6) {
+        const page = scan(true, true);
+        if (index === 0 && onFirstCapture) onFirstCapture(page, lastCaptureSavePromise);
+        if (index === CAPTURE_RETRY_OFFSETS.length - 1) {
           captureRetryTimers = [];
           captureRunActive = false;
         }
@@ -408,15 +434,36 @@
     }, Math.max(0, Number(delay) || 1000));
   }
 
+  function runDisplayCheckpoint(delay) {
+    window.setTimeout(() => scan(true, true), Math.max(0, Number(delay) || 0));
+  }
+
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message?.type !== 'scanNow') return false;
     window.clearTimeout(scanTimer);
     scanTimer = 0;
-    startCaptureRetries(1000, sendResponse);
+    startCaptureRetries(1000, (page, savePromise) => {
+      Promise.resolve(savePromise).then(() => sendResponse(page));
+    });
     return true;
   });
 
-  window.addEventListener('load', () => scheduleScan(1000), { once: true });
+  const onDomReady = () => {
+    // DOMが組み上がり、本文がある程度表示された段階でも保存を試みます。
+    runDisplayCheckpoint(700);
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', onDomReady, { once: true });
+  } else {
+    onDomReady();
+  }
+
+  window.addEventListener('load', () => {
+    // load後の描画反映を待って、初回表示の最終状態をもう一度保存します。
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => runDisplayCheckpoint(100));
+    });
+  }, { once: true });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') scheduleScan(1000);
   });
