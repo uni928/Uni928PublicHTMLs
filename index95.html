@@ -1,0 +1,1189 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="前画面を画像として保持し、円形ワイプで次の迷路へ切り替える画面遷移デモ">
+  <title>迷路の円形ワイプ遷移デモ</title>
+  <style>
+    @layer reset, base, layout, components, utilities;
+
+    /* reset: デモを単体HTMLで開いたときの基本表示をそろえます。 */
+    @layer reset {
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-width: 320px;
+        background: #07111c;
+      }
+
+      body,
+      h1,
+      h2,
+      p,
+      ol {
+        margin: 0;
+      }
+
+      button {
+        font: inherit;
+      }
+    }
+
+    /* base: 背景、文字、色トークンを定義します。 */
+    @layer base {
+      :root {
+        color-scheme: dark;
+        --background: #07111c;
+        --background-deep: #040a12;
+        --foreground: #edf7f7;
+        --muted-foreground: #8ea7ae;
+        --line: rgba(160, 210, 218, 0.16);
+        --line-strong: rgba(160, 210, 218, 0.28);
+        --surface: rgba(12, 26, 38, 0.78);
+        --surface-soft: rgba(17, 38, 50, 0.58);
+        --primary: #7cf6d1;
+        --primary-foreground: #041310;
+        --accent: #5caeff;
+        --danger: #ff9e8e;
+        --font-size-base: 16px;
+        --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      body {
+        min-height: 100vh;
+        color: var(--foreground);
+        background:
+          radial-gradient(circle at 16% 8%, rgba(49, 121, 129, 0.18), transparent 32rem),
+          radial-gradient(circle at 86% 12%, rgba(70, 95, 176, 0.14), transparent 28rem),
+          linear-gradient(145deg, var(--background), var(--background-deep));
+        font-family: var(--font-sans);
+        font-size: var(--font-size-base);
+        line-height: 1.5;
+        overflow-x: hidden;
+      }
+
+      button:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 3px;
+      }
+
+      canvas,
+      img {
+        display: block;
+      }
+    }
+
+    /* layout: 見出し、デモ領域、説明領域のレイアウトを組みます。 */
+    @layer layout {
+      .app-shell {
+        width: min(calc(100% - 32px), 1040px);
+        margin: 0 auto;
+        padding: clamp(28px, 5vw, 64px) 0 48px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 32px;
+        align-items: end;
+        margin-bottom: clamp(24px, 4vw, 42px);
+      }
+
+      .hero-copy {
+        max-width: 680px;
+      }
+
+      .hero-orbit {
+        position: relative;
+        width: 142px;
+        aspect-ratio: 1;
+        overflow: hidden;
+        border: 1px solid rgba(124, 246, 209, 0.26);
+        border-radius: 50%;
+        background: radial-gradient(circle at 50% 50%, rgba(124, 246, 209, 0.15), transparent 56%);
+      }
+
+      .hero-orbit::before,
+      .hero-orbit::after {
+        position: absolute;
+        inset: 18%;
+        border: 1px dashed rgba(124, 246, 209, 0.44);
+        border-radius: inherit;
+        content: "";
+      }
+
+      .hero-orbit::after {
+        inset: 38%;
+        border-style: solid;
+        background: var(--primary);
+        box-shadow: 0 0 32px rgba(124, 246, 209, 0.72);
+      }
+
+      .demo-shell {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: linear-gradient(145deg, rgba(13, 29, 42, 0.94), rgba(8, 17, 28, 0.95));
+        box-shadow: 0 28px 80px rgba(0, 0, 0, 0.26);
+      }
+
+      .demo-header {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px 24px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 20px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .demo-stage-wrap {
+        padding: clamp(14px, 3vw, 26px);
+      }
+
+      .process-wrap {
+        padding: 0 clamp(14px, 3vw, 26px) clamp(18px, 3vw, 28px);
+      }
+
+      .explanation {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 16px;
+        margin-top: 18px;
+      }
+
+      .explanation-item {
+        min-width: 0;
+        padding: 16px 18px;
+        border-top: 1px solid var(--line);
+      }
+
+      @media (max-width: 640px) {
+        .hero {
+          grid-template-columns: 1fr;
+          gap: 24px;
+        }
+
+        .hero-orbit {
+          width: 92px;
+        }
+
+        .demo-header {
+          align-items: flex-start;
+        }
+
+        .explanation {
+          grid-template-columns: 1fr;
+        }
+      }
+    }
+
+    /* components: ヘッダー、操作、迷路ステージ、手順表示を装飾します。 */
+    @layer components {
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 14px;
+        color: var(--primary);
+        font-size: 0.75rem;
+        font-weight: 500;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow-dot,
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        flex: 0 0 auto;
+        border-radius: 50%;
+        background: var(--primary);
+        box-shadow: 0 0 14px rgba(124, 246, 209, 0.9);
+      }
+
+      h1 {
+        max-width: 700px;
+        font-size: clamp(2rem, 5vw, 4.5rem);
+        font-weight: 500;
+        letter-spacing: -0.055em;
+        line-height: 1.02;
+      }
+
+      h1 span {
+        color: var(--primary);
+      }
+
+      .hero-description {
+        max-width: 610px;
+        margin-top: 18px;
+        color: var(--muted-foreground);
+        font-size: clamp(0.92rem, 2vw, 1.04rem);
+      }
+
+      .status-stack {
+        display: grid;
+        gap: 2px;
+      }
+
+      .status-kicker {
+        color: var(--muted-foreground);
+        font-size: 0.68rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .status-scene {
+        font-size: 0.96rem;
+        font-weight: 500;
+        letter-spacing: 0.04em;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .control-button {
+        min-height: 38px;
+        padding: 8px 14px;
+        border: 1px solid var(--line-strong);
+        border-radius: 999px;
+        color: var(--foreground);
+        background: rgba(20, 42, 54, 0.76);
+        cursor: pointer;
+        transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+      }
+
+      .control-button:hover {
+        border-color: rgba(124, 246, 209, 0.64);
+        background: rgba(38, 76, 83, 0.84);
+        transform: translateY(-1px);
+      }
+
+      .control-button.primary {
+        border-color: transparent;
+        color: var(--primary-foreground);
+        background: var(--primary);
+      }
+
+      .control-button.primary:hover {
+        background: #a5ffe8;
+      }
+
+      .stage {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 3 / 2;
+        overflow: hidden;
+        isolation: isolate;
+        border: 1px solid var(--line-strong);
+        border-radius: 22px;
+        background: #09131e;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02), inset 0 -32px 70px rgba(0, 0, 0, 0.2);
+      }
+
+      .stage::after {
+        position: absolute;
+        inset: 0;
+        z-index: 6;
+        pointer-events: none;
+        border-radius: inherit;
+        box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.34);
+        content: "";
+      }
+
+      .scene-canvas,
+      .previous-frame {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .scene-canvas {
+        z-index: 1;
+      }
+
+      .incoming-canvas {
+        z-index: 4;
+        visibility: hidden;
+        opacity: 0;
+        transition: opacity 120ms ease;
+      }
+
+      .incoming-canvas.is-visible {
+        visibility: visible;
+        opacity: 1;
+      }
+
+      .previous-frame {
+        z-index: 3;
+        object-fit: fill;
+        visibility: hidden;
+        opacity: 0;
+        transition: opacity 120ms ease;
+      }
+
+      .previous-frame.is-visible {
+        visibility: visible;
+        opacity: 1;
+      }
+
+      .stage-hud,
+      .stage-footer {
+        position: absolute;
+        z-index: 7;
+        right: 16px;
+        left: 16px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        pointer-events: none;
+      }
+
+      .stage-hud {
+        top: 16px;
+      }
+
+      .stage-footer {
+        bottom: 14px;
+        color: rgba(237, 247, 247, 0.72);
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .hud-chip {
+        display: inline-flex;
+        min-height: 30px;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 10px;
+        border: 1px solid rgba(237, 247, 247, 0.18);
+        border-radius: 999px;
+        color: rgba(237, 247, 247, 0.9);
+        background: rgba(4, 12, 20, 0.54);
+        backdrop-filter: blur(12px);
+        font-size: 0.7rem;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .phase-chip[data-phase="cover"] .status-dot {
+        background: #ffd27d;
+        box-shadow: 0 0 14px rgba(255, 210, 125, 0.9);
+      }
+
+      .phase-chip[data-phase="reveal"] .status-dot {
+        background: var(--accent);
+        box-shadow: 0 0 14px rgba(92, 174, 255, 0.9);
+      }
+
+      .phase-chip[data-phase="settle"] .status-dot {
+        background: #d6a6ff;
+        box-shadow: 0 0 14px rgba(214, 166, 255, 0.9);
+      }
+
+      .reveal-ring {
+        position: absolute;
+        z-index: 5;
+        width: 0;
+        height: 0;
+        border: 1px solid rgba(237, 247, 247, 0.78);
+        border-radius: 50%;
+        box-shadow: 0 0 26px rgba(124, 246, 209, 0.42), inset 0 0 18px rgba(124, 246, 209, 0.2);
+        opacity: 0;
+        pointer-events: none;
+        transform: translate(-50%, -50%);
+      }
+
+      .progress-area {
+        display: grid;
+        gap: 9px;
+        margin-top: 14px;
+      }
+
+      .progress-track {
+        position: relative;
+        height: 3px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(160, 210, 218, 0.12);
+      }
+
+      .progress-fill {
+        width: 0;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--primary), var(--accent));
+        box-shadow: 0 0 16px rgba(124, 246, 209, 0.66);
+        transition: width 80ms linear;
+      }
+
+      .process-steps {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+        padding: 0;
+        list-style: none;
+      }
+
+      .process-step {
+        display: flex;
+        min-width: 0;
+        gap: 9px;
+        align-items: center;
+        color: rgba(142, 167, 174, 0.72);
+        font-size: 0.78rem;
+        transition: color 180ms ease;
+      }
+
+      .step-number {
+        display: inline-grid;
+        width: 25px;
+        height: 25px;
+        flex: 0 0 auto;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 50%;
+        color: inherit;
+        font-size: 0.66rem;
+        letter-spacing: 0.04em;
+      }
+
+      .process-step.is-active {
+        color: var(--foreground);
+      }
+
+      .process-step.is-active .step-number {
+        border-color: var(--primary);
+        color: var(--primary);
+        background: rgba(124, 246, 209, 0.1);
+        box-shadow: 0 0 16px rgba(124, 246, 209, 0.18);
+      }
+
+      .process-step.is-done {
+        color: rgba(124, 246, 209, 0.72);
+      }
+
+      .process-step.is-done .step-number {
+        border-color: rgba(124, 246, 209, 0.42);
+      }
+
+      .explanation-item strong {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--foreground);
+        font-size: 0.86rem;
+        font-weight: 500;
+      }
+
+      .explanation-item span {
+        display: block;
+        color: var(--muted-foreground);
+        font-size: 0.82rem;
+      }
+
+      .article-note {
+        margin-top: 18px;
+        color: var(--muted-foreground);
+        font-size: 0.78rem;
+      }
+
+      @media (max-width: 560px) {
+        .process-steps {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          row-gap: 12px;
+        }
+
+        .stage-hud,
+        .stage-footer {
+          right: 10px;
+          left: 10px;
+        }
+
+        .stage-hud {
+          top: 10px;
+        }
+
+        .stage-footer {
+          bottom: 9px;
+        }
+
+        .hud-chip {
+          min-height: 27px;
+          padding-inline: 8px;
+          font-size: 0.62rem;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .control-button,
+        .progress-fill,
+        .process-step,
+        .incoming-canvas,
+        .previous-frame {
+          transition: none;
+        }
+      }
+    }
+
+    /* utilities: スクリーンリーダー向けの補助テキストを定義します。 */
+    @layer utilities {
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="maze-transition-demo" class="app-shell">
+    <header class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span>Transition Lab / HTML Demo</div>
+        <h1>円形ワイプでつながる<br><span>迷路の画面遷移</span></h1>
+        <p class="hero-description">出口に触れた瞬間の画面を画像として保持し、次の迷路を入口から円形に見せます。黒い画面を挟まず、移動の続きを感じられる遷移です。</p>
+      </div>
+      <div class="hero-orbit" aria-hidden="true"></div>
+    </header>
+
+    <section class="demo-shell" aria-labelledby="demo-title">
+      <h2 id="demo-title" class="sr-only">迷路の円形ワイプ遷移デモ</h2>
+      <div class="demo-header">
+        <div class="status-stack">
+          <span class="status-kicker">Current scene</span>
+          <span id="sceneLabel" class="status-scene">MAZE 01 · GREEN CIRCUIT</span>
+        </div>
+        <div class="controls" aria-label="デモ操作">
+          <button id="playButton" class="control-button primary" type="button">一時停止</button>
+          <button id="restartButton" class="control-button" type="button">最初から</button>
+        </div>
+      </div>
+
+      <div class="demo-stage-wrap">
+        <div id="stage" class="stage" role="img" aria-describedby="stageDescription" aria-label="迷路を進む円と、円形に切り替わる次の迷路">
+          <canvas id="baseCanvas" class="scene-canvas" width="720" height="480" aria-hidden="true"></canvas>
+          <img id="previousFrame" class="previous-frame" alt="" aria-hidden="true">
+          <canvas id="incomingCanvas" class="scene-canvas incoming-canvas" width="720" height="480" aria-hidden="true"></canvas>
+          <div id="revealRing" class="reveal-ring" aria-hidden="true"></div>
+          <div class="stage-hud">
+            <span id="phaseChip" class="hud-chip phase-chip" data-phase="travel"><span class="status-dot" aria-hidden="true"></span><span id="phaseLabel" aria-live="polite">探索中</span></span>
+            <span id="sceneChip" class="hud-chip">SCENE 01</span>
+          </div>
+          <div class="stage-footer">
+            <span id="phaseDetail">円が出口へ向かっています</span>
+            <span id="cycleLabel">CYCLE 01</span>
+          </div>
+        </div>
+        <p id="stageDescription" class="sr-only">円が迷路の入口から出口へ移動します。出口に到達すると前の画面を画像として保持し、次の迷路を入口を中心に円形ワイプで表示してから前の画像を削除します。</p>
+
+        <div class="progress-area" aria-label="遷移の進行状況">
+          <div class="progress-track" aria-hidden="true"><div id="progressFill" class="progress-fill"></div></div>
+          <ol class="process-steps" aria-label="画面遷移の手順">
+            <li class="process-step is-active" data-step="0"><span class="step-number">01</span><span>前画面を保持</span></li>
+            <li class="process-step" data-step="1"><span class="step-number">02</span><span>次の迷路を生成</span></li>
+            <li class="process-step" data-step="2"><span class="step-number">03</span><span>円形に表示</span></li>
+            <li class="process-step" data-step="3"><span class="step-number">04</span><span>前画像を削除</span></li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="explanation" aria-label="デモで見えるポイント">
+        <div class="explanation-item">
+          <strong>前画面は一枚の画像になります</strong>
+          <span>遷移中も画面全体が残るため、黒いロード画面を経由しません。</span>
+        </div>
+        <div class="explanation-item">
+          <strong>円の中心は次の入口です</strong>
+          <span>少し広がったところで新しい円が迷路の中へ進み始めます。</span>
+        </div>
+      </div>
+      <p class="article-note">自動再生中です。ボタンから一時停止・再スタートを切り替えられます。</p>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const root = document.getElementById('maze-transition-demo');
+      if (!root) {
+        return;
+      }
+
+      const WIDTH = 720;
+      const HEIGHT = 480;
+      const CELL = 34;
+      const OFFSET_X = 36;
+      const OFFSET_Y = 36;
+      const TRAVEL_MS = 5200;
+      const TRAVEL_TRIGGER = 0.985;
+      const COVER_MS = 360;
+      const REVEAL_MS = 1900;
+      const SETTLE_MS = 320;
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      const baseCanvas = root.querySelector('#baseCanvas');
+      const incomingCanvas = root.querySelector('#incomingCanvas');
+      const baseContext = baseCanvas.getContext('2d');
+      const incomingContext = incomingCanvas.getContext('2d');
+      const previousFrame = root.querySelector('#previousFrame');
+      const revealRing = root.querySelector('#revealRing');
+      const stage = root.querySelector('#stage');
+      const sceneLabel = root.querySelector('#sceneLabel');
+      const sceneChip = root.querySelector('#sceneChip');
+      const phaseChip = root.querySelector('#phaseChip');
+      const phaseLabel = root.querySelector('#phaseLabel');
+      const phaseDetail = root.querySelector('#phaseDetail');
+      const cycleLabel = root.querySelector('#cycleLabel');
+      const progressFill = root.querySelector('#progressFill');
+      const playButton = root.querySelector('#playButton');
+      const restartButton = root.querySelector('#restartButton');
+      const processSteps = Array.from(root.querySelectorAll('[data-step]'));
+
+      const sceneDefinitions = [
+        {
+          code: 'MAZE 01',
+          name: 'GREEN CIRCUIT',
+          accent: '#7cf6d1',
+          accentAlt: '#58b7ff',
+          backgroundStart: '#081c25',
+          backgroundEnd: '#0b1423',
+          wall: '#153c4a',
+          wallEdge: '#3e8290',
+          startCell: [1, 10],
+          exitCell: [17, 1],
+          exitSide: 'right',
+          path: [
+            [1, 10], [1, 9], [1, 8], [2, 8], [3, 8], [3, 7], [3, 6],
+            [4, 6], [5, 6], [5, 5], [6, 5], [7, 5], [7, 4], [8, 4],
+            [9, 4], [9, 3], [10, 3], [11, 3], [11, 2], [12, 2], [13, 2],
+            [13, 1], [14, 1], [15, 1], [16, 1], [17, 1], [19, 1], [21, 1]
+          ],
+          wallSegments: [
+            [2, 1, 4, 1], [8, 1, 3, 1], [13, 1, 4, 1],
+            [2, 2, 1, 3], [5, 2, 1, 3], [8, 2, 1, 2], [11, 2, 1, 3], [15, 2, 1, 2],
+            [2, 5, 3, 1], [7, 5, 3, 1], [12, 5, 4, 1],
+            [2, 6, 1, 2], [6, 6, 1, 3], [10, 6, 1, 3], [14, 6, 1, 3],
+            [2, 9, 4, 1], [8, 9, 4, 1], [13, 9, 3, 1],
+            [5, 10, 1, 1], [10, 10, 1, 1], [15, 10, 1, 1]
+          ]
+        },
+        {
+          code: 'MAZE 02',
+          name: 'VIOLET SHIFT',
+          accent: '#e6a8ff',
+          accentAlt: '#ffbd7a',
+          backgroundStart: '#211222',
+          backgroundEnd: '#111827',
+          wall: '#42283e',
+          wallEdge: '#a56c94',
+          startCell: [16, 1],
+          exitCell: [1, 10],
+          exitSide: 'left',
+          path: [
+            [16, 1], [16, 2], [15, 2], [14, 2], [14, 3], [13, 3], [12, 3],
+            [12, 4], [11, 4], [11, 5], [10, 5], [9, 5], [9, 6], [8, 6],
+            [7, 6], [7, 7], [6, 7], [5, 7], [5, 8], [4, 8], [4, 9], [3, 9],
+            [2, 9], [2, 10], [1, 10], [-1, 10], [-3, 10]
+          ],
+          wallSegments: [
+            [1, 1, 3, 1], [6, 1, 4, 1], [12, 1, 4, 1],
+            [3, 2, 1, 3], [7, 2, 1, 3], [11, 2, 1, 3], [15, 2, 1, 3],
+            [1, 5, 4, 1], [6, 5, 3, 1], [11, 5, 4, 1],
+            [2, 6, 1, 3], [5, 6, 1, 3], [9, 6, 1, 3], [14, 6, 1, 3],
+            [1, 9, 4, 1], [7, 9, 4, 1], [12, 9, 4, 1],
+            [5, 10, 1, 1], [10, 10, 1, 1], [15, 10, 1, 1]
+          ]
+        },
+        {
+          code: 'MAZE 03',
+          name: 'GOLDEN DROP',
+          accent: '#ffe18a',
+          accentAlt: '#79d8ff',
+          backgroundStart: '#211c0c',
+          backgroundEnd: '#101b1c',
+          wall: '#403a1f',
+          wallEdge: '#b8a65f',
+          startCell: [1, 1],
+          exitCell: [16, 10],
+          exitSide: 'bottom',
+          path: [
+            [1, 1], [2, 1], [2, 2], [3, 2], [4, 2], [4, 3], [5, 3], [6, 3],
+            [6, 4], [7, 4], [8, 4], [8, 5], [9, 5], [10, 5], [10, 6], [11, 6],
+            [12, 6], [12, 7], [13, 7], [14, 7], [14, 8], [15, 8], [16, 8],
+            [16, 9], [16, 10], [16, 12], [16, 14]
+          ],
+          wallSegments: [
+            [1, 1, 5, 1], [8, 1, 3, 1], [13, 1, 4, 1],
+            [1, 2, 1, 3], [4, 2, 1, 3], [7, 2, 1, 3], [11, 2, 1, 3], [15, 2, 1, 3],
+            [2, 5, 3, 1], [6, 5, 3, 1], [11, 5, 4, 1],
+            [3, 6, 1, 3], [8, 6, 1, 3], [13, 6, 1, 3],
+            [1, 9, 5, 1], [7, 9, 4, 1], [12, 9, 4, 1],
+            [4, 10, 1, 1], [10, 10, 1, 1], [15, 10, 1, 1]
+          ]
+        }
+      ];
+
+      const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+      const smoothStep = (value) => {
+        const t = clamp(value, 0, 1);
+        return t * t * (3 - 2 * t);
+      };
+      const pointFromCell = ([column, row]) => ({
+        x: OFFSET_X + column * CELL,
+        y: OFFSET_Y + row * CELL
+      });
+      const pointsForScene = (scene) => scene.path.map(pointFromCell);
+      const cellKey = ([column, row]) => `${column},${row}`;
+
+      sceneDefinitions.forEach((scene) => {
+        scene.pathPoints = pointsForScene(scene);
+        scene.startPoint = pointFromCell(scene.startCell);
+        scene.exitPoint = pointFromCell(scene.exitCell);
+        const pathCellKeys = new Set(scene.path.map(cellKey));
+        const wallCellKeys = new Set();
+        scene.wallSegments.forEach(([startColumn, startRow, width, height]) => {
+          for (let row = startRow; row < startRow + height; row += 1) {
+            for (let column = startColumn; column < startColumn + width; column += 1) {
+              const key = `${column},${row}`;
+              if (!pathCellKeys.has(key)) {
+                wallCellKeys.add(key);
+              }
+            }
+          }
+        });
+        scene.wallCells = Array.from(wallCellKeys, (key) => {
+          const [column, row] = key.split(',').map(Number);
+          return { column, row };
+        });
+      });
+
+      const state = {
+        sceneIndex: 0,
+        nextSceneIndex: 1,
+        phase: 'travel',
+        phaseElapsed: 0,
+        pathProgress: 0,
+        revealProgress: 0,
+        cycle: 1,
+        time: 0,
+        playing: !reducedMotion
+      };
+
+      const phaseInfo = {
+        travel: { label: '探索中', detail: '円が出口へ向かっています', step: 0 },
+        cover: { label: '画像を保持', detail: '前画面を一枚の画像として保持中', step: 0 },
+        reveal: { label: '円形ワイプ', detail: '次の迷路を入口から円形に表示中', step: 2 },
+        settle: { label: '前画像を削除', detail: '新しい迷路へ表示を切り替えました', step: 3 }
+      };
+
+      function roundedRect(context, x, y, width, height, radius) {
+        const r = Math.min(radius, width / 2, height / 2);
+        context.beginPath();
+        context.moveTo(x + r, y);
+        context.arcTo(x + width, y, x + width, y + height, r);
+        context.arcTo(x + width, y + height, x, y + height, r);
+        context.arcTo(x, y + height, x, y, r);
+        context.arcTo(x, y, x + width, y, r);
+        context.closePath();
+      }
+
+      function drawBackground(context, scene) {
+        context.clearRect(0, 0, WIDTH, HEIGHT);
+        const background = context.createLinearGradient(0, 0, WIDTH, HEIGHT);
+        background.addColorStop(0, scene.backgroundStart);
+        background.addColorStop(1, scene.backgroundEnd);
+        context.fillStyle = background;
+        context.fillRect(0, 0, WIDTH, HEIGHT);
+
+        const glow = context.createRadialGradient(scene.startPoint.x, scene.startPoint.y, 0, scene.startPoint.x, scene.startPoint.y, 270);
+        glow.addColorStop(0, `${scene.accent}22`);
+        glow.addColorStop(1, `${scene.accent}00`);
+        context.fillStyle = glow;
+        context.fillRect(0, 0, WIDTH, HEIGHT);
+
+        context.save();
+        context.strokeStyle = 'rgba(182, 226, 228, 0.065)';
+        context.lineWidth = 1;
+        for (let x = OFFSET_X - CELL / 2; x <= WIDTH - OFFSET_X + CELL / 2; x += CELL) {
+          context.beginPath();
+          context.moveTo(x, OFFSET_Y - CELL / 2);
+          context.lineTo(x, HEIGHT - OFFSET_Y + CELL / 2);
+          context.stroke();
+        }
+        for (let y = OFFSET_Y - CELL / 2; y <= HEIGHT - OFFSET_Y + CELL / 2; y += CELL) {
+          context.beginPath();
+          context.moveTo(OFFSET_X - CELL / 2, y);
+          context.lineTo(WIDTH - OFFSET_X + CELL / 2, y);
+          context.stroke();
+        }
+        context.restore();
+
+        context.save();
+        roundedRect(context, 19, 19, WIDTH - 38, HEIGHT - 38, 20);
+        context.strokeStyle = `${scene.accent}35`;
+        context.lineWidth = 1;
+        context.stroke();
+        context.restore();
+      }
+
+      function drawWalls(context, scene) {
+        scene.wallCells.forEach(({ column, row }) => {
+          const x = OFFSET_X + column * CELL - CELL / 2 + 2;
+          const y = OFFSET_Y + row * CELL - CELL / 2 + 2;
+          context.save();
+          context.shadowColor = 'rgba(0, 0, 0, 0.32)';
+          context.shadowBlur = 10;
+          context.shadowOffsetY = 4;
+          roundedRect(context, x, y, CELL - 4, CELL - 4, 7);
+          context.fillStyle = scene.wall;
+          context.fill();
+          context.shadowColor = 'transparent';
+          context.strokeStyle = `${scene.wallEdge}72`;
+          context.lineWidth = 1;
+          context.stroke();
+          context.restore();
+        });
+      }
+
+      function pointAtProgress(scene, progress) {
+        const points = scene.pathPoints;
+        const safeProgress = clamp(progress, 0, 1);
+        const scaled = safeProgress * (points.length - 1);
+        const index = Math.min(Math.floor(scaled), points.length - 2);
+        const localProgress = scaled - index;
+        const first = points[index];
+        const second = points[index + 1];
+        return {
+          x: first.x + (second.x - first.x) * localProgress,
+          y: first.y + (second.y - first.y) * localProgress
+        };
+      }
+
+      function drawRoute(context, scene, progress) {
+        const points = scene.pathPoints;
+        context.save();
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+        context.lineWidth = 2;
+        context.setLineDash([3, 8]);
+        context.strokeStyle = `${scene.accent}48`;
+        context.beginPath();
+        points.forEach((point, index) => {
+          if (index === 0) {
+            context.moveTo(point.x, point.y);
+          } else {
+            context.lineTo(point.x, point.y);
+          }
+        });
+        context.stroke();
+        context.restore();
+
+        const safeProgress = clamp(progress, 0, 1);
+        const scaled = safeProgress * (points.length - 1);
+        const index = Math.min(Math.floor(scaled), points.length - 2);
+        const current = pointAtProgress(scene, safeProgress);
+        context.save();
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+        context.lineWidth = 4;
+        context.strokeStyle = `${scene.accent}b8`;
+        context.beginPath();
+        context.moveTo(points[0].x, points[0].y);
+        for (let pointIndex = 1; pointIndex <= index; pointIndex += 1) {
+          context.lineTo(points[pointIndex].x, points[pointIndex].y);
+        }
+        context.lineTo(current.x, current.y);
+        context.stroke();
+        context.restore();
+      }
+
+      function drawMarker(context, point, scene, label, type, time) {
+        const pulse = 1 + Math.sin(time * 0.004) * 0.08;
+        context.save();
+        context.translate(point.x, point.y);
+        context.globalAlpha = 0.24;
+        context.fillStyle = scene.accent;
+        context.beginPath();
+        context.arc(0, 0, 22 * pulse, 0, Math.PI * 2);
+        context.fill();
+        context.globalAlpha = 0.92;
+        context.strokeStyle = scene.accent;
+        context.lineWidth = 2;
+        context.beginPath();
+        context.arc(0, 0, 12 * pulse, 0, Math.PI * 2);
+        context.stroke();
+        context.globalAlpha = 1;
+        context.fillStyle = scene.accent;
+        context.beginPath();
+        context.arc(0, 0, type === 'exit' ? 4 : 3, 0, Math.PI * 2);
+        context.fill();
+        context.font = '500 10px system-ui, sans-serif';
+        context.letterSpacing = '1px';
+        context.fillStyle = 'rgba(237, 247, 247, 0.74)';
+        const offsetX = type === 'exit' && scene.exitSide === 'left' ? 17 : -16;
+        const offsetY = type === 'exit' && scene.exitSide === 'bottom' ? -18 : -17;
+        context.textAlign = type === 'exit' && scene.exitSide === 'left' ? 'left' : 'right';
+        context.fillText(label, offsetX, offsetY);
+        context.restore();
+      }
+
+      function drawPlayer(context, point, scene, time) {
+        const bob = Math.sin(time * 0.008) * 1.5;
+        context.save();
+        context.translate(point.x, point.y + bob);
+        context.shadowColor = `${scene.accent}cc`;
+        context.shadowBlur = 22;
+        context.fillStyle = scene.accent;
+        context.beginPath();
+        context.arc(0, 0, 10, 0, Math.PI * 2);
+        context.fill();
+        context.shadowColor = 'transparent';
+        context.fillStyle = '#f6fffd';
+        context.beginPath();
+        context.arc(-2, -2, 5, 0, Math.PI * 2);
+        context.fill();
+        context.strokeStyle = scene.accentAlt;
+        context.lineWidth = 2;
+        context.beginPath();
+        context.arc(0, 0, 14, 0, Math.PI * 2);
+        context.stroke();
+        context.restore();
+      }
+
+      function drawScene(context, scene, playerProgress, time, showPlayer) {
+        drawBackground(context, scene);
+        drawWalls(context, scene);
+        drawRoute(context, scene, playerProgress);
+        drawMarker(context, scene.startPoint, scene, 'ENTRY', 'start', time);
+        drawMarker(context, scene.exitPoint, scene, 'EXIT', 'exit', time);
+        if (showPlayer) {
+          drawPlayer(context, pointAtProgress(scene, playerProgress), scene, time);
+        }
+      }
+
+      function maxRevealRadius(point) {
+        const farthestX = Math.max(point.x, WIDTH - point.x);
+        const farthestY = Math.max(point.y, HEIGHT - point.y);
+        return Math.hypot(farthestX, farthestY) + 36;
+      }
+
+      function setRevealClip(scene, radius, visible) {
+        const stageRect = stage.getBoundingClientRect();
+        const scaleX = stageRect.width / WIDTH;
+        const scaleY = stageRect.height / HEIGHT;
+        const scale = (scaleX + scaleY) / 2;
+        const centerX = (scene.startPoint.x / WIDTH) * 100;
+        const centerY = (scene.startPoint.y / HEIGHT) * 100;
+        const radiusPixels = radius * scale;
+        const clipValue = `circle(${radiusPixels}px at ${centerX}% ${centerY}%)`;
+        incomingCanvas.style.clipPath = clipValue;
+        incomingCanvas.style.webkitClipPath = clipValue;
+        revealRing.style.left = `${centerX}%`;
+        revealRing.style.top = `${centerY}%`;
+        revealRing.style.width = `${radiusPixels * 2}px`;
+        revealRing.style.height = `${radiusPixels * 2}px`;
+        revealRing.style.opacity = visible ? '1' : '0';
+      }
+
+      function transitionPlayerProgress(revealProgress) {
+        if (revealProgress <= 0.16) {
+          return 0;
+        }
+        return smoothStep((revealProgress - 0.16) / 0.84) * 0.34;
+      }
+
+      function capturePreviousFrame() {
+        const currentScene = sceneDefinitions[state.sceneIndex];
+        drawScene(baseContext, currentScene, state.pathProgress, state.time, true);
+        previousFrame.src = baseCanvas.toDataURL('image/png');
+        previousFrame.classList.add('is-visible');
+      }
+
+      function beginTransition() {
+        capturePreviousFrame();
+        state.nextSceneIndex = (state.sceneIndex + 1) % sceneDefinitions.length;
+        state.phase = 'cover';
+        state.phaseElapsed = 0;
+        state.revealProgress = 0;
+      }
+
+      function completeReveal() {
+        state.sceneIndex = state.nextSceneIndex;
+        state.pathProgress = transitionPlayerProgress(1);
+        state.phase = 'settle';
+        state.phaseElapsed = 0;
+        state.revealProgress = 1;
+        if (state.sceneIndex === 0) {
+          state.cycle += 1;
+        }
+        previousFrame.classList.remove('is-visible');
+        revealRing.style.opacity = '0';
+      }
+
+      function update(delta) {
+        if (!state.playing) {
+          return;
+        }
+
+        state.time += delta;
+        state.phaseElapsed += delta;
+
+        if (state.phase === 'travel') {
+          state.pathProgress += delta / TRAVEL_MS;
+          if (state.pathProgress >= TRAVEL_TRIGGER) {
+            state.pathProgress = TRAVEL_TRIGGER;
+            beginTransition();
+          }
+          return;
+        }
+
+        if (state.phase === 'cover') {
+          if (state.phaseElapsed >= COVER_MS) {
+            state.phase = 'reveal';
+            state.phaseElapsed = 0;
+          }
+          return;
+        }
+
+        if (state.phase === 'reveal') {
+          state.revealProgress += delta / REVEAL_MS;
+          if (state.revealProgress >= 1) {
+            state.revealProgress = 1;
+            completeReveal();
+          }
+          return;
+        }
+
+        if (state.phase === 'settle' && state.phaseElapsed >= SETTLE_MS) {
+          state.phase = 'travel';
+          state.phaseElapsed = 0;
+        }
+      }
+
+      function updateInterface() {
+        const currentScene = sceneDefinitions[state.sceneIndex];
+        const info = phaseInfo[state.phase];
+        const progress = state.phase === 'travel'
+          ? (state.pathProgress / TRAVEL_TRIGGER) * 100
+          : state.phase === 'cover'
+            ? 0
+            : state.phase === 'reveal'
+              ? state.revealProgress * 100
+              : 100;
+
+        sceneLabel.textContent = `${currentScene.code} · ${currentScene.name}`;
+        sceneChip.textContent = currentScene.code;
+        phaseLabel.textContent = info.label;
+        phaseDetail.textContent = info.detail;
+        phaseChip.dataset.phase = state.phase;
+        cycleLabel.textContent = `CYCLE ${String(state.cycle).padStart(2, '0')}`;
+        progressFill.style.width = `${clamp(progress, 0, 100)}%`;
+        playButton.textContent = state.playing ? '一時停止' : '再生';
+        playButton.setAttribute('aria-pressed', String(state.playing));
+
+        processSteps.forEach((step, index) => {
+          step.classList.toggle('is-active', index === info.step);
+          step.classList.toggle('is-done', index < info.step);
+        });
+
+        const stageState = state.phase === 'travel'
+          ? '迷路を探索しています'
+          : state.phase === 'cover'
+            ? '前画面を画像として重ねています'
+            : state.phase === 'reveal'
+              ? '次の迷路を円形に表示しています'
+              : '新しい迷路へ切り替わりました';
+        stage.setAttribute('aria-label', `${currentScene.code}。${stageState}。`);
+      }
+
+      function render() {
+        const currentScene = sceneDefinitions[state.sceneIndex];
+        if (state.phase === 'travel' || state.phase === 'settle') {
+          drawScene(baseContext, currentScene, state.pathProgress, state.time, true);
+          incomingCanvas.classList.remove('is-visible');
+          previousFrame.classList.remove('is-visible');
+          setRevealClip(currentScene, 0, false);
+          updateInterface();
+          return;
+        }
+
+        const nextScene = sceneDefinitions[state.nextSceneIndex];
+        const incomingProgress = state.phase === 'cover' ? 0 : transitionPlayerProgress(state.revealProgress);
+        drawScene(incomingContext, nextScene, incomingProgress, state.time, true);
+        incomingCanvas.classList.add('is-visible');
+        previousFrame.classList.add('is-visible');
+        const radius = state.phase === 'cover'
+          ? 0
+          : maxRevealRadius(nextScene.startPoint) * smoothStep(state.revealProgress);
+        setRevealClip(nextScene, radius, state.phase === 'reveal' && state.revealProgress < 0.985);
+        updateInterface();
+      }
+
+      function togglePlayback() {
+        state.playing = !state.playing;
+        lastTime = performance.now();
+        updateInterface();
+      }
+
+      function restart() {
+        state.sceneIndex = 0;
+        state.nextSceneIndex = 1;
+        state.phase = 'travel';
+        state.phaseElapsed = 0;
+        state.pathProgress = 0;
+        state.revealProgress = 0;
+        state.cycle = 1;
+        state.time = 0;
+        state.playing = true;
+        previousFrame.removeAttribute('src');
+        previousFrame.classList.remove('is-visible');
+        incomingCanvas.classList.remove('is-visible');
+        revealRing.style.opacity = '0';
+        lastTime = performance.now();
+        render();
+      }
+
+      playButton.addEventListener('click', togglePlayback);
+      restartButton.addEventListener('click', restart);
+
+      document.addEventListener('visibilitychange', () => {
+        lastTime = performance.now();
+      });
+
+      window.addEventListener('resize', () => {
+        render();
+      });
+
+      let lastTime = performance.now();
+      function animationFrame(now) {
+        const delta = Math.min(now - lastTime, 80);
+        lastTime = now;
+        update(delta);
+        render();
+        window.requestAnimationFrame(animationFrame);
+      }
+
+      render();
+      window.requestAnimationFrame(animationFrame);
+    })();
+  </script>
+</body>
+</html>
