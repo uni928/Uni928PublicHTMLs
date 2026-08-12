@@ -1,5 +1,6 @@
 /*
  * plugin10.js
+ * VERSION: 10.1.0-window-name
  * 画像保持＋円形マスクによるページ間遷移プラグイン
  *
  * ページ側には次の1行だけを記述します。
@@ -14,9 +15,8 @@
   window.__pageTransitionPlugin10 = true;
 
   const CONFIG = Object.freeze({
-    key: 'uni928-page-transition-v10',
-    database: 'uni928-page-transition-v10-db',
-    store: 'frames',
+    windowNamePrefix: '__UNI928_PAGE_TRANSITION_V10__:',
+    maxWindowNameChars: 1800000,
     captureLibraryUrl: 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
     captureTimeout: 3500,
     revealDuration: 2200,
@@ -185,8 +185,11 @@
       }), CONFIG.captureTimeout);
 
       let image = canvas.toDataURL('image/jpeg', CONFIG.imageQuality);
-      if (image.length > 4000000) {
-        image = canvas.toDataURL('image/jpeg', 0.62);
+      for (const quality of [0.62, 0.48, 0.36]) {
+        if (image.length <= CONFIG.maxWindowNameChars) {
+          break;
+        }
+        image = canvas.toDataURL('image/jpeg', quality);
       }
       return { image, width, height, scrollX, scrollY };
     } catch (error) {
@@ -194,51 +197,33 @@
     }
   }
 
-  function openDatabase(mode, action) {
-    return new Promise((resolve, reject) => {
-      if (!window.indexedDB) {
-        reject(new Error('IndexedDB is unavailable'));
-        return;
-      }
-      const request = window.indexedDB.open(CONFIG.database, 1);
-      request.onupgradeneeded = () => {
-        if (!request.result.objectStoreNames.contains(CONFIG.store)) {
-          request.result.createObjectStore(CONFIG.store);
-        }
-      };
-      request.onerror = () => reject(request.error || new Error('IndexedDB open failed'));
-      request.onsuccess = () => {
-        const database = request.result;
-        const transaction = database.transaction(CONFIG.store, mode);
-        const store = transaction.objectStore(CONFIG.store);
-        transaction.onabort = () => reject(transaction.error || new Error('IndexedDB transaction aborted'));
-        action(store, resolve, reject);
-      };
-    });
+  /* transfer: Web Storage／IndexedDBを使わず、同一タブのwindow.nameで一度だけ渡します。 */
+  function writeWindowTransfer(value) {
+    const serialized = CONFIG.windowNamePrefix + JSON.stringify(value);
+    if (serialized.length > CONFIG.maxWindowNameChars) {
+      return false;
+    }
+    try {
+      window.name = serialized;
+      return window.name === serialized;
+    } catch (error) {
+      return false;
+    }
   }
 
-  function writeIndexedDb(value) {
-    return openDatabase('readwrite', (store, resolve, reject) => {
-      const request = store.put(value, CONFIG.key);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error || new Error('IndexedDB write failed'));
-    });
-  }
-
-  function readIndexedDb() {
-    return openDatabase('readonly', (store, resolve, reject) => {
-      const request = store.get(CONFIG.key);
-      request.onsuccess = () => resolve(request.result || null);
-      request.onerror = () => reject(request.error || new Error('IndexedDB read failed'));
-    });
-  }
-
-  function deleteIndexedDb() {
-    return openDatabase('readwrite', (store, resolve, reject) => {
-      const request = store.delete(CONFIG.key);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error || new Error('IndexedDB delete failed'));
-    });
+  function readWindowTransfer() {
+    const currentName = window.name || '';
+    if (!currentName.startsWith(CONFIG.windowNamePrefix)) {
+      return null;
+    }
+    try {
+      const value = JSON.parse(currentName.slice(CONFIG.windowNamePrefix.length));
+      window.name = '';
+      return value;
+    } catch (error) {
+      window.name = '';
+      return null;
+    }
   }
 
   async function saveFrame(targetUrl, pointer) {
@@ -251,34 +236,28 @@
       createdAt: Date.now()
     };
 
-    try {
-      sessionStorage.setItem(CONFIG.key, JSON.stringify(value));
-      return value;
-    } catch (error) {
-      await writeIndexedDb(value);
-      return value;
+    if (!writeWindowTransfer(value)) {
+      const compactValue = {
+        ...value,
+        image: fallbackSnapshot(),
+        fallback: true
+      };
+      if (!writeWindowTransfer(compactValue)) {
+        throw new Error('The captured image is too large for window.name');
+      }
+      return compactValue;
     }
+    return value;
   }
 
   async function readFrame() {
-    try {
-      const raw = sessionStorage.getItem(CONFIG.key);
-      if (raw) {
-        return JSON.parse(raw);
-      }
-    } catch (error) {}
-    try {
-      return await readIndexedDb();
-    } catch (error) {
-      return null;
-    }
+    return readWindowTransfer();
   }
 
   function clearFrame() {
-    try {
-      sessionStorage.removeItem(CONFIG.key);
-    } catch (error) {}
-    deleteIndexedDb().catch(() => {});
+    if ((window.name || '').startsWith(CONFIG.windowNamePrefix)) {
+      window.name = '';
+    }
   }
 
   function shouldHandleLink(link, event) {
@@ -392,6 +371,7 @@
 
   function exposeApi() {
     window.PageTransition10 = Object.freeze({
+      version: '10.1.0-window-name',
       go(url, options = {}) {
         const link = document.createElement('a');
         link.href = url;
