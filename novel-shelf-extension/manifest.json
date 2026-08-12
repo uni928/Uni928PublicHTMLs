@@ -1,15 +1,19 @@
 {
   "manifest_version": 3,
   "name": "小説棚 - 作品別JSON保存＆閲覧出力",
-  "version": "1.0.0",
-  "description": "閲覧中の小説を作品別に自動保存し、ライトテーマのローカル閲覧サイトへ出力します。",
+  "version": "1.1.0",
+  "description": "主要な小説サイトで閲覧中の小説を作品別に自動保存し、ライトテーマのローカル閲覧サイトへ出力します。",
   "minimum_chrome_version": "114",
   "permissions": [
     "storage",
     "sidePanel"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "https://*.syosetu.com/*",
+    "https://*.syosetu.org/*",
+    "https://*.kakuyomu.jp/*",
+    "https://*.alphapolis.co.jp/*",
+    "https://*.pixiv.net/novel/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -22,7 +26,13 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "https://*.syosetu.com/*",
+        "https://*.syosetu.org/*",
+        "https://*.kakuyomu.jp/*",
+        "https://*.alphapolis.co.jp/*",
+        "https://*.pixiv.net/novel/*"
+      ],
       "js": ["content-script.js"],
       "run_at": "document_idle",
       "all_frames": false

@@ -10,6 +10,13 @@
       known: true
     },
     {
+      test: /(?:^|\.)syosetu\.org$/i,
+      body: ['#honbun', '#novel_honbun', '.novel_view', '.novel_view_body', '#main'],
+      work: ['h1', '.title', '[class*="title"]'],
+      page: ['h1', 'h2', '.novel_subtitle'],
+      known: true
+    },
+    {
       test: /kakuyomu\.jp$/i,
       body: ['.widget-episodeBody', '[data-episode-body]', '.episode-body'],
       work: ['a[href*="/works/"]', '[data-work-title]', '.widget-workTitle'],
@@ -17,10 +24,18 @@
       known: true
     },
     {
-      test: /novel18\.syosetu\.com$/i,
-      body: ['#novel_honbun', '#novel_color'],
-      work: ['#novel_title', '.novel_title'],
-      page: ['.chapter_title', '.novel_subtitle'],
+      test: /(?:^|\.)alphapolis\.co\.jp$/i,
+      body: ['.novel-body', '.novel_text', '[class*="novel"]'],
+      work: ['.novel-title', '.title', 'h1'],
+      page: ['.episode-title', '.chapter-title', 'h1', 'h2'],
+      known: true
+    },
+    {
+      test: /(?:^|\.)pixiv\.net$/i,
+      path: /^\/novel(?:\/|$)/i,
+      body: ['[class*="novel-text"]', '[class*="NovelText"]', 'main'],
+      work: ['h1', '[class*="title"]'],
+      page: ['h1', 'h2'],
       known: true
     }
   ];
@@ -71,7 +86,7 @@
 
   function siteRule() {
     const host = location.hostname;
-    return KNOWN_SITES.find((rule) => rule.test.test(host)) || null;
+    return KNOWN_SITES.find((rule) => rule.test.test(host) && (!rule.path || rule.path.test(location.pathname))) || null;
   }
 
   function cloneReadable(element) {
@@ -189,6 +204,7 @@
   }
 
   function isLikelyNovel(rule, body, pageTitle) {
+    if (!rule) return false;
     if (!body || body.value.length < 120) return false;
     if (rule?.known) return true;
     const urlHint = /(?:novel|episode|chapter|story|works|read|ncode)/i.test(location.href);
@@ -200,6 +216,7 @@
 
   function extractPage() {
     const rule = siteRule();
+    if (!rule) return null;
     const body = findBody(rule);
     const pageTitle = getPageTitle(rule);
     if (!isLikelyNovel(rule, body, pageTitle)) return null;
