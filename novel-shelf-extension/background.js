@@ -194,6 +194,24 @@ async function saveRecord(key, record) {
   return summary;
 }
 
+async function findRecordBySourceUrl(sourceSite, sourceUrl) {
+  if (!sourceSite || !sourceUrl) return null;
+  const index = await getIndex();
+  if (!index.length) return null;
+  const values = await chrome.storage.local.get(index.map((item) => item.key));
+  for (const item of index) {
+    const record = values[item.key];
+    if (!record) continue;
+    const normalized = normalizeRecord(record);
+    const recordSite = normalized.sourceHost || siteKeyFromUrl(normalized.pages[0]?.sourceUrl || '');
+    if (recordSite !== sourceSite) continue;
+    if (normalized.pages.some((page) => page.sourceUrl === sourceUrl)) {
+      return { key: item.key, record: normalized };
+    }
+  }
+  return null;
+}
+
 function notifyNovelUpdated(summary) {
   chrome.runtime.sendMessage({ type: 'novelUpdated', summary }).catch(() => undefined);
 }
@@ -213,6 +231,13 @@ async function upsertNovelPage(page) {
     if (!legacySite || !sourceSite || legacySite === sourceSite) {
       key = legacyKey;
       current = legacy;
+    }
+  }
+  if (!current) {
+    const existing = await findRecordBySourceUrl(sourceSite, sourceUrl);
+    if (existing) {
+      key = existing.key;
+      current = existing.record;
     }
   }
   current ||= normalizeRecord({ title: novelTitle, sourceHost: sourceSite });
@@ -260,7 +285,9 @@ async function upsertNovelPage(page) {
   target.text = text;
   target.sourceUrl = sourceUrl;
   target.capturedAt = Date.now();
-  if (!current.title || current.title === '無題の小説') current.title = novelTitle;
+  const titleWasPageName = current.pages.some((item) => item.title && item.title === current.title);
+  if (!current.title || current.title === '無題の小説' ||
+      (sourceSite === 'syosetu.org' && titleWasPageName)) current.title = novelTitle;
   current.sourceHost = current.sourceHost || sourceSite;
   current.sourceUrls = Array.from(new Set([...(current.sourceUrls || []), sourceUrl].filter(Boolean))).slice(0, 100);
   current.pages.sort(comparePages);

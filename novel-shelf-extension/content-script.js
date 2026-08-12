@@ -194,6 +194,22 @@
     );
   }
 
+  function hamelnNovelLinkTitle() {
+    try {
+      const elements = document.querySelectorAll('a[href], [role="link"]');
+      for (const element of elements) {
+        const href = String(element.getAttribute?.('href') || '').trim();
+        if (href === './' || href === '.' || href.startsWith('./?')) {
+          const value = elementTitle(element);
+          if (value) return value;
+        }
+      }
+    } catch {
+      // ページ側の特殊なDOMは無視し、他のタイトル候補へ進みます。
+    }
+    return '';
+  }
+
   function getPageTitle(rule) {
     if (rule?.site === 'hameln') {
       const parsed = parseHamelnTitle(document.title);
@@ -206,13 +222,15 @@
   }
 
   function getNovelTitle(rule, pageTitle) {
+    if (rule?.site === 'hameln') {
+      const linkedTitle = hamelnNovelLinkTitle();
+      if (linkedTitle && linkedTitle !== pageTitle && linkedTitle.length <= 140) return linkedTitle;
+      const parsed = parseHamelnTitle(document.title);
+      if (parsed?.novelTitle && parsed.novelTitle !== pageTitle) return parsed.novelTitle;
+    }
     const workElement = firstMatching(rule?.work);
     const explicit = elementTitle(workElement);
     if (explicit && explicit !== pageTitle && explicit.length <= 140) return explicit;
-    if (rule?.site === 'hameln') {
-      const parsed = parseHamelnTitle(document.title);
-      if (parsed?.novelTitle) return parsed.novelTitle;
-    }
 
     const dataElement = one('[data-novel-title], [data-work-title]');
     const dataTitle = cleanTitle(dataElement?.getAttribute('data-novel-title') || dataElement?.getAttribute('data-work-title') || '');
@@ -341,7 +359,7 @@
 
   function startCaptureRetries(firstDelay, onFirstCapture) {
     clearCaptureRetryTimers();
-    [0, 2000, 4000].forEach((offset, index) => {
+    [0, 500, 1000, 2000, 4000, 7000, 12000].forEach((offset, index) => {
       const timer = window.setTimeout(() => {
         const page = scan(index > 0);
         if (index === 0 && onFirstCapture) onFirstCapture(page);
