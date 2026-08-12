@@ -17,11 +17,41 @@ export function safeFileBase(value) {
   return name || 'novel';
 }
 
+function pageInfoNumber(page) {
+  if (page?.numberSource !== 'capture-order') {
+    const direct = Number(page?.number || page?.pageNumber);
+    if (Number.isInteger(direct) && direct > 0) return direct;
+  }
+  const value = String(page?.title || '') + ' ' + String(page?.sourceUrl || '');
+  const match = value.match(/(?:第\s*)?(\d{1,6})\s*(?:話|章|回|ページ|page|episode|chapter)(?:\D|$)/i) ||
+    value.match(/(?:episode|chapter|page|story|read|novel)[^\d]{0,8}(\d{1,6})(?:\D|$)/i);
+  return match ? Number(match[1]) : null;
+}
+
+function comparePages(a, b) {
+  const aInfo = pageInfoNumber(a);
+  const bInfo = pageInfoNumber(b);
+  if (aInfo !== null && bInfo === null) return -1;
+  if (aInfo === null && bInfo !== null) return 1;
+  if (aInfo !== null && bInfo !== null && aInfo !== bInfo) return aInfo - bInfo;
+  const aNumber = Number(a?.number) || Number.MAX_SAFE_INTEGER;
+  const bNumber = Number(b?.number) || Number.MAX_SAFE_INTEGER;
+  if (aNumber !== bNumber) return aNumber - bNumber;
+  const titleOrder = String(a?.title || '').localeCompare(String(b?.title || ''), 'ja');
+  if (titleOrder) return titleOrder;
+  return String(a?.sourceUrl || '').localeCompare(String(b?.sourceUrl || ''));
+}
+
+function sortedPages(value) {
+  return (Array.isArray(value) ? value : []).slice().sort(comparePages);
+}
+
 export function recordToJson(record) {
   return JSON.stringify({
     schemaVersion: Number(record?.schemaVersion) || 1,
     title: String(record?.title || '無題の小説'),
-    pages: Array.isArray(record?.pages) ? record.pages : [],
+    sourceHost: String(record?.sourceHost || ''),
+    pages: sortedPages(record?.pages),
     sourceUrls: Array.isArray(record?.sourceUrls) ? record.sourceUrls : [],
     createdAt: Number(record?.createdAt) || Date.now(),
     updatedAt: Number(record?.updatedAt) || Date.now()
@@ -30,9 +60,7 @@ export function recordToJson(record) {
 
 export function buildReaderHtml(novel) {
   const title = String(novel?.title || '無題の小説');
-  const pages = (Array.isArray(novel?.pages) ? novel.pages : [])
-    .slice()
-    .sort((a, b) => Number(a.number || 0) - Number(b.number || 0))
+  const pages = sortedPages(novel?.pages)
     .map((page, index) => ({
       number: Number(page.number) || index + 1,
       title: String(page.title || ''),

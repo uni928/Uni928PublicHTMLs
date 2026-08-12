@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "小説棚 - 作品別JSON保存＆閲覧出力",
-  "version": "1.1.0",
-  "description": "主要な小説サイトで閲覧中の小説を作品別に自動保存し、ライトテーマのローカル閲覧サイトへ出力します。",
+  "version": "1.2.1",
+  "description": "主要な小説サイトで閲覧中の小説をサイト単位の作品別に保存し、ページ情報順のライトテーマ閲覧サイトへ出力します。",
   "minimum_chrome_version": "114",
   "permissions": [
     "storage",

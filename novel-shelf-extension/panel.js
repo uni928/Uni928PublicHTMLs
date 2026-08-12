@@ -51,6 +51,11 @@ function downloadText(filename, content, mimeType) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function recordFileBase(record) {
+  const site = String(record?.sourceHost || '').replace(/^www\./i, '').trim();
+  return safeFileBase((site ? site + '_' : '') + String(record?.title || 'novel'));
+}
+
 async function loadNovels() {
   const response = await send({ type: 'getNovels' });
   if (!response.ok) {
@@ -123,14 +128,14 @@ function renderNovelList() {
 async function exportReader(key) {
   const novel = await getNovel(key);
   if (!novel) return;
-  downloadText(safeFileBase(novel.title) + '_閲覧.html', buildReaderHtml(novel), 'text/html;charset=utf-8');
+  downloadText(recordFileBase(novel) + '_閲覧.html', buildReaderHtml(novel), 'text/html;charset=utf-8');
   showToast('閲覧サイトを出力しました。');
 }
 
 async function exportJson(key) {
   const novel = await getNovel(key);
   if (!novel) return;
-  downloadText(safeFileBase(novel.title) + '.json', recordToJson(novel), 'application/json;charset=utf-8');
+  downloadText(recordFileBase(novel) + '.json', recordToJson(novel), 'application/json;charset=utf-8');
   showToast('JSONを出力しました。');
 }
 
@@ -223,7 +228,7 @@ function setFolderStatus(message) {
 async function writeRecordToFolder(record, requestPermission) {
   const handle = state.directoryHandle;
   if (!handle || !(await hasWritePermission(handle, requestPermission))) return false;
-  const fileHandle = await handle.getFileHandle(safeFileBase(record.title) + '.json', { create: true });
+  const fileHandle = await handle.getFileHandle(recordFileBase(record) + '.json', { create: true });
   const writable = await fileHandle.createWritable();
   await writable.write(recordToJson(record));
   await writable.close();

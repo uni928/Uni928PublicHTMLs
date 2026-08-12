@@ -28,9 +28,15 @@ function normalizeTitle(value) {
     .trim() || '無題の小説';
 }
 
-function makeNovelKey(title) {
+function makeNovelKey(title, site) {
   const normalized = normalizeTitle(title).toLocaleLowerCase('ja-JP');
-  return STORAGE_PREFIX + encodeURIComponent(normalized).slice(0, 180);
+  const siteKey = siteKeyFromUrl(site);
+  const identity = siteKey ? siteKey + '|' + normalized : normalized;
+  return STORAGE_PREFIX + encodeURIComponent(identity).slice(0, 180);
+}
+
+function makeLegacyNovelKey(title) {
+  return STORAGE_PREFIX + encodeURIComponent(normalizeTitle(title).toLocaleLowerCase('ja-JP')).slice(0, 180);
 }
 
 function canonicalizeUrl(value) {
@@ -53,16 +59,52 @@ function hostFromUrl(value) {
   }
 }
 
+function siteKeyFromUrl(value) {
+  const host = hostFromUrl(value || '') || String(value || '').toLowerCase().replace(/^www\./, '');
+  if (!host) return '';
+  const knownSites = [
+    'syosetu.com', 'syosetu.org', 'kakuyomu.jp', 'alphapolis.co.jp', 'pixiv.net'
+  ];
+  return knownSites.find((site) => host === site || host.endsWith('.' + site)) || host;
+}
+
 function safeNumber(value) {
   const number = Number(value);
   return Number.isInteger(number) && number > 0 ? number : null;
 }
 
+function pageInfoNumber(page) {
+  if (page?.numberSource !== 'capture-order') {
+    const direct = safeNumber(page?.number || page?.pageNumber);
+    if (direct) return direct;
+  }
+  const value = String(page?.title || '') + ' ' + String(page?.sourceUrl || '');
+  const match = value.match(/(?:第\s*)?(\d{1,6})\s*(?:話|章|回|ページ|page|episode|chapter)(?:\D|$)/i) ||
+    value.match(/(?:episode|chapter|page|story|read|novel)[^\d]{0,8}(\d{1,6})(?:\D|$)/i);
+  return match ? Number(match[1]) : null;
+}
+
+function comparePages(a, b) {
+  const aInfo = pageInfoNumber(a);
+  const bInfo = pageInfoNumber(b);
+  if (aInfo !== null && bInfo === null) return -1;
+  if (aInfo === null && bInfo !== null) return 1;
+  if (aInfo !== null && bInfo !== null && aInfo !== bInfo) return aInfo - bInfo;
+  const aNumber = safeNumber(a?.number) || Number.MAX_SAFE_INTEGER;
+  const bNumber = safeNumber(b?.number) || Number.MAX_SAFE_INTEGER;
+  if (aNumber !== bNumber) return aNumber - bNumber;
+  const titleOrder = String(a?.title || '').localeCompare(String(b?.title || ''), 'ja');
+  if (titleOrder) return titleOrder;
+  return String(a?.sourceUrl || '').localeCompare(String(b?.sourceUrl || ''));
+}
+
 function normalizePage(page, fallbackNumber) {
   const text = cleanText(page?.text, 500000);
   const sourceUrl = canonicalizeUrl(page?.sourceUrl || page?.url || '');
+  const requestedNumber = safeNumber(page?.number || page?.pageNumber);
   return {
-    number: safeNumber(page?.number || page?.pageNumber) || fallbackNumber,
+    number: requestedNumber || fallbackNumber,
+    numberSource: page?.numberSource || (requestedNumber ? 'page-info' : 'capture-order'),
     title: cleanText(page?.title || page?.pageTitle, 240),
     text,
     sourceUrl,
@@ -90,11 +132,13 @@ function normalizeRecord(record) {
     pages.push(page);
   }
 
-  pages.sort((a, b) => a.number - b.number);
+  pages.sort(comparePages);
+  const sourceHost = siteKeyFromUrl(record?.sourceHost || pages[0]?.sourceUrl || '');
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     title,
     pages,
+    sourceHost,
     sourceUrls: Array.from(new Set([
       ...(Array.isArray(record?.sourceUrls) ? record.sourceUrls : []),
       ...pages.map((page) => page.sourceUrl).filter(Boolean)
@@ -120,7 +164,7 @@ function summaryFromRecord(record, key) {
     title: record.title,
     pageCount: record.pages.length,
     updatedAt: record.updatedAt,
-    sourceHost: hostFromUrl(record.pages[0]?.sourceUrl || '')
+    sourceHost: hostFromUrl(record.pages[0]?.sourceUrl || '') || record.sourceHost || ''
   };
 }
 
@@ -139,31 +183,64 @@ function notifyNovelUpdated(summary) {
 
 async function upsertNovelPage(page) {
   const novelTitle = normalizeTitle(page?.novelTitle || page?.title || hostFromUrl(page?.sourceUrl));
-  const key = makeNovelKey(novelTitle);
-  const stored = await chrome.storage.local.get(key);
-  const current = stored[key] ? normalizeRecord(stored[key]) : normalizeRecord({ title: novelTitle });
   const sourceUrl = canonicalizeUrl(page?.sourceUrl || page?.url || '');
+  const sourceSite = siteKeyFromUrl(page?.sourceHost || sourceUrl);
+  const scopedKey = makeNovelKey(novelTitle, sourceSite);
+  const legacyKey = makeLegacyNovelKey(novelTitle);
+  const stored = await chrome.storage.local.get([scopedKey, legacyKey]);
+  let key = scopedKey;
+  let current = stored[scopedKey] ? normalizeRecord(stored[scopedKey]) : null;
+  if (!current && stored[legacyKey]) {
+    const legacy = normalizeRecord(stored[legacyKey]);
+    const legacySite = legacy.sourceHost || siteKeyFromUrl(legacy.pages[0]?.sourceUrl || '');
+    if (!legacySite || !sourceSite || legacySite === sourceSite) {
+      key = legacyKey;
+      current = legacy;
+    }
+  }
+  current ||= normalizeRecord({ title: novelTitle, sourceHost: sourceSite });
   const text = cleanText(page?.text, 500000);
   if (!text || text.length < 80) return null;
 
-  let target = current.pages.find((item) => item.sourceUrl && item.sourceUrl === sourceUrl);
+  const pageTitle = cleanText(page?.pageTitle, 240);
+  const requestedNumber = safeNumber(page?.pageNumber);
+  let target = current.pages.find((item) => item.sourceUrl && sourceUrl && item.sourceUrl === sourceUrl);
+  if (!target && requestedNumber) {
+    target = current.pages.find((item) => pageInfoNumber(item) === requestedNumber &&
+      (!pageTitle || !item.title || item.title === pageTitle));
+  }
+  if (!target && !sourceUrl && pageTitle) {
+    target = current.pages.find((item) => item.title === pageTitle);
+  }
   if (!target) {
-    const requestedNumber = safeNumber(page?.pageNumber);
     let number = requestedNumber || Math.max(0, ...current.pages.map((item) => item.number)) + 1;
     if (current.pages.some((item) => item.number === number)) {
       number = Math.max(0, ...current.pages.map((item) => item.number)) + 1;
     }
-    target = { number, title: '', text: '', sourceUrl, capturedAt: Date.now() };
+    target = {
+      number,
+      numberSource: requestedNumber ? 'page-info' : 'capture-order',
+      title: '',
+      text: '',
+      sourceUrl,
+      capturedAt: Date.now()
+    };
     current.pages.push(target);
   }
 
-  target.title = cleanText(page?.pageTitle || target.title || ('第' + target.number + 'ページ'), 240);
+  if (requestedNumber && target.number !== requestedNumber &&
+      !current.pages.some((item) => item !== target && item.number === requestedNumber)) {
+    target.number = requestedNumber;
+    target.numberSource = 'page-info';
+  }
+  target.title = pageTitle || target.title || ('第' + target.number + 'ページ');
   target.text = text;
   target.sourceUrl = sourceUrl;
   target.capturedAt = Date.now();
-  current.title = current.title || novelTitle;
+  if (!current.title || current.title === '無題の小説') current.title = novelTitle;
+  current.sourceHost = current.sourceHost || sourceSite;
   current.sourceUrls = Array.from(new Set([...(current.sourceUrls || []), sourceUrl].filter(Boolean))).slice(0, 100);
-  current.pages.sort((a, b) => a.number - b.number);
+  current.pages.sort(comparePages);
   current.updatedAt = Date.now();
 
   const summary = await saveRecord(key, current);
@@ -194,7 +271,7 @@ async function getNovel(key) {
 
 async function importNovel(record) {
   const normalized = normalizeRecord(record);
-  const key = makeNovelKey(normalized.title);
+  const key = makeNovelKey(normalized.title, normalized.sourceHost);
   normalized.updatedAt = Date.now();
   const summary = await saveRecord(key, normalized);
   notifyNovelUpdated(summary);

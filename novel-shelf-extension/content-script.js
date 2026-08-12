@@ -4,28 +4,28 @@
   const KNOWN_SITES = [
     {
       test: /(?:^|\.)syosetu\.com$/i,
-      body: ['#novel_honbun', '#novel_color', '.js-novel-text'],
+      body: ['#novel_honbun', '#novel_color', '.js-novel-text', '.p-novel__body', '[class*="novel_honbun"]'],
       work: ['#novel_title', '.novel_title', '[data-novel-title]'],
       page: ['.chapter_title', '.novel_subtitle', '.p-novel__title'],
       known: true
     },
     {
       test: /(?:^|\.)syosetu\.org$/i,
-      body: ['#honbun', '#novel_honbun', '.novel_view', '.novel_view_body', '#main'],
+      body: ['#honbun', '#novel_honbun', '.novel_view', '.novel_view_body', '[id*="honbun"]', '[class*="honbun"]', '#main'],
       work: ['h1', '.title', '[class*="title"]'],
       page: ['h1', 'h2', '.novel_subtitle'],
       known: true
     },
     {
       test: /kakuyomu\.jp$/i,
-      body: ['.widget-episodeBody', '[data-episode-body]', '.episode-body'],
+      body: ['.widget-episodeBody', '.widget-episodeBody__content', '[data-episode-body]', '[data-testid*="episode"]', '.episode-body'],
       work: ['a[href*="/works/"]', '[data-work-title]', '.widget-workTitle'],
       page: ['.widget-episodeTitle', '[data-episode-title]', 'h1'],
       known: true
     },
     {
       test: /(?:^|\.)alphapolis\.co\.jp$/i,
-      body: ['.novel-body', '.novel_text', '[class*="novel"]'],
+      body: ['.novel-body', '.novel-body-inner', '.novel_text', '[class*="novel-body"]', '[class*="novel-text"]'],
       work: ['.novel-title', '.title', 'h1'],
       page: ['.episode-title', '.chapter-title', 'h1', 'h2'],
       known: true
@@ -33,7 +33,7 @@
     {
       test: /(?:^|\.)pixiv\.net$/i,
       path: /^\/novel(?:\/|$)/i,
-      body: ['[class*="novel-text"]', '[class*="NovelText"]', 'main'],
+      body: ['[class*="novel-text"]', '[class*="NovelText"]', '[data-testid*="novel"]', 'main'],
       work: ['h1', '[class*="title"]'],
       page: ['h1', 'h2'],
       known: true
@@ -49,6 +49,7 @@
 
   let lastFingerprint = '';
   let scanTimer = 0;
+  let captureRetryTimers = [];
   let lastScanAt = 0;
 
   function text(value, maxLength) {
@@ -77,6 +78,19 @@
       if (element && text(element.innerText || element.textContent).length) return element;
     }
     return null;
+  }
+
+  function paragraphFallback() {
+    const values = [];
+    document.querySelectorAll('p, [role="paragraph"]').forEach((element) => {
+      if (element.closest('nav, header, footer, aside, form, button, [aria-hidden="true"], [class*="comment"], [class*="advert"]')) return;
+      const value = text(element.innerText || element.textContent);
+      if (value.length >= 20) values.push(value);
+    });
+    const uniqueValues = Array.from(new Set(values));
+    if (uniqueValues.length < 3) return null;
+    const value = uniqueValues.join('\n\n');
+    return { value, score: Math.min(value.length / 120, 35) + uniqueValues.length + 18, element: document.body };
   }
 
   function meta(property) {
@@ -121,7 +135,8 @@
     const selectors = [
       'article', 'main', '[role="main"]',
       '[class*="novel"]', '[class*="episode"]', '[class*="chapter"]',
-      '[class*="story"]', '[class*="article"]', '[class*="content"]'
+      '[class*="story"]', '[class*="article"]', '[class*="content"]',
+      '[class*="body"]', '[class*="text"]', '[data-testid*="content"]'
     ];
     for (const selector of selectors) {
       try {
@@ -144,6 +159,8 @@
       const score = candidateScore(item.element, value, item.preferred);
       if (!best || score > best.score) best = { value, score, element: item.element };
     }
+    const paragraph = paragraphFallback();
+    if (paragraph && (!best || paragraph.score > best.score || best.element === document.body)) best = paragraph;
     return best;
   }
 
@@ -197,7 +214,8 @@
       const number = Number(String(candidate || '').match(/\d+/)?.[0]);
       if (Number.isInteger(number) && number > 0) return number;
     }
-    const fromTitle = String(pageTitle || '').match(/(?:第\s*)?(\d{1,5})\s*[話章回ページ]/i);
+    const fromTitle = String(pageTitle || '').match(/(?:第\s*)?(\d{1,6})\s*[話章回ページ]/i) ||
+      String(document.title || '').match(/(?:第\s*)?(\d{1,6})\s*[話章回ページ]/i);
     if (fromTitle) return Number(fromTitle[1]);
     const pathMatches = location.pathname.match(/(?:episode|chapter|page|story|read|novel)[^\d]{0,8}(\d{1,5})(?:\D|$)/i);
     return pathMatches ? Number(pathMatches[1]) : null;
@@ -254,26 +272,47 @@
     return page;
   }
 
+  function clearCaptureRetryTimers() {
+    captureRetryTimers.forEach((timer) => window.clearTimeout(timer));
+    captureRetryTimers = [];
+  }
+
+  function startCaptureRetries(firstDelay, onFirstCapture) {
+    clearCaptureRetryTimers();
+    [0, 2000, 4000].forEach((offset, index) => {
+      const timer = window.setTimeout(() => {
+        const page = scan(index > 0);
+        if (index === 0 && onFirstCapture) onFirstCapture(page);
+      }, Math.max(0, Number(firstDelay) || 0) + offset);
+      captureRetryTimers.push(timer);
+    });
+  }
+
   function scheduleScan(delay) {
     window.clearTimeout(scanTimer);
-    scanTimer = window.setTimeout(() => scan(false), delay || 900);
+    clearCaptureRetryTimers();
+    scanTimer = window.setTimeout(() => {
+      scanTimer = 0;
+      startCaptureRetries(0);
+    }, Math.max(0, Number(delay) || 1000));
   }
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message?.type !== 'scanNow') return false;
-    const page = scan(true);
-    sendResponse(page);
-    return false;
+    window.clearTimeout(scanTimer);
+    scanTimer = 0;
+    startCaptureRetries(1000, sendResponse);
+    return true;
   });
 
-  window.addEventListener('load', () => scheduleScan(500), { once: true });
+  window.addEventListener('load', () => scheduleScan(1000), { once: true });
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') scheduleScan(300);
+    if (document.visibilityState === 'visible') scheduleScan(1000);
   });
-  window.addEventListener('scroll', () => scheduleScan(1200), { passive: true });
+  window.addEventListener('scroll', () => scheduleScan(1000), { passive: true });
 
   if (document.body) {
-    const observer = new MutationObserver(() => scheduleScan(1500));
+    const observer = new MutationObserver(() => scheduleScan(1000));
     observer.observe(document.body, { childList: true, subtree: true, characterData: true });
   }
 
