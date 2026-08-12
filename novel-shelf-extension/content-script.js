@@ -176,10 +176,15 @@
   function parseHamelnTitle(value) {
     const source = cleanTitle(value);
     const parts = source.split(/\s+-\s+/).map(cleanTitle).filter(Boolean);
-    if (parts.length < 3) return null;
+    if (parts.length < 2) return null;
+    if (/ハーメルン/i.test(parts.at(-1) || '')) parts.pop();
+    if (parts.length < 2) return null;
+    const firstLooksLikePage = /^(?:No\.?\s*\d+|\d{1,6})(?:\s|$)/i.test(parts[0]) ||
+      /^(?:第\s*\d+\s*(?:話|章|回|ページ)|(?:序章|終章|prologue|epilogue))$/i.test(parts[0]) ||
+      Boolean(extractPageInfo(parts[0]));
     return {
-      pageTitle: parts.slice(0, -2).join(' - '),
-      novelTitle: parts.slice(-2).join(' - ')
+      pageTitle: firstLooksLikePage ? parts.slice(0, -1).join(' - ') : parts.slice(1).join(' - '),
+      novelTitle: firstLooksLikePage ? parts.at(-1) : parts[0]
     };
   }
 
@@ -201,9 +206,9 @@
       document.querySelectorAll('p').forEach((paragraph) => {
         const paragraphText = text(paragraph.innerText || paragraph.textContent || '');
         if (!/作\s*[:：]/.test(paragraphText)) return;
-        paragraph.querySelectorAll('a[href], [role="link"]').forEach((element) => elements.push(element));
+        paragraph.querySelectorAll('a, [role="link"]').forEach((element) => elements.push(element));
       });
-      document.querySelectorAll('a[href], [role="link"]').forEach((element) => elements.push(element));
+      document.querySelectorAll('a, [role="link"]').forEach((element) => elements.push(element));
       for (const element of elements) {
         const href = String(element.getAttribute?.('href') || '').trim();
         let isNovelLink = href === './' || href === '.' || href.startsWith('./?');
@@ -240,10 +245,10 @@
 
   function getNovelTitle(rule, pageTitle) {
     if (rule?.site === 'hameln') {
-      const linkedTitle = hamelnNovelLinkTitle();
-      if (linkedTitle && linkedTitle !== pageTitle && linkedTitle.length <= 140) return linkedTitle;
       const parsed = parseHamelnTitle(document.title);
       if (parsed?.novelTitle && parsed.novelTitle !== pageTitle) return parsed.novelTitle;
+      const linkedTitle = hamelnNovelLinkTitle();
+      if (linkedTitle && linkedTitle !== pageTitle && linkedTitle.length <= 140) return linkedTitle;
       const dataTitle = elementTitle(one('[data-novel-title], [data-work-title]'));
       if (dataTitle && dataTitle !== pageTitle) return dataTitle;
       return '無題の小説';
