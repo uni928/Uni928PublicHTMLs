@@ -196,31 +196,59 @@
   async function captureViewport() {
     const width = Math.max(1, window.innerWidth);
     const height = Math.max(1, window.innerHeight);
+    // html2canvasのスクロール再現には依存せず、全体画像から現在位置を切り出します。
     const scrollX = Math.max(0, Number(window.scrollX ?? window.pageXOffset ?? document.documentElement.scrollLeft ?? 0));
     const scrollY = Math.max(0, Number(window.scrollY ?? window.pageYOffset ?? document.documentElement.scrollTop ?? 0));
+    const documentWidth = Math.max(width, document.documentElement.scrollWidth);
+    const documentHeight = Math.max(height, document.documentElement.scrollHeight);
     const devicePixelRatio = Math.min(window.devicePixelRatio || 1, CONFIG.maxDevicePixelRatio);
 
     try {
       const html2canvas = await withTimeout(loadCaptureLibrary(), CONFIG.captureTimeout);
-      const canvas = await withTimeout(html2canvas(document.documentElement, {
+      const fullCanvas = await withTimeout(html2canvas(document.documentElement, {
         backgroundColor: null,
         allowTaint: false,
         useCORS: true,
         imageTimeout: 1500,
         logging: false,
         scale: devicePixelRatio,
-        x: scrollX,
-        y: scrollY,
-        width,
-        height,
-        windowWidth: Math.max(width, document.documentElement.scrollWidth, scrollX + width),
-        windowHeight: Math.max(height, document.documentElement.scrollHeight, scrollY + height),
-        scrollX,
-        scrollY
+        x: 0,
+        y: 0,
+        width: documentWidth,
+        height: documentHeight,
+        windowWidth: documentWidth,
+        windowHeight: documentHeight,
+        scrollX: 0,
+        scrollY: 0
       }), CONFIG.captureTimeout);
 
-      let image = canvas.toDataURL('image/jpeg', CONFIG.imageQuality);
-      return { image, width, height, scrollX, scrollY };
+      const viewportCanvas = document.createElement('canvas');
+      viewportCanvas.width = Math.ceil(width * devicePixelRatio);
+      viewportCanvas.height = Math.ceil(height * devicePixelRatio);
+      const viewportContext = viewportCanvas.getContext('2d');
+      if (!viewportContext) {
+        throw new Error('viewport canvas context unavailable');
+      }
+      viewportContext.drawImage(
+        fullCanvas,
+        Math.round(scrollX * devicePixelRatio),
+        Math.round(scrollY * devicePixelRatio),
+        viewportCanvas.width,
+        viewportCanvas.height,
+        0,
+        0,
+        viewportCanvas.width,
+        viewportCanvas.height
+      );
+      const image = viewportCanvas.toDataURL('image/jpeg', CONFIG.imageQuality);
+      return {
+        image,
+        width,
+        height,
+        scrollX,
+        scrollY,
+        captureMode: 'full-document-crop'
+      };
     } catch (error) {
       return { image: fallbackSnapshot(), width, height, scrollX, scrollY, fallback: true };
     }
