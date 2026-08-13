@@ -12,6 +12,7 @@ https://uni928.github.io/Uni928PublicHTMLs/ファイル名
 
 | ファイル | 紹介 |
 | --- | --- |
+| [今まで公開したサイト.html](https://uni928.github.io/Uni928PublicHTMLs/今まで公開したサイト.html) | Uni928PublicHTMLs と TestYou に公開したサイトを載せています。 |
 | [index.html](https://uni928.github.io/Uni928PublicHTMLs/index.html) | フォルダを選択し、ファイル名と説明を一覧化して、ChatGPTに目的のファイルを探してもらうためのプロンプトを作成します。 |
 | [index2.html](https://uni928.github.io/Uni928PublicHTMLs/index2.html) | コードや設定ファイルなどの内容を貼り付け、共同開発で分かりやすいファイル名の候補をChatGPTに提案してもらう補助ツールです。 |
 | [index3.html](https://uni928.github.io/Uni928PublicHTMLs/index3.html) | index2.htmlと同系統のファイル名提案ツールです。日本語のファイル名を提案するプロンプトに調整した派生版です。 |
