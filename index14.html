@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>API料金シミュレーター</title>
   <style>
+    @layer base {
+      /* base layer: 既存のシミュレーター表示と、サマリー内のモデル別料金表示 */
     :root{
       --cream: #fbf4df;
       --ink: #1e1f22;
@@ -237,6 +239,24 @@
       letter-spacing: .2px;
     }
 
+    .summary-line{
+      display: grid;
+      gap: 2px;
+    }
+
+    .summary-line + .summary-line{
+      margin-top: 9px;
+      padding-top: 9px;
+      border-top: 1px solid rgba(30,31,34,.09);
+    }
+
+    .summary-model{
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.3;
+      white-space: nowrap;
+    }
+
     .tables{
       display:grid;
       gap: 16px;
@@ -355,6 +375,7 @@
       opacity: 1;
       transform: translateX(-50%) translateY(-2px);
     }
+    }
   </style>
 </head>
 
@@ -424,11 +445,25 @@
             <div class="summary" aria-label="サマリー">
               <div class="pill">
                 <div class="t">1日あたり</div>
-                <div class="v" id="sumDay">—</div>
+                <div class="summary-line">
+                  <div class="summary-model">gpt-5.6-luna Flex</div>
+                  <div class="v" id="sumLunaDay">—</div>
+                </div>
+                <div class="summary-line">
+                  <div class="summary-model">gpt-5-nano Flex</div>
+                  <div class="v" id="sumDay">—</div>
+                </div>
               </div>
               <div class="pill">
                 <div class="t">1か月（30日）あたり</div>
-                <div class="v" id="sumMonth">—</div>
+                <div class="summary-line">
+                  <div class="summary-model">gpt-5.6-luna Flex</div>
+                  <div class="v" id="sumLunaMonth">—</div>
+                </div>
+                <div class="summary-line">
+                  <div class="summary-model">gpt-5-nano Flex</div>
+                  <div class="v" id="sumMonth">—</div>
+                </div>
               </div>
             </div>
           </form>
@@ -544,6 +579,8 @@
     const meta2 = $("meta2");
     const sumDay = $("sumDay");
     const sumMonth = $("sumMonth");
+    const sumLunaDay = $("sumLunaDay");
+    const sumLunaMonth = $("sumLunaMonth");
     const toast = $("toast");
 
     const btnCalc  = $("btnCalc");
@@ -653,6 +690,8 @@ const btnCopyUrl = $("btnCopyUrl");
       // → サマリーは “gpt-4o-mini” ではなく「gpt-5-nano」を基準に表示（例があるため）。
       //const baseForSummary = MODELS[0];
       const baseForSummary = { name: "gpt-5-nano Flex",   inRate: 0.025, outRate: 0.20 };
+      const lunaFlexForSummary = FLEX.find(x => x.label === "gpt-5.6-luna Flex");
+      const lunaBaseForSummary = MODELS.find(x => x.name === lunaFlexForSummary?.base);
 
       // Render base models
       const rows = [];
@@ -739,15 +778,27 @@ const btnCopyUrl = $("btnCopyUrl");
         tsvLines.push(["", r.model, tdFormula.textContent, perMonth].join("\t"));
       }
 
-      // Summary (use first base model as a neutral baseline)
+      // Summary (gpt-5.6-luna Flexを上段、既存のgpt-5-nano Flexを下段に表示)
       const basePerReq = moneyPerRequestJPY(baseForSummary.inRate, baseForSummary.outRate, inT, outT, fxJ);
       const basePerDay = basePerReq * dayN;
       const basePerMonth = basePerDay * daysInMonth;
 
-      //sumDay.textContent = `${formatYenInt(basePerDay)}（${baseForSummary.name}）`;
-      //sumMonth.textContent = `${formatYenInt(basePerMonth)}（${baseForSummary.name}）`;
-      sumDay.textContent = `${formatYenInt(basePerDay)}（${baseForSummary.name}）`;
-      sumMonth.textContent = `${formatYenInt(basePerMonth)}（${baseForSummary.name}）`;
+      const lunaPerReq = lunaBaseForSummary && lunaFlexForSummary
+        ? moneyPerRequestJPY(
+            lunaBaseForSummary.inRate * lunaFlexForSummary.factor,
+            lunaBaseForSummary.outRate * lunaFlexForSummary.factor,
+            inT,
+            outT,
+            fxJ
+          )
+        : 0;
+      const lunaPerDay = lunaPerReq * dayN;
+      const lunaPerMonth = lunaPerDay * daysInMonth;
+
+      sumLunaDay.textContent = formatYenInt(lunaPerDay);
+      sumLunaMonth.textContent = formatYenInt(lunaPerMonth);
+      sumDay.textContent = formatYenInt(basePerDay);
+      sumMonth.textContent = formatYenInt(basePerMonth);
 
       // store TSV into button dataset (no localStorage)
       btnCopy.dataset.tsv = tsvLines.join("\n");
@@ -809,7 +860,6 @@ applyQueryParams();
   </script>
 </body>
 </html>
-
 
 
 
