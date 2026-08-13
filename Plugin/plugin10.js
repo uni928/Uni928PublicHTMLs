@@ -1,6 +1,6 @@
 /*
  * plugin10.js
- * VERSION: 10.5.1-low-memory-mobile-bypass
+ * VERSION: 10.5.2-low-memory-reveal-bypass
  * 画像保持＋円形マスクによるページ間遷移プラグイン
  * html2canvas はオンラインCDNから読み込みます。
  *
@@ -24,15 +24,24 @@
 
   // 低メモリのスマホでは、重い画面キャプチャと遷移アニメーションを行いません。
   // navigator.deviceMemory は対応ブラウザで概算RAM容量(GB)を返します。
-  const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+  // iOS系ブラウザでは deviceMemory が取得できないため、安全側に倒して演出を無効化します。
+  const userAgent = navigator.userAgent || '';
+  const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
+  const isIOSDevice = /iPhone|iPad|iPod/i.test(userAgent);
   const deviceMemoryGb = Number(navigator.deviceMemory);
-  const isLowMemoryMobile = isMobileDevice
-    && Number.isFinite(deviceMemoryGb)
-    && deviceMemoryGb <= 4;
+  const hasDeviceMemoryInfo = Number.isFinite(deviceMemoryGb) && deviceMemoryGb > 0;
+  const hardwareConcurrency = Number(navigator.hardwareConcurrency);
+  const hasCpuInfo = Number.isFinite(hardwareConcurrency) && hardwareConcurrency > 0;
+  const isLowMemoryMobile = isMobileDevice && (
+    (hasDeviceMemoryInfo && deviceMemoryGb <= 4)
+    || (!hasDeviceMemoryInfo && isIOSDevice)
+    || (!hasDeviceMemoryInfo && !isIOSDevice && hasCpuInfo && hardwareConcurrency <= 4)
+  );
+  const shouldSkipTransitionEffects = prefersReducedMotion || isLowMemoryMobile;
 
   // 前画面データがある場合は、DOMの描画より先に次画面を隠します。
-  // このスクリプトは<head>内で読み込むと、初回表示のちらつきを最小化できます。
-  if (hasIncomingFrame && !prefersReducedMotion && !isLowMemoryMobile && document.documentElement) {
+  // 低メモリ端末ではここで pending を付けないため、一瞬白くなる問題を防ぎます。
+  if (hasIncomingFrame && !shouldSkipTransitionEffects && document.documentElement) {
     document.documentElement.classList.add('page-transition-pending');
   }
 
@@ -384,7 +393,8 @@
   }
 
   function revealFrame(frame) {
-    if (!frame || !frame.image || normalizeUrl(window.location.href) !== frame.targetUrl || isReducedMotion()) {
+    // 演出する側でも低メモリ端末を必ず除外し、画像のデコードやCanvas生成を行いません。
+    if (shouldSkipTransitionEffects || !frame || !frame.image || normalizeUrl(window.location.href) !== frame.targetUrl || isReducedMotion()) {
       clearFrame();
       return;
     }
@@ -462,7 +472,7 @@
 
   function exposeApi() {
     window.PageTransition10 = Object.freeze({
-      version: '10.5.1-low-memory-mobile-bypass',
+      version: '10.5.2-low-memory-reveal-bypass',
       go(url, options = {}) {
         const link = document.createElement('a');
         link.href = url;
@@ -486,9 +496,9 @@
   function boot() {
     exposeApi();
 
-    // 低メモリのスマホではプラグイン処理を無効化し、通常のリンク遷移に任せます。
+    // 低メモリのスマホでは、遷移先側でも被せ画像を一切作らず通常表示に戻します。
     // 遷移用ハッシュ付きURLで到着した場合だけ、URLを通常状態へ戻します。
-    if (isLowMemoryMobile) {
+    if (shouldSkipTransitionEffects) {
       clearFrame();
       return;
     }
