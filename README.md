@@ -8,8 +8,6 @@ https://uni928.github.io/Uni928PublicHTMLs/ファイル名
 
 サブディレクトリ内のファイルは、ディレクトリ名もURLに含めます。IndexedDBやlocalStorageを利用するページは、入力内容をブラウザ内に保存します。外部APIを利用するページでは、各自のAPIキーが必要です。
 
-> 注意：現行READMEの「パーティゲーム for ワンナイト人狼」のリンク先は index71.html になっていますが、現在のファイル内容ではパーティゲームは index70.html です。index71.html は URL Share です。
-
 ## ルート直下のHTML・ツール
 
 | ファイル | 紹介 |
