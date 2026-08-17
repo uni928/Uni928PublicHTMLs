@@ -56,7 +56,15 @@
       .section-panel-head h2 { margin: 0; font-size: 1.05rem; }
       .section-panel-head small { color: var(--muted); }
       .section-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+      /* ページ番号とauto切替をセクション行の右側に配置 */
+      .section-item-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
       .section-item { width: 100%; min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--text); text-align: left; }
+      .section-page-wrap { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: .82rem; font-weight: 700; white-space: nowrap; }
+      .section-page-wrap > label { display: flex; align-items: center; gap: 6px; }
+      .section-page-input { width: 72px; min-height: 44px; padding: 8px 9px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--text); text-align: right; font-variant-numeric: tabular-nums; outline: none; }
+      .section-page-input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(37,99,235,.12); }
+      .section-auto-button { min-width: 74px; min-height: 44px; padding: 0 10px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--muted); font-weight: 800; }
+      .section-auto-button.is-on { border-color: #9fc0f5; background: var(--accent-soft); color: var(--accent-dark); }
       .section-item:hover { border-color: #a9c4ef; }
       .section-item.is-active { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 2px rgba(37,99,235,.08); }
       .section-number { flex: 0 0 auto; color: var(--muted); font-weight: 800; }
@@ -160,6 +168,11 @@
         .controls { flex-direction: column; }
         .controls button { width: 100%; }
         .section-panel-head { align-items: flex-start; flex-direction: column; }
+        /* モバイルでもページ番号とautoを横並びで維持 */
+        .section-item-row { grid-template-columns: minmax(0, 1fr) auto; }
+        .section-page-wrap { gap: 4px; }
+        .section-page-input { width: 62px; }
+        .section-auto-button { min-width: 68px; padding: 0 8px; }
         .section-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .section-controls button { width: 100%; }
         .viewer-actions { position: static; margin: 0 0 16px; flex-wrap: wrap; }
@@ -238,7 +251,7 @@
     </article>
   </main>
 
-  <script id="initialData" type="application/json">{"sections":[{"id":"section-1","title":"","source":""}],"createdAt":"","note":"","startMode":"auto"}</script>
+  <script id="initialData" type="application/json">{"sections":[{"id":"section-1","title":"","source":"","pageNumber":0,"autoPage":true}],"createdAt":"","note":"","startMode":"auto"}</script>
   <script>
   window.addEventListener("DOMContentLoaded", function () {
     "use strict";
@@ -515,11 +528,13 @@
     }
 
 
-    function createSection(title, source) {
+    function createSection(title, source, pageNumber, autoPage) {
       return {
         id: "section-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8),
         title: typeof title === "string" ? title : "",
-        source: typeof source === "string" ? source : ""
+        source: typeof source === "string" ? source : "",
+        pageNumber: Number.isInteger(Number(pageNumber)) && Number(pageNumber) >= 0 ? Number(pageNumber) : 0,
+        autoPage: typeof autoPage === "boolean" ? autoPage : true
       };
     }
 
@@ -529,7 +544,9 @@
         return {
           id: typeof section.id === "string" && section.id ? section.id : createSection("", "").id,
           title: typeof section.title === "string" ? section.title : "",
-          source: typeof section.source === "string" ? section.source : ""
+          source: typeof section.source === "string" ? section.source : "",
+          pageNumber: Number.isInteger(Number(section.pageNumber)) && Number(section.pageNumber) >= 0 ? Number(section.pageNumber) : 0,
+          autoPage: typeof section.autoPage === "boolean" ? section.autoPage : !(Number(section.pageNumber) > 0)
         };
       });
     }
@@ -539,7 +556,7 @@
         const raw = decodeStoredText(document.getElementById("initialData").textContent || "");
         const parsed = JSON.parse(raw);
         const legacySections = typeof parsed.title === "string" || typeof parsed.source === "string"
-          ? [{ id: "section-legacy", title: parsed.title || "", source: parsed.source || "" }]
+          ? [{ id: "section-legacy", title: parsed.title || "", source: parsed.source || "", pageNumber: 0, autoPage: true }]
           : null;
         return {
           sections: normalizeSections(legacySections || parsed.sections),
@@ -582,7 +599,8 @@
       return JSON.stringify(sections.map(function (section) {
         return {
           title: String(section.title || "").trim(),
-          source: String(section.source || "").replace(/\r\n?/g, "\n").trim()
+          source: String(section.source || "").replace(/\r\n?/g, "\n").trim(),
+          pageNumber: Number(section.pageNumber) || 0
         };
       }));
     }
@@ -811,6 +829,9 @@
       sectionList.replaceChildren();
       sections.forEach(function (section, index) {
         const li = document.createElement("li");
+        const row = document.createElement("div");
+        row.className = "section-item-row";
+
         const button = document.createElement("button");
         button.type = "button";
         button.className = "section-item" + (index === selectedIndex ? " is-active" : "");
@@ -823,7 +844,53 @@
         name.textContent = sectionDisplayTitle(section, index);
         button.append(number, name);
         button.addEventListener("click", function () { selectSection(index); });
-        li.appendChild(button);
+
+        const pageWrap = document.createElement("div");
+        pageWrap.className = "section-page-wrap";
+        const pageLabel = document.createElement("label");
+        pageLabel.appendChild(document.createTextNode("ページ"));
+        const pageInput = document.createElement("input");
+        pageInput.className = "section-page-input";
+        pageInput.type = "number";
+        pageInput.min = "0";
+        pageInput.step = "1";
+        pageInput.value = String(Number(section.pageNumber) || 0);
+        pageInput.title = "手入力するとautoがOFFになります";
+        pageInput.setAttribute("aria-label", sectionDisplayTitle(section, index) + " のページ番号");
+        pageLabel.appendChild(pageInput);
+
+        const autoButton = document.createElement("button");
+        autoButton.type = "button";
+        autoButton.className = "section-auto-button";
+
+        function updateAutoButton() {
+          const isOn = section.autoPage !== false;
+          autoButton.classList.toggle("is-on", isOn);
+          autoButton.textContent = "auto " + (isOn ? "ON" : "OFF");
+          autoButton.setAttribute("aria-pressed", String(isOn));
+          autoButton.title = isOn ? "ページ番号を自動計算します" : "入力したページ番号を使用します";
+        }
+
+        pageInput.addEventListener("input", function () {
+          const value = Math.max(0, Math.floor(Number(pageInput.value) || 0));
+          section.pageNumber = value;
+          section.autoPage = false;
+          updateAutoButton();
+        });
+        pageInput.addEventListener("change", function () {
+          pageInput.value = String(Math.max(0, Math.floor(Number(pageInput.value) || 0)));
+          section.pageNumber = Number(pageInput.value);
+        });
+        autoButton.addEventListener("click", function () {
+          section.autoPage = section.autoPage === false;
+          updateAutoButton();
+          updatePrintTocPageNumbers();
+        });
+        updateAutoButton();
+        pageWrap.append(pageLabel, autoButton);
+
+        row.append(button, pageWrap);
+        li.appendChild(row);
         sectionList.appendChild(li);
       });
       moveUpButton.disabled = selectedIndex <= 0;
@@ -1113,7 +1180,9 @@
         clone.querySelectorAll(".viewer-only").forEach(function (element) { element.remove(); });
         measureRoot.appendChild(clone);
 
-        pageNodes[index].textContent = String(startPage);
+        const manualPageNumber = Math.max(0, Math.floor(Number(sections[index].pageNumber) || 0));
+        const useAutoPage = sections[index].autoPage !== false;
+        pageNodes[index].textContent = String(useAutoPage ? startPage : manualPageNumber);
         startPage += countPrintedPages(clone, pageHeight);
         clone.remove();
       });
@@ -1166,7 +1235,7 @@
       const clone = document.documentElement.cloneNode(true);
       const dataNode = clone.querySelector("#initialData");
       const data = {
-        sections: sections.map(function (section) { return { id: section.id, title: section.title, source: section.source }; }),
+        sections: sections.map(function (section) { return { id: section.id, title: section.title, source: section.source, pageNumber: Number(section.pageNumber) || 0, autoPage: section.autoPage !== false }; }),
         createdAt: new Intl.DateTimeFormat("ja-JP", {
           year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit"
         }).format(new Date()),
@@ -1241,11 +1310,33 @@
       updateCount();
     });
 
+    sourceText.addEventListener("paste", function () {
+      window.setTimeout(function () {
+        const section = getSelectedSection();
+        if (!section) return;
+
+        const normalized = sourceText.value.replace(/\r\n?/g, "\n");
+        const lines = normalized.split("\n");
+        const firstLine = lines[0] || "";
+        const match = firstLine.match(/^#\s+(.+?)\s*$/);
+        if (!match) return;
+
+        titleInput.value = match[1].trim();
+        lines.shift();
+        while (lines.length && !lines[0].trim()) lines.shift();
+        sourceText.value = lines.join("\n");
+        syncInputsToSection();
+        updateCount();
+        renderSectionList();
+        showStatus("先頭のMarkdown見出しをページタイトルへ移動しました。");
+      }, 0);
+    });
+
     document.getElementById("sampleButton").addEventListener("click", function () {
       sections = [
-        createSection("旅行の概要", "## 集合場所\n\n東京駅の丸の内南口に、午前9時までに集合します。\n\n> 雨天の場合は予定を変更します。"),
-        createSection("持ち物", "- スマートフォン\n- 充電器\n- 飲み物\n- 折りたたみ傘"),
-        createSection("参考情報", "参考：[JR東日本](https://www.jreast.co.jp/)\n\n## メモ\n\n各自、前日までに交通経路を確認してください。")
+        createSection("旅行の概要", "## 集合場所\n\n東京駅の丸の内南口に、午前9時までに集合します。\n\n> 雨天の場合は予定を変更します。", 0, true),
+        createSection("持ち物", "- スマートフォン\n- 充電器\n- 飲み物\n- 折りたたみ傘", 0, true),
+        createSection("参考情報", "参考：[JR東日本](https://www.jreast.co.jp/)\n\n## メモ\n\n各自、前日までに交通経路を確認してください。", 0, true)
       ];
       selectedIndex = 0;
       loadSelectedSection();
