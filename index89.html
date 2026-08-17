@@ -383,6 +383,7 @@
     /* preview: 画像化前の表プレビュー */
     @layer preview {
       .canvas-stage {
+        position: relative;
         min-height: 480px;
         overflow: auto;
         padding: 22px;
@@ -412,6 +413,48 @@
         margin-top: 12px;
         color: var(--muted);
         font-size: 0.82rem;
+      }
+
+      /* preview: 編集モード切替とCanvas上セル編集 */
+      .preview-header-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .edit-mode-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 800;
+        user-select: none;
+      }
+
+      .edit-mode-toggle input {
+        width: 18px;
+        height: 18px;
+        margin: 0;
+        accent-color: var(--accent);
+      }
+
+      #previewCanvas.edit-mode { cursor: text; }
+
+      .canvas-cell-editor {
+        position: absolute;
+        z-index: 20;
+        min-width: 40px;
+        min-height: 32px;
+        padding: 6px 8px;
+        border: 2px solid var(--accent);
+        border-radius: 6px;
+        background: #fff;
+        color: var(--text);
+        font: 500 16px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", "Yu Gothic", Meiryo, sans-serif;
+        resize: none;
+        outline: none;
+        box-shadow: 0 8px 24px rgba(31, 41, 55, 0.20);
       }
     }
 
@@ -566,7 +609,14 @@
       <article class="panel">
         <header class="panel-header">
           <h2 class="panel-title">PNGプレビュー</h2>
-          <span class="panel-note">白い余白にMarkdownを埋め込み</span>
+          <div class="preview-header-actions">
+            <label class="edit-mode-toggle" for="editModeToggle">
+              編集モード
+              <input id="editModeToggle" type="checkbox" role="switch" aria-label="PNGプレビュー編集モード">
+              <span id="editModeState">OFF</span>
+            </label>
+            <span class="panel-note">白い余白にMarkdownを埋め込み</span>
+          </div>
         </header>
         <div class="preview-body">
           <div class="canvas-stage">
@@ -609,6 +659,9 @@
       const counter = document.getElementById("counter");
       const sizeMeta = document.getElementById("sizeMeta");
       const capacityMeta = document.getElementById("capacityMeta");
+      const editModeToggle = document.getElementById("editModeToggle");
+      const editModeState = document.getElementById("editModeState");
+      const canvasStage = canvas.closest(".canvas-stage");
       const imageInput = document.getElementById("imageInput");
       const dropZone = document.getElementById("dropZone");
       const templateButton = document.getElementById("templateButton");
@@ -648,6 +701,8 @@
         headerColor: "#eaf2ff"
       });
       let saveTimer = 0;
+      let renderedCellRects = [];
+      let activeCellEditor = null;
 
       function openDatabase() {
         return new Promise((resolve, reject) => {
@@ -1366,7 +1421,85 @@
         capacityMeta.textContent = "埋め込み: 表を入力してください";
       }
 
+      function isTemplatePlaceholder(value) {
+        const text = String(value || "").trim();
+        return /^項目\d+$/.test(text) || /^要素\d+-\d+$/.test(text);
+      }
+
+      function updateTableCell(rowIndex, columnIndex, value) {
+        const table = parseEditableTable(input.value);
+        if (!table || !table.rows[rowIndex] || columnIndex >= table.rows[rowIndex].length) return false;
+        table.rows[rowIndex][columnIndex] = String(value).replace(/\r?\n/g, "\\n");
+        writeEditableTable(table);
+        return true;
+      }
+
+      function closeCellEditor(commit = true) {
+        if (!activeCellEditor) return;
+        const { element, rowIndex, columnIndex } = activeCellEditor;
+        activeCellEditor = null;
+        if (commit) updateTableCell(rowIndex, columnIndex, element.value);
+        element.remove();
+      }
+
+      function setEditMode(enabled) {
+        const on = Boolean(enabled);
+        editModeToggle.checked = on;
+        editModeState.textContent = on ? "ON" : "OFF";
+        canvas.classList.toggle("edit-mode", on);
+        if (!on) closeCellEditor(true);
+      }
+
+      function beginCellEdit(cellRect) {
+        closeCellEditor(true);
+        const table = parseEditableTable(input.value);
+        if (!table || !table.rows[cellRect.rowIndex]) return;
+
+        const canvasRect = canvas.getBoundingClientRect();
+        const stageRect = canvasStage.getBoundingClientRect();
+        const scaleX = canvasRect.width / canvas.width;
+        const scaleY = canvasRect.height / canvas.height;
+        const editor = document.createElement("textarea");
+        editor.className = "canvas-cell-editor";
+        editor.rows = 1;
+        const originalValue = table.rows[cellRect.rowIndex][cellRect.columnIndex] || "";
+        editor.value = isTemplatePlaceholder(originalValue) ? "" : originalValue.replace(/\\n/g, "\n");
+        editor.style.left = `${canvasRect.left - stageRect.left + cellRect.x * scaleX}px`;
+        editor.style.top = `${canvasRect.top - stageRect.top + cellRect.y * scaleY}px`;
+        editor.style.width = `${Math.max(40, cellRect.width * scaleX)}px`;
+        editor.style.height = `${Math.max(32, cellRect.height * scaleY)}px`;
+        editor.style.fontSize = `${Math.max(12, clamp(settings.fontSize.value, 12, 40) * clamp(settings.scale.value, 1, 3) * scaleY)}px`;
+        canvasStage.append(editor);
+        activeCellEditor = { element: editor, rowIndex: cellRect.rowIndex, columnIndex: cellRect.columnIndex };
+        editor.focus();
+
+        editor.addEventListener("blur", () => closeCellEditor(true), { once: true });
+        editor.addEventListener("keydown", event => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            closeCellEditor(false);
+          } else if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            closeCellEditor(true);
+          }
+        });
+      }
+
+      function handleCanvasEdit(event) {
+        if (!editModeToggle.checked || !renderedCellRects.length) return;
+        const rect = canvas.getBoundingClientRect();
+        const canvasX = (event.clientX - rect.left) * canvas.width / rect.width;
+        const canvasY = (event.clientY - rect.top) * canvas.height / rect.height;
+        const hit = renderedCellRects.find(cell =>
+          canvasX >= cell.x && canvasX <= cell.x + cell.width &&
+          canvasY >= cell.y && canvasY <= cell.y + cell.height
+        );
+        if (hit) beginCellEdit(hit);
+      }
+
       function render() {
+        closeCellEditor(false);
+        renderedCellRects = [];
         const markdown = input.value;
         counter.textContent = `${markdown.length.toLocaleString("ja-JP")}文字`;
         scheduleSave();
@@ -1462,6 +1595,14 @@
             lines.forEach(lineRuns => {
               drawStyledLine(context, lineRuns, textX, textY, alignment, fontSize, rowIndex === 0);
               textY += lineHeight;
+            });
+            renderedCellRects.push({
+              rowIndex,
+              columnIndex,
+              x: x * scale,
+              y: y * scale,
+              width: width * scale,
+              height: row.height * scale
             });
             x += width;
           });
@@ -1715,6 +1856,12 @@
         if (event.key === "Enter" || event.key === " ") imageInput.click();
       });
 
+      editModeToggle.addEventListener("change", () => {
+        setEditMode(editModeToggle.checked);
+        showStatus(`プレビュー編集モードを${editModeToggle.checked ? "ON" : "OFF"}にしました。`, "info");
+      });
+      canvas.addEventListener("click", handleCanvasEdit);
+
       async function initialize() {
         applySettings(BUILT_IN_DEFAULT_SETTINGS);
         try {
@@ -1735,6 +1882,7 @@
         render();
       }
 
+      setEditMode(false);
       updateTemplateAlignments();
       initialize();
     })();
