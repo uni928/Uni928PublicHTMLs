@@ -84,6 +84,27 @@
       .status.error { color: var(--danger); }
       .note-panel { margin-top: 14px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: #f8fafc; }
       .note-panel .text-input { min-height: 120px; background: #fff; }
+
+      /* 画像読み込みパネル: 圧縮済み画像の管理・埋め込み文コピー */
+      .image-panel { margin-bottom: 20px; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: #f8fafc; }
+      .image-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+      .image-panel-head h2 { margin: 0; font-size: 1.05rem; }
+      .image-panel-head small { display: block; margin-top: 4px; color: var(--muted); line-height: 1.6; }
+      /* 画像読込ボタンのラベル文字を縦横中央に配置 */
+      .image-load-button { position: relative; overflow: hidden; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; text-align: center; }
+      .image-load-button input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+      .image-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+      .image-empty { padding: 14px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); text-align: center; background: #fff; }
+      .image-item { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+      .image-thumb { width: 92px; height: 92px; object-fit: contain; border: 1px solid var(--line); border-radius: 10px; background: #f8fafc; }
+      .image-item-main { min-width: 0; }
+      .image-item-title { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+      .image-file-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; }
+      .image-meta { color: var(--muted); font-size: .82rem; line-height: 1.55; }
+      .image-embed-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 9px; }
+      .image-embed-text { width: 100%; min-height: 40px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 10px; background: #f8fafc; color: var(--text); font: .86rem/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; }
+      .image-item-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+      .image-item-actions button, .image-embed-row button { min-height: 38px; padding: 0 11px; }
     }
 
     @layer viewer {
@@ -175,6 +196,13 @@
         .section-auto-button { min-width: 68px; padding: 0 8px; }
         .section-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .section-controls button { width: 100%; }
+        /* 画像管理はモバイルで縦積みにして操作性を維持 */
+        .image-panel-head { flex-direction: column; }
+        .image-load-button { width: 100%; text-align: center; }
+        .image-item { grid-template-columns: 1fr; }
+        .image-thumb { width: 100%; height: min(220px, 50vw); }
+        .image-embed-row { grid-template-columns: 1fr; }
+        .image-embed-row button { width: 100%; }
         .viewer-actions { position: static; margin: 0 0 16px; flex-wrap: wrap; }
         .toc-actions { flex-direction: column; }
         .toc-actions button { width: 100%; }
@@ -206,6 +234,20 @@
           <button id="deleteSectionButton" class="danger-button" type="button">削除</button>
         </div>
       </div>
+
+      <section class="image-panel" aria-labelledby="imagePanelTitle">
+        <div class="image-panel-head">
+          <div>
+            <h2 id="imagePanelTitle">画像読み込み</h2>
+            <small>画像は読み込み時にWebP圧縮し、Base64本体18,000文字以内でHTML内に保持します。埋め込み用文章には圧縮済みBase64を直接出力します。</small>
+          </div>
+          <label class="secondary-button image-load-button">
+            画像を読み込む
+            <input id="imageFileInput" type="file" accept="image/*" multiple aria-label="画像を読み込む">
+          </label>
+        </div>
+        <ol id="imageList" class="image-list"></ol>
+      </section>
 
       <div class="field-label">
         <label for="pageTitle" id="editorTitle">ページタイトル</label>
@@ -272,6 +314,8 @@
     const moveUpButton = document.getElementById("moveUpButton");
     const moveDownButton = document.getElementById("moveDownButton");
     const deleteSectionButton = document.getElementById("deleteSectionButton");
+    const imageFileInput = document.getElementById("imageFileInput");
+    const imageList = document.getElementById("imageList");
 
     function escapeHtml(value) {
       return String(value)
@@ -306,16 +350,26 @@
 
     function parseInlineMarkdown(text) {
       const codeTokens = [];
+      const imageTokens = [];
       let value = String(text).replace(/`([^`]+)`/g, function (_, code) {
         const token = "@@CODE" + codeTokens.length + "@@";
         codeTokens.push("<code>" + escapeHtml(code) + "</code>");
         return token;
       });
 
+      // [画像挿入](ファイル名) は、画像パネル内の同名画像のBase64へ内部解決します。
+      // ファイル名に記号が含まれても誤判定しないよう、登録済みの埋め込み文を完全一致で置換します。
+      imageAssets.forEach(function (asset) {
+        const literal = imageEmbedText(asset);
+        if (!value.includes(literal)) return;
+        const token = "@@IMAGE" + imageTokens.length + "@@";
+        imageTokens.push('<img src="' + escapeHtml(asset.dataUrl) + '" alt="' + escapeHtml(asset.fileName) + '">');
+        value = value.split(literal).join(token);
+      });
+
       value = escapeHtml(value);
-      // [画像挿入](data:image/...;base64,...) は画像として描画します。
-      value = value.replace(/\[画像挿入\]\((data:image\/[^\s)]+)\)/gi, function (_, url) {
-        return '<img src="' + escapeHtml(safeImageUrl(url)) + '" alt="画像挿入">';
+      imageTokens.forEach(function (html, index) {
+        value = value.replace("@@IMAGE" + index + "@@", html);
       });
       value = value.replace(/!\[([^\]]*)\]\(([^\s)]+)(?:\s+["']([^"']*)["'])?\)/g, function (_, alt, url, title) {
         const titleAttr = title ? ' title="' + escapeHtml(title) + '"' : "";
@@ -568,6 +622,22 @@
       });
     }
 
+    function normalizeImageAssets(value) {
+      if (!Array.isArray(value)) return [];
+      return value.filter(function (asset) {
+        return asset && typeof asset.dataUrl === "string" && /^data:image\/webp;base64,/i.test(asset.dataUrl);
+      }).map(function (asset) {
+        return {
+          id: typeof asset.id === "string" && asset.id ? asset.id : "image-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8),
+          fileName: typeof asset.fileName === "string" && asset.fileName.trim() ? asset.fileName.trim() : "image.webp",
+          dataUrl: asset.dataUrl,
+          width: Math.max(1, Math.floor(Number(asset.width) || 1)),
+          height: Math.max(1, Math.floor(Number(asset.height) || 1)),
+          base64Length: getBase64Body(asset.dataUrl).length
+        };
+      });
+    }
+
     function readInitialData() {
       try {
         const raw = decodeStoredText(document.getElementById("initialData").textContent || "");
@@ -579,14 +649,16 @@
           sections: normalizeSections(legacySections || parsed.sections),
           createdAt: typeof parsed.createdAt === "string" ? parsed.createdAt : "",
           note: typeof parsed.note === "string" ? parsed.note : "",
+          imageAssets: normalizeImageAssets(parsed.imageAssets),
           startMode: parsed.startMode === "editor" ? "editor" : "auto"
         };
       } catch (error) {
-        return { sections: [createSection("", "")], createdAt: "", note: "", startMode: "auto" };
+        return { sections: [createSection("", "")], createdAt: "", note: "", imageAssets: [], startMode: "auto" };
       }
     }
 
     let sections = [];
+    let imageAssets = [];
     let selectedIndex = 0;
     let activeViewerPage = { type: "toc", index: -1 };
     let markdownHash = "";
@@ -1270,12 +1342,17 @@
           year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit"
         }).format(new Date()),
         note: noteText.value,
+        imageAssets: imageAssets.map(function (asset) {
+          return { id: asset.id, fileName: asset.fileName, dataUrl: asset.dataUrl, width: asset.width, height: asset.height, base64Length: asset.base64Length };
+        }),
         startMode: startMode === "editor" ? "editor" : "auto"
       };
       dataNode.textContent = encodeStoredText(JSON.stringify(data));
       clone.querySelector("#editorMode").classList.add("hidden");
       clone.querySelector("#viewerMode").classList.remove("hidden");
       clone.querySelector("#sectionList").replaceChildren();
+      clone.querySelector("#imageList").replaceChildren();
+      clone.querySelector("#imageFileInput").value = "";
       clone.querySelector("#pageTitle").value = "";
       clone.querySelector("#sourceText").textContent = "";
       clone.querySelector("#noteText").textContent = "";
@@ -1285,7 +1362,7 @@
       return "<!DOCTYPE html>\n" + clone.outerHTML;
     }
 
-    function downloadSelf(startMode) {
+    async function downloadSelf(startMode) {
       if (!hasDocumentContent()) {
         showStatus("文章またはタイトルを1文字以上入力してください。", true);
         sourceText.focus();
@@ -1395,9 +1472,7 @@
       return { dataUrl: dataUrl, width: outputWidth, height: outputHeight, maxSize: maxSize, quality: quality };
     }
 
-    async function compressPastedImageToBase64Limit(file) {
-      const sourceDataUrl = await fileToDataUrl(file);
-      const sourceImage = await loadImageForCompression(sourceDataUrl);
+    function compressLoadedImageToBase64Limit(sourceImage) {
       let smallest = null;
 
       for (const step of PASTED_IMAGE_COMPRESSION_STEPS) {
@@ -1415,6 +1490,200 @@
       );
     }
 
+    async function compressPastedImageToBase64Limit(file) {
+      const sourceDataUrl = await fileToDataUrl(file);
+      const sourceImage = await loadImageForCompression(sourceDataUrl);
+      return compressLoadedImageToBase64Limit(sourceImage);
+    }
+
+    function normalizeAssetFileName(value) {
+      return String(value || "").trim().replace(/[\\/:*?"<>|]/g, "_") || "image.webp";
+    }
+
+    function findImageAssetByFileName(fileName) {
+      const target = String(fileName || "").trim();
+      return imageAssets.find(function (asset) { return asset.fileName === target; }) || null;
+    }
+
+    function imageEmbedText(asset) {
+      // 本文にはBase64を直接入れず、画像パネル内のファイル名だけを参照します。
+      return "[画像挿入](" + asset.fileName + ")";
+    }
+
+    function renameImageReferences(oldFileName, newFileName) {
+      syncInputsToSection();
+      const oldText = "[画像挿入](" + oldFileName + ")";
+      const newText = "[画像挿入](" + newFileName + ")";
+      sections.forEach(function (section) {
+        section.source = String(section.source || "").split(oldText).join(newText);
+      });
+      loadSelectedSection();
+    }
+
+    function ensureUniqueAssetFileName(fileName, ignoreId) {
+      const safeName = normalizeAssetFileName(fileName);
+      const duplicated = imageAssets.some(function (asset) {
+        return asset.id !== ignoreId && asset.fileName === safeName;
+      });
+      if (duplicated) throw new Error("同じファイル名「" + safeName + "」の画像がすでにあります。");
+      return safeName;
+    }
+
+    async function copyText(value) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(value);
+        return;
+      }
+      const temp = document.createElement("textarea");
+      temp.value = value;
+      temp.setAttribute("readonly", "");
+      temp.style.position = "fixed";
+      temp.style.left = "-9999px";
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand("copy");
+      temp.remove();
+    }
+
+    function renderImageList() {
+      imageList.replaceChildren();
+      if (!imageAssets.length) {
+        const empty = document.createElement("li");
+        empty.className = "image-empty";
+        empty.textContent = "読み込んだ画像はありません。";
+        imageList.appendChild(empty);
+        return;
+      }
+
+      imageAssets.forEach(function (asset, index) {
+        const li = document.createElement("li");
+        li.className = "image-item";
+
+        const thumb = document.createElement("img");
+        thumb.className = "image-thumb";
+        thumb.src = asset.dataUrl;
+        thumb.alt = asset.fileName;
+
+        const main = document.createElement("div");
+        main.className = "image-item-main";
+        const titleRow = document.createElement("div");
+        titleRow.className = "image-item-title";
+        const fileName = document.createElement("span");
+        fileName.className = "image-file-name";
+        fileName.textContent = asset.fileName;
+        titleRow.appendChild(fileName);
+
+        const meta = document.createElement("div");
+        meta.className = "image-meta";
+        meta.textContent = asset.width + " × " + asset.height + "px / Base64 " + asset.base64Length.toLocaleString("ja-JP") + "文字";
+
+        const embedRow = document.createElement("div");
+        embedRow.className = "image-embed-row";
+        const embedInput = document.createElement("input");
+        embedInput.className = "image-embed-text";
+        embedInput.type = "text";
+        embedInput.readOnly = true;
+        embedInput.value = imageEmbedText(asset);
+        embedInput.setAttribute("aria-label", asset.fileName + " の埋め込み用文章");
+        const copyButton = document.createElement("button");
+        copyButton.type = "button";
+        copyButton.className = "secondary-button";
+        copyButton.textContent = "コピー";
+        copyButton.addEventListener("click", function () {
+          copyText(embedInput.value).then(function () {
+            showStatus("埋め込み用文章をコピーしました。");
+          }).catch(function () {
+            showStatus("コピーに失敗しました。", true);
+          });
+        });
+        embedRow.append(embedInput, copyButton);
+
+        const actions = document.createElement("div");
+        actions.className = "image-item-actions";
+        const renameButton = document.createElement("button");
+        renameButton.type = "button";
+        renameButton.className = "secondary-button";
+        renameButton.textContent = "ファイル名変更";
+        renameButton.addEventListener("click", function () {
+          const next = window.prompt("新しいファイル名を入力してください。", asset.fileName);
+          if (next === null) return;
+          try {
+            const oldFileName = asset.fileName;
+            const newFileName = ensureUniqueAssetFileName(next, asset.id);
+            asset.fileName = newFileName;
+            renameImageReferences(oldFileName, newFileName);
+            renderImageList();
+            showStatus("画像ファイル名と本文中の参照名を変更しました。");
+          } catch (error) {
+            showStatus(error.message || "ファイル名を変更できませんでした。", true);
+          }
+        });
+
+        const upButton = document.createElement("button");
+        upButton.type = "button";
+        upButton.className = "secondary-button";
+        upButton.textContent = "↑ 上へ";
+        upButton.disabled = index === 0;
+        upButton.addEventListener("click", function () {
+          if (index <= 0) return;
+          const moved = imageAssets.splice(index, 1)[0];
+          imageAssets.splice(index - 1, 0, moved);
+          renderImageList();
+        });
+
+        const downButton = document.createElement("button");
+        downButton.type = "button";
+        downButton.className = "secondary-button";
+        downButton.textContent = "↓ 下へ";
+        downButton.disabled = index >= imageAssets.length - 1;
+        downButton.addEventListener("click", function () {
+          if (index >= imageAssets.length - 1) return;
+          const moved = imageAssets.splice(index, 1)[0];
+          imageAssets.splice(index + 1, 0, moved);
+          renderImageList();
+        });
+
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "danger-button";
+        deleteButton.textContent = "削除";
+        deleteButton.addEventListener("click", function () {
+          if (!window.confirm("「" + asset.fileName + "」を画像一覧から削除しますか？")) return;
+          imageAssets.splice(index, 1);
+          renderImageList();
+          showStatus("画像を削除しました。本文中に同じファイル名の参照がある場合は画像を表示できなくなります。");
+        });
+
+        actions.append(renameButton, upButton, downButton, deleteButton);
+        main.append(titleRow, meta, embedRow, actions);
+        li.append(thumb, main);
+        imageList.appendChild(li);
+      });
+    }
+
+    async function addImageFiles(files) {
+      const targets = Array.from(files || []).filter(function (file) { return file && /^image\//i.test(file.type); });
+      if (!targets.length) return;
+      showStatus(targets.length + "枚の画像をWebP圧縮しています…");
+
+      const newAssets = [];
+      for (const file of targets) {
+        const fileName = ensureUniqueAssetFileName(file.name, "");
+        const result = await compressPastedImageToBase64Limit(file);
+        newAssets.push({
+          id: "image-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8),
+          fileName: fileName,
+          dataUrl: result.dataUrl,
+          width: result.width,
+          height: result.height,
+          base64Length: result.base64Length
+        });
+      }
+      imageAssets.push.apply(imageAssets, newAssets);
+      renderImageList();
+      showStatus(newAssets.length + "枚の画像を読み込みました。すべてBase64本体18,000文字以内です。");
+    }
+
     function insertTextAtSelection(text) {
       const start = sourceText.selectionStart;
       const end = sourceText.selectionEnd;
@@ -1426,6 +1695,15 @@
       sourceText.setRangeText(insertion, start, end, "end");
       sourceText.dispatchEvent(new Event("input", { bubbles: true }));
     }
+
+    imageFileInput.addEventListener("change", function () {
+      const files = imageFileInput.files;
+      addImageFiles(files).catch(function (error) {
+        showStatus(error && error.message ? error.message : "画像の読み込みに失敗しました。", true);
+      }).finally(function () {
+        imageFileInput.value = "";
+      });
+    });
 
     sourceText.addEventListener("paste", function (event) {
       const clipboardData = event.clipboardData;
@@ -1440,14 +1718,29 @@
         event.preventDefault();
         showStatus("クリップボード画像をWebP圧縮しています…");
         Promise.all(imageFiles.map(compressPastedImageToBase64Limit)).then(function (results) {
-          const markdown = results.map(function (result) {
-            return "[画像挿入](" + result.dataUrl + ")";
-          }).join("\n\n");
-          insertTextAtSelection(markdown);
+          const addedAssets = results.map(function (result, index) {
+            let baseName = "clipboard-image-" + Date.now().toString(36) + "-" + (index + 1) + ".webp";
+            let suffix = 1;
+            while (findImageAssetByFileName(baseName)) {
+              suffix += 1;
+              baseName = "clipboard-image-" + Date.now().toString(36) + "-" + (index + 1) + "-" + suffix + ".webp";
+            }
+            return {
+              id: "image-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8),
+              fileName: baseName,
+              dataUrl: result.dataUrl,
+              width: result.width,
+              height: result.height,
+              base64Length: result.base64Length
+            };
+          });
+          imageAssets.push.apply(imageAssets, addedAssets);
+          renderImageList();
+          insertTextAtSelection(addedAssets.map(imageEmbedText).join("\n\n"));
           const longest = Math.max.apply(null, results.map(function (result) { return result.base64Length; }));
           showStatus(
             imageFiles.length +
-            "枚の画像をWebP圧縮して貼り付けました。Base64最大" +
+            "枚の画像を画像一覧へ追加し、ファイル名参照で貼り付けました。Base64最大" +
             longest.toLocaleString("ja-JP") +
             "文字 / 上限18,000文字。"
           );
@@ -1594,6 +1887,7 @@
 
     const initialData = readInitialData();
     sections = initialData.sections;
+    imageAssets = initialData.imageAssets;
     selectedIndex = 0;
     noteText.value = initialData.note;
     if (noteText.value.trim()) {
@@ -1601,6 +1895,7 @@
       noteEditButton.setAttribute("aria-expanded", "true");
     }
     loadSelectedSection();
+    renderImageList();
 
     const initialHasContent = sections.some(function (section) { return section.title.length + section.source.length >= 1; });
     if (initialData.startMode !== "editor" && initialHasContent) {
