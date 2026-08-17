@@ -1310,27 +1310,123 @@
       updateCount();
     });
 
-    sourceText.addEventListener("paste", function () {
-      window.setTimeout(function () {
-        const section = getSelectedSection();
-        if (!section) return;
+sourceText.addEventListener("paste", function () {
+  window.setTimeout(function () {
+    const section = getSelectedSection();
+    if (!section) return;
 
-        const normalized = sourceText.value.replace(/\r\n?/g, "\n");
-        const lines = normalized.split("\n");
-        const firstLine = lines[0] || "";
-        const match = firstLine.match(/^#\s+(.+?)\s*$/);
-        if (!match) return;
+    const normalized = sourceText.value.replace(/\r\n?/g, "\n");
+    const lines = normalized.split("\n");
 
-        titleInput.value = match[1].trim();
-        lines.shift();
-        while (lines.length && !lines[0].trim()) lines.shift();
-        sourceText.value = lines.join("\n");
-        syncInputsToSection();
-        updateCount();
-        renderSectionList();
-        showStatus("先頭のMarkdown見出しをページタイトルへ移動しました。");
-      }, 0);
+    // 行頭 "# " の見出し位置をすべて取得
+    const headingIndexes = [];
+    lines.forEach(function (line, index) {
+      if (/^#\s+.+?\s*$/.test(line)) {
+        headingIndexes.push(index);
+      }
     });
+
+    // "# " が1つもなければ通常の貼り付けとして終了
+    if (!headingIndexes.length) {
+      syncInputsToSection();
+      updateCount();
+      return;
+    }
+
+    const originalSelectedIndex = selectedIndex;
+    const newSections = [];
+
+    // 最初の "# " より前に文章がある場合、
+    // その部分は現在のセクションに残す
+    const firstHeadingIndex = headingIndexes[0];
+
+    if (firstHeadingIndex > 0) {
+      const beforeText = lines
+        .slice(0, firstHeadingIndex)
+        .join("\n")
+        .trim();
+
+      section.source = beforeText;
+      newSections.push(section);
+    }
+
+    // 各 "# 見出し" を新しいセクションとして生成
+    headingIndexes.forEach(function (headingIndex, position) {
+      const headingLine = lines[headingIndex];
+      const titleMatch = headingLine.match(/^#\s+(.+?)\s*$/);
+      if (!titleMatch) return;
+
+      const nextHeadingIndex =
+        position + 1 < headingIndexes.length
+          ? headingIndexes[position + 1]
+          : lines.length;
+
+      const bodyLines = lines.slice(
+        headingIndex + 1,
+        nextHeadingIndex
+      );
+
+      while (bodyLines.length && !bodyLines[0].trim()) {
+        bodyLines.shift();
+      }
+
+      while (
+        bodyLines.length &&
+        !bodyLines[bodyLines.length - 1].trim()
+      ) {
+        bodyLines.pop();
+      }
+
+      const title = titleMatch[1].trim();
+      const body = bodyLines.join("\n");
+
+      // 最初の行そのものが "# " の場合は、
+      // 現在選択中のセクションをそのまま再利用
+      if (position === 0 && firstHeadingIndex === 0) {
+        section.title = title;
+        section.source = body;
+        newSections.push(section);
+      } else {
+        newSections.push(
+          createSection(title, body, 0, true)
+        );
+      }
+    });
+
+    // 選択中の1セクションを、
+    // 分割後の複数セクションへ置き換える。
+    // 後続の既存セクションは自動的に後ろへずれる。
+    sections.splice(
+      originalSelectedIndex,
+      1,
+      ...newSections
+    );
+
+    // 分割後も先頭側のセクションを選択状態にする
+    selectedIndex = originalSelectedIndex;
+
+    loadSelectedSection();
+
+    const addedCount = Math.max(0, newSections.length - 1);
+
+    if (newSections.length > 1) {
+      showStatus(
+        "Markdownの「# 」見出しを検出し、" +
+        newSections.length +
+        "個のセクションに分割しました。" +
+        (addedCount
+          ? " 後続のセクションは" +
+            addedCount +
+            "個分後ろへ移動しました。"
+          : "")
+      );
+    } else {
+      showStatus(
+        "Markdownの「# 」見出しをページタイトルへ移動しました。"
+      );
+    }
+  }, 0);
+});
 
     document.getElementById("sampleButton").addEventListener("click", function () {
       sections = [
