@@ -291,6 +291,19 @@
       }
     }
 
+    function safeImageUrl(value) {
+      const input = String(value || "").trim();
+      if (/^data:image\/(?:png|jpe?g|gif|webp|bmp);base64,[A-Za-z0-9+/=]+$/i.test(input)) {
+        return input;
+      }
+      try {
+        const url = new URL(input, location.href);
+        return ["http:", "https:"].includes(url.protocol) ? url.href : "#";
+      } catch (error) {
+        return "#";
+      }
+    }
+
     function parseInlineMarkdown(text) {
       const codeTokens = [];
       let value = String(text).replace(/`([^`]+)`/g, function (_, code) {
@@ -300,9 +313,13 @@
       });
 
       value = escapeHtml(value);
+      // [画像挿入](data:image/...;base64,...) は画像として描画します。
+      value = value.replace(/\[画像挿入\]\((data:image\/[^\s)]+)\)/gi, function (_, url) {
+        return '<img src="' + escapeHtml(safeImageUrl(url)) + '" alt="画像挿入">';
+      });
       value = value.replace(/!\[([^\]]*)\]\(([^\s)]+)(?:\s+["']([^"']*)["'])?\)/g, function (_, alt, url, title) {
         const titleAttr = title ? ' title="' + escapeHtml(title) + '"' : "";
-        return '<img src="' + escapeHtml(safeUrl(url)) + '" alt="' + alt + '"' + titleAttr + ">";
+        return '<img src="' + escapeHtml(safeImageUrl(url)) + '" alt="' + alt + '"' + titleAttr + ">";
       });
       value = value.replace(/\[([^\]]+)\]\(([^\s)]+)(?:\s+["']([^"']*)["'])?\)/g, function (_, label, url, title) {
         const titleAttr = title ? ' title="' + escapeHtml(title) + '"' : "";
@@ -1161,6 +1178,18 @@
       return Math.max(page, Math.ceil(sectionRect.height / pageHeight), 1);
     }
 
+    function waitForImages(root) {
+      const images = Array.from(root.querySelectorAll("img"));
+      if (!images.length) return Promise.resolve();
+      return Promise.all(images.map(function (image) {
+        if (image.complete) return Promise.resolve();
+        return new Promise(function (resolve) {
+          image.addEventListener("load", resolve, { once: true });
+          image.addEventListener("error", resolve, { once: true });
+        });
+      })).then(function () {});
+    }
+
     function updatePrintTocPageNumbers() {
       const sectionNodes = Array.from(documentContent.querySelectorAll(".document-section"));
       const pageNodes = Array.from(documentContent.querySelectorAll(".toc-page"));
@@ -1199,6 +1228,7 @@
       }
       markdownHash = await calculateMarkdownHash();
       buildViewerContent();
+      await waitForImages(documentContent);
       updatePrintTocPageNumbers();
       await refreshResumeState();
       const savedData = readInitialData();
@@ -1310,123 +1340,239 @@
       updateCount();
     });
 
-sourceText.addEventListener("paste", function () {
-  window.setTimeout(function () {
-    const section = getSelectedSection();
-    if (!section) return;
+    const PASTED_IMAGE_BASE64_LIMIT = 18000;
+    const PASTED_IMAGE_COMPRESSION_STEPS = [
+      [768, 0.72], [640, 0.66], [560, 0.60], [480, 0.54], [420, 0.48],
+      [360, 0.42], [320, 0.36], [280, 0.30], [240, 0.24], [200, 0.18], [160, 0.12]
+    ];
 
-    const normalized = sourceText.value.replace(/\r\n?/g, "\n");
-    const lines = normalized.split("\n");
+    function fileToDataUrl(file) {
+      return new Promise(function (resolve, reject) {
+        const reader = new FileReader();
+        reader.onload = function () { resolve(String(reader.result || "")); };
+        reader.onerror = function () { reject(reader.error || new Error("画像をBase64へ変換できませんでした。")); };
+        reader.readAsDataURL(file);
+      });
+    }
 
-    // 行頭 "# " の見出し位置をすべて取得
-    const headingIndexes = [];
-    lines.forEach(function (line, index) {
-      if (/^#\s+.+?\s*$/.test(line)) {
-        headingIndexes.push(index);
+    function loadImageForCompression(src) {
+      return new Promise(function (resolve, reject) {
+        const image = new Image();
+        image.onload = function () { resolve(image); };
+        image.onerror = function () { reject(new Error("画像を表示できませんでした。")); };
+        image.src = src;
+      });
+    }
+
+    function getBase64Body(dataUrl) {
+      const commaIndex = String(dataUrl || "").indexOf(",");
+      return commaIndex >= 0 ? dataUrl.slice(commaIndex + 1) : "";
+    }
+
+    function renderPastedImageAsWebp(sourceImage, maxSize, quality) {
+      const width = sourceImage.naturalWidth || sourceImage.width;
+      const height = sourceImage.naturalHeight || sourceImage.height;
+      const scale = Math.min(maxSize / width, maxSize / height, 1);
+      const outputWidth = Math.max(1, Math.round(width * scale));
+      const outputHeight = Math.max(1, Math.round(height * scale));
+
+      const canvas = document.createElement("canvas");
+      canvas.width = outputWidth;
+      canvas.height = outputHeight;
+      const context = canvas.getContext("2d", { alpha: false });
+      if (!context) throw new Error("Canvasを初期化できませんでした。");
+
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, outputWidth, outputHeight);
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "high";
+      context.drawImage(sourceImage, 0, 0, outputWidth, outputHeight);
+
+      const dataUrl = canvas.toDataURL("image/webp", quality);
+      if (!dataUrl.startsWith("data:image/webp;base64,")) {
+        throw new Error("このブラウザはWebP変換に対応していません。");
       }
-    });
-
-    // "# " が1つもなければ通常の貼り付けとして終了
-    if (!headingIndexes.length) {
-      syncInputsToSection();
-      updateCount();
-      return;
+      return { dataUrl: dataUrl, width: outputWidth, height: outputHeight, maxSize: maxSize, quality: quality };
     }
 
-    const originalSelectedIndex = selectedIndex;
-    const newSections = [];
+    async function compressPastedImageToBase64Limit(file) {
+      const sourceDataUrl = await fileToDataUrl(file);
+      const sourceImage = await loadImageForCompression(sourceDataUrl);
+      let smallest = null;
 
-    // 最初の "# " より前に文章がある場合、
-    // その部分は現在のセクションに残す
-    const firstHeadingIndex = headingIndexes[0];
+      for (const step of PASTED_IMAGE_COMPRESSION_STEPS) {
+        const result = renderPastedImageAsWebp(sourceImage, step[0], step[1]);
+        const base64Length = getBase64Body(result.dataUrl).length;
+        const candidate = Object.assign({}, result, { base64Length: base64Length });
+        if (!smallest || candidate.base64Length < smallest.base64Length) smallest = candidate;
+        if (candidate.base64Length <= PASTED_IMAGE_BASE64_LIMIT) return candidate;
+      }
 
-    if (firstHeadingIndex > 0) {
-      const beforeText = lines
-        .slice(0, firstHeadingIndex)
-        .join("\n")
-        .trim();
-
-      section.source = beforeText;
-      newSections.push(section);
-    }
-
-    // 各 "# 見出し" を新しいセクションとして生成
-    headingIndexes.forEach(function (headingIndex, position) {
-      const headingLine = lines[headingIndex];
-      const titleMatch = headingLine.match(/^#\s+(.+?)\s*$/);
-      if (!titleMatch) return;
-
-      const nextHeadingIndex =
-        position + 1 < headingIndexes.length
-          ? headingIndexes[position + 1]
-          : lines.length;
-
-      const bodyLines = lines.slice(
-        headingIndex + 1,
-        nextHeadingIndex
+      throw new Error(
+        "最小設定でもBase64が" +
+        smallest.base64Length.toLocaleString("ja-JP") +
+        "文字となり、上限18,000文字を超えました。"
       );
+    }
 
-      while (bodyLines.length && !bodyLines[0].trim()) {
-        bodyLines.shift();
+    function insertTextAtSelection(text) {
+      const start = sourceText.selectionStart;
+      const end = sourceText.selectionEnd;
+      const before = sourceText.value.slice(0, start);
+      const after = sourceText.value.slice(end);
+      const prefix = before && !before.endsWith("\n") ? "\n\n" : "";
+      const suffix = after && !after.startsWith("\n") ? "\n\n" : "";
+      const insertion = prefix + text + suffix;
+      sourceText.setRangeText(insertion, start, end, "end");
+      sourceText.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    sourceText.addEventListener("paste", function (event) {
+      const clipboardData = event.clipboardData;
+      const imageFiles = clipboardData
+        ? Array.from(clipboardData.items || [])
+            .filter(function (item) { return item.kind === "file" && /^image\//i.test(item.type || ""); })
+            .map(function (item) { return item.getAsFile(); })
+            .filter(Boolean)
+        : [];
+
+      if (imageFiles.length) {
+        event.preventDefault();
+        showStatus("クリップボード画像をWebP圧縮しています…");
+        Promise.all(imageFiles.map(compressPastedImageToBase64Limit)).then(function (results) {
+          const markdown = results.map(function (result) {
+            return "[画像挿入](" + result.dataUrl + ")";
+          }).join("\n\n");
+          insertTextAtSelection(markdown);
+          const longest = Math.max.apply(null, results.map(function (result) { return result.base64Length; }));
+          showStatus(
+            imageFiles.length +
+            "枚の画像をWebP圧縮して貼り付けました。Base64最大" +
+            longest.toLocaleString("ja-JP") +
+            "文字 / 上限18,000文字。"
+          );
+        }).catch(function (error) {
+          showStatus(error && error.message ? error.message : "クリップボード画像のWebP圧縮に失敗しました。", true);
+        });
+        return;
       }
 
-      while (
-        bodyLines.length &&
-        !bodyLines[bodyLines.length - 1].trim()
-      ) {
-        bodyLines.pop();
-      }
+      window.setTimeout(function () {
+        const section = getSelectedSection();
+        if (!section) return;
 
-      const title = titleMatch[1].trim();
-      const body = bodyLines.join("\n");
+        const normalized = sourceText.value.replace(/\r\n?/g, "\n");
+        const lines = normalized.split("\n");
 
-      // 最初の行そのものが "# " の場合は、
-      // 現在選択中のセクションをそのまま再利用
-      if (position === 0 && firstHeadingIndex === 0) {
-        section.title = title;
-        section.source = body;
-        newSections.push(section);
-      } else {
-        newSections.push(
-          createSection(title, body, 0, true)
+        // 行頭 "# " の見出し位置をすべて取得
+        const headingIndexes = [];
+        lines.forEach(function (line, index) {
+          if (/^#\s+.+?\s*$/.test(line)) {
+            headingIndexes.push(index);
+          }
+        });
+
+        // "# " が1つもなければ通常の貼り付けとして終了
+        if (!headingIndexes.length) {
+          syncInputsToSection();
+          updateCount();
+          return;
+        }
+
+        const originalSelectedIndex = selectedIndex;
+        const newSections = [];
+
+        // 最初の "# " より前に文章がある場合、
+        // その部分は現在のセクションに残す
+        const firstHeadingIndex = headingIndexes[0];
+
+        if (firstHeadingIndex > 0) {
+          const beforeText = lines
+            .slice(0, firstHeadingIndex)
+            .join("\n")
+            .trim();
+
+          section.source = beforeText;
+          newSections.push(section);
+        }
+
+        // 各 "# 見出し" を新しいセクションとして生成
+        headingIndexes.forEach(function (headingIndex, position) {
+          const headingLine = lines[headingIndex];
+          const titleMatch = headingLine.match(/^#\s+(.+?)\s*$/);
+          if (!titleMatch) return;
+
+          const nextHeadingIndex =
+            position + 1 < headingIndexes.length
+              ? headingIndexes[position + 1]
+              : lines.length;
+
+          const bodyLines = lines.slice(
+            headingIndex + 1,
+            nextHeadingIndex
+          );
+
+          while (bodyLines.length && !bodyLines[0].trim()) {
+            bodyLines.shift();
+          }
+
+          while (
+            bodyLines.length &&
+            !bodyLines[bodyLines.length - 1].trim()
+          ) {
+            bodyLines.pop();
+          }
+
+          const title = titleMatch[1].trim();
+          const body = bodyLines.join("\n");
+
+          // 最初の行そのものが "# " の場合は、
+          // 現在選択中のセクションをそのまま再利用
+          if (position === 0 && firstHeadingIndex === 0) {
+            section.title = title;
+            section.source = body;
+            newSections.push(section);
+          } else {
+            newSections.push(
+              createSection(title, body, 0, true)
+            );
+          }
+        });
+
+        // 選択中の1セクションを、
+        // 分割後の複数セクションへ置き換える。
+        // 後続の既存セクションは自動的に後ろへずれる。
+        sections.splice(
+          originalSelectedIndex,
+          1,
+          ...newSections
         );
-      }
+
+        // 分割後も先頭側のセクションを選択状態にする
+        selectedIndex = originalSelectedIndex;
+
+        loadSelectedSection();
+
+        const addedCount = Math.max(0, newSections.length - 1);
+
+        if (newSections.length > 1) {
+          showStatus(
+            "Markdownの「# 」見出しを検出し、" +
+            newSections.length +
+            "個のセクションに分割しました。" +
+            (addedCount
+              ? " 後続のセクションは" +
+                addedCount +
+                "個分後ろへ移動しました。"
+              : "")
+          );
+        } else {
+          showStatus(
+            "Markdownの「# 」見出しをページタイトルへ移動しました。"
+          );
+        }
+      }, 0);
     });
-
-    // 選択中の1セクションを、
-    // 分割後の複数セクションへ置き換える。
-    // 後続の既存セクションは自動的に後ろへずれる。
-    sections.splice(
-      originalSelectedIndex,
-      1,
-      ...newSections
-    );
-
-    // 分割後も先頭側のセクションを選択状態にする
-    selectedIndex = originalSelectedIndex;
-
-    loadSelectedSection();
-
-    const addedCount = Math.max(0, newSections.length - 1);
-
-    if (newSections.length > 1) {
-      showStatus(
-        "Markdownの「# 」見出しを検出し、" +
-        newSections.length +
-        "個のセクションに分割しました。" +
-        (addedCount
-          ? " 後続のセクションは" +
-            addedCount +
-            "個分後ろへ移動しました。"
-          : "")
-      );
-    } else {
-      showStatus(
-        "Markdownの「# 」見出しをページタイトルへ移動しました。"
-      );
-    }
-  }, 0);
-});
 
     document.getElementById("sampleButton").addEventListener("click", function () {
       sections = [
