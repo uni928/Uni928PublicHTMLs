@@ -1205,5 +1205,1110 @@ function startDiscussion() {
   }
 })();
 </script>
+  <script>
+/*
+  ============================================================
+  ワンナイト人狼 共有URL拡張
+  ============================================================
+
+  実装内容
+  - URLの ?share= に保存情報をBase64URL形式で格納
+  - 共有URLコピーボタンを追加
+  - ゲーム開始時に
+      ・1台で回して遊ぶ
+      ・共有URLを発行して遊ぶ
+    を選択
+  - shareパラメータ付きURLを開いた場合、読み込み確認
+  - 開始済みゲームの場合、自分の名前を1人だけ選択
+  - 一度選択したら別プレイヤーへ変更不可
+  - 自分の役職・能力結果だけ表示
+  - 議論画面の役職をタッチすると役職説明を表示
+
+  注意:
+  Base64は暗号化ではありません。
+  URLをBase64デコードするとゲーム情報そのものを確認できます。
+*/
+
+(() => {
+  const SHARE_PARAM = 'share';
+
+  const shareState = {
+    mode: 'local',
+    selectedPlayerId: null,
+    loadedFromShare: false
+  };
+
+  /*
+    ============================================================
+    UI追加
+    ============================================================
+  */
+
+  const style = document.createElement('style');
+
+  style.textContent = `
+    @layer components {
+      /* 共有機能: トップバーの共有URLボタン */
+      .share-copy-btn {
+        white-space: nowrap;
+      }
+
+      /* 共有機能: ゲーム開始方法選択 */
+      .share-mode-actions {
+        display: grid;
+        gap: 10px;
+      }
+
+      /* 共有機能: プレイヤー選択 */
+      .share-player-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .share-player-btn {
+        width: 100%;
+        min-height: 50px;
+      }
+
+      /* 共有機能: 個人用役職画面 */
+      .shared-role-panel {
+        text-align: center;
+      }
+
+      .shared-role-name {
+        margin: 16px 0;
+        font-size: clamp(28px, 8vw, 48px);
+        font-weight: 900;
+        color: var(--accent);
+      }
+
+      .shared-player-name {
+        font-size: clamp(24px, 6vw, 34px);
+        font-weight: 900;
+      }
+
+      /* 議論画面: タッチ可能な役職 */
+      .discussion-role-clickable {
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .discussion-role-clickable:focus-visible {
+        outline: 3px solid var(--accent-2);
+        outline-offset: 2px;
+      }
+    }
+  `;
+
+  document.head.append(style);
+
+  /*
+    ============================================================
+    トップバーへ「共有URLコピー」を追加
+    ============================================================
+  */
+
+  const topbar = document.querySelector('.topbar');
+
+  const topActions = document.createElement('div');
+  topActions.className = 'actions';
+
+  const originalHomeBtn = document.getElementById('homeBtn');
+
+  const shareCopyBtn = document.createElement('button');
+  shareCopyBtn.type = 'button';
+  shareCopyBtn.className = 'btn small secondary share-copy-btn';
+  shareCopyBtn.textContent = '共有URLコピー';
+  shareCopyBtn.hidden = true;
+
+  if (originalHomeBtn) {
+    originalHomeBtn.before(topActions);
+    topActions.append(shareCopyBtn);
+    topActions.append(originalHomeBtn);
+  } else {
+    topbar.append(topActions);
+    topActions.append(shareCopyBtn);
+  }
+
+  /*
+    ============================================================
+    共有開始方法ダイアログ
+    ============================================================
+  */
+
+  const modeDialog = document.createElement('dialog');
+
+  modeDialog.innerHTML = `
+    <div class="dialog-body">
+      <h2>遊び方を選択</h2>
+
+      <p>
+        1台の端末を順番に回して遊ぶか、
+        各プレイヤーが共有URLから自分の役職を確認するかを選んでください。
+      </p>
+
+      <div class="share-mode-actions">
+        <button
+          type="button"
+          class="btn primary wide"
+          id="shareModeLocalBtn"
+        >
+          1台で回して遊ぶ
+        </button>
+
+        <button
+          type="button"
+          class="btn good wide"
+          id="shareModeUrlBtn"
+        >
+          共有URLを発行して遊ぶ
+        </button>
+
+        <button
+          type="button"
+          class="btn secondary wide"
+          id="shareModeCancelBtn"
+        >
+          キャンセル
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.append(modeDialog);
+
+  /*
+    ============================================================
+    共有URL読み込み確認ダイアログ
+    ============================================================
+  */
+
+  const loadDialog = document.createElement('dialog');
+
+  loadDialog.innerHTML = `
+    <div class="dialog-body">
+      <h2>共有データを読み込みますか？</h2>
+
+      <p>
+        URLにワンナイト人狼の共有データが含まれています。
+        読み込むと、このURLに保存されたゲーム情報を使用します。
+      </p>
+
+      <div class="actions">
+        <button
+          type="button"
+          class="btn secondary"
+          id="shareLoadCancelBtn"
+        >
+          読み込まない
+        </button>
+
+        <button
+          type="button"
+          class="btn primary"
+          id="shareLoadOkBtn"
+        >
+          読み込む
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.append(loadDialog);
+
+  /*
+    ============================================================
+    プレイヤー選択ダイアログ
+    ============================================================
+  */
+
+  const playerDialog = document.createElement('dialog');
+
+  playerDialog.innerHTML = `
+    <div class="dialog-body">
+      <h2>あなたの名前を選択</h2>
+
+      <p>
+        自分の名前を選択してください。
+        <strong>選択後は別のプレイヤーへ変更できません。</strong>
+      </p>
+
+      <div
+        class="share-player-list"
+        id="sharePlayerList"
+      ></div>
+    </div>
+  `;
+
+  document.body.append(playerDialog);
+
+  /*
+    ============================================================
+    共有プレイヤー専用画面
+    ============================================================
+  */
+
+  const sharedScreen = document.createElement('section');
+
+  sharedScreen.className = 'screen';
+  sharedScreen.id = 'screen-shared-player';
+
+  sharedScreen.innerHTML = `
+    <div class="card shared-role-panel">
+      <p class="muted">共有URLから参加中</p>
+
+      <div
+        class="shared-player-name"
+        id="sharedPlayerName"
+      ></div>
+
+      <div
+        class="shared-role-name"
+        id="sharedRoleName"
+      ></div>
+
+      <div
+        class="status-box"
+        id="sharedRoleDescription"
+      ></div>
+
+      <div class="actions mt">
+        <button
+          type="button"
+          class="btn secondary wide"
+          id="sharedRoleInfoBtn"
+        >
+          役職の説明を見る
+        </button>
+
+        <button
+          type="button"
+          class="btn primary wide"
+          id="sharedDiscussionBtn"
+        >
+          議論タイムへ
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.querySelector('.app').append(sharedScreen);
+
+  /*
+    ============================================================
+    Base64URL
+    ============================================================
+  */
+
+  function encodeBase64Url(data) {
+    const json = JSON.stringify(data);
+    const bytes = new TextEncoder().encode(json);
+
+    let binary = '';
+
+    for (const byte of bytes) {
+      binary += String.fromCharCode(byte);
+    }
+
+    return btoa(binary)
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/g, '');
+  }
+
+  function decodeBase64Url(value) {
+    let base64 = value
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+
+    while (base64.length % 4) {
+      base64 += '=';
+    }
+
+    const binary = atob(base64);
+
+    const bytes = Uint8Array.from(
+      binary,
+      char => char.charCodeAt(0)
+    );
+
+    const json = new TextDecoder().decode(bytes);
+
+    return JSON.parse(json);
+  }
+
+  /*
+    ============================================================
+    URLへ保存する情報
+    ============================================================
+  */
+
+  function buildShareData() {
+    const activeScreen = document.querySelector('.screen.is-active');
+
+    return {
+      version: 1,
+
+      createdAt: Date.now(),
+
+      players: state.players,
+
+      stats: state.stats,
+
+      savedSetup: state.savedSetup,
+
+      setup: state.setup,
+
+      game: state.game,
+
+      currentScreen:
+        activeScreen?.id?.replace('screen-', '') || 'home'
+    };
+  }
+
+  function buildShareUrl() {
+    const data = buildShareData();
+
+    const encoded = encodeBase64Url(data);
+
+    const url = new URL(location.href);
+
+    url.searchParams.set(
+      SHARE_PARAM,
+      encoded
+    );
+
+    /*
+      URL内に過去のハッシュ等がある場合は残さない
+    */
+    url.hash = '';
+
+    return url.toString();
+  }
+
+  /*
+    ============================================================
+    クリップボードコピー
+    ============================================================
+  */
+
+  async function copyText(text) {
+    if (
+      navigator.clipboard &&
+      window.isSecureContext
+    ) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    const textarea = document.createElement('textarea');
+
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+
+    document.body.append(textarea);
+
+    textarea.select();
+
+    document.execCommand('copy');
+
+    textarea.remove();
+  }
+
+  async function copyShareUrl() {
+    try {
+      const url = buildShareUrl();
+
+      await copyText(url);
+
+      showInfo(
+        'コピーしました',
+        '共有用URLをクリップボードへコピーしました。'
+      );
+    } catch (error) {
+      console.error(error);
+
+      showInfo(
+        'コピーに失敗しました',
+        '共有URLをコピーできませんでした。'
+      );
+    }
+  }
+
+  shareCopyBtn.addEventListener(
+    'click',
+    copyShareUrl
+  );
+
+  /*
+    ============================================================
+    ゲーム開始処理を拡張
+    ============================================================
+  */
+
+  const originalCreateGame = createGame;
+
+  /*
+    元のstartGameBtnには既にcreateGameが登録されています。
+
+    そのイベントを削除するため、
+    ボタン自体をcloneNode()で置き換えます。
+  */
+
+  const oldStartButton =
+    document.getElementById('startGameBtn');
+
+  const newStartButton =
+    oldStartButton.cloneNode(true);
+
+  oldStartButton.replaceWith(
+    newStartButton
+  );
+
+  newStartButton.addEventListener(
+    'click',
+    () => {
+      modeDialog.showModal();
+    }
+  );
+
+  /*
+    ============================================================
+    1台モード
+    ============================================================
+  */
+
+  document
+    .getElementById('shareModeLocalBtn')
+    .addEventListener('click', () => {
+      modeDialog.close();
+
+      shareState.mode = 'local';
+
+      shareCopyBtn.hidden = false;
+
+      originalCreateGame();
+    });
+
+  /*
+    ============================================================
+    共有URLモード
+    ============================================================
+  */
+
+  document
+    .getElementById('shareModeUrlBtn')
+    .addEventListener(
+      'click',
+      async () => {
+        modeDialog.close();
+
+        shareState.mode = 'share';
+
+        /*
+          先にゲームを生成します。
+
+          これにより、
+          - 役職
+          - 能力結果
+          - 村長
+          - 最終役職
+          なども共有URLへ入ります。
+        */
+        originalCreateGame();
+
+        shareCopyBtn.hidden = false;
+
+        try {
+          const url = buildShareUrl();
+
+          await copyText(url);
+
+          showInfo(
+            '共有URLを発行しました',
+            '共有URLをコピーしました。各プレイヤーへ送ってください。'
+          );
+        } catch (error) {
+          console.error(error);
+
+          showInfo(
+            '共有URLの作成に失敗しました',
+            '共有URLを作成できませんでした。'
+          );
+        }
+      }
+    );
+
+  document
+    .getElementById('shareModeCancelBtn')
+    .addEventListener(
+      'click',
+      () => {
+        modeDialog.close();
+      }
+    );
+
+  /*
+    ============================================================
+    次のゲーム
+
+    共有モードの場合は、
+    次のゲーム生成後にURLを更新できるようにします。
+    ============================================================
+  */
+
+  const oldNextGameButton =
+    document.getElementById('nextGameBtn');
+
+  const newNextGameButton =
+    oldNextGameButton.cloneNode(true);
+
+  oldNextGameButton.replaceWith(
+    newNextGameButton
+  );
+
+  newNextGameButton.addEventListener(
+    'click',
+    async () => {
+      originalCreateGame();
+
+      if (shareState.mode === 'share') {
+        shareCopyBtn.hidden = false;
+
+        try {
+          await copyText(
+            buildShareUrl()
+          );
+
+          showInfo(
+            '次のゲームを開始しました',
+            '新しい共有URLもクリップボードへコピーしました。'
+          );
+        } catch (error) {
+          console.error(error);
+        }
+      }
+    }
+  );
+
+  /*
+    ============================================================
+    共有データ読み込み
+    ============================================================
+  */
+
+  let pendingShareData = null;
+
+  function readShareParameter() {
+    const params =
+      new URLSearchParams(location.search);
+
+    const encoded =
+      params.get(SHARE_PARAM);
+
+    if (!encoded) {
+      return null;
+    }
+
+    try {
+      return decodeBase64Url(encoded);
+    } catch (error) {
+      console.error(
+        '共有データのデコードに失敗しました。',
+        error
+      );
+
+      return null;
+    }
+  }
+
+  function validateShareData(data) {
+    if (
+      !data ||
+      typeof data !== 'object'
+    ) {
+      return false;
+    }
+
+    if (!Array.isArray(data.players)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /*
+    ============================================================
+    共有データ適用
+    ============================================================
+  */
+
+  async function applyShareData(data) {
+    state.players =
+      Array.isArray(data.players)
+        ? data.players
+        : [];
+
+    state.stats =
+      data.stats &&
+      typeof data.stats === 'object'
+        ? data.stats
+        : {};
+
+    state.savedSetup =
+      data.savedSetup || null;
+
+    state.setup =
+      data.setup || null;
+
+    state.game =
+      data.game || null;
+
+    ensureDefaultPlayers();
+    ensureStats();
+
+    /*
+      共有データは端末へ保存します。
+
+      ただし、確認ダイアログで
+      「読み込む」が押された場合のみ実行されます。
+    */
+    await dbSet(
+      'players',
+      state.players
+    );
+
+    await dbSet(
+      'stats',
+      state.stats
+    );
+
+    if (state.savedSetup) {
+      await dbSet(
+        'setupConfig',
+        state.savedSetup
+      );
+    }
+
+    shareState.mode = 'share';
+
+    shareState.loadedFromShare = true;
+
+    shareCopyBtn.hidden = false;
+
+    /*
+      ゲーム開始済みの場合は、
+      通常のターン画面へは行かせません。
+
+      自分の名前選択へ移動します。
+    */
+    if (
+      state.game &&
+      Array.isArray(state.game.players) &&
+      state.game.players.length
+    ) {
+      openSharedPlayerSelection();
+      return;
+    }
+
+    /*
+      ゲーム開始前の共有URLなら
+      条件設定画面へ。
+    */
+    prepareSetup();
+  }
+
+  /*
+    ============================================================
+    自分の名前選択
+    ============================================================
+  */
+
+  function openSharedPlayerSelection() {
+    const wrap =
+      document.getElementById(
+        'sharePlayerList'
+      );
+
+    wrap.innerHTML = '';
+
+    state.game.players.forEach(player => {
+      const button =
+        document.createElement('button');
+
+      button.type = 'button';
+
+      button.className =
+        'btn secondary share-player-btn';
+
+      button.textContent =
+        player.name;
+
+      button.addEventListener(
+        'click',
+        () => {
+          /*
+            一度選択したら
+            変更できないようにします。
+          */
+          if (
+            shareState.selectedPlayerId
+          ) {
+            return;
+          }
+
+          askConfirm(
+            '本人確認',
+            `${player.name}さんで間違いありませんか？ 一度選択すると変更できません。`,
+            () => {
+              shareState.selectedPlayerId =
+                player.id;
+
+              playerDialog.close();
+
+              showSharedPlayer(
+                player.id
+              );
+            }
+          );
+        }
+      );
+
+      wrap.append(button);
+    });
+
+    playerDialog.showModal();
+  }
+
+  /*
+    ============================================================
+    自分の役職表示
+    ============================================================
+  */
+
+  function showSharedPlayer(playerId) {
+    const player =
+      state.game.players.find(
+        p => p.id === playerId
+      );
+
+    if (!player) {
+      showInfo(
+        'プレイヤー情報がありません',
+        '共有データ内にプレイヤー情報がありません。'
+      );
+
+      return;
+    }
+
+    document.getElementById(
+      'sharedPlayerName'
+    ).textContent =
+      `${player.name}さん`;
+
+    document.getElementById(
+      'sharedRoleName'
+    ).textContent =
+      `あなたは「${roleDefs[player.initialRole].name}」です`;
+
+    document.getElementById(
+      'sharedRoleDescription'
+    ).textContent =
+      player.actionText;
+
+    const roleInfoButton =
+      document.getElementById(
+        'sharedRoleInfoBtn'
+      );
+
+    roleInfoButton.onclick =
+      () => {
+        const def =
+          roleDefs[player.initialRole];
+
+        showInfo(
+          def.name,
+          def.info
+        );
+      };
+
+    showScreen(
+      'shared-player'
+    );
+  }
+
+  /*
+    ============================================================
+    共有画面 → 議論タイム
+    ============================================================
+  */
+
+  document
+    .getElementById(
+      'sharedDiscussionBtn'
+    )
+    .addEventListener(
+      'click',
+      () => {
+        startDiscussion();
+      }
+    );
+
+  /*
+    ============================================================
+    共有URLから開いた場合のホームボタン制御
+
+    共有URLから参加したプレイヤーが
+    他プレイヤーの情報を通常画面経由で
+    見られないようにします。
+    ============================================================
+  */
+
+  if (originalHomeBtn) {
+    originalHomeBtn.addEventListener(
+      'click',
+      event => {
+        if (
+          !shareState.loadedFromShare ||
+          !shareState.selectedPlayerId
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        showSharedPlayer(
+          shareState.selectedPlayerId
+        );
+      },
+      true
+    );
+  }
+
+  /*
+    ============================================================
+    議論タイムの役職タッチ
+    ============================================================
+  */
+
+  const originalStartDiscussion =
+    startDiscussion;
+
+  startDiscussion =
+    function() {
+      originalStartDiscussion();
+
+      const roles =
+        document.querySelectorAll(
+          '#discussionRoles .pill'
+        );
+
+      /*
+        DOMに表示されている順番と
+        roleCountsの解決順を合わせます。
+      */
+      const ordered =
+        getOrderedRoleEntries(
+          state.setup.counts
+        );
+
+      roles.forEach(
+        (element, index) => {
+          const entry =
+            ordered[index];
+
+          if (!entry) {
+            return;
+          }
+
+          const roleKey =
+            entry[0];
+
+          const def =
+            roleDefs[roleKey];
+
+          element.classList.add(
+            'discussion-role-clickable'
+          );
+
+          element.tabIndex = 0;
+
+          element.setAttribute(
+            'role',
+            'button'
+          );
+
+          element.setAttribute(
+            'aria-label',
+            `${def.name}の説明を見る`
+          );
+
+          const openInfo =
+            () => {
+              showInfo(
+                def.name,
+                def.info
+              );
+            };
+
+          element.addEventListener(
+            'click',
+            openInfo
+          );
+
+          element.addEventListener(
+            'keydown',
+            event => {
+              if (
+                event.key === 'Enter' ||
+                event.key === ' '
+              ) {
+                event.preventDefault();
+
+                openInfo();
+              }
+            }
+          );
+        }
+      );
+    };
+
+  /*
+    ============================================================
+    初期化完了待ち
+    ============================================================
+  */
+
+  async function waitForDatabase() {
+    for (
+      let i = 0;
+      i < 200;
+      i++
+    ) {
+      if (state.db) {
+        return;
+      }
+
+      await new Promise(
+        resolve =>
+          setTimeout(
+            resolve,
+            25
+          )
+      );
+    }
+
+    throw new Error(
+      'IndexedDBの初期化待ちがタイムアウトしました。'
+    );
+  }
+
+  async function initializeShareFeature() {
+    await waitForDatabase();
+
+    const data =
+      readShareParameter();
+
+    if (!data) {
+      return;
+    }
+
+    if (!validateShareData(data)) {
+      showInfo(
+        '共有URLを読み込めません',
+        '共有データの形式が正しくありません。'
+      );
+
+      return;
+    }
+
+    pendingShareData = data;
+
+    loadDialog.showModal();
+  }
+
+  /*
+    ============================================================
+    読み込まない
+    ============================================================
+  */
+
+  document
+    .getElementById(
+      'shareLoadCancelBtn'
+    )
+    .addEventListener(
+      'click',
+      () => {
+        loadDialog.close();
+
+        pendingShareData = null;
+
+        /*
+          shareパラメータだけURLから削除
+        */
+        const url =
+          new URL(location.href);
+
+        url.searchParams.delete(
+          SHARE_PARAM
+        );
+
+        history.replaceState(
+          null,
+          '',
+          url.toString()
+        );
+      }
+    );
+
+  /*
+    ============================================================
+    読み込む
+    ============================================================
+  */
+
+  document
+    .getElementById(
+      'shareLoadOkBtn'
+    )
+    .addEventListener(
+      'click',
+      async () => {
+        if (!pendingShareData) {
+          return;
+        }
+
+        loadDialog.close();
+
+        try {
+          await applyShareData(
+            pendingShareData
+          );
+        } catch (error) {
+          console.error(error);
+
+          showInfo(
+            '読み込みに失敗しました',
+            '共有ゲームデータを読み込めませんでした。'
+          );
+        }
+
+        pendingShareData = null;
+      }
+    );
+
+  initializeShareFeature()
+    .catch(error => {
+      console.error(
+        '共有機能の初期化に失敗しました。',
+        error
+      );
+    });
+})();
+  </script>
 </body>
 </html>
