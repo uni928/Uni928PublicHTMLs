@@ -468,7 +468,7 @@
       werewolf: { name: '人狼', min: 0, max: 6, team: 'wolf', actualWolf: true, info: '人狼陣営です。村人陣営は、人狼・大狼・スーパー大狼のいずれかを処刑する必要があります。' },
       direWolf: { name: '大狼', min: 0, max: 3, team: 'wolf', actualWolf: true, info: '人狼です。ランダムな他プレイヤー1人が人狼系か、それ以外かを確認します。狂人は村人判定になります。' },
       superDireWolf: { name: 'スーパー大狼', min: 0, max: 3, team: 'wolf', actualWolf: true, info: '人狼です。ランダムな他プレイヤー1人の役職を、役職名まで確認します。' },
-      seer: { name: '占い師', min: 0, max: 3, team: 'village', info: 'ランダムな他プレイヤー1人が人狼系か、それ以外かを確認します。狂人は村人判定になります。' },
+      seer: { name: '占い師', min: 0, max: 3, team: 'village', info: 'ランダムな他プレイヤー1人が人狼系か、それ以外かを確認します。狂人ときつねは村人判定になります。' },
       superSeer: { name: 'スーパー占い師', min: 0, max: 3, team: 'village', info: 'ランダムな他プレイヤー1人の役職を、役職名まで確認します。' },
       robber: { name: '怪盗', min: 0, max: 3, team: 'village', info: 'ランダムな他プレイヤー1人と役職を交換します。勝敗は交換後の役職で判定します。' },
       entertainer: { name: '娯楽主義者', min: 0, max: 3, team: 'village', info: '自分以外のランダムな2人の役職を入れ替えます。入れ替えた2人のプレイヤー名は分かりますが、役職は分かりません。' },
@@ -868,7 +868,7 @@
           } else if (role === 'superHunter') {
             p.actionText = '処刑された場合、全プレイヤーの最終役職を確認してから1人を処刑し返せます。';
           } else if (role === 'fox') {
-            p.actionText = `処刑された場合、最大${Math.ceil(g.players.length/2)}人を処刑し返せます。`;
+            p.actionText = `処刑された場合、最大${Math.ceil(g.players.length/2)}人を処刑し返さなくてはなりません。占い結果は村人判定になります。`;
           } else if (role === 'madman') {
             p.actionText = 'あなたは狂人です。人狼陣営の勝利を目指してください。占い結果は村人判定になります。';
           } else if (role === 'tanner') {
@@ -1193,7 +1193,7 @@ function startDiscussion() {
     if (!def) continue;
 
     const abilityText = def.info || '';
-    const madmanNote = roleKey === 'madman'
+    const madmanNote = (roleKey === 'madman' || roleKey === 'fox')
       ? '\n\n【占い判定】占い師・大狼からは「村人判定」になります。スーパー占い師・スーパー大狼には役職名まで確認されます。'
       : '';
 
