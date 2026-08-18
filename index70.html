@@ -1501,13 +1501,22 @@ function startDiscussion() {
     ============================================================
   */
 
-  function encodeBase64Url(data) {
+  async function encodeBase64Url(data) {
     const json = JSON.stringify(data);
     const bytes = new TextEncoder().encode(json);
 
+    // JSONをgzip圧縮してからBase64URLへ変換します。
+    const compressedStream = new Blob([bytes])
+      .stream()
+      .pipeThrough(new CompressionStream('gzip'));
+
+    const compressed = new Uint8Array(
+      await new Response(compressedStream).arrayBuffer()
+    );
+
     let binary = '';
 
-    for (const byte of bytes) {
+    for (const byte of compressed) {
       binary += String.fromCharCode(byte);
     }
 
@@ -1517,8 +1526,8 @@ function startDiscussion() {
       .replace(/=+$/g, '');
   }
 
-  function decodeBase64Url(value) {
-    let base64 = value
+  async function decodeBase64Url(value) {
+    let base64 = String(value)
       .replace(/-/g, '+')
       .replace(/_/g, '/');
 
@@ -1528,14 +1537,29 @@ function startDiscussion() {
 
     const binary = atob(base64);
 
-    const bytes = Uint8Array.from(
+    const compressed = Uint8Array.from(
       binary,
       char => char.charCodeAt(0)
     );
 
-    const json = new TextDecoder().decode(bytes);
+    try {
+      // 新形式: Base64URLから戻したgzipデータを展開します。
+      const decompressedStream = new Blob([compressed])
+        .stream()
+        .pipeThrough(new DecompressionStream('gzip'));
 
-    return JSON.parse(json);
+      const decompressed = new Uint8Array(
+        await new Response(decompressedStream).arrayBuffer()
+      );
+
+      const json = new TextDecoder().decode(decompressed);
+
+      return JSON.parse(json);
+    } catch (error) {
+      // 旧形式との互換: gzip圧縮前のBase64URLも読み込めるようにします。
+      const json = new TextDecoder().decode(compressed);
+      return JSON.parse(json);
+    }
   }
 
   /*
@@ -1567,10 +1591,10 @@ function startDiscussion() {
     };
   }
 
-  function buildShareUrl() {
+  async function buildShareUrl() {
     const data = buildShareData();
 
-    const encoded = encodeBase64Url(data);
+    const encoded = await encodeBase64Url(data);
 
     const url = new URL(location.href);
 
@@ -1619,7 +1643,7 @@ function startDiscussion() {
 
   async function copyShareUrl() {
     try {
-      const url = buildShareUrl();
+      const url = await buildShareUrl();
 
       await copyText(url);
 
@@ -1722,7 +1746,7 @@ function startDiscussion() {
         shareCopyBtn.hidden = false;
 
         try {
-          const url = buildShareUrl();
+          const url = await buildShareUrl();
 
           await copyText(url);
 
@@ -1779,7 +1803,7 @@ function startDiscussion() {
 
         try {
           await copyText(
-            buildShareUrl()
+            await buildShareUrl()
           );
 
           showInfo(
@@ -1801,7 +1825,7 @@ function startDiscussion() {
 
   let pendingShareData = null;
 
-  function readShareParameter() {
+  async function readShareParameter() {
     const params =
       new URLSearchParams(location.search);
 
@@ -1813,7 +1837,7 @@ function startDiscussion() {
     }
 
     try {
-      return decodeBase64Url(encoded);
+      return await decodeBase64Url(encoded);
     } catch (error) {
       console.error(
         '共有データのデコードに失敗しました。',
@@ -2210,7 +2234,7 @@ function startDiscussion() {
     await waitForDatabase();
 
     const data =
-      readShareParameter();
+      await readShareParameter();
 
     if (!data) {
       return;
@@ -2415,13 +2439,22 @@ function startDiscussion() {
     return JSON.parse(JSON.stringify(value));
   }
 
-  function encodeBase64Url(data) {
+  async function encodeBase64Url(data) {
     const json = JSON.stringify(data);
     const bytes = new TextEncoder().encode(json);
 
+    // JSONをgzip圧縮してからBase64URLへ変換します。
+    const compressedStream = new Blob([bytes])
+      .stream()
+      .pipeThrough(new CompressionStream('gzip'));
+
+    const compressed = new Uint8Array(
+      await new Response(compressedStream).arrayBuffer()
+    );
+
     let binary = '';
 
-    for (const byte of bytes) {
+    for (const byte of compressed) {
       binary += String.fromCharCode(byte);
     }
 
@@ -2431,7 +2464,7 @@ function startDiscussion() {
       .replace(/=+$/g, '');
   }
 
-  function decodeBase64Url(value) {
+  async function decodeBase64Url(value) {
     let base64 = String(value)
       .replace(/-/g, '+')
       .replace(/_/g, '/');
@@ -2442,14 +2475,30 @@ function startDiscussion() {
 
     const binary = atob(base64);
 
-    const bytes = Uint8Array.from(
+    const compressed = Uint8Array.from(
       binary,
       char => char.charCodeAt(0)
     );
 
-    return JSON.parse(
-      new TextDecoder().decode(bytes)
-    );
+    try {
+      // 新形式: Base64URLから戻したgzipデータを展開します。
+      const decompressedStream = new Blob([compressed])
+        .stream()
+        .pipeThrough(new DecompressionStream('gzip'));
+
+      const decompressed = new Uint8Array(
+        await new Response(decompressedStream).arrayBuffer()
+      );
+
+      return JSON.parse(
+        new TextDecoder().decode(decompressed)
+      );
+    } catch (error) {
+      // 旧形式との互換: gzip圧縮前のBase64URLも読み込めるようにします。
+      return JSON.parse(
+        new TextDecoder().decode(compressed)
+      );
+    }
   }
 
   async function copyText(text) {
@@ -2543,14 +2592,17 @@ function startDiscussion() {
     };
   }
 
-  function buildConfigUrl() {
+  async function buildConfigUrl() {
     const url = cleanUrl();
+
+    const encoded =
+      await encodeBase64Url(
+        buildConfigExportData()
+      );
 
     url.searchParams.set(
       CONFIG_PARAM,
-      encodeBase64Url(
-        buildConfigExportData()
-      )
+      encoded
     );
 
     return url.toString();
@@ -2559,7 +2611,7 @@ function startDiscussion() {
   async function copyConfigUrl() {
     try {
       await copyText(
-        buildConfigUrl()
+        await buildConfigUrl()
       );
 
       showInfo(
@@ -3566,7 +3618,7 @@ function startDiscussion() {
     ============================================================
   */
 
-  function readConfigUrlData() {
+  async function readConfigUrlData() {
     const params =
       new URLSearchParams(
         location.search
@@ -3582,7 +3634,7 @@ function startDiscussion() {
     }
 
     try {
-      return decodeBase64Url(
+      return await decodeBase64Url(
         config
       );
     } catch (error) {
@@ -3702,7 +3754,7 @@ function startDiscussion() {
     await waitForDatabase();
 
     const data =
-      readConfigUrlData();
+      await readConfigUrlData();
 
     if (data === null) {
       return;
