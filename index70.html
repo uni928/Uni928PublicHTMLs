@@ -1730,6 +1730,8 @@ function startDiscussion() {
             '共有URLを発行しました',
             '共有URLをコピーしました。各プレイヤーへ送ってください。'
           );
+
+window.location.href = url;
         } catch (error) {
           console.error(error);
 
@@ -2914,9 +2916,12 @@ function startDiscussion() {
         ).textContent =
           '現在の設定をデッキ保存';
 
+        const decks =
+          await getDecks();
+
         document.getElementById(
           'deckNameInput'
-        ).value = '';
+        ).value = "デッキ" + (decks.length + 1);
       }
 
       deckNameDialog.showModal();
