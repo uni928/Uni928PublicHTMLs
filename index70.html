@@ -2310,5 +2310,1426 @@ function startDiscussion() {
     });
 })();
   </script>
+<script>
+(() => {
+  const CONFIG_PARAM = 'config';
+  const DECK_DB_KEY = 'savedDecks';
+
+  const extensionState = {
+    pendingConfigData: null,
+    editingDeckId: null
+  };
+
+  /*
+    ============================================================
+    CSS
+    ============================================================
+  */
+
+  const style = document.createElement('style');
+
+  style.textContent = `
+    @layer components {
+      /* デッキ機能 */
+      .deck-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .deck-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .deck-item {
+        display: grid;
+        gap: 10px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #fff;
+      }
+
+      .deck-item-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .deck-item-name {
+        font-size: 18px;
+        font-weight: 900;
+      }
+
+      .deck-item-summary {
+        color: var(--muted);
+        line-height: 1.6;
+        font-size: 14px;
+      }
+
+      .deck-item-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+
+      /* 議論中の役職説明 */
+      .discussion-role-clickable {
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .discussion-role-clickable:focus-visible {
+        outline: 3px solid var(--accent-2);
+        outline-offset: 2px;
+      }
+    }
+
+    @layer layout {
+      /* デッキ一覧のモバイル調整 */
+      @media (max-width: 600px) {
+        .deck-item-actions .btn {
+          flex: 1 1 auto;
+        }
+      }
+    }
+  `;
+
+  document.head.append(style);
+
+  /*
+    ============================================================
+    共通
+    ============================================================
+  */
+
+  function generateId() {
+    return crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+
+  function deepClone(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function encodeBase64Url(data) {
+    const json = JSON.stringify(data);
+    const bytes = new TextEncoder().encode(json);
+
+    let binary = '';
+
+    for (const byte of bytes) {
+      binary += String.fromCharCode(byte);
+    }
+
+    return btoa(binary)
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/g, '');
+  }
+
+  function decodeBase64Url(value) {
+    let base64 = String(value)
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+
+    while (base64.length % 4) {
+      base64 += '=';
+    }
+
+    const binary = atob(base64);
+
+    const bytes = Uint8Array.from(
+      binary,
+      char => char.charCodeAt(0)
+    );
+
+    return JSON.parse(
+      new TextDecoder().decode(bytes)
+    );
+  }
+
+  async function copyText(text) {
+    if (
+      navigator.clipboard &&
+      window.isSecureContext
+    ) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    const textarea = document.createElement('textarea');
+
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+
+    document.body.append(textarea);
+
+    textarea.select();
+    document.execCommand('copy');
+
+    textarea.remove();
+  }
+
+  function cleanUrl() {
+    const url = new URL(location.href);
+
+    url.searchParams.delete(CONFIG_PARAM);
+    url.hash = '';
+
+    return url;
+  }
+
+  /*
+    ============================================================
+    設定URL
+    ============================================================
+  */
+
+  function buildConfigExportData() {
+    let setupConfig = state.savedSetup;
+
+    /*
+      設定画面が初期化済みなら、
+      現在画面に入力されている最新値を使用します。
+    */
+    const playerCount =
+      document.getElementById('playerCount');
+
+    if (
+      playerCount &&
+      playerCount.options.length
+    ) {
+      setupConfig = {
+        playerCount:
+          Number(playerCount.value) || 3,
+
+        counts:
+          getRoleCountsFromUI(),
+
+        discussionSeconds:
+          Math.max(
+            10,
+            Number(
+              document.getElementById(
+                'discussionSeconds'
+              ).value
+            ) || 60
+          ),
+
+        mayorEnabled:
+          document.getElementById(
+            'mayorEnabled'
+          ).checked
+      };
+    }
+
+    return {
+      type: 'one-night-werewolf-config',
+      version: 1,
+      createdAt: Date.now(),
+
+      players:
+        deepClone(state.players),
+
+      setupConfig:
+        setupConfig
+          ? deepClone(setupConfig)
+          : null
+    };
+  }
+
+  function buildConfigUrl() {
+    const url = cleanUrl();
+
+    url.searchParams.set(
+      CONFIG_PARAM,
+      encodeBase64Url(
+        buildConfigExportData()
+      )
+    );
+
+    return url.toString();
+  }
+
+  async function copyConfigUrl() {
+    try {
+      await copyText(
+        buildConfigUrl()
+      );
+
+      showInfo(
+        '設定URLをコピーしました',
+        'プレイヤー名・参加人数・役職構成などの設定をURLとしてコピーしました。'
+      );
+    } catch (error) {
+      console.error(error);
+
+      showInfo(
+        'コピーに失敗しました',
+        '設定URLをコピーできませんでした。'
+      );
+    }
+  }
+
+  /*
+    ============================================================
+    プレイヤー名変更画面へ設定URLボタン追加
+    ============================================================
+  */
+
+  const savePlayersButton =
+    document.getElementById(
+      'savePlayersBtn'
+    );
+
+  const playerActions =
+    savePlayersButton.closest(
+      '.actions'
+    );
+
+  const configUrlButton =
+    document.createElement(
+      'button'
+    );
+
+  configUrlButton.type =
+    'button';
+
+  configUrlButton.className =
+    'btn secondary';
+
+  configUrlButton.textContent =
+    '設定URLをコピー';
+
+  playerActions.append(
+    configUrlButton
+  );
+
+  configUrlButton.addEventListener(
+    'click',
+    async () => {
+      const names =
+        state.players.map(
+          player =>
+            player.name.trim()
+        );
+
+      if (
+        names.some(
+          name => !name
+        )
+      ) {
+        showInfo(
+          '名前を入力してください',
+          '空欄のプレイヤー名があります。'
+        );
+
+        return;
+      }
+
+      if (
+        new Set(names).size !==
+        names.length
+      ) {
+        showInfo(
+          '同じ名前があります',
+          'プレイヤー名は重複しないようにしてください。'
+        );
+
+        return;
+      }
+
+      await copyConfigUrl();
+    }
+  );
+
+  /*
+    ============================================================
+    デッキ一覧画面
+    ============================================================
+  */
+
+  const deckScreen =
+    document.createElement(
+      'section'
+    );
+
+  deckScreen.id =
+    'screen-decks';
+
+  deckScreen.className =
+    'screen';
+
+  deckScreen.innerHTML = `
+    <div class="card">
+      <div class="section-title">
+        <h2>保存デッキ</h2>
+
+        <button
+          type="button"
+          class="btn small"
+          id="deckBackBtn"
+        >
+          戻る
+        </button>
+      </div>
+
+      <p class="muted">
+        保存した参加人数・役職構成・議論時間・村長設定を呼び出せます。
+      </p>
+
+      <div
+        class="deck-list"
+        id="deckList"
+      ></div>
+    </div>
+  `;
+
+  document.querySelector(
+    '.app'
+  ).append(deckScreen);
+
+  /*
+    ============================================================
+    設定画面へデッキボタン追加
+    ============================================================
+  */
+
+  const setupCards =
+    document.querySelectorAll(
+      '#screen-setup .card'
+    );
+
+  const roleCard =
+    setupCards[
+      setupCards.length - 1
+    ];
+
+  const deckToolbar =
+    document.createElement(
+      'div'
+    );
+
+  deckToolbar.className =
+    'deck-toolbar mt';
+
+  deckToolbar.innerHTML = `
+    <button
+      type="button"
+      class="btn secondary"
+      id="saveDeckBtn"
+    >
+      現在の設定をデッキ保存
+    </button>
+
+    <button
+      type="button"
+      class="btn secondary"
+      id="openDeckListBtn"
+    >
+      保存デッキを開く
+    </button>
+  `;
+
+  const roleCardActions =
+    roleCard.querySelector(
+      '.actions'
+    );
+
+  roleCard.insertBefore(
+    deckToolbar,
+    roleCardActions
+  );
+
+  /*
+    ============================================================
+    デッキ名ダイアログ
+    ============================================================
+  */
+
+  const deckNameDialog =
+    document.createElement(
+      'dialog'
+    );
+
+  deckNameDialog.innerHTML = `
+    <div class="dialog-body">
+      <h2 id="deckNameDialogTitle">
+        デッキ保存
+      </h2>
+
+      <div class="field">
+        <label for="deckNameInput">
+          デッキ名
+        </label>
+
+        <input
+          id="deckNameInput"
+          type="text"
+          maxlength="50"
+          placeholder="例：5人基本セット"
+        >
+      </div>
+
+      <div class="actions mt">
+        <button
+          type="button"
+          class="btn secondary"
+          id="deckNameCancelBtn"
+        >
+          キャンセル
+        </button>
+
+        <button
+          type="button"
+          class="btn primary"
+          id="deckNameSaveBtn"
+        >
+          保存
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.append(
+    deckNameDialog
+  );
+
+  /*
+    ============================================================
+    デッキデータ
+    ============================================================
+  */
+
+  async function getDecks() {
+    const decks =
+      await dbGet(
+        DECK_DB_KEY
+      );
+
+    return Array.isArray(decks)
+      ? decks
+      : [];
+  }
+
+  async function saveDecks(decks) {
+    await dbSet(
+      DECK_DB_KEY,
+      decks
+    );
+  }
+
+  function getCurrentDeckConfig() {
+    return {
+      playerCount:
+        Number(
+          document.getElementById(
+            'playerCount'
+          ).value
+        ) || 3,
+
+      counts:
+        getRoleCountsFromUI(),
+
+      discussionSeconds:
+        Math.max(
+          10,
+          Number(
+            document.getElementById(
+              'discussionSeconds'
+            ).value
+          ) || 60
+        ),
+
+      mayorEnabled:
+        document.getElementById(
+          'mayorEnabled'
+        ).checked
+    };
+  }
+
+  function validateDeckConfig(config) {
+    if (
+      !config ||
+      typeof config !== 'object'
+    ) {
+      return false;
+    }
+
+    if (
+      !config.counts ||
+      typeof config.counts !== 'object'
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /*
+    ============================================================
+    デッキ保存ダイアログ
+    ============================================================
+  */
+
+  document.getElementById(
+    'saveDeckBtn'
+  ).addEventListener(
+    'click',
+    async () => {
+      /*
+        編集中なら既存名を表示。
+        通常保存なら新規保存。
+      */
+      if (
+        extensionState.editingDeckId
+      ) {
+        const decks =
+          await getDecks();
+
+        const deck =
+          decks.find(
+            item =>
+              item.id ===
+              extensionState.editingDeckId
+          );
+
+        document.getElementById(
+          'deckNameDialogTitle'
+        ).textContent =
+          'デッキを編集';
+
+        document.getElementById(
+          'deckNameInput'
+        ).value =
+          deck?.name || '';
+      } else {
+        document.getElementById(
+          'deckNameDialogTitle'
+        ).textContent =
+          '現在の設定をデッキ保存';
+
+        document.getElementById(
+          'deckNameInput'
+        ).value = '';
+      }
+
+      deckNameDialog.showModal();
+
+      requestAnimationFrame(
+        () => {
+          document.getElementById(
+            'deckNameInput'
+          ).focus();
+        }
+      );
+    }
+  );
+
+  document.getElementById(
+    'deckNameCancelBtn'
+  ).addEventListener(
+    'click',
+    () => {
+      deckNameDialog.close();
+    }
+  );
+
+  document.getElementById(
+    'deckNameSaveBtn'
+  ).addEventListener(
+    'click',
+    async () => {
+      const input =
+        document.getElementById(
+          'deckNameInput'
+        );
+
+      const name =
+        input.value.trim();
+
+      if (!name) {
+        showInfo(
+          'デッキ名を入力してください',
+          '保存するデッキの名前を入力してください。'
+        );
+
+        return;
+      }
+
+      const decks =
+        await getDecks();
+
+      if (
+        extensionState.editingDeckId
+      ) {
+        const deck =
+          decks.find(
+            item =>
+              item.id ===
+              extensionState.editingDeckId
+          );
+
+        if (deck) {
+          deck.name = name;
+
+          deck.config =
+            getCurrentDeckConfig();
+
+          deck.updatedAt =
+            Date.now();
+        }
+      } else {
+        decks.push({
+          id: generateId(),
+          name,
+          config:
+            getCurrentDeckConfig(),
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        });
+      }
+
+      await saveDecks(
+        decks
+      );
+
+      extensionState.editingDeckId =
+        null;
+
+      deckNameDialog.close();
+
+      showInfo(
+        '保存しました',
+        `「${name}」を保存しました。`
+      );
+    }
+  );
+
+  /*
+    ============================================================
+    デッキ適用
+    ============================================================
+  */
+
+  async function applyDeck(deck) {
+    if (
+      !validateDeckConfig(
+        deck.config
+      )
+    ) {
+      showInfo(
+        'デッキを開けません',
+        '保存されている設定データが正しくありません。'
+      );
+
+      return;
+    }
+
+    const config =
+      deepClone(
+        deck.config
+      );
+
+    state.savedSetup =
+      config;
+
+    await dbSet(
+      'setupConfig',
+      config
+    );
+
+    initSetupUI();
+
+    showScreen(
+      'setup'
+    );
+
+    showInfo(
+      'デッキを開きました',
+      `「${deck.name}」の設定を読み込みました。`
+    );
+  }
+
+  /*
+    ============================================================
+    デッキ一覧描画
+    ============================================================
+  */
+
+  async function renderDeckList() {
+    const decks =
+      await getDecks();
+
+    const wrap =
+      document.getElementById(
+        'deckList'
+      );
+
+    wrap.innerHTML = '';
+
+    if (!decks.length) {
+      wrap.innerHTML = `
+        <div class="empty">
+          保存されているデッキはありません。
+        </div>
+      `;
+
+      return;
+    }
+
+    decks.forEach(
+      (deck, index) => {
+        const item =
+          document.createElement(
+            'div'
+          );
+
+        item.className =
+          'deck-item';
+
+        const roleText =
+          getOrderedRoleEntries(
+            deck.config.counts
+          )
+            .map(
+              ([key, count]) =>
+                `${roleDefs[key].name}×${count}`
+            )
+            .join('、');
+
+        item.innerHTML = `
+          <div class="deck-item-header">
+            <div>
+              <div class="deck-item-name">
+                ${escapeHtml(deck.name)}
+              </div>
+
+              <div class="deck-item-summary">
+                ${deck.config.playerCount}人 /
+                議論${deck.config.discussionSeconds}秒 /
+                村長${deck.config.mayorEnabled ? 'あり' : 'なし'}
+              </div>
+            </div>
+          </div>
+
+          <div class="deck-item-summary">
+            ${roleText || '役職設定なし'}
+          </div>
+
+          <div class="deck-item-actions">
+            <button
+              type="button"
+              class="btn small primary"
+              data-action="open"
+            >
+              開く
+            </button>
+
+            <button
+              type="button"
+              class="btn small secondary"
+              data-action="edit"
+            >
+              編集
+            </button>
+
+            <button
+              type="button"
+              class="btn small secondary"
+              data-action="up"
+              ${index === 0 ? 'disabled' : ''}
+            >
+              ↑
+            </button>
+
+            <button
+              type="button"
+              class="btn small secondary"
+              data-action="down"
+              ${index === decks.length - 1 ? 'disabled' : ''}
+            >
+              ↓
+            </button>
+
+            <button
+              type="button"
+              class="btn small danger"
+              data-action="delete"
+            >
+              削除
+            </button>
+          </div>
+        `;
+
+        /*
+          開く
+        */
+        item
+          .querySelector(
+            '[data-action="open"]'
+          )
+          .addEventListener(
+            'click',
+            () => {
+              extensionState.editingDeckId =
+                null;
+
+              applyDeck(
+                deck
+              );
+            }
+          );
+
+        /*
+          編集
+        */
+        item
+          .querySelector(
+            '[data-action="edit"]'
+          )
+          .addEventListener(
+            'click',
+            async () => {
+              state.savedSetup =
+                deepClone(
+                  deck.config
+                );
+
+              await dbSet(
+                'setupConfig',
+                state.savedSetup
+              );
+
+              initSetupUI();
+
+              extensionState.editingDeckId =
+                deck.id;
+
+              showScreen(
+                'setup'
+              );
+
+              showInfo(
+                '編集モード',
+                `「${deck.name}」を読み込みました。設定を変更して「現在の設定をデッキ保存」を押すと上書きできます。`
+              );
+            }
+          );
+
+        /*
+          上へ
+        */
+        item
+          .querySelector(
+            '[data-action="up"]'
+          )
+          .addEventListener(
+            'click',
+            async () => {
+              if (
+                index <= 0
+              ) {
+                return;
+              }
+
+              [
+                decks[index - 1],
+                decks[index]
+              ] = [
+                decks[index],
+                decks[index - 1]
+              ];
+
+              await saveDecks(
+                decks
+              );
+
+              renderDeckList();
+            }
+          );
+
+        /*
+          下へ
+        */
+        item
+          .querySelector(
+            '[data-action="down"]'
+          )
+          .addEventListener(
+            'click',
+            async () => {
+              if (
+                index >=
+                decks.length - 1
+              ) {
+                return;
+              }
+
+              [
+                decks[index],
+                decks[index + 1]
+              ] = [
+                decks[index + 1],
+                decks[index]
+              ];
+
+              await saveDecks(
+                decks
+              );
+
+              renderDeckList();
+            }
+          );
+
+        /*
+          削除
+        */
+        item
+          .querySelector(
+            '[data-action="delete"]'
+          )
+          .addEventListener(
+            'click',
+            () => {
+              askConfirm(
+                'デッキを削除',
+                `「${deck.name}」を削除しますか？`,
+                async () => {
+                  const latest =
+                    await getDecks();
+
+                  const filtered =
+                    latest.filter(
+                      item =>
+                        item.id !==
+                        deck.id
+                    );
+
+                  await saveDecks(
+                    filtered
+                  );
+
+                  if (
+                    extensionState.editingDeckId ===
+                    deck.id
+                  ) {
+                    extensionState.editingDeckId =
+                      null;
+                  }
+
+                  renderDeckList();
+                }
+              );
+            }
+          );
+
+        wrap.append(
+          item
+        );
+      }
+    );
+  }
+
+  /*
+    ============================================================
+    デッキ一覧を開く
+    ============================================================
+  */
+
+  document.getElementById(
+    'openDeckListBtn'
+  ).addEventListener(
+    'click',
+    async () => {
+      await renderDeckList();
+
+      showScreen(
+        'decks'
+      );
+    }
+  );
+
+  document.getElementById(
+    'deckBackBtn'
+  ).addEventListener(
+    'click',
+    () => {
+      showScreen(
+        'setup'
+      );
+    }
+  );
+
+  /*
+    ============================================================
+    議論中の役職説明
+    ============================================================
+  */
+
+  const originalStartDiscussion =
+    startDiscussion;
+
+  startDiscussion =
+    function() {
+      originalStartDiscussion();
+
+      const roleElements =
+        document.querySelectorAll(
+          '#discussionRoles .pill'
+        );
+
+      const orderedRoles =
+        getOrderedRoleEntries(
+          state.setup.counts
+        );
+
+      roleElements.forEach(
+        (element, index) => {
+          const entry =
+            orderedRoles[index];
+
+          if (!entry) {
+            return;
+          }
+
+          const roleKey =
+            entry[0];
+
+          const def =
+            roleDefs[roleKey];
+
+          element.classList.add(
+            'discussion-role-clickable'
+          );
+
+          element.tabIndex =
+            0;
+
+          element.setAttribute(
+            'role',
+            'button'
+          );
+
+          element.setAttribute(
+            'aria-label',
+            `${def.name}の説明を見る`
+          );
+
+          const openRoleInfo =
+            () => {
+              showInfo(
+                def.name,
+                def.info
+              );
+            };
+
+          element.addEventListener(
+            'click',
+            openRoleInfo
+          );
+
+          element.addEventListener(
+            'keydown',
+            event => {
+              if (
+                event.key === 'Enter' ||
+                event.key === ' '
+              ) {
+                event.preventDefault();
+
+                openRoleInfo();
+              }
+            }
+          );
+        }
+      );
+    };
+
+  /*
+    ============================================================
+    設定URL読み込み確認
+    ============================================================
+  */
+
+  const importDialog =
+    document.createElement(
+      'dialog'
+    );
+
+  importDialog.innerHTML = `
+    <div class="dialog-body">
+      <h2>
+        設定を読み込みますか？
+      </h2>
+
+      <p>
+        URLにプレイヤー名・参加人数・役職構成などの設定が含まれています。
+        読み込むと現在の設定へ反映されます。
+      </p>
+
+      <div class="actions">
+        <button
+          type="button"
+          class="btn secondary"
+          id="configImportCancelBtn"
+        >
+          読み込まない
+        </button>
+
+        <button
+          type="button"
+          class="btn primary"
+          id="configImportOkBtn"
+        >
+          読み込む
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.append(
+    importDialog
+  );
+
+  /*
+    ============================================================
+    設定URL適用
+    ============================================================
+  */
+
+  async function applyConfigImport(data) {
+    if (
+      !data ||
+      data.type !==
+        'one-night-werewolf-config' ||
+      !Array.isArray(
+        data.players
+      )
+    ) {
+      throw new Error(
+        'Invalid config data'
+      );
+    }
+
+    state.players =
+      deepClone(
+        data.players
+      );
+
+    ensureDefaultPlayers();
+    ensureStats();
+
+    await dbSet(
+      'players',
+      state.players
+    );
+
+    await dbSet(
+      'stats',
+      state.stats
+    );
+
+    if (
+      data.setupConfig
+    ) {
+      state.savedSetup =
+        deepClone(
+          data.setupConfig
+        );
+
+      await dbSet(
+        'setupConfig',
+        state.savedSetup
+      );
+    }
+
+    prepareSetup();
+
+    showInfo(
+      '設定を読み込みました',
+      'URLに保存されていたプレイヤー名・参加人数・役職構成などを読み込みました。'
+    );
+  }
+
+  /*
+    ============================================================
+    URLからconfigを取得
+    ============================================================
+  */
+
+  function readConfigUrlData() {
+    const params =
+      new URLSearchParams(
+        location.search
+      );
+
+    const config =
+      params.get(
+        CONFIG_PARAM
+      );
+
+    if (!config) {
+      return null;
+    }
+
+    try {
+      return decodeBase64Url(
+        config
+      );
+    } catch (error) {
+      console.error(error);
+
+      return false;
+    }
+  }
+
+  /*
+    ============================================================
+    読み込まない
+    ============================================================
+  */
+
+  document.getElementById(
+    'configImportCancelBtn'
+  ).addEventListener(
+    'click',
+    () => {
+      importDialog.close();
+
+      extensionState.pendingConfigData =
+        null;
+
+      history.replaceState(
+        null,
+        '',
+        cleanUrl().toString()
+      );
+    }
+  );
+
+  /*
+    ============================================================
+    読み込む
+    ============================================================
+  */
+
+  document.getElementById(
+    'configImportOkBtn'
+  ).addEventListener(
+    'click',
+    async () => {
+      importDialog.close();
+
+      if (
+        !extensionState.pendingConfigData
+      ) {
+        return;
+      }
+
+      try {
+        await applyConfigImport(
+          extensionState.pendingConfigData
+        );
+
+        /*
+          読み込み済みURLを通常URLへ戻します。
+        */
+        history.replaceState(
+          null,
+          '',
+          cleanUrl().toString()
+        );
+      } catch (error) {
+        console.error(error);
+
+        showInfo(
+          '読み込みに失敗しました',
+          'URLに含まれている設定データを読み込めませんでした。'
+        );
+      }
+
+      extensionState.pendingConfigData =
+        null;
+    }
+  );
+
+  /*
+    ============================================================
+    IndexedDB初期化待ち
+    ============================================================
+  */
+
+  async function waitForDatabase() {
+    for (
+      let i = 0;
+      i < 200;
+      i++
+    ) {
+      if (state.db) {
+        return;
+      }
+
+      await new Promise(
+        resolve =>
+          setTimeout(
+            resolve,
+            25
+          )
+      );
+    }
+
+    throw new Error(
+      'IndexedDB initialization timeout'
+    );
+  }
+
+  /*
+    ============================================================
+    拡張初期化
+    ============================================================
+  */
+
+  async function initializeExtension() {
+    await waitForDatabase();
+
+    const data =
+      readConfigUrlData();
+
+    if (data === null) {
+      return;
+    }
+
+    if (data === false) {
+      showInfo(
+        '設定URLを読み込めません',
+        'URLに含まれているBase64データが正しくありません。'
+      );
+
+      return;
+    }
+
+    extensionState.pendingConfigData =
+      data;
+
+    importDialog.showModal();
+  }
+
+  initializeExtension()
+    .catch(
+      error => {
+        console.error(
+          '拡張機能の初期化に失敗しました。',
+          error
+        );
+      }
+    );
+})();
+</script>
 </body>
 </html>
