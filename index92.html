@@ -808,7 +808,7 @@
         const startsNamedFunction = (line) =>
           /^(?:async\s+)?function\s+[A-Za-z_$][\w$]*\s*\(/.test(line);
 
-        const braceDelta = (line) => {
+        const scanLineStructure = (line) => {
           let delta = 0;
           let lineComment = false;
           for (let index = 0; index < line.length; index += 1) {
@@ -846,7 +846,7 @@
             if (character === "{") delta += 1;
             else if (character === "}") delta -= 1;
           }
-          return delta;
+          return { delta, hasLineComment: lineComment };
         };
 
         for (const line of sourceLines) {
@@ -859,17 +859,21 @@
           }
 
           append(line);
-          const delta = braceDelta(line);
+          const structure = scanLineStructure(line);
 
           if (inNamedFunction) {
-            functionDepth += delta;
+            functionDepth += structure.delta;
             if (functionDepth <= 0 && /}/.test(line)) {
               flush();
               inNamedFunction = false;
               functionDepth = 0;
+            } else if (structure.hasLineComment) {
+              // Safety: // comments must always terminate the physical output line.
+              // Otherwise the next statement can be swallowed by the comment after compaction.
+              flush();
             }
-          } else if (/\/\//.test(line)) {
-            // 行コメントを次のコードへ連結するとコメントアウト事故になるため改行を維持。
+          } else if (structure.hasLineComment) {
+            // Safety: preserve the line boundary after // comments outside named functions too.
             flush();
           }
         }
