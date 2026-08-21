@@ -2,7 +2,7 @@
  * DOM Source Cleaner - Portable Temporary Site Edition
  *
  * Usage:
- *   <script src="https://uni928.github.io/Uni928PublicHTMLs/Plugin/plugin8.js"></script>
+ *   <script src="./dom-source-cleaner-portable-temporary-site.js" defer></script>
  *
  * Before moving to a Blob URL, this plug-in tries to fetch and embed resources.
  * Same-origin images, CSS, classic JavaScript, fonts and media are converted to
