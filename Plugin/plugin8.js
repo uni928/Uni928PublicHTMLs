@@ -13,6 +13,28 @@
 (function () {
   "use strict";
 
+    let head = document.head || document.getElementsByTagName("head")[0];
+  if (head) {
+
+  const metas = [
+    ["Cache-Control", "no-store, no-cache, must-revalidate, max-age=0"],
+    ["Pragma", "no-cache"],
+    ["Expires", "0"]
+  ];
+
+  for (const [httpEquiv, content] of metas) {
+    const existing = Array.from(head.querySelectorAll("meta[http-equiv]")).find(
+      meta => (meta.getAttribute("http-equiv") || "").toLowerCase() === httpEquiv.toLowerCase()
+    );
+
+    const meta = existing || document.createElement("meta");
+    meta.setAttribute("http-equiv", httpEquiv);
+    meta.setAttribute("content", content);
+
+    if (!existing) head.prepend(meta);
+  }
+  }
+
   const TEMP_ATTRIBUTE = "data-dom-source-cleaner-temporary";
   const BUILD_ATTRIBUTE = "data-dom-source-cleaner-building";
   const selfScript = document.currentScript;
@@ -39,7 +61,7 @@
   }
 
   function ensureBaseElement(root, sourceUrl) {
-    const head = root.querySelector("head");
+    let head = root.querySelector("head");
     if (!head) return;
     let base = head.querySelector("base");
     if (!base) {
