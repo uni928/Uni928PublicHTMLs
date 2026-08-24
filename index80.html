@@ -967,6 +967,23 @@
       showStatus("入力内容を消しました。");
       sourceText.focus();
     });
+
+sourceText.addEventListener("paste", function () {
+  setTimeout(function () {
+    const normalized = sourceText.value.replace(/\r\n?/g, "\n");
+    const lines = normalized.split("\n");
+
+    // 1行目が「# 文章」、2行目が空行の場合だけ既存処理を実行
+    if (
+      /^#\s+.+\s*$/.test(lines[0] || "") &&
+      lines.length >= 2 &&
+      (lines[1] || "").trim() === ""
+    ) {
+      applyMarkdownTitle();
+    }
+  }, 0);
+});
+
     sourceText.addEventListener("input", updateCount);
 
     document.addEventListener("keydown", function (event) {
