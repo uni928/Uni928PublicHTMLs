@@ -6,146 +6,131 @@
   <meta name="description" content="Markdown形式の文章を読みやすい閲覧ページとして表示し、1つのHTMLとして保存できます。">
   <title>Markdownから閲覧用サイトを作成</title>
   <style>
-    @layer base, layout, editor, viewer, responsive;
-
-    @layer base {
-      :root {
-        color-scheme: light;
-        --bg: #f4f7fb;
-        --panel: #ffffff;
-        --text: #1e293b;
-        --muted: #64748b;
-        --line: #dbe4f0;
-        --accent: #2563eb;
-        --accent-dark: #1d4ed8;
-        --accent-soft: #eaf2ff;
-        --danger: #b91c1c;
-        --shadow: 0 18px 48px rgba(30, 41, 59, 0.10);
-      }
-
-      * { box-sizing: border-box; }
-      html { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
-      body { margin: 0; min-height: 100vh; background: linear-gradient(180deg, rgba(255,255,255,.78), transparent 340px), var(--bg); }
-      button, input, textarea { font: inherit; }
-      button { cursor: pointer; }
-      button:disabled { cursor: default; opacity: .62; }
-      a { color: var(--accent); overflow-wrap: anywhere; }
-      .hidden { display: none !important; }
-    }
-
-    @layer layout {
-      .app { width: min(920px, calc(100% - 28px)); margin: 0 auto; padding: 28px 0 52px; }
-      .hero { margin-bottom: 18px; text-align: center; }
-      .hero h1 { margin: 0; font-size: clamp(1.7rem, 4vw, 2.6rem); letter-spacing: -.04em; }
-      .hero p { max-width: 740px; margin: 10px auto 0; color: var(--muted); line-height: 1.8; }
-      .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow); }
-      .primary-button, .secondary-button { min-height: 48px; border: 0; border-radius: 14px; padding: 0 18px; font-weight: 800; }
-      .primary-button { background: var(--accent); color: #fff; }
-      .primary-button:hover { background: var(--accent-dark); }
-      .secondary-button { background: var(--accent-soft); color: var(--accent-dark); }
-    }
-
-    @layer editor {
-      .editor-panel { padding: 20px; }
-      .field-label { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-weight: 800; }
-      .field-label small { color: var(--muted); font-weight: 500; }
-      .title-input, .text-input { width: 100%; border: 1px solid var(--line); border-radius: 14px; background: #fff; color: var(--text); outline: none; }
-      .title-input:focus, .text-input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(37,99,235,.12); }
-      .title-input { padding: 12px 14px; margin-bottom: 16px; }
-      .text-input { min-height: 430px; padding: 16px; resize: vertical; line-height: 1.75; }
-      .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
-      .controls .primary-button { flex: 1 1 300px; }
-      .helper { margin-top: 14px; padding: 14px 16px; border-radius: 14px; background: #f8fafc; color: var(--muted); line-height: 1.7; font-size: .94rem; }
-      .status { min-height: 24px; margin-top: 12px; color: var(--muted); font-size: .93rem; }
-      .status.error { color: var(--danger); }
-
-      /* 特記事項編集パネル */
-      .note-panel { margin-top: 14px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: #f8fafc; }
-      .note-panel .text-input { min-height: 120px; background: #fff; }
-
-      /* URL保存パネル */
-      .url-save-panel { margin-top: 14px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: #f8fafc; }
-      .url-save-panel h2 { margin: 0 0 8px; font-size: 1.05rem; }
-      .url-save-description { margin: 0 0 14px; color: var(--muted); font-size: .92rem; line-height: 1.75; }
-      .url-save-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-      .url-save-actions button { width: 100%; }
-      .url-size-info { margin: 12px 0 0; color: var(--muted); font-size: .84rem; line-height: 1.6; }
-
-      /* 画像読み込みパネル */
-      .image-panel { margin-top: 16px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: #f8fafc; }
-      .image-panel-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
-      .image-panel-head h2 { margin: 0; font-size: 1.05rem; }
-      .image-load-label { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border: 0; border-radius: 12px; background: var(--accent); color: #fff; font-weight: 800; line-height: 1; cursor: pointer; }
-      .image-load-label:hover { background: var(--accent-dark); }
-      .image-load-label input { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
-      .image-panel-note { margin: 0 0 12px; color: var(--muted); font-size: .9rem; line-height: 1.65; }
-      /* 画像追加: ドラッグ＆ドロップ領域と自動挿入設定 */
-      .image-drop-zone { display: grid; place-items: center; min-height: 92px; margin: 0 0 12px; padding: 16px; border: 2px dashed #b9c8dc; border-radius: 14px; background: #fff; color: var(--muted); text-align: center; transition: border-color .15s ease, background .15s ease; }
-      .image-drop-zone.is-dragover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-dark); }
-      .image-options { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin: 0 0 12px; }
-      .image-option-check { display: inline-flex; gap: 8px; align-items: center; font-size: .92rem; font-weight: 700; cursor: pointer; }
-      .image-option-check input { inline-size: 18px; block-size: 18px; }
-      .image-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
-      .image-item { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 13px; background: #fff; }
-      .image-thumb { width: 92px; height: 92px; object-fit: contain; border: 1px solid var(--line); border-radius: 10px; background: #f8fafc; }
-      .image-item-main { min-width: 0; }
-      .image-name { margin: 0; font-weight: 800; overflow-wrap: anywhere; }
-      .image-meta { margin: 4px 0 8px; color: var(--muted); font-size: .82rem; }
-      .embed-output { width: 100%; min-height: 38px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: #f8fafc; color: var(--text); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .82rem; resize: vertical; }
-      .image-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-      .image-actions button { min-height: 36px; padding: 0 10px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--text); font-weight: 700; }
-      .image-actions .delete-image-button { color: var(--danger); }
-      .image-missing { display: inline-block; margin: 10px 0; padding: 9px 12px; border: 1px dashed var(--danger); border-radius: 10px; color: var(--danger); background: #fff; }
-    }
-
-    @layer viewer {
-      .document { position: relative; padding: clamp(24px, 5vw, 48px); }
-      .viewer-actions { position: absolute; top: 16px; right: 16px; display: flex; gap: 8px; }
-      .viewer-actions button { min-height: 42px; }
-      .document h1 { margin: 0 110px 28px 0; font-size: clamp(1.8rem, 5vw, 2.8rem); line-height: 1.25; letter-spacing: -.035em; }
-      .document h2 { margin: 34px 0 14px; padding-bottom: 8px; border-bottom: 2px solid var(--accent-soft); font-size: clamp(1.2rem, 3vw, 1.55rem); line-height: 1.45; }
-      .document p, .document li, .document blockquote { font-size: clamp(1rem, 2.2vw, 1.08rem); line-height: 1.9; }
-      .document p { margin: 0 0 18px; }
-      .document ul { margin: 0 0 22px; padding-left: 1.5em; }
-      .document li + li { margin-top: 8px; }
-      .document blockquote { margin: 20px 0; padding: 15px 18px; border-left: 5px solid var(--accent); border-radius: 0 12px 12px 0; background: var(--accent-soft); }
-      .link-card { margin: 20px 0; }
-      .link-card a { display: block; padding: 16px 18px; border: 1px solid #bfd2f5; border-radius: 14px; background: var(--accent-soft); text-decoration: none; font-weight: 700; }
-      .meta { margin-top: 36px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: .86rem; }
-      .document h3 { margin: 28px 0 12px; font-size: 1.2rem; }
-      .document h4, .document h5, .document h6 { margin: 24px 0 10px; line-height: 1.5; }
-      .document ol { margin: 0 0 22px; padding-left: 1.7em; }
-      .document pre { overflow-x: auto; margin: 20px 0; padding: 16px; border-radius: 14px; background: #0f172a; color: #e2e8f0; line-height: 1.65; }
-      .document code { padding: .14em .38em; border-radius: 6px; background: #eef2f7; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .92em; }
-      .document pre code { padding: 0; background: transparent; color: inherit; }
-      .document hr { margin: 30px 0; border: 0; border-top: 1px solid var(--line); }
-      .table-wrap { overflow-x: auto; margin: 20px 0; }
-      .document table { width: 100%; border-collapse: collapse; background: #fff; }
-      .document th, .document td { padding: 11px 13px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
-      .document th { background: #f8fafc; }
-      .document img { display: block; max-width: 100%; height: auto; margin: 20px auto; border-radius: 12px; }
-      .task-item { list-style: none; margin-left: -1.3em; }
-      #viewTitle { margin-top: 36px; }
-    }
-
-    @layer responsive {
-      @media (max-width: 620px) {
-        .app { width: min(100% - 16px, 920px); padding-top: 10px; }
-        .editor-panel, .document { padding: 18px; border-radius: 18px; }
-        .text-input { min-height: 55vh; }
-        .note-panel .text-input { min-height: 120px; }
-        .image-item { grid-template-columns: 1fr; }
-        .image-thumb { width: 100%; height: 180px; }
-        .image-panel-head { align-items: stretch; flex-direction: column; }
-        .image-load-label { width: 100%; }
-        .controls { flex-direction: column; }
-        .controls button { width: 100%; }
-        .url-save-actions { grid-template-columns: 1fr; }
-        .viewer-actions { position: static; justify-content: flex-end; margin: -4px 0 14px; }
-        .document h1 { margin-right: 0; }
-      }
-    }
-  </style>
+@layer base,layout,editor,viewer,responsive;
+@layer base{
+:root{color-scheme:light;--bg:#f4f7fb;--panel:#ffffff;--text:#1e293b;--muted:#64748b;--line:#dbe4f0;--accent:#2563eb;--accent-dark:#1d4ed8;--accent-soft:#eaf2ff;--danger:#b91c1c;--shadow:0 18px 48px rgba(30,41,59,0.10);}
+*{box-sizing:border-box;}
+html{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);}
+body{margin:0;min-height:100vh;background:linear-gradient(180deg,rgba(255,255,255,.78),transparent 340px),var(--bg);}
+button,input,textarea{font:inherit;}
+button{cursor:pointer;}
+button:disabled{cursor:default;opacity:.62;}
+a{color:var(--accent);overflow-wrap:anywhere;}
+.hidden{display:none !important;}
+}
+@layer layout{
+.app{width:min(920px,calc(100% - 28px));margin:0 auto;padding:28px 0 52px;}
+.hero{margin-bottom:18px;text-align:center;}
+.hero h1{margin:0;font-size:clamp(1.7rem,4vw,2.6rem);letter-spacing:-.04em;}
+.hero p{max-width:740px;margin:10px auto 0;color:var(--muted);line-height:1.8;}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);}
+.primary-button,.secondary-button{min-height:48px;border:0;border-radius:14px;padding:0 18px;font-weight:800;}
+.primary-button{background:var(--accent);color:#fff;}
+.primary-button:hover{background:var(--accent-dark);}
+.secondary-button{background:var(--accent-soft);color:var(--accent-dark);}
+}
+@layer editor{
+.editor-panel{padding:20px;}
+.field-label{display:flex;justify-content:space-between;gap:12px;margin-bottom:8px;font-weight:800;}
+.field-label small{color:var(--muted);font-weight:500;}
+.title-input,.text-input{width:100%;border:1px solid var(--line);border-radius:14px;background:#fff;color:var(--text);outline:none;}
+.title-input:focus,.text-input:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(37,99,235,.12);}
+.title-input{padding:12px 14px;margin-bottom:16px;}
+.text-input{min-height:430px;padding:16px;resize:vertical;line-height:1.75;}
+.controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
+.controls .primary-button{flex:1 1 300px;}
+.helper{margin-top:14px;padding:14px 16px;border-radius:14px;background:#f8fafc;color:var(--muted);line-height:1.7;font-size:.94rem;}
+.status{min-height:24px;margin-top:12px;color:var(--muted);font-size:.93rem;}
+.status.error{color:var(--danger);}
+.note-panel{margin-top:14px;padding:16px;border:1px solid var(--line);border-radius:14px;background:#f8fafc;}
+.note-panel .text-input{min-height:120px;background:#fff;}
+.url-save-panel{margin-top:14px;padding:16px;border:1px solid var(--line);border-radius:14px;background:#f8fafc;}
+.url-save-panel h2{margin:0 0 8px;font-size:1.05rem;}
+.url-save-description{margin:0 0 14px;color:var(--muted);font-size:.92rem;line-height:1.75;}
+.url-save-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+.url-save-actions button{width:100%;}
+.url-size-info{margin:12px 0 0;color:var(--muted);font-size:.84rem;line-height:1.6;}
+.image-panel{margin-top:16px;padding:16px;border:1px solid var(--line);border-radius:14px;background:#f8fafc;}
+.image-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.image-panel-head h2{margin:0;font-size:1.05rem;}
+.image-panel-toggle{flex:0 0 auto;min-height:38px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--text);font-weight:800;}
+.image-panel-toggle:hover{background:var(--accent-soft);color:var(--accent-dark);}
+.image-panel-body{margin-top:12px;}
+.image-panel-note{margin:0 0 12px;color:var(--muted);font-size:.9rem;line-height:1.65;}
+.uni-photo-dropbox{margin:0 0 12px;padding:20px;background:rgba(255,255,255,0.97);border:1px solid rgba(255,255,255,0.9);border-radius:24px;box-shadow:0 8px 24px rgba(41,50,75,0.07);}
+.uni-photo-dropbox__zone{position:relative;display:grid;place-items:center;width:100%;height:220px;overflow:hidden;border:1.5px dashed rgba(117,103,220,0.28);border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,247,253,0.98));cursor:pointer;box-sizing:border-box;transition:border-color .18s ease,transform .18s ease,box-shadow .18s ease;}
+.uni-photo-dropbox__zone:hover,.uni-photo-dropbox__zone.is-dragging{border-color:rgba(117,103,220,0.58);box-shadow:0 12px 28px rgba(117,103,220,0.10);transform:translateY(-1px);}
+.uni-photo-dropbox__zone:focus-within{border-color:rgba(117,103,220,0.58);box-shadow:0 0 0 4px rgba(117,103,220,0.10);}
+.uni-photo-dropbox__inner{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:22px;text-align:center;pointer-events:none;}
+.uni-photo-dropbox__icon{display:grid;place-items:center;width:54px;height:54px;border-radius:18px;background:linear-gradient(135deg,rgba(117,103,220,0.12),rgba(217,137,180,0.16));}
+.uni-photo-dropbox__icon svg{width:25px;height:25px;stroke:#6e65ad;}
+.uni-photo-dropbox__copy{display:grid;gap:5px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;}
+.uni-photo-dropbox__title{color:#182033;font-size:16px;font-weight:800;line-height:1.35;letter-spacing:.01em;}
+.uni-photo-dropbox__guide{color:#667085;font-size:13px;font-weight:600;line-height:1.55;}
+.uni-photo-dropbox__meta{color:#98a2b3;font-size:11px;font-weight:500;line-height:1.4;}
+.uni-photo-dropbox__input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;}
+.image-options{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin:0 0 12px;}
+.image-option-check{display:inline-flex;gap:8px;align-items:center;font-size:.92rem;font-weight:700;cursor:pointer;}
+.image-option-check input{inline-size:18px;block-size:18px;}
+.image-list{display:grid;gap:10px;margin:0;padding:0;list-style:none;}
+.image-item{display:grid;grid-template-columns:92px minmax(0,1fr);gap:12px;padding:12px;border:1px solid var(--line);border-radius:13px;background:#fff;}
+.image-thumb{width:92px;height:92px;object-fit:contain;border:1px solid var(--line);border-radius:10px;background:#f8fafc;}
+.image-item-main{min-width:0;}
+.image-name{margin:0;font-weight:800;overflow-wrap:anywhere;}
+.image-meta{margin:4px 0 8px;color:var(--muted);font-size:.82rem;}
+.embed-output{width:100%;min-height:38px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#f8fafc;color:var(--text);font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.82rem;resize:vertical;}
+.image-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.image-actions button{min-height:36px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--text);font-weight:700;}
+.image-actions .delete-image-button{color:var(--danger);}
+.image-missing{display:inline-block;margin:10px 0;padding:9px 12px;border:1px dashed var(--danger);border-radius:10px;color:var(--danger);background:#fff;}
+}
+@layer viewer{
+.document{position:relative;padding:clamp(24px,5vw,48px);}
+.viewer-actions{position:absolute;top:16px;right:16px;display:flex;gap:8px;}
+.viewer-actions button{min-height:42px;}
+.document h1{margin:0 110px 28px 0;font-size:clamp(1.8rem,5vw,2.8rem);line-height:1.25;letter-spacing:-.035em;}
+.document h2{margin:34px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--accent-soft);font-size:clamp(1.2rem,3vw,1.55rem);line-height:1.45;}
+.document p,.document li,.document blockquote{font-size:clamp(1rem,2.2vw,1.08rem);line-height:1.9;}
+.document p{margin:0 0 18px;}
+.document ul{margin:0 0 22px;padding-left:1.5em;}
+.document li + li{margin-top:8px;}
+.document blockquote{margin:20px 0;padding:15px 18px;border-left:5px solid var(--accent);border-radius:0 12px 12px 0;background:var(--accent-soft);}
+.link-card{margin:20px 0;}
+.link-card a{display:block;padding:16px 18px;border:1px solid #bfd2f5;border-radius:14px;background:var(--accent-soft);text-decoration:none;font-weight:700;}
+.meta{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:.86rem;}
+.document h3{margin:28px 0 12px;font-size:1.2rem;}
+.document h4,.document h5,.document h6{margin:24px 0 10px;line-height:1.5;}
+.document ol{margin:0 0 22px;padding-left:1.7em;}
+.document pre{overflow-x:auto;margin:20px 0;padding:16px;border-radius:14px;background:#0f172a;color:#e2e8f0;line-height:1.65;}
+.document code{padding:.14em .38em;border-radius:6px;background:#eef2f7;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.92em;}
+.document pre code{padding:0;background:transparent;color:inherit;}
+.document hr{margin:30px 0;border:0;border-top:1px solid var(--line);}
+.table-wrap{overflow-x:auto;margin:20px 0;}
+.document table{width:100%;border-collapse:collapse;background:#fff;}
+.document th,.document td{padding:11px 13px;border:1px solid var(--line);text-align:left;vertical-align:top;}
+.document th{background:#f8fafc;}
+.document img{display:block;max-width:100%;height:auto;margin:20px auto;border-radius:12px;}
+.task-item{list-style:none;margin-left:-1.3em;}
+#viewTitle{margin-top:36px;}
+}
+@layer responsive{
+@media (max-width:620px){
+.app{width:min(100% - 16px,920px);padding-top:10px;}
+.editor-panel,.document{padding:18px;border-radius:18px;}
+.text-input{min-height:55vh;}
+.note-panel .text-input{min-height:120px;}
+.image-item{grid-template-columns:1fr;}
+.image-thumb{width:100%;height:180px;}
+.uni-photo-dropbox{padding:16px;}
+.uni-photo-dropbox__zone{height:190px;}
+.controls{flex-direction:column;}
+.controls button{width:100%;}
+.url-save-actions{grid-template-columns:1fr;}
+.viewer-actions{position:static;justify-content:flex-end;margin:-4px 0 14px;}
+.document h1{margin-right:0;}
+}
+}
+</style>
 </head>
 <body>
   <main id="editorMode" class="app">
@@ -170,17 +155,33 @@
       <section class="image-panel" aria-labelledby="imagePanelTitle">
         <div class="image-panel-head">
           <h2 id="imagePanelTitle">画像読み込み</h2>
-          <label class="image-load-label">
-            画像を読み込む
-            <input id="imageFileInput" type="file" accept="image/*" multiple>
-          </label>
+          <button id="imagePanelToggle" class="image-panel-toggle" type="button" aria-expanded="false" aria-controls="imagePanelBody">開く</button>
         </div>
-        <p class="image-panel-note">読み込んだ画像は、対応ブラウザではWebP、WebP変換が使えない環境ではJPEGへ圧縮し、Base64本体18,000文字以内でHTML内に保持します。本文には「[画像挿入](ファイル名)」を貼り付けて使用します。</p>
-        <div id="imageDropZone" class="image-drop-zone" tabindex="0">ここへ画像をドラッグ＆ドロップできます</div>
-        <div class="image-options">
-          <label class="image-option-check"><input id="insertAtCursorCheck" type="checkbox">画像を追加する際に、カーソル位置へ自動挿入する</label>
+        <div id="imagePanelBody" class="image-panel-body hidden">
+          <p class="image-panel-note">読み込んだ画像は、対応ブラウザではWebP、WebP変換が使えない環境ではJPEGへ圧縮し、Base64本体18,000文字以内でHTML内に保持します。画像名はMarkdown内で問題になりやすい括弧などの記号を自動で除去します。本文には「[画像挿入](ファイル名)」を貼り付けて使用します。</p>
+          <div class="uni-photo-dropbox">
+            <label id="imageDropZone" class="uni-photo-dropbox__zone">
+              <span class="uni-photo-dropbox__inner">
+                <span class="uni-photo-dropbox__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2">
+                    <rect x="3" y="5" width="18" height="14" rx="3"></rect>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </span>
+                <span class="uni-photo-dropbox__copy">
+                  <span class="uni-photo-dropbox__title">画像を追加</span>
+                  <span class="uni-photo-dropbox__guide">タップ・クリックして選択、またはここへドラッグ</span>
+                  <span class="uni-photo-dropbox__meta">JPG・PNG・WebPなどの画像に対応・複数選択可</span>
+                </span>
+              </span>
+              <input id="imageFileInput" class="uni-photo-dropbox__input" type="file" accept="image/*" multiple aria-label="追加する画像を選択">
+            </label>
+          </div>
+          <div class="image-options">
+            <label class="image-option-check"><input id="insertAtCursorCheck" type="checkbox">画像を追加する際に、カーソル位置へ自動挿入する</label>
+          </div>
+          <ol id="imageList" class="image-list"></ol>
         </div>
-        <ol id="imageList" class="image-list"></ol>
       </section>
 
       <div class="controls">
@@ -231,9 +232,11 @@
     </article>
   </main>
 
-  <script id="initialData" type="application/json">{"title":"","source":"","createdAt":"","note":"","startMode":"auto","images":[]}</script>
+  <script id="initialData" type="application/json">
+{"title":"","source":"","createdAt":"","note":"","startMode":"auto","images":[]}
+</script>
   <script>
-  window.addEventListener("DOMContentLoaded", async function () {
+window.addEventListener("DOMContentLoaded", async function () {
     "use strict";
 
     const editorMode = document.getElementById("editorMode");
@@ -250,6 +253,8 @@
     const viewMeta = document.getElementById("viewMeta");
     const imageFileInput = document.getElementById("imageFileInput");
     const imageList = document.getElementById("imageList");
+    const imagePanelToggle = document.getElementById("imagePanelToggle");
+    const imagePanelBody = document.getElementById("imagePanelBody");
     const imageDropZone = document.getElementById("imageDropZone");
     const insertAtCursorCheck = document.getElementById("insertAtCursorCheck");
     const urlSaveButton = document.getElementById("urlSaveButton");
@@ -606,15 +611,26 @@
       throw new Error("最小設定でもBase64本体を18,000文字以内に圧縮できませんでした。" + (smallest ? " 最小結果：" + getBase64Length(smallest.dataUrl).toLocaleString("ja-JP") + "文字" : ""));
     }
 
+    function sanitizeImageFileName(name) {
+      const raw = String(name || "image.webp").trim();
+      const dot = raw.lastIndexOf(".");
+      const rawStem = dot > 0 ? raw.slice(0, dot) : raw;
+      const rawExt = dot > 0 ? raw.slice(dot) : "";
+      const unsafePattern = /[\\/:*?"'`<>()[\]{}（）［］【】「」『』〈〉《》]/g;
+      const stem = rawStem.replace(unsafePattern, "").replace(/\s+/g, " ").trim() || "image";
+      const ext = rawExt.replace(/[^.A-Za-z0-9]/g, "").slice(0, 12);
+      return stem + ext;
+    }
+
     function makeUniqueImageName(name, exceptId) {
-      const original = String(name || "image.webp").trim() || "image.webp";
+      const original = sanitizeImageFileName(name);
       const dot = original.lastIndexOf(".");
       const stem = dot > 0 ? original.slice(0, dot) : original;
       const ext = dot > 0 ? original.slice(dot) : "";
       let candidate = original;
       let index = 2;
       while (images.some(function (image) { return image.id !== exceptId && image.fileName === candidate; })) {
-        candidate = stem + " (" + index + ")" + ext;
+        candidate = stem + "-" + index + ext;
         index++;
       }
       return candidate;
@@ -1105,6 +1121,13 @@
       }
     });
 
+    imagePanelToggle.addEventListener("click", function () {
+      const willOpen = imagePanelBody.classList.contains("hidden");
+      imagePanelBody.classList.toggle("hidden", !willOpen);
+      imagePanelToggle.setAttribute("aria-expanded", String(willOpen));
+      imagePanelToggle.textContent = willOpen ? "閉じる" : "開く";
+    });
+
     imageFileInput.addEventListener("change", function () { addImageFiles(imageFileInput.files); });
 
     ["dragenter", "dragover"].forEach(function (eventName) {
@@ -1112,14 +1135,14 @@
         event.preventDefault();
         event.stopPropagation();
         if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
-        imageDropZone.classList.add("is-dragover");
+        imageDropZone.classList.add("is-dragging");
       });
     });
     ["dragleave", "drop"].forEach(function (eventName) {
       imageDropZone.addEventListener(eventName, function (event) {
         event.preventDefault();
         event.stopPropagation();
-        imageDropZone.classList.remove("is-dragover");
+        imageDropZone.classList.remove("is-dragging");
       });
     });
     imageDropZone.addEventListener("drop", function (event) {
@@ -1181,6 +1204,6 @@
     if (initialData.startMode !== "editor" && (initialData.title + initialData.source).length >= 1) showViewer();
     else showEditor();
   });
-  </script>
+</script>
 </body>
 </html>
