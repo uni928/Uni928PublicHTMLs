@@ -989,6 +989,78 @@ window.addEventListener("DOMContentLoaded", async function () {
       return (safe || "閲覧用ページ") + ".html";
     }
 
+    function bytesToBase64(bytes) {
+      let binary = "";
+      const chunkSize = 0x8000;
+      for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+        const chunk = bytes.subarray(offset, offset + chunkSize);
+        for (let i = 0; i < chunk.length; i++) binary += String.fromCharCode(chunk[i]);
+      }
+      return btoa(binary);
+    }
+
+    async function compressWithFormat(bytes, format) {
+      const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream(format));
+      return new Uint8Array(await new Response(stream).arrayBuffer());
+    }
+
+    async function decompressWithFormat(bytes, format) {
+      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream(format));
+      return new Uint8Array(await new Response(stream).arrayBuffer());
+    }
+
+    function sameBytes(a, b) {
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+      return true;
+    }
+
+    async function findBestSafeCompression(bytes) {
+      if (!("CompressionStream" in window) || !("DecompressionStream" in window)) {
+        throw new Error("このブラウザはHTML保存用の圧縮・解凍機能に対応していません。");
+      }
+      const formats = ["brotli", "deflate-raw", "gzip"];
+      const results = [];
+      for (const format of formats) {
+        try {
+          new DecompressionStream(format);
+          const compressed = await compressWithFormat(bytes, format);
+          const restored = await decompressWithFormat(compressed, format);
+          if (sameBytes(bytes, restored)) results.push({ format: format, bytes: compressed });
+        } catch (error) {
+          // 未対応形式は無視し、利用可能な形式だけを比較する。
+        }
+      }
+      if (!results.length) throw new Error("利用可能なHTML保存用圧縮方式がありません。");
+      results.sort(function (a, b) { return a.bytes.length - b.bytes.length; });
+      return results[0];
+    }
+
+    function makeSafePackedHtml(base64, format) {
+      return '<!doctype html><meta charset=utf-8><script>' +
+        'let b=' + JSON.stringify(base64) + ',f=' + JSON.stringify(format) + ';' +
+        '(async()=>{try{' +
+        'let x=Uint8Array.from(atob(b),c=>c.charCodeAt(0)),' +
+        's=new Blob([x]).stream().pipeThrough(new DecompressionStream(f));' +
+        'document.open();document.write(new TextDecoder().decode(await new Response(s).arrayBuffer()));document.close()' +
+        '}catch(e){document.body.textContent="解凍エラー: "+e.message}})()' +
+        '<\/script>';
+    }
+
+    async function packSelfHtmlSafely(html) {
+      const sourceBytes = new TextEncoder().encode(html);
+      const best = await findBestSafeCompression(sourceBytes);
+      const restored = await decompressWithFormat(best.bytes, best.format);
+      if (!sameBytes(sourceBytes, restored)) throw new Error("復元チェックに失敗しました。元HTMLと復元結果が一致しません。");
+      const packedHtml = makeSafePackedHtml(bytesToBase64(best.bytes), best.format);
+      return {
+        html: packedHtml,
+        format: best.format,
+        sourceBytes: sourceBytes.length,
+        packedBytes: new TextEncoder().encode(packedHtml).length
+      };
+    }
+
     function buildSelfHtml(startMode) {
       applyMarkdownTitle();
       const clone = document.documentElement.cloneNode(true);
@@ -1012,24 +1084,32 @@ window.addEventListener("DOMContentLoaded", async function () {
       return "<!DOCTYPE html>\n" + clone.outerHTML;
     }
 
-    function downloadSelf(startMode) {
+    async function downloadSelf(startMode) {
       applyMarkdownTitle();
       if (!sourceText.value.length && !titleInput.value.length) {
         showStatus("文章またはタイトルを1文字以上入力してください。", true);
         sourceText.focus();
         return;
       }
-      const html = buildSelfHtml(startMode);
-      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = makeFileName();
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-      showStatus(startMode === "editor" ? "入力画面から開始するHTMLを保存しました。" : "閲覧画面から開始するHTMLを保存しました。");
+      try {
+        showStatus("安全版圧縮で保存用HTMLを作成しています…");
+        const originalHtml = buildSelfHtml(startMode);
+        const packed = await packSelfHtmlSafely(originalHtml);
+        const blob = new Blob([packed.html], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = makeFileName();
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        const reduction = packed.sourceBytes ? Math.max(0, 100 - packed.packedBytes / packed.sourceBytes * 100) : 0;
+        const modeText = startMode === "editor" ? "入力画面から開始するHTML" : "閲覧画面から開始するHTML";
+        showStatus(modeText + "を安全版圧縮で保存しました。方式：" + packed.format + " / 約" + reduction.toFixed(1) + "%削減");
+      } catch (error) {
+        showStatus(error && error.message ? "保存に失敗しました：" + error.message : "保存に失敗しました。", true);
+      }
     }
 
     document.getElementById("saveButton").addEventListener("click", function () { downloadSelf("auto"); });
