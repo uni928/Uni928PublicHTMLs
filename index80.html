@@ -47,7 +47,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .url-save-panel{margin-top:14px;padding:16px;border:1px solid var(--line);border-radius:14px;background:#f8fafc;}
 .url-save-panel h2{margin:0 0 8px;font-size:1.05rem;}
 .url-save-description{margin:0 0 14px;color:var(--muted);font-size:.92rem;line-height:1.75;}
-.url-save-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+.url-save-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
 .url-save-actions button{width:100%;}
 .url-size-info{margin:12px 0 0;color:var(--muted);font-size:.84rem;line-height:1.6;}
 .image-panel{margin-top:16px;padding:16px;border:1px solid var(--line);border-radius:14px;background:#f8fafc;}
@@ -200,7 +200,8 @@ a{color:var(--accent);overflow-wrap:anywhere;}
           現在の内容を圧縮してURL内に保存します。コピーしたURLへアクセスすると、このページで内容を開くことができます。
         </p>
         <div class="url-save-actions">
-          <button id="copyViewerUrlButton" class="primary-button" type="button">「閲覧用サイトとして保存」のURLをコピー</button>
+          <button id="copyViewerUrlButton" class="primary-button" type="button">「閲覧用サイトとして保存」<br>のURLをコピー</button>
+          <button id="copyDiscordLinkButton" class="secondary-button" type="button">Discodeで共有用の<br>「資料はこちら」リンクをコピー</button>
           <button id="copyEditorUrlButton" class="secondary-button" type="button">「保存」のURLをコピー</button>
         </div>
         <p id="urlSizeInfo" class="url-size-info"></p>
@@ -260,6 +261,7 @@ window.addEventListener("DOMContentLoaded", async function () {
     const urlSaveButton = document.getElementById("urlSaveButton");
     const urlSavePanel = document.getElementById("urlSavePanel");
     const copyViewerUrlButton = document.getElementById("copyViewerUrlButton");
+    const copyDiscordLinkButton = document.getElementById("copyDiscordLinkButton");
     const copyEditorUrlButton = document.getElementById("copyEditorUrlButton");
     const urlSizeInfo = document.getElementById("urlSizeInfo");
 
@@ -771,6 +773,23 @@ window.addEventListener("DOMContentLoaded", async function () {
       }
     }
 
+    async function copyDiscordSavedLink(button) {
+      const originalText = button.textContent;
+      try {
+        button.disabled = true;
+        button.textContent = "リンクを作成中…";
+        const result = await createSavedUrl("auto");
+        await copyText("[資料はこちら](" + result.url + ")");
+        button.textContent = "リンクをコピーしました";
+        showStatus("Discode共有用の「資料はこちら」リンクをクリップボードへコピーしました。圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字");
+      } catch (error) {
+        button.textContent = "コピーできませんでした";
+        showStatus(error && error.message ? error.message : "共有用リンクの作成に失敗しました。", true);
+      } finally {
+        setTimeout(function () { button.textContent = originalText; button.disabled = false; }, 1600);
+      }
+    }
+
     async function updateUrlSaveAvailability() {
       const serial = ++urlSizeUpdateSerial;
       if (!("CompressionStream" in window) || !("DecompressionStream" in window)) {
@@ -1121,6 +1140,7 @@ window.addEventListener("DOMContentLoaded", async function () {
       if (willOpen) updateUrlSaveAvailability();
     });
     copyViewerUrlButton.addEventListener("click", function () { copySavedUrl("auto", copyViewerUrlButton); });
+    copyDiscordLinkButton.addEventListener("click", function () { copyDiscordSavedLink(copyDiscordLinkButton); });
     copyEditorUrlButton.addEventListener("click", function () { copySavedUrl("editor", copyEditorUrlButton); });
     document.getElementById("viewButton").addEventListener("click", showViewer);
     document.getElementById("editButton").addEventListener("click", showEditor);
