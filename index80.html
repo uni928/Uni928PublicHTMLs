@@ -79,6 +79,12 @@
       .image-load-label:hover { background: var(--accent-dark); }
       .image-load-label input { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
       .image-panel-note { margin: 0 0 12px; color: var(--muted); font-size: .9rem; line-height: 1.65; }
+      /* 画像追加: ドラッグ＆ドロップ領域と自動挿入設定 */
+      .image-drop-zone { display: grid; place-items: center; min-height: 92px; margin: 0 0 12px; padding: 16px; border: 2px dashed #b9c8dc; border-radius: 14px; background: #fff; color: var(--muted); text-align: center; transition: border-color .15s ease, background .15s ease; }
+      .image-drop-zone.is-dragover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-dark); }
+      .image-options { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin: 0 0 12px; }
+      .image-option-check { display: inline-flex; gap: 8px; align-items: center; font-size: .92rem; font-weight: 700; cursor: pointer; }
+      .image-option-check input { inline-size: 18px; block-size: 18px; }
       .image-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
       .image-item { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 13px; background: #fff; }
       .image-thumb { width: 92px; height: 92px; object-fit: contain; border: 1px solid var(--line); border-radius: 10px; background: #f8fafc; }
@@ -169,7 +175,11 @@
             <input id="imageFileInput" type="file" accept="image/*" multiple>
           </label>
         </div>
-        <p class="image-panel-note">読み込んだ画像はWebPへ圧縮し、Base64本体18,000文字以内でHTML内に保持します。本文には「[画像挿入](ファイル名)」を貼り付けて使用します。</p>
+        <p class="image-panel-note">読み込んだ画像は、対応ブラウザではWebP、WebP変換が使えない環境ではJPEGへ圧縮し、Base64本体18,000文字以内でHTML内に保持します。本文には「[画像挿入](ファイル名)」を貼り付けて使用します。</p>
+        <div id="imageDropZone" class="image-drop-zone" tabindex="0">ここへ画像をドラッグ＆ドロップできます</div>
+        <div class="image-options">
+          <label class="image-option-check"><input id="insertAtCursorCheck" type="checkbox">画像を追加する際に、カーソル位置へ自動挿入する</label>
+        </div>
         <ol id="imageList" class="image-list"></ol>
       </section>
 
@@ -240,6 +250,8 @@
     const viewMeta = document.getElementById("viewMeta");
     const imageFileInput = document.getElementById("imageFileInput");
     const imageList = document.getElementById("imageList");
+    const imageDropZone = document.getElementById("imageDropZone");
+    const insertAtCursorCheck = document.getElementById("insertAtCursorCheck");
     const urlSaveButton = document.getElementById("urlSaveButton");
     const urlSavePanel = document.getElementById("urlSavePanel");
     const copyViewerUrlButton = document.getElementById("copyViewerUrlButton");
@@ -516,7 +528,7 @@
           note: typeof parsed.note === "string" ? parsed.note : "",
           startMode: parsed.startMode === "editor" ? "editor" : "auto",
           images: Array.isArray(parsed.images) ? parsed.images.filter(function (image) {
-            return image && typeof image.fileName === "string" && typeof image.dataUrl === "string" && image.dataUrl.startsWith("data:image/webp;base64,");
+            return image && typeof image.fileName === "string" && typeof image.dataUrl === "string" && /^data:image\/(?:webp|jpeg|png);base64,/.test(image.dataUrl);
           }).map(function (image) {
             return { id: typeof image.id === "string" ? image.id : "image-" + Math.random().toString(36).slice(2), fileName: image.fileName, dataUrl: image.dataUrl, width: Number(image.width) || 0, height: Number(image.height) || 0 };
           }) : []
@@ -549,7 +561,18 @@
       });
     }
 
-    async function renderWebp(sourceImage, maxSize, quality) {
+    function canvasSupportsMimeType(mimeType) {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 1;
+        canvas.height = 1;
+        return canvas.toDataURL(mimeType, 0.8).startsWith("data:" + mimeType + ";base64,");
+      } catch (error) {
+        return false;
+      }
+    }
+
+    async function renderCompressedImage(sourceImage, maxSize, quality, mimeType) {
       const width = sourceImage.naturalWidth || sourceImage.width;
       const height = sourceImage.naturalHeight || sourceImage.height;
       const scale = Math.min(maxSize / width, maxSize / height, 1);
@@ -565,17 +588,18 @@
       context.imageSmoothingEnabled = true;
       context.imageSmoothingQuality = "high";
       context.drawImage(sourceImage, 0, 0, outputWidth, outputHeight);
-      const dataUrl = canvas.toDataURL("image/webp", quality);
-      if (!dataUrl.startsWith("data:image/webp;base64,")) throw new Error("このブラウザはWebP変換に対応していません。");
-      return { dataUrl: dataUrl, width: outputWidth, height: outputHeight };
+      const dataUrl = canvas.toDataURL(mimeType, quality);
+      if (!dataUrl.startsWith("data:" + mimeType + ";base64,")) throw new Error("このブラウザでは画像変換を行えません。");
+      return { dataUrl: dataUrl, width: outputWidth, height: outputHeight, mimeType: mimeType };
     }
 
     async function compressImageFile(file) {
       const sourceDataUrl = await readFileAsDataUrl(file);
       const sourceImage = await loadImage(sourceDataUrl);
+      const preferredMimeType = canvasSupportsMimeType("image/webp") ? "image/webp" : "image/jpeg";
       let smallest = null;
       for (const step of compressionSteps) {
-        const result = await renderWebp(sourceImage, step[0], step[1]);
+        const result = await renderCompressedImage(sourceImage, step[0], step[1], preferredMimeType);
         if (!smallest || getBase64Length(result.dataUrl) < getBase64Length(smallest.dataUrl)) smallest = result;
         if (getBase64Length(result.dataUrl) <= IMAGE_BASE64_LIMIT) return result;
       }
@@ -680,7 +704,7 @@
         note: typeof data.n === "string" ? data.n : "",
         startMode: data.m === "editor" ? "editor" : "auto",
         images: Array.isArray(data.i) ? data.i.filter(function (image) {
-          return image && typeof image.fileName === "string" && typeof image.dataUrl === "string" && image.dataUrl.startsWith("data:image/webp;base64,");
+          return image && typeof image.fileName === "string" && typeof image.dataUrl === "string" && /^data:image\/(?:webp|jpeg|png);base64,/.test(image.dataUrl);
         }).map(function (image) {
           return { id: typeof image.id === "string" ? image.id : "image-" + Math.random().toString(36).slice(2), fileName: image.fileName, dataUrl: image.dataUrl, width: Number(image.width) || 0, height: Number(image.height) || 0 };
         }) : []
@@ -845,15 +869,33 @@
       scheduleUrlSaveAvailabilityUpdate();
     }
 
+    function insertTextAtCursor(text) {
+      const start = Number.isInteger(sourceText.selectionStart) ? sourceText.selectionStart : sourceText.value.length;
+      const end = Number.isInteger(sourceText.selectionEnd) ? sourceText.selectionEnd : start;
+      const before = sourceText.value.slice(0, start);
+      const after = sourceText.value.slice(end);
+      const prefix = before && !before.endsWith("\n") ? "\n\n" : "";
+      const suffix = after && !after.startsWith("\n") ? "\n\n" : "";
+      const inserted = prefix + text + suffix;
+      sourceText.value = before + inserted + after;
+      const cursor = before.length + inserted.length;
+      sourceText.focus();
+      sourceText.setSelectionRange(cursor, cursor);
+      updateCount();
+      scheduleUrlSaveAvailabilityUpdate();
+    }
+
     async function addImageFiles(fileList) {
       const files = Array.from(fileList || []).filter(function (file) { return file && file.type && file.type.startsWith("image/"); });
       if (!files.length) return;
       imageFileInput.disabled = true;
       try {
         for (const file of files) {
-          showStatus("画像をWebPへ圧縮しています：" + file.name);
+          showStatus("画像を圧縮しています：" + file.name);
           const result = await compressImageFile(file);
-          images.push({ id: "image-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8), fileName: makeUniqueImageName(file.name), dataUrl: result.dataUrl, width: result.width, height: result.height });
+          const image = { id: "image-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8), fileName: makeUniqueImageName(file.name), dataUrl: result.dataUrl, width: result.width, height: result.height };
+          images.push(image);
+          if (insertAtCursorCheck.checked) insertTextAtCursor(getEmbedText(image));
           renderImageList();
         }
         showStatus(files.length.toLocaleString("ja-JP") + "枚の画像を読み込みました。Base64本体は各18,000文字以内です。");
@@ -1064,6 +1106,25 @@
     });
 
     imageFileInput.addEventListener("change", function () { addImageFiles(imageFileInput.files); });
+
+    ["dragenter", "dragover"].forEach(function (eventName) {
+      imageDropZone.addEventListener(eventName, function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+        imageDropZone.classList.add("is-dragover");
+      });
+    });
+    ["dragleave", "drop"].forEach(function (eventName) {
+      imageDropZone.addEventListener(eventName, function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        imageDropZone.classList.remove("is-dragover");
+      });
+    });
+    imageDropZone.addEventListener("drop", function (event) {
+      if (event.dataTransfer && event.dataTransfer.files) addImageFiles(event.dataTransfer.files);
+    });
 
     document.getElementById("sampleButton").addEventListener("click", function () {
       titleInput.value = "旅行の予定";
