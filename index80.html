@@ -779,7 +779,7 @@ window.addEventListener("DOMContentLoaded", async function () {
         button.disabled = true;
         button.textContent = "リンクを作成中…";
         const result = await createSavedUrl("auto");
-        await copyText("[資料はこちら](" + result.url + ")");
+        await copyText("[資料はこちら](<" + result.url + ">)");
         button.textContent = "リンクをコピーしました";
         showStatus("Discode共有用の「資料はこちら」リンクをクリップボードへコピーしました。圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字");
       } catch (error) {
