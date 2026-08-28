@@ -176,6 +176,7 @@
       <div class="controls">
         <button id="saveButton" class="primary-button" type="button">閲覧用サイトとして保存</button>
         <button id="saveEditorButton" class="secondary-button" type="button">保存</button>
+        <button id="shareFileButton" class="secondary-button" type="button" aria-expanded="false" aria-controls="shareFilePanel">共有用サイトを保存</button>
         <button id="urlSaveButton" class="secondary-button" type="button" aria-expanded="false" aria-controls="urlSavePanel">URL保存</button>
         <button id="viewButton" class="secondary-button" type="button">この画面で閲覧</button>
         <button id="noteEditButton" class="secondary-button" type="button" aria-expanded="false" aria-controls="notePanel">特記事項編集</button>
@@ -183,10 +184,22 @@
         <div hidden><button id="clearButton" class="secondary-button" type="button">入力を消す</button></div>
       </div>
 
+      <section id="shareFilePanel" class="url-save-panel hidden" aria-labelledby="shareFileTitle">
+        <h2 id="shareFileTitle">共有用サイトを保存</h2>
+        <p class="url-save-description">
+          現在の内容を埋め込んだ共有用HTMLを保存します。このHTMLをGitHub Pagesなどへ公開すると、その共有URLを開くだけで「Markdownから閲覧用サイトを作成」に内容を渡して表示できます。チャットでは、公開した共有用サイトのURLだけを送れます。
+        </p>
+        <div class="url-save-actions">
+          <button id="saveSharedViewerButton" class="primary-button" type="button">閲覧用サイトとして共有用サイトを保存</button>
+          <button id="saveSharedEditorButton" class="secondary-button" type="button">共有用サイトを保存</button>
+        </div>
+      </section>
+
       <section id="urlSavePanel" class="url-save-panel hidden" aria-labelledby="urlSaveTitle">
         <h2 id="urlSaveTitle">URLとして保存</h2>
         <p class="url-save-description">
-          現在の内容を圧縮してURL内に保存します。コピーしたURLへアクセスすると、このページで内容を開くことができます。
+          現在の内容を圧縮してURL内に保存します。コピーしたURLへアクセスすると、このページで内容を開くことができます。<br><br>
+          見られても大丈夫な内容の場合は、有効期限付きの短縮URLで短縮して送ることも検討してください。
         </p>
         <div class="url-save-actions">
           <button id="copyViewerUrlButton" class="primary-button" type="button">「閲覧用サイトとして保存」のURLをコピー</button>
@@ -687,6 +700,22 @@
       };
     }
 
+    async function readSharedFileData() {
+      if (!location.hash.startsWith("#shared=")) return null;
+      const storageKey = decodeURIComponent(location.hash.slice("#shared=".length));
+      if (!storageKey) return null;
+
+      try {
+        const encoded = localStorage.getItem("markdownViewerShared:" + storageKey);
+        if (!encoded) return null;
+        return await decodeUrlSaveData(encoded);
+      } catch (error) {
+        console.error(error);
+        showStatus("共有用ファイルの内容を読み込めませんでした。共有用ファイルのURLから開き直してください。", true);
+        return null;
+      }
+    }
+
     async function readUrlSaveData() {
       if (!location.hash.startsWith(URL_HASH_PREFIX)) return null;
       const encoded = location.hash.slice(URL_HASH_PREFIX.length);
@@ -954,6 +983,74 @@
       return "<!DOCTYPE html>\n" + clone.outerHTML;
     }
 
+    function makeSharedFileName() {
+      const base = titleInput.value.trim() || "共有用ページ";
+      const safe = base.replace(/[\\/:*?"<>|]/g, "_").replace(/\s+/g, " ").trim().slice(0, 60);
+      return (safe || "共有用ページ") + ".html";
+    }
+
+    function makeSharedStorageKey() {
+      return "mdv-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
+    }
+
+    function buildSharedLauncherHtml(encodedPayload, storageKey) {
+      const targetUrl = "https://uni928.github.io/Uni928PublicHTMLs/index80.html";
+      const safeTitle = escapeHtml(titleInput.value.trim() || "共有ページを開く");
+      const payload = JSON.stringify(String(encodedPayload));
+      const key = JSON.stringify(String(storageKey));
+      const target = JSON.stringify(targetUrl);
+
+      return "<!DOCTYPE html>\n" +
+        '<html lang="ja"><head><meta charset="UTF-8">' +
+        '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+        '<meta name="robots" content="noindex,nofollow">' +
+        '<title>' + safeTitle + '</title>' +
+        '<style>@layer base;@layer base{html{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color-scheme:light}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f7fb;color:#1e293b}.box{width:min(560px,calc(100% - 32px));padding:28px;border:1px solid #dbe4f0;border-radius:20px;background:#fff;box-shadow:0 18px 48px rgba(30,41,59,.10);text-align:center}h1{margin:0 0 12px;font-size:1.35rem}p{margin:0;color:#64748b;line-height:1.75}a{display:inline-block;margin-top:18px;color:#2563eb;font-weight:700}}</style>' +
+        '</head><body><main class="box"><h1>' + safeTitle + '</h1>' +
+        '<p>Markdownから閲覧用サイトを作成で開いています。</p>' +
+        '<a id="fallback" href="' + targetUrl + '">開かない場合はこちら</a></main>' +
+        '<script>(function(){"use strict";var p=' + payload + ',k=' + key + ',t=' + target + ';' +
+        'var next=t+"#shared="+encodeURIComponent(k);' +
+        'try{localStorage.setItem("markdownViewerShared:"+k,p);location.replace(next);}' +
+        'catch(e){location.replace(t+"#saved="+p);}' +
+        '})();<\/script></body></html>';
+    }
+
+    async function downloadSharedFile(startMode, button) {
+      applyMarkdownTitle();
+      if (!sourceText.value.length && !titleInput.value.length) {
+        showStatus("文章またはタイトルを1文字以上入力してください。", true);
+        sourceText.focus();
+        return;
+      }
+
+      const original = button.textContent;
+      try {
+        button.disabled = true;
+        button.textContent = "共有用サイトを作成中…";
+        const encodedPayload = await encodeUrlSaveData(startMode);
+        const storageKey = makeSharedStorageKey();
+        const html = buildSharedLauncherHtml(encodedPayload, storageKey);
+        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = makeSharedFileName();
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        showStatus(startMode === "editor"
+          ? "編集画面から開始する共有用サイトを保存しました。"
+          : "閲覧画面から開始する共有用サイトを保存しました。");
+      } catch (error) {
+        showStatus(error && error.message ? error.message : "共有用サイトの作成に失敗しました。", true);
+      } finally {
+        button.disabled = false;
+        button.textContent = original;
+      }
+    }
+
     function downloadSelf(startMode) {
       applyMarkdownTitle();
       if (!sourceText.value.length && !titleInput.value.length) {
@@ -976,6 +1073,24 @@
 
     document.getElementById("saveButton").addEventListener("click", function () { downloadSelf("auto"); });
     document.getElementById("saveEditorButton").addEventListener("click", function () { downloadSelf("editor"); });
+
+    const shareFileButton = document.getElementById("shareFileButton");
+    const shareFilePanel = document.getElementById("shareFilePanel");
+    const saveSharedViewerButton = document.getElementById("saveSharedViewerButton");
+    const saveSharedEditorButton = document.getElementById("saveSharedEditorButton");
+
+    shareFileButton.addEventListener("click", function () {
+      const willOpen = shareFilePanel.classList.contains("hidden");
+      shareFilePanel.classList.toggle("hidden", !willOpen);
+      shareFileButton.setAttribute("aria-expanded", String(willOpen));
+    });
+    saveSharedViewerButton.addEventListener("click", function () {
+      downloadSharedFile("auto", saveSharedViewerButton);
+    });
+    saveSharedEditorButton.addEventListener("click", function () {
+      downloadSharedFile("editor", saveSharedEditorButton);
+    });
+
     urlSaveButton.addEventListener("click", function () {
       const willOpen = urlSavePanel.classList.contains("hidden");
       urlSavePanel.classList.toggle("hidden", !willOpen);
@@ -1103,8 +1218,9 @@
       }
     });
 
-    const urlInitialData = await readUrlSaveData();
-    const initialData = urlInitialData || readInitialData();
+    const sharedInitialData = await readSharedFileData();
+    const urlInitialData = sharedInitialData ? null : await readUrlSaveData();
+    const initialData = sharedInitialData || urlInitialData || readInitialData();
     titleInput.value = initialData.title;
     sourceText.value = initialData.source;
     noteText.value = initialData.note;
