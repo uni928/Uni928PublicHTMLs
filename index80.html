@@ -700,20 +700,60 @@
       };
     }
 
-    async function readSharedFileData() {
-      if (!location.hash.startsWith("#shared=")) return null;
-      const storageKey = decodeURIComponent(location.hash.slice("#shared=".length));
-      if (!storageKey) return null;
+    const SHARED_LOCAL_STORAGE_KEY = "markdownViewerSharedData";
+    const SHARED_COMPRESSED_LIMIT = 3 * 1024 * 1024;
+    let shareSizeUpdateTimer = 0;
+    let shareSizeUpdateSerial = 0;
 
+    async function getSharedCompressedData(startMode) {
+      const json = JSON.stringify(makeUrlSaveData(startMode));
+      return await compressBytes(new TextEncoder().encode(json));
+    }
+
+    async function readSharedFileData() {
+      let encoded = "";
       try {
-        const encoded = localStorage.getItem("markdownViewerShared:" + storageKey);
+        encoded = localStorage.getItem(SHARED_LOCAL_STORAGE_KEY) || "";
         if (!encoded) return null;
-        return await decodeUrlSaveData(encoded);
+        const decoded = await decodeUrlSaveData(encoded);
+        localStorage.removeItem(SHARED_LOCAL_STORAGE_KEY);
+        return decoded;
       } catch (error) {
+        try { localStorage.removeItem(SHARED_LOCAL_STORAGE_KEY); } catch (removeError) {}
         console.error(error);
-        showStatus("共有用ファイルの内容を読み込めませんでした。共有用ファイルのURLから開き直してください。", true);
+        showStatus("共有用サイトの内容を読み込めませんでした。共有用サイトのURLから開き直してください。", true);
         return null;
       }
+    }
+
+    async function updateShareSaveAvailability() {
+      const serial = ++shareSizeUpdateSerial;
+      if (!("CompressionStream" in window) || !("DecompressionStream" in window)) {
+        shareFileButton.classList.add("hidden");
+        shareFilePanel.classList.add("hidden");
+        shareFileButton.setAttribute("aria-expanded", "false");
+        return;
+      }
+      try {
+        const compressedBytes = await getSharedCompressedData("auto");
+        if (serial !== shareSizeUpdateSerial) return;
+        const tooLarge = compressedBytes.byteLength >= SHARED_COMPRESSED_LIMIT;
+        shareFileButton.classList.toggle("hidden", tooLarge);
+        if (tooLarge) {
+          shareFilePanel.classList.add("hidden");
+          shareFileButton.setAttribute("aria-expanded", "false");
+        }
+      } catch (error) {
+        if (serial !== shareSizeUpdateSerial) return;
+        shareFileButton.classList.add("hidden");
+        shareFilePanel.classList.add("hidden");
+        shareFileButton.setAttribute("aria-expanded", "false");
+      }
+    }
+
+    function scheduleShareSaveAvailabilityUpdate() {
+      clearTimeout(shareSizeUpdateTimer);
+      shareSizeUpdateTimer = setTimeout(updateShareSaveAvailability, 300);
     }
 
     async function readUrlSaveData() {
@@ -872,6 +912,7 @@
         imageList.appendChild(item);
       });
       scheduleUrlSaveAvailabilityUpdate();
+      scheduleShareSaveAvailabilityUpdate();
     }
 
     async function addImageFiles(fileList) {
@@ -989,16 +1030,12 @@
       return (safe || "共有用ページ") + ".html";
     }
 
-    function makeSharedStorageKey() {
-      return "mdv-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
-    }
-
-    function buildSharedLauncherHtml(encodedPayload, storageKey) {
+    function buildSharedLauncherHtml(encodedPayload) {
       const targetUrl = "https://uni928.github.io/Uni928PublicHTMLs/index80.html";
       const safeTitle = escapeHtml(titleInput.value.trim() || "共有ページを開く");
       const payload = JSON.stringify(String(encodedPayload));
-      const key = JSON.stringify(String(storageKey));
       const target = JSON.stringify(targetUrl);
+      const storageKey = JSON.stringify(SHARED_LOCAL_STORAGE_KEY);
 
       return "<!DOCTYPE html>\n" +
         '<html lang="ja"><head><meta charset="UTF-8">' +
@@ -1007,12 +1044,10 @@
         '<title>' + safeTitle + '</title>' +
         '<style>@layer base;@layer base{html{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color-scheme:light}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f7fb;color:#1e293b}.box{width:min(560px,calc(100% - 32px));padding:28px;border:1px solid #dbe4f0;border-radius:20px;background:#fff;box-shadow:0 18px 48px rgba(30,41,59,.10);text-align:center}h1{margin:0 0 12px;font-size:1.35rem}p{margin:0;color:#64748b;line-height:1.75}a{display:inline-block;margin-top:18px;color:#2563eb;font-weight:700}}</style>' +
         '</head><body><main class="box"><h1>' + safeTitle + '</h1>' +
-        '<p>Markdownから閲覧用サイトを作成で開いています。</p>' +
+        '<p id="message">Markdownから閲覧用サイトを作成で開いています。</p>' +
         '<a id="fallback" href="' + targetUrl + '">開かない場合はこちら</a></main>' +
-        '<script>(function(){"use strict";var p=' + payload + ',k=' + key + ',t=' + target + ';' +
-        'var next=t+"#shared="+encodeURIComponent(k);' +
-        'try{localStorage.setItem("markdownViewerShared:"+k,p);location.replace(next);}' +
-        'catch(e){location.replace(t+"#saved="+p);}' +
+        '<script>(function(){"use strict";var p=' + payload + ',t=' + target + ',k=' + storageKey + ';' +
+        'try{localStorage.setItem(k,p);location.replace(t);}catch(e){var m=document.getElementById("message");if(m)m.textContent="共有データを一時保存できませんでした。この共有用サイトと遷移先は同じサイト内で公開してください。";}' +
         '})();<\/script></body></html>';
     }
 
@@ -1028,9 +1063,13 @@
       try {
         button.disabled = true;
         button.textContent = "共有用サイトを作成中…";
-        const encodedPayload = await encodeUrlSaveData(startMode);
-        const storageKey = makeSharedStorageKey();
-        const html = buildSharedLauncherHtml(encodedPayload, storageKey);
+        const compressedBytes = await getSharedCompressedData(startMode);
+        if (compressedBytes.byteLength >= SHARED_COMPRESSED_LIMIT) {
+          await updateShareSaveAvailability();
+          throw new Error("圧縮後の共有データが3MB以上のため、共有用サイトとして保存できません。");
+        }
+        const encodedPayload = bytesToBase64Url(compressedBytes);
+        const html = buildSharedLauncherHtml(encodedPayload);
         const blob = new Blob([html], { type: "text/html;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const anchor = document.createElement("a");
@@ -1083,6 +1122,7 @@
       const willOpen = shareFilePanel.classList.contains("hidden");
       shareFilePanel.classList.toggle("hidden", !willOpen);
       shareFileButton.setAttribute("aria-expanded", String(willOpen));
+      if (willOpen) updateShareSaveAvailability();
     });
     saveSharedViewerButton.addEventListener("click", function () {
       downloadSharedFile("auto", saveSharedViewerButton);
@@ -1185,6 +1225,7 @@
       sourceText.value = "## 集合場所\n\n東京駅の丸の内南口に、午前9時までに集合します。\n\n## 持ち物\n\n- スマートフォン\n- 充電器\n- 飲み物\n- 折りたたみ傘\n\n> 雨天の場合は予定を変更します。\n\n参考：[JR東日本](https://www.jreast.co.jp/)";
       updateCount();
       scheduleUrlSaveAvailabilityUpdate();
+      scheduleShareSaveAvailabilityUpdate();
       showStatus("入力例を入れました。");
     });
 
@@ -1194,6 +1235,7 @@
       noteText.value = "";
       updateCount();
       scheduleUrlSaveAvailabilityUpdate();
+      scheduleShareSaveAvailabilityUpdate();
       showStatus("入力内容を消しました。");
       sourceText.focus();
     });
@@ -1204,12 +1246,23 @@
         const lines = normalized.split("\n");
         if (/^#\s+.+\s*$/.test(lines[0] || "") && lines.length >= 2 && (lines[1] || "").trim() === "") applyMarkdownTitle();
         scheduleUrlSaveAvailabilityUpdate();
+        scheduleShareSaveAvailabilityUpdate();
       }, 0);
     });
 
-    sourceText.addEventListener("input", function () { updateCount(); scheduleUrlSaveAvailabilityUpdate(); });
-    titleInput.addEventListener("input", scheduleUrlSaveAvailabilityUpdate);
-    noteText.addEventListener("input", scheduleUrlSaveAvailabilityUpdate);
+    sourceText.addEventListener("input", function () {
+      updateCount();
+      scheduleUrlSaveAvailabilityUpdate();
+      scheduleShareSaveAvailabilityUpdate();
+    });
+    titleInput.addEventListener("input", function () {
+      scheduleUrlSaveAvailabilityUpdate();
+      scheduleShareSaveAvailabilityUpdate();
+    });
+    noteText.addEventListener("input", function () {
+      scheduleUrlSaveAvailabilityUpdate();
+      scheduleShareSaveAvailabilityUpdate();
+    });
 
     document.addEventListener("keydown", function (event) {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
@@ -1232,6 +1285,7 @@
     }
     updateCount();
     await updateUrlSaveAvailability();
+    await updateShareSaveAvailability();
 
     if (initialData.startMode !== "editor" && (initialData.title + initialData.source).length >= 1) showViewer();
     else showEditor();
