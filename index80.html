@@ -28,6 +28,7 @@
       body { margin: 0; min-height: 100vh; background: linear-gradient(180deg, rgba(255,255,255,.78), transparent 340px), var(--bg); }
       button, input, textarea { font: inherit; }
       button { cursor: pointer; }
+      button:disabled { cursor: default; opacity: .62; }
       a { color: var(--accent); overflow-wrap: anywhere; }
       .hidden { display: none !important; }
     }
@@ -61,6 +62,14 @@
       /* 特記事項編集パネル */
       .note-panel { margin-top: 14px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: #f8fafc; }
       .note-panel .text-input { min-height: 120px; background: #fff; }
+
+      /* URL保存パネル */
+      .url-save-panel { margin-top: 14px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: #f8fafc; }
+      .url-save-panel h2 { margin: 0 0 8px; font-size: 1.05rem; }
+      .url-save-description { margin: 0 0 14px; color: var(--muted); font-size: .92rem; line-height: 1.75; }
+      .url-save-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .url-save-actions button { width: 100%; }
+      .url-size-info { margin: 12px 0 0; color: var(--muted); font-size: .84rem; line-height: 1.6; }
 
       /* 画像読み込みパネル */
       .image-panel { margin-top: 16px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: #f8fafc; }
@@ -110,6 +119,7 @@
       .document th { background: #f8fafc; }
       .document img { display: block; max-width: 100%; height: auto; margin: 20px auto; border-radius: 12px; }
       .task-item { list-style: none; margin-left: -1.3em; }
+      #viewTitle { margin-top: 36px; }
     }
 
     @layer responsive {
@@ -124,13 +134,10 @@
         .image-load-label { width: 100%; }
         .controls { flex-direction: column; }
         .controls button { width: 100%; }
+        .url-save-actions { grid-template-columns: 1fr; }
         .viewer-actions { position: static; justify-content: flex-end; margin: -4px 0 14px; }
         .document h1 { margin-right: 0; }
       }
-
-#viewTitle {
-  margin-top: 36px;
-}
     }
   </style>
 </head>
@@ -169,11 +176,25 @@
       <div class="controls">
         <button id="saveButton" class="primary-button" type="button">閲覧用サイトとして保存</button>
         <button id="saveEditorButton" class="secondary-button" type="button">保存</button>
+        <button id="urlSaveButton" class="secondary-button" type="button" aria-expanded="false" aria-controls="urlSavePanel">URL保存</button>
         <button id="viewButton" class="secondary-button" type="button">この画面で閲覧</button>
         <button id="noteEditButton" class="secondary-button" type="button" aria-expanded="false" aria-controls="notePanel">特記事項編集</button>
         <button id="sampleButton" class="secondary-button" type="button">入力例を入れる</button>
-        <div hidden>m<button id="clearButton" class="secondary-button" type="button">入力を消す</button></div>
+        <div hidden><button id="clearButton" class="secondary-button" type="button">入力を消す</button></div>
       </div>
+
+      <section id="urlSavePanel" class="url-save-panel hidden" aria-labelledby="urlSaveTitle">
+        <h2 id="urlSaveTitle">URLとして保存</h2>
+        <p class="url-save-description">
+          現在の内容を圧縮してURL内に保存します。コピーしたURLへアクセスすると、このページで内容を開くことができます。<br><br>
+          見られても大丈夫な内容の場合は、有効期限付きの短縮URLで短縮して送ることも検討してください。
+        </p>
+        <div class="url-save-actions">
+          <button id="copyViewerUrlButton" class="primary-button" type="button">「閲覧用サイトとして保存」のURLをコピー</button>
+          <button id="copyEditorUrlButton" class="secondary-button" type="button">「保存」のURLをコピー</button>
+        </div>
+        <p id="urlSizeInfo" class="url-size-info"></p>
+      </section>
 
       <div id="notePanel" class="note-panel hidden">
         <div class="field-label">
@@ -203,7 +224,7 @@
 
   <script id="initialData" type="application/json">{"title":"","source":"","createdAt":"","note":"","startMode":"auto","images":[]}</script>
   <script>
-  window.addEventListener("DOMContentLoaded", function () {
+  window.addEventListener("DOMContentLoaded", async function () {
     "use strict";
 
     const editorMode = document.getElementById("editorMode");
@@ -220,13 +241,22 @@
     const viewMeta = document.getElementById("viewMeta");
     const imageFileInput = document.getElementById("imageFileInput");
     const imageList = document.getElementById("imageList");
+    const urlSaveButton = document.getElementById("urlSaveButton");
+    const urlSavePanel = document.getElementById("urlSavePanel");
+    const copyViewerUrlButton = document.getElementById("copyViewerUrlButton");
+    const copyEditorUrlButton = document.getElementById("copyEditorUrlButton");
+    const urlSizeInfo = document.getElementById("urlSizeInfo");
 
     const IMAGE_BASE64_LIMIT = 18000;
+    const URL_BASE64_LIMIT = 9000;
+    const URL_HASH_PREFIX = "#saved=";
     const compressionSteps = [
       [768, 0.72], [640, 0.66], [560, 0.60], [480, 0.54], [420, 0.48],
       [360, 0.42], [320, 0.36], [280, 0.30], [240, 0.24], [200, 0.18], [160, 0.12]
     ];
     let images = [];
+    let urlSizeUpdateTimer = 0;
+    let urlSizeUpdateSerial = 0;
 
     function escapeHtml(value) {
       return String(value)
@@ -287,12 +317,8 @@
       value = value.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
       value = value.replace(/(^|[^_])_([^_\n]+)_/g, "$1<em>$2</em>");
       value = value.replace(/  $/g, "<br>");
-      codeTokens.forEach(function (html, index) {
-        value = value.replace("@@CODE" + index + "@@", html);
-      });
-      imageTokens.forEach(function (html, index) {
-        value = value.replace("@@EMBEDIMAGE" + index + "@@", html);
-      });
+      codeTokens.forEach(function (html, index) { value = value.replace("@@CODE" + index + "@@", html); });
+      imageTokens.forEach(function (html, index) { value = value.replace("@@EMBEDIMAGE" + index + "@@", html); });
       return value;
     }
 
@@ -303,16 +329,12 @@
     function isTableDivider(line) {
       const cells = splitTableRow(line);
       if (!line.includes("|") || !cells.length) return false;
-
-      return cells.every(function (cell) {
-        return cell === "" || /^:?-+:?$/.test(cell);
-      });
+      return cells.every(function (cell) { return cell === "" || /^:?-+:?$/.test(cell); });
     }
 
     function isTableCandidate(line) {
       if (!line || !line.includes("|")) return false;
-      const cells = splitTableRow(line);
-      return cells.length >= 2;
+      return splitTableRow(line).length >= 2;
     }
 
     function parseMarkdownToHtml(markdown) {
@@ -341,7 +363,7 @@
         output.push("<" + tag + ">" + listItems.map(function (item) {
           const task = item.match(/^\[([ xX])\]\s+(.+)$/);
           if (task) {
-            return "<li class=\"task-item\"><input type=\"checkbox\" disabled" + (task[1].toLowerCase() === "x" ? " checked" : "") + "> " + parseInlineMarkdown(task[2]) + "</li>";
+            return '<li class="task-item"><input type="checkbox" disabled' + (task[1].toLowerCase() === "x" ? " checked" : "") + "> " + parseInlineMarkdown(task[2]) + "</li>";
           }
           return "<li>" + parseInlineMarkdown(item) + "</li>";
         }).join("") + "</" + tag + ">");
@@ -397,7 +419,6 @@
 
           if (hasFollowingTableLine || looksExplicit) {
             flushAll();
-
             const headers = splitTableRow(raw);
             const secondLineIsDivider = isTableDivider(nextLine);
             const dividerCells = secondLineIsDivider ? splitTableRow(nextLine) : [];
@@ -407,7 +428,6 @@
               if (/^-+:$/.test(cell)) return "right";
               return "left";
             });
-
             const rows = [];
             index += secondLineIsDivider ? 2 : 1;
             while (index < lines.length && isTableCandidate(lines[index]) && lines[index].trim()) {
@@ -415,17 +435,12 @@
               index++;
             }
             index--;
-
             let html = '<div class="table-wrap"><table><thead><tr>';
-            headers.forEach(function (cell, i) {
-              html += '<th style="text-align:' + aligns[i] + '">' + parseInlineMarkdown(cell) + "</th>";
-            });
+            headers.forEach(function (cell, i) { html += '<th style="text-align:' + aligns[i] + '">' + parseInlineMarkdown(cell) + "</th>"; });
             html += "</tr></thead><tbody>";
             rows.forEach(function (row) {
               html += "<tr>";
-              headers.forEach(function (_, i) {
-                html += '<td style="text-align:' + aligns[i] + '">' + parseInlineMarkdown(row[i] || "") + "</td>";
-              });
+              headers.forEach(function (_, i) { html += '<td style="text-align:' + aligns[i] + '">' + parseInlineMarkdown(row[i] || "") + "</td>"; });
               html += "</tr>";
             });
             html += "</tbody></table></div>";
@@ -480,24 +495,15 @@
       return output.join("\n");
     }
 
-    function parseTextToHtml(text) {
-      return parseMarkdownToHtml(text);
-    }
-
-    function parseTextToMarkdown(text) {
-      return String(text).replace(/\r\n?/g, "\n").trim();
-    }
+    function parseTextToHtml(text) { return parseMarkdownToHtml(text); }
+    function parseTextToMarkdown(text) { return String(text).replace(/\r\n?/g, "\n").trim(); }
 
     function encodeStoredText(value) {
-      return String(value)
-        .replace(/`/g, "jfasofklasflkd")
-        .replace(/<\//g, "<gsafnasdfhags/");
+      return String(value).replace(/`/g, "jfasofklasflkd").replace(/<\//g, "<gsafnasdfhags/");
     }
 
     function decodeStoredText(value) {
-      return String(value)
-        .replace(/<gsafnasdfhags\//g, "</")
-        .replace(/jfasofklasflkd/g, String.fromCharCode(96));
+      return String(value).replace(/<gsafnasdfhags\//g, "</").replace(/jfasofklasflkd/g, String.fromCharCode(96));
     }
 
     function readInitialData() {
@@ -513,20 +519,13 @@
           images: Array.isArray(parsed.images) ? parsed.images.filter(function (image) {
             return image && typeof image.fileName === "string" && typeof image.dataUrl === "string" && image.dataUrl.startsWith("data:image/webp;base64,");
           }).map(function (image) {
-            return {
-              id: typeof image.id === "string" ? image.id : "image-" + Math.random().toString(36).slice(2),
-              fileName: image.fileName,
-              dataUrl: image.dataUrl,
-              width: Number(image.width) || 0,
-              height: Number(image.height) || 0
-            };
+            return { id: typeof image.id === "string" ? image.id : "image-" + Math.random().toString(36).slice(2), fileName: image.fileName, dataUrl: image.dataUrl, width: Number(image.width) || 0, height: Number(image.height) || 0 };
           }) : []
         };
       } catch (error) {
         return { title: "", source: "", createdAt: "", note: "", startMode: "auto", images: [] };
       }
     }
-
 
     function getBase64Length(dataUrl) {
       const commaIndex = String(dataUrl).indexOf(",");
@@ -601,14 +600,12 @@
     function replaceImageReferences(oldName, newName) {
       if (!oldName || oldName === newName) return;
       const escapedOld = oldName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const pattern = new RegExp("\\[画像挿入\\]\\(" + escapedOld + "\\)", "g");
+      const pattern = new RegExp(String.raw`\[画像挿入\]\(${escapedOld}\)`, "g");
       sourceText.value = sourceText.value.replace(pattern, "[画像挿入](" + newName + ")");
       updateCount();
     }
 
-    function getEmbedText(image) {
-      return "[画像挿入](" + image.fileName + ")";
-    }
+    function getEmbedText(image) { return "[画像挿入](" + image.fileName + ")"; }
 
     async function copyText(value) {
       try {
@@ -625,17 +622,156 @@
       }
     }
 
+    function bytesToBase64Url(bytes) {
+      let binary = "";
+      const chunkSize = 0x8000;
+      for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+        const chunk = bytes.subarray(offset, offset + chunkSize);
+        for (let i = 0; i < chunk.length; i++) binary += String.fromCharCode(chunk[i]);
+      }
+      return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+    }
+
+    function base64UrlToBytes(value) {
+      const base64 = String(value).replace(/-/g, "+").replace(/_/g, "/");
+      const padded = base64 + "=".repeat((4 - base64.length % 4) % 4);
+      const binary = atob(padded);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    }
+
+    async function compressBytes(bytes) {
+      if (!("CompressionStream" in window)) throw new Error("このブラウザはURL保存用の圧縮機能に対応していません。");
+      const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip"));
+      return new Uint8Array(await new Response(stream).arrayBuffer());
+    }
+
+    async function decompressBytes(bytes) {
+      if (!("DecompressionStream" in window)) throw new Error("このブラウザはURL保存データの展開に対応していません。");
+      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+      return new Uint8Array(await new Response(stream).arrayBuffer());
+    }
+
+    function makeUrlSaveData(startMode) {
+      return {
+        v: 1,
+        t: titleInput.value,
+        s: sourceText.value,
+        n: noteText.value,
+        m: startMode === "editor" ? "editor" : "auto",
+        i: images.map(function (image) { return { id: image.id, fileName: image.fileName, dataUrl: image.dataUrl, width: image.width, height: image.height }; })
+      };
+    }
+
+    async function encodeUrlSaveData(startMode) {
+      const json = JSON.stringify(makeUrlSaveData(startMode));
+      const compressedBytes = await compressBytes(new TextEncoder().encode(json));
+      return bytesToBase64Url(compressedBytes);
+    }
+
+    async function decodeUrlSaveData(encoded) {
+      const decompressedBytes = await decompressBytes(base64UrlToBytes(encoded));
+      const data = JSON.parse(new TextDecoder().decode(decompressedBytes));
+      if (!data || data.v !== 1) throw new Error("対応していないURL保存データです。");
+      return {
+        title: typeof data.t === "string" ? data.t : "",
+        source: typeof data.s === "string" ? data.s : "",
+        createdAt: "",
+        note: typeof data.n === "string" ? data.n : "",
+        startMode: data.m === "editor" ? "editor" : "auto",
+        images: Array.isArray(data.i) ? data.i.filter(function (image) {
+          return image && typeof image.fileName === "string" && typeof image.dataUrl === "string" && image.dataUrl.startsWith("data:image/webp;base64,");
+        }).map(function (image) {
+          return { id: typeof image.id === "string" ? image.id : "image-" + Math.random().toString(36).slice(2), fileName: image.fileName, dataUrl: image.dataUrl, width: Number(image.width) || 0, height: Number(image.height) || 0 };
+        }) : []
+      };
+    }
+
+    async function readUrlSaveData() {
+      if (!location.hash.startsWith(URL_HASH_PREFIX)) return null;
+      const encoded = location.hash.slice(URL_HASH_PREFIX.length);
+      if (!encoded) return null;
+      try {
+        return await decodeUrlSaveData(encoded);
+      } catch (error) {
+        console.error(error);
+        showStatus(error && error.message ? "URL保存データを開けませんでした：" + error.message : "URL保存データを開けませんでした。", true);
+        return null;
+      }
+    }
+
+    function buildUrlWithPayload(encoded) {
+      const url = new URL(location.href);
+      url.hash = "saved=" + encoded;
+      return url.href;
+    }
+
+    async function createSavedUrl(startMode) {
+      applyMarkdownTitle();
+      if (!sourceText.value.length && !titleInput.value.length) throw new Error("文章またはタイトルを1文字以上入力してください。");
+      const encoded = await encodeUrlSaveData(startMode);
+      if (encoded.length >= URL_BASE64_LIMIT) throw new Error("圧縮後のBase64データが9,000文字以上のため、URLとして保存できません。");
+      return { url: buildUrlWithPayload(encoded), encodedLength: encoded.length };
+    }
+
+    async function copySavedUrl(startMode, button) {
+      const originalText = button.textContent;
+      try {
+        button.disabled = true;
+        button.textContent = "URLを作成中…";
+        const result = await createSavedUrl(startMode);
+        await copyText(result.url);
+        button.textContent = "URLをコピーしました";
+        showStatus("URLをクリップボードへコピーしました。圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字");
+      } catch (error) {
+        button.textContent = "コピーできませんでした";
+        showStatus(error && error.message ? error.message : "URLの作成に失敗しました。", true);
+      } finally {
+        setTimeout(function () { button.textContent = originalText; button.disabled = false; }, 1600);
+      }
+    }
+
+    async function updateUrlSaveAvailability() {
+      const serial = ++urlSizeUpdateSerial;
+      if (!("CompressionStream" in window) || !("DecompressionStream" in window)) {
+        urlSaveButton.classList.add("hidden");
+        urlSavePanel.classList.add("hidden");
+        urlSaveButton.setAttribute("aria-expanded", "false");
+        return;
+      }
+      try {
+        const encoded = await encodeUrlSaveData("auto");
+        if (serial !== urlSizeUpdateSerial) return;
+        const tooLarge = encoded.length >= URL_BASE64_LIMIT;
+        urlSaveButton.classList.toggle("hidden", tooLarge);
+        if (tooLarge) {
+          urlSavePanel.classList.add("hidden");
+          urlSaveButton.setAttribute("aria-expanded", "false");
+        }
+        urlSizeInfo.textContent = "現在の圧縮後Base64：" + encoded.length.toLocaleString("ja-JP") + " / " + URL_BASE64_LIMIT.toLocaleString("ja-JP") + "文字" + (tooLarge ? "（URL保存の上限を超えています）" : "");
+      } catch (error) {
+        if (serial !== urlSizeUpdateSerial) return;
+        urlSaveButton.classList.add("hidden");
+        urlSavePanel.classList.add("hidden");
+        urlSaveButton.setAttribute("aria-expanded", "false");
+      }
+    }
+
+    function scheduleUrlSaveAvailabilityUpdate() {
+      clearTimeout(urlSizeUpdateTimer);
+      urlSizeUpdateTimer = setTimeout(updateUrlSaveAvailability, 300);
+    }
+
     function renderImageList() {
       imageList.replaceChildren();
       images.forEach(function (image, index) {
         const item = document.createElement("li");
         item.className = "image-item";
-
         const preview = document.createElement("img");
         preview.className = "image-thumb";
         preview.src = image.dataUrl;
         preview.alt = image.fileName;
-
         const main = document.createElement("div");
         main.className = "image-item-main";
         const name = document.createElement("p");
@@ -649,7 +785,6 @@
         output.readOnly = true;
         output.value = getEmbedText(image);
         output.setAttribute("aria-label", image.fileName + " の埋め込み用文章");
-
         const actions = document.createElement("div");
         actions.className = "image-actions";
         const copyButton = document.createElement("button");
@@ -708,6 +843,7 @@
         item.append(preview, main);
         imageList.appendChild(item);
       });
+      scheduleUrlSaveAvailabilityUpdate();
     }
 
     async function addImageFiles(fileList) {
@@ -718,13 +854,7 @@
         for (const file of files) {
           showStatus("画像をWebPへ圧縮しています：" + file.name);
           const result = await compressImageFile(file);
-          images.push({
-            id: "image-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8),
-            fileName: makeUniqueImageName(file.name),
-            dataUrl: result.dataUrl,
-            width: result.width,
-            height: result.height
-          });
+          images.push({ id: "image-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8), fileName: makeUniqueImageName(file.name), dataUrl: result.dataUrl, width: result.width, height: result.height });
           renderImageList();
         }
         showStatus(files.length.toLocaleString("ja-JP") + "枚の画像を読み込みました。Base64本体は各18,000文字以内です。");
@@ -736,16 +866,13 @@
       }
     }
 
-
     function applyMarkdownTitle() {
       if (titleInput.value.trim()) return;
-
       const normalized = sourceText.value.replace(/\r\n?/g, "\n");
       const lines = normalized.split("\n");
       const firstLine = lines[0] || "";
       const match = firstLine.match(/^#\s+(.+?)\s*$/);
       if (!match) return;
-
       titleInput.value = match[1].trim();
       lines.shift();
       while (lines.length && !lines[0].trim()) lines.shift();
@@ -758,9 +885,7 @@
       status.classList.toggle("error", Boolean(isError));
     }
 
-    function updateCount() {
-      charCount.textContent = sourceText.value.length.toLocaleString("ja-JP") + "文字";
-    }
+    function updateCount() { charCount.textContent = sourceText.value.length.toLocaleString("ja-JP") + "文字"; }
 
     function showEditor() {
       viewerMode.classList.add("hidden");
@@ -779,13 +904,10 @@
         sourceText.focus();
         return false;
       }
-
       viewTitle.textContent = title;
       viewContent.innerHTML = parseTextToHtml(source);
       const savedData = readInitialData();
-      const dateText = savedData.createdAt || new Intl.DateTimeFormat("ja-JP", {
-        year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit"
-      }).format(new Date());
+      const dateText = savedData.createdAt || new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date());
       viewMeta.replaceChildren();
       if (noteText.value.trim()) {
         const noteLine = document.createElement("div");
@@ -817,17 +939,12 @@
       const data = {
         title: titleInput.value,
         source: sourceText.value,
-        createdAt: new Intl.DateTimeFormat("ja-JP", {
-          year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit"
-        }).format(new Date()),
+        createdAt: new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date()),
         note: noteText.value,
         startMode: startMode === "editor" ? "editor" : "auto",
-        images: images.map(function (image) {
-          return { id: image.id, fileName: image.fileName, dataUrl: image.dataUrl, width: image.width, height: image.height };
-        })
+        images: images.map(function (image) { return { id: image.id, fileName: image.fileName, dataUrl: image.dataUrl, width: image.width, height: image.height }; })
       };
       dataNode.textContent = encodeStoredText(JSON.stringify(data));
-
       clone.querySelector("#editorMode").classList.add("hidden");
       clone.querySelector("#viewerMode").classList.remove("hidden");
       clone.querySelector("#pageTitle").value = "";
@@ -835,7 +952,6 @@
       clone.querySelector("#noteText").textContent = "";
       clone.querySelector("#imageList").replaceChildren();
       clone.querySelector("#status").textContent = "";
-
       return "<!DOCTYPE html>\n" + clone.outerHTML;
     }
 
@@ -846,7 +962,6 @@
         sourceText.focus();
         return;
       }
-
       const html = buildSelfHtml(startMode);
       const blob = new Blob([html], { type: "text/html;charset=utf-8" });
       const url = URL.createObjectURL(blob);
@@ -862,6 +977,14 @@
 
     document.getElementById("saveButton").addEventListener("click", function () { downloadSelf("auto"); });
     document.getElementById("saveEditorButton").addEventListener("click", function () { downloadSelf("editor"); });
+    urlSaveButton.addEventListener("click", function () {
+      const willOpen = urlSavePanel.classList.contains("hidden");
+      urlSavePanel.classList.toggle("hidden", !willOpen);
+      urlSaveButton.setAttribute("aria-expanded", String(willOpen));
+      if (willOpen) updateUrlSaveAvailability();
+    });
+    copyViewerUrlButton.addEventListener("click", function () { copySavedUrl("auto", copyViewerUrlButton); });
+    copyEditorUrlButton.addEventListener("click", function () { copySavedUrl("editor", copyEditorUrlButton); });
     document.getElementById("viewButton").addEventListener("click", showViewer);
     document.getElementById("editButton").addEventListener("click", showEditor);
     noteEditButton.addEventListener("click", function () {
@@ -870,10 +993,10 @@
       noteEditButton.setAttribute("aria-expanded", String(willOpen));
       if (willOpen) noteText.focus();
     });
+
     function buildNoteCopyHtml() {
       const title = escapeHtml(titleInput.value.trim() || "閲覧用ページ");
-      const body = parseTextToHtml(sourceText.value);
-      return '<article><h1>' + title + '</h1>' + body + '</article>';
+      return "<article><h1>" + title + "</h1>" + parseTextToHtml(sourceText.value) + "</article>";
     }
 
     function buildNoteCopyText() {
@@ -884,14 +1007,10 @@
 
     async function copyRichText(html, plainText) {
       if (navigator.clipboard && window.ClipboardItem) {
-        const item = new ClipboardItem({
-          "text/html": new Blob([html], { type: "text/html" }),
-          "text/plain": new Blob([plainText], { type: "text/plain" })
-        });
+        const item = new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([plainText], { type: "text/plain" }) });
         await navigator.clipboard.write([item]);
         return;
       }
-
       const holder = document.createElement("div");
       holder.contentEditable = "true";
       holder.setAttribute("aria-hidden", "true");
@@ -899,7 +1018,6 @@
       holder.style.left = "-9999px";
       holder.innerHTML = html;
       document.body.appendChild(holder);
-
       const range = document.createRange();
       range.selectNodeContents(holder);
       const selection = window.getSelection();
@@ -918,12 +1036,8 @@
         await copyRichText(buildNoteCopyHtml(), buildNoteCopyText());
         button.textContent = "コピーしました";
       } catch (error) {
-        try {
-          await navigator.clipboard.writeText(buildNoteCopyText());
-          button.textContent = "文字だけコピーしました";
-        } catch (fallbackError) {
-          button.textContent = "コピーできませんでした";
-        }
+        try { await navigator.clipboard.writeText(buildNoteCopyText()); button.textContent = "文字だけコピーしました"; }
+        catch (fallbackError) { button.textContent = "コピーできませんでした"; }
       }
       setTimeout(function () { button.textContent = original; }, 1800);
     });
@@ -949,42 +1063,39 @@
         textarea.remove();
       }
     });
-    imageFileInput.addEventListener("change", function () {
-      addImageFiles(imageFileInput.files);
-    });
+
+    imageFileInput.addEventListener("change", function () { addImageFiles(imageFileInput.files); });
 
     document.getElementById("sampleButton").addEventListener("click", function () {
       titleInput.value = "旅行の予定";
       sourceText.value = "## 集合場所\n\n東京駅の丸の内南口に、午前9時までに集合します。\n\n## 持ち物\n\n- スマートフォン\n- 充電器\n- 飲み物\n- 折りたたみ傘\n\n> 雨天の場合は予定を変更します。\n\n参考：[JR東日本](https://www.jreast.co.jp/)";
       updateCount();
+      scheduleUrlSaveAvailabilityUpdate();
       showStatus("入力例を入れました。");
     });
+
     document.getElementById("clearButton").addEventListener("click", function () {
       titleInput.value = "";
       sourceText.value = "";
       noteText.value = "";
       updateCount();
+      scheduleUrlSaveAvailabilityUpdate();
       showStatus("入力内容を消しました。");
       sourceText.focus();
     });
 
-sourceText.addEventListener("paste", function () {
-  setTimeout(function () {
-    const normalized = sourceText.value.replace(/\r\n?/g, "\n");
-    const lines = normalized.split("\n");
+    sourceText.addEventListener("paste", function () {
+      setTimeout(function () {
+        const normalized = sourceText.value.replace(/\r\n?/g, "\n");
+        const lines = normalized.split("\n");
+        if (/^#\s+.+\s*$/.test(lines[0] || "") && lines.length >= 2 && (lines[1] || "").trim() === "") applyMarkdownTitle();
+        scheduleUrlSaveAvailabilityUpdate();
+      }, 0);
+    });
 
-    // 1行目が「# 文章」、2行目が空行の場合だけ既存処理を実行
-    if (
-      /^#\s+.+\s*$/.test(lines[0] || "") &&
-      lines.length >= 2 &&
-      (lines[1] || "").trim() === ""
-    ) {
-      applyMarkdownTitle();
-    }
-  }, 0);
-});
-
-    sourceText.addEventListener("input", updateCount);
+    sourceText.addEventListener("input", function () { updateCount(); scheduleUrlSaveAvailabilityUpdate(); });
+    titleInput.addEventListener("input", scheduleUrlSaveAvailabilityUpdate);
+    noteText.addEventListener("input", scheduleUrlSaveAvailabilityUpdate);
 
     document.addEventListener("keydown", function (event) {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
@@ -993,7 +1104,8 @@ sourceText.addEventListener("paste", function () {
       }
     });
 
-    const initialData = readInitialData();
+    const urlInitialData = await readUrlSaveData();
+    const initialData = urlInitialData || readInitialData();
     titleInput.value = initialData.title;
     sourceText.value = initialData.source;
     noteText.value = initialData.note;
@@ -1004,12 +1116,10 @@ sourceText.addEventListener("paste", function () {
       noteEditButton.setAttribute("aria-expanded", "true");
     }
     updateCount();
+    await updateUrlSaveAvailability();
 
-    if (initialData.startMode !== "editor" && (initialData.title + initialData.source).length >= 1) {
-      showViewer();
-    } else {
-      showEditor();
-    }
+    if (initialData.startMode !== "editor" && (initialData.title + initialData.source).length >= 1) showViewer();
+    else showEditor();
   });
   </script>
 </body>
