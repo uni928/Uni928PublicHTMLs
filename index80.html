@@ -267,7 +267,15 @@ window.addEventListener("DOMContentLoaded", async function () {
 
     const IMAGE_BASE64_LIMIT = 18000;
     const URL_BASE64_LIMIT = 1920;
-    const URL_HASH_PREFIX = "#saved=";
+    const LONG_URL_BASE = "https://uni928.github.io/Uni928PublicHTMLs/index80.html";
+    const SHORT_URL_BASE = "https://x.gd/sm9K2";
+    const SHORT_URL_COPY_THRESHOLD = 1950;
+    const URL_COMPRESSION_FORMATS = [
+      { format: "brotli", hashKey: "br" },
+      { format: "deflate-raw", hashKey: "dr" },
+      { format: "gzip", hashKey: "gz" }
+    ];
+    const LEGACY_URL_HASH_KEY = "saved";
     const compressionSteps = [
       [768, 0.72], [640, 0.66], [560, 0.60], [480, 0.54], [420, 0.48],
       [360, 0.42], [320, 0.36], [280, 0.30], [240, 0.24], [200, 0.18], [160, 0.12]
@@ -682,18 +690,6 @@ window.addEventListener("DOMContentLoaded", async function () {
       return bytes;
     }
 
-    async function compressBytes(bytes) {
-      if (!("CompressionStream" in window)) throw new Error("このブラウザはURL保存用の圧縮機能に対応していません。");
-      const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip"));
-      return new Uint8Array(await new Response(stream).arrayBuffer());
-    }
-
-    async function decompressBytes(bytes) {
-      if (!("DecompressionStream" in window)) throw new Error("このブラウザはURL保存データの展開に対応していません。");
-      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
-      return new Uint8Array(await new Response(stream).arrayBuffer());
-    }
-
     function makeUrlSaveData(startMode) {
       return {
         v: 1,
@@ -705,14 +701,41 @@ window.addEventListener("DOMContentLoaded", async function () {
       };
     }
 
-    async function encodeUrlSaveData(startMode) {
-      const json = JSON.stringify(makeUrlSaveData(startMode));
-      const compressedBytes = await compressBytes(new TextEncoder().encode(json));
-      return bytesToBase64Url(compressedBytes);
+    async function getUrlCompressionCandidates(bytes) {
+      if (!("CompressionStream" in window) || !("DecompressionStream" in window)) {
+        throw new Error("このブラウザはURL保存用の圧縮機能に対応していません。");
+      }
+      const candidates = [];
+      for (const definition of URL_COMPRESSION_FORMATS) {
+        try {
+          new DecompressionStream(definition.format);
+          const compressedBytes = await compressWithFormat(bytes, definition.format);
+          const restored = await decompressWithFormat(compressedBytes, definition.format);
+          if (sameBytes(bytes, restored)) {
+            candidates.push({
+              format: definition.format,
+              hashKey: definition.hashKey,
+              encoded: bytesToBase64Url(compressedBytes)
+            });
+          }
+        } catch (error) {
+          // ブラウザが対応していない圧縮形式は候補から除外する。
+        }
+      }
+      if (!candidates.length) throw new Error("利用可能なURL保存用圧縮方式がありません。");
+      candidates.sort(function (a, b) {
+        return (a.hashKey.length + a.encoded.length) - (b.hashKey.length + b.encoded.length);
+      });
+      return candidates;
     }
 
-    async function decodeUrlSaveData(encoded) {
-      const decompressedBytes = await decompressBytes(base64UrlToBytes(encoded));
+    async function encodeUrlSaveData(startMode) {
+      const bytes = new TextEncoder().encode(JSON.stringify(makeUrlSaveData(startMode)));
+      return (await getUrlCompressionCandidates(bytes))[0];
+    }
+
+    async function decodeUrlSaveData(encoded, format) {
+      const decompressedBytes = await decompressWithFormat(base64UrlToBytes(encoded), format);
       const data = JSON.parse(new TextDecoder().decode(decompressedBytes));
       if (!data || data.v !== 1) throw new Error("対応していないURL保存データです。");
       return {
@@ -729,12 +752,19 @@ window.addEventListener("DOMContentLoaded", async function () {
       };
     }
 
+    function readUrlHashPayload() {
+      const match = location.hash.match(/^#([^=]+)=([A-Za-z0-9_-]+)$/);
+      if (!match) return null;
+      if (match[1] === LEGACY_URL_HASH_KEY) return { encoded: match[2], format: "gzip" };
+      const definition = URL_COMPRESSION_FORMATS.find(function (item) { return item.hashKey === match[1]; });
+      return definition ? { encoded: match[2], format: definition.format } : null;
+    }
+
     async function readUrlSaveData() {
-      if (!location.hash.startsWith(URL_HASH_PREFIX)) return null;
-      const encoded = location.hash.slice(URL_HASH_PREFIX.length);
-      if (!encoded) return null;
+      const payload = readUrlHashPayload();
+      if (!payload) return null;
       try {
-        return await decodeUrlSaveData(encoded);
+        return await decodeUrlSaveData(payload.encoded, payload.format);
       } catch (error) {
         console.error(error);
         showStatus(error && error.message ? "URL保存データを開けませんでした：" + error.message : "URL保存データを開けませんでした。", true);
@@ -742,18 +772,21 @@ window.addEventListener("DOMContentLoaded", async function () {
       }
     }
 
-    function buildUrlWithPayload(encoded) {
-      const url = new URL(location.href);
-      url.hash = "saved=" + encoded;
-      return url.href;
+    function buildUrlWithPayload(payload) {
+      return LONG_URL_BASE + "#" + payload.hashKey + "=" + payload.encoded;
+    }
+
+    function makeCopyUrl(url) {
+      return url.length >= SHORT_URL_COPY_THRESHOLD ? url.replace(LONG_URL_BASE, SHORT_URL_BASE) : url;
     }
 
     async function createSavedUrl(startMode) {
       applyMarkdownTitle();
       if (!sourceText.value.length && !titleInput.value.length) throw new Error("文章またはタイトルを1文字以上入力してください。");
-      const encoded = await encodeUrlSaveData(startMode);
-      if (encoded.length >= URL_BASE64_LIMIT) throw new Error("圧縮後のBase64データが9,000文字以上のため、URLとして保存できません。");
-      return { url: buildUrlWithPayload(encoded), encodedLength: encoded.length };
+      const payload = await encodeUrlSaveData(startMode);
+      if (payload.encoded.length >= URL_BASE64_LIMIT) throw new Error("圧縮後のBase64データが" + URL_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため、URLとして保存できません。");
+      const url = buildUrlWithPayload(payload);
+      return { url: url, copyUrl: makeCopyUrl(url), encodedLength: payload.encoded.length, format: payload.format };
     }
 
     async function copySavedUrl(startMode, button) {
@@ -762,9 +795,9 @@ window.addEventListener("DOMContentLoaded", async function () {
         button.disabled = true;
         button.textContent = "URLを作成中…";
         const result = await createSavedUrl(startMode);
-        await copyText(result.url);
+        await copyText(result.copyUrl);
         button.textContent = "URLをコピーしました";
-        showStatus("URLをクリップボードへコピーしました。圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字");
+        showStatus("URLをクリップボードへコピーしました。圧縮形式：" + result.format + "、圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字" + (result.copyUrl !== result.url ? "（長いため短いURLを使用）" : ""));
       } catch (error) {
         button.textContent = "コピーできませんでした";
         showStatus(error && error.message ? error.message : "URLの作成に失敗しました。", true);
@@ -779,9 +812,10 @@ window.addEventListener("DOMContentLoaded", async function () {
         button.disabled = true;
         button.textContent = "リンクを作成中…";
         const result = await createSavedUrl("auto");
-        await copyText("[資料はこちら](<" + result.url + ">)");
+        const discordLink = "[資料はこちら](<" + result.copyUrl + ">)";
+        await copyText(discordLink.length >= SHORT_URL_COPY_THRESHOLD ? "[資料はこちら](<" + makeCopyUrl(result.url) + ">)" : discordLink);
         button.textContent = "リンクをコピーしました";
-        showStatus("Discode共有用の「資料はこちら」リンクをクリップボードへコピーしました。圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字");
+        showStatus("Discode共有用の「資料はこちら」リンクをクリップボードへコピーしました。圧縮形式：" + result.format + "、圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字" + (discordLink.length >= SHORT_URL_COPY_THRESHOLD ? "（長いため短いURLを使用）" : ""));
       } catch (error) {
         button.textContent = "コピーできませんでした";
         showStatus(error && error.message ? error.message : "共有用リンクの作成に失敗しました。", true);
@@ -799,15 +833,15 @@ window.addEventListener("DOMContentLoaded", async function () {
         return;
       }
       try {
-        const encoded = await encodeUrlSaveData("auto");
+        const payload = await encodeUrlSaveData("auto");
         if (serial !== urlSizeUpdateSerial) return;
-        const tooLarge = encoded.length >= URL_BASE64_LIMIT;
+        const tooLarge = payload.encoded.length >= URL_BASE64_LIMIT;
         urlSaveButton.classList.toggle("hidden", tooLarge);
         if (tooLarge) {
           urlSavePanel.classList.add("hidden");
           urlSaveButton.setAttribute("aria-expanded", "false");
         }
-        urlSizeInfo.textContent = "現在の圧縮後Base64：" + encoded.length.toLocaleString("ja-JP") + " / " + URL_BASE64_LIMIT.toLocaleString("ja-JP") + "文字" + (tooLarge ? "（URL保存の上限を超えています）" : "");
+        urlSizeInfo.textContent = "現在の最短形式（" + payload.format + "）の圧縮後Base64：" + payload.encoded.length.toLocaleString("ja-JP") + " / " + URL_BASE64_LIMIT.toLocaleString("ja-JP") + "文字" + (tooLarge ? "（URL保存の上限を超えています）" : "");
       } catch (error) {
         if (serial !== urlSizeUpdateSerial) return;
         urlSaveButton.classList.add("hidden");
