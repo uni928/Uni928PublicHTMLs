@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Display Markdown as an easy-to-read page and save it as a single HTML file.">
+  <title>Create a Readable Site from Markdown</title>
+  <style>
+@layer base,layout,editor,viewer,responsive;
+@layer base{
+:root{color-scheme:light;--bg:#f4f7fb;--panel:#ffffff;--text:#1e293b;--muted:#64748b;--line:#dbe4f0;--accent:#2563eb;--accent-dark:#1d4ed8;--accent-soft:#eaf2ff;--danger:#b91c1c;--shadow:0 18px 48px rgba(30,41,59,0.10);}
+*{box-sizing:border-box;}
+html{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);}
+body{margin:0;min-height:100vh;background:linear-gradient(180deg,rgba(255,255,255,.78),transparent 340px),var(--bg);}
+button,input,textarea{font:inherit;}
+button{cursor:pointer;}
+button:disabled{cursor:default;opacity:.62;}
+a{color:var(--accent);overflow-wrap:anywhere;}
+.hidden{display:none !important;}
+}
+@layer layout{
+.app{width:min(920px,calc(100% - 28px));margin:0 auto;padding:28px 0 52px;}
+.hero{margin-bottom:18px;text-align:center;}
+.hero h1{margin:0;font-size:clamp(1.7rem,4vw,2.6rem);letter-spacing:-.04em;}
+.hero p{max-width:740px;margin:10px auto 0;color:var(--muted);line-height:1.8;}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);}
+.primary-button,.secondary-button{min-height:48px;border:0;border-radius:14px;padding:0 18px;font-weight:800;}
+.primary-button{background:var(--accent);color:#fff;}
+.primary-button:hover{background:var(--accent-dark);}
+.secondary-button{background:var(--accent-soft);color:var(--accent-dark);}
+}
+@layer editor{
+.editor-panel{padding:20px;}
+.field-label{display:flex;justify-content:space-between;gap:12px;margin-bottom:8px;font-weight:800;}
+.field-label small{color:var(--muted);font-weight:500;}
+.title-input,.text-input{width:100%;border:1px solid var(--line);border-radius:14px;background:#fff;color:var(--text);outline:none;}
+.title-input:focus,.text-input:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(37,99,235,.12);}
+.title-input{padding:12px 14px;margin-bottom:16px;}
+.text-input{min-height:430px;padding:16px;resize:vertical;line-height:1.75;}
+.controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
+.controls .primary-button{flex:1 1 300px;}
+.helper{margin-top:14px;padding:14px 16px;border-radius:14px;background:#f8fafc;color:var(--muted);line-height:1.7;font-size:.94rem;}
+.status{min-height:24px;margin-top:12px;color:var(--muted);font-size:.93rem;}
+.status.error{color:var(--danger);}
+.note-panel{margin-top:14px;padding:16px;border:1px solid var(--line);border-radius:14px;background:#f8fafc;}
+.note-panel .text-input{min-height:120px;background:#fff;}
+.url-save-panel{margin-top:14px;padding:16px;border:1px solid var(--line);border-radius:14px;background:#f8fafc;}
+.url-save-panel h2{margin:0 0 8px;font-size:1.05rem;}
+.url-save-description{margin:0 0 14px;color:var(--muted);font-size:.92rem;line-height:1.75;}
+.url-save-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+.url-save-actions button{width:100%;}
+.url-size-info{margin:12px 0 0;color:var(--muted);font-size:.84rem;line-height:1.6;}
+.image-panel{margin-top:16px;padding:16px;border:1px solid var(--line);border-radius:14px;background:#f8fafc;}
+.image-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.image-panel-head h2{margin:0;font-size:1.05rem;}
+.image-panel-toggle{flex:0 0 auto;min-height:38px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--text);font-weight:800;}
+.image-panel-toggle:hover{background:var(--accent-soft);color:var(--accent-dark);}
+.image-panel-body{margin-top:12px;}
+.image-panel-note{margin:0 0 12px;color:var(--muted);font-size:.9rem;line-height:1.65;}
+.uni-photo-dropbox{margin:0 0 12px;padding:20px;background:rgba(255,255,255,0.97);border:1px solid rgba(255,255,255,0.9);border-radius:24px;box-shadow:0 8px 24px rgba(41,50,75,0.07);}
+.uni-photo-dropbox__zone{position:relative;display:grid;place-items:center;width:100%;height:220px;overflow:hidden;border:1.5px dashed rgba(117,103,220,0.28);border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,247,253,0.98));cursor:pointer;box-sizing:border-box;transition:border-color .18s ease,transform .18s ease,box-shadow .18s ease;}
+.uni-photo-dropbox__zone:hover,.uni-photo-dropbox__zone.is-dragging{border-color:rgba(117,103,220,0.58);box-shadow:0 12px 28px rgba(117,103,220,0.10);transform:translateY(-1px);}
+.uni-photo-dropbox__zone:focus-within{border-color:rgba(117,103,220,0.58);box-shadow:0 0 0 4px rgba(117,103,220,0.10);}
+.uni-photo-dropbox__inner{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:22px;text-align:center;pointer-events:none;}
+.uni-photo-dropbox__icon{display:grid;place-items:center;width:54px;height:54px;border-radius:18px;background:linear-gradient(135deg,rgba(117,103,220,0.12),rgba(217,137,180,0.16));}
+.uni-photo-dropbox__icon svg{width:25px;height:25px;stroke:#6e65ad;}
+.uni-photo-dropbox__copy{display:grid;gap:5px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",sans-serif;}
+.uni-photo-dropbox__title{color:#182033;font-size:16px;font-weight:800;line-height:1.35;letter-spacing:.01em;}
+.uni-photo-dropbox__guide{color:#667085;font-size:13px;font-weight:600;line-height:1.55;}
+.uni-photo-dropbox__meta{color:#98a2b3;font-size:11px;font-weight:500;line-height:1.4;}
+.uni-photo-dropbox__input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;}
+.image-options{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin:0 0 12px;}
+.image-option-check{display:inline-flex;gap:8px;align-items:center;font-size:.92rem;font-weight:700;cursor:pointer;}
+.image-option-check input{inline-size:18px;block-size:18px;}
+.image-list{display:grid;gap:10px;margin:0;padding:0;list-style:none;}
+.image-item{display:grid;grid-template-columns:92px minmax(0,1fr);gap:12px;padding:12px;border:1px solid var(--line);border-radius:13px;background:#fff;}
+.image-thumb{width:92px;height:92px;object-fit:contain;border:1px solid var(--line);border-radius:10px;background:#f8fafc;}
+.image-item-main{min-width:0;}
+.image-name{margin:0;font-weight:800;overflow-wrap:anywhere;}
+.image-meta{margin:4px 0 8px;color:var(--muted);font-size:.82rem;}
+.embed-output{width:100%;min-height:38px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#f8fafc;color:var(--text);font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.82rem;resize:vertical;}
+.image-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.image-actions button{min-height:36px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--text);font-weight:700;}
+.image-actions .delete-image-button{color:var(--danger);}
+.image-missing{display:inline-block;margin:10px 0;padding:9px 12px;border:1px dashed var(--danger);border-radius:10px;color:var(--danger);background:#fff;}
+}
+@layer viewer{
+.document{position:relative;padding:clamp(24px,5vw,48px);}
+.viewer-actions{position:absolute;top:16px;right:16px;display:flex;gap:8px;}
+.viewer-actions button{min-height:42px;}
+.document h1{margin:0 110px 28px 0;font-size:clamp(1.8rem,5vw,2.8rem);line-height:1.25;letter-spacing:-.035em;}
+.document h2{margin:34px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--accent-soft);font-size:clamp(1.2rem,3vw,1.55rem);line-height:1.45;}
+.document p,.document li,.document blockquote{font-size:clamp(1rem,2.2vw,1.08rem);line-height:1.9;}
+.document p{margin:0 0 18px;}
+.document ul{margin:0 0 22px;padding-left:1.5em;}
+.document li + li{margin-top:8px;}
+.document blockquote{margin:20px 0;padding:15px 18px;border-left:5px solid var(--accent);border-radius:0 12px 12px 0;background:var(--accent-soft);}
+.link-card{margin:20px 0;}
+.link-card a{display:block;padding:16px 18px;border:1px solid #bfd2f5;border-radius:14px;background:var(--accent-soft);text-decoration:none;font-weight:700;}
+.meta{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:.86rem;}
+.document h3{margin:28px 0 12px;font-size:1.2rem;}
+.document h4,.document h5,.document h6{margin:24px 0 10px;line-height:1.5;}
+.document ol{margin:0 0 22px;padding-left:1.7em;}
+.document pre{overflow-x:auto;margin:20px 0;padding:16px;border-radius:14px;background:#0f172a;color:#e2e8f0;line-height:1.65;}
+.document code{padding:.14em .38em;border-radius:6px;background:#eef2f7;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.92em;}
+.document pre code{padding:0;background:transparent;color:inherit;}
+.document hr{margin:30px 0;border:0;border-top:1px solid var(--line);}
+.table-wrap{overflow-x:auto;margin:20px 0;}
+.document table{width:100%;border-collapse:collapse;background:#fff;}
+.document th,.document td{padding:11px 13px;border:1px solid var(--line);text-align:left;vertical-align:top;}
+.document th{background:#f8fafc;}
+.document img{display:block;max-width:100%;height:auto;margin:20px auto;border-radius:12px;}
+.task-item{list-style:none;margin-left:-1.3em;}
+#viewTitle{margin-top:36px;}
+}
+@layer responsive{
+@media (max-width:620px){
+.app{width:min(100% - 16px,920px);padding-top:10px;}
+.editor-panel,.document{padding:18px;border-radius:18px;}
+.text-input{min-height:55vh;}
+.note-panel .text-input{min-height:120px;}
+.image-item{grid-template-columns:1fr;}
+.image-thumb{width:100%;height:180px;}
+.uni-photo-dropbox{padding:16px;}
+.uni-photo-dropbox__zone{height:190px;}
+.controls{flex-direction:column;}
+.controls button{width:100%;}
+.url-save-actions{grid-template-columns:1fr;}
+.viewer-actions{position:static;justify-content:flex-end;margin:-4px 0 14px;}
+.document h1{margin-right:0;}
+}
+}
+</style>
+</head>
+<body>
+  <main id="editorMode" class="app">
+    <header class="hero">
+      <h1>Create a Readable Site from Markdown</h1>
+      <p>Enter Markdown and click “Save as Viewer Site” to download a visually formatted HTML file.</p>
+    </header>
+
+    <section class="panel editor-panel" aria-labelledby="editorTitle">
+      <div class="field-label">
+        <label for="pageTitle" id="editorTitle">Page title</label>
+        <small>Optional</small>
+      </div>
+      <input id="pageTitle" class="title-input" type="text" placeholder="e.g., Travel Plan, Work Instructions, Reference Notes">
+
+      <div class="field-label">
+        <label for="sourceText">Markdown content</label>
+        <small id="charCount">0 characters</small>
+      </div>
+      <textarea id="sourceText" class="text-input" placeholder="Enter your Markdown here."></textarea>
+
+      <section class="image-panel" aria-labelledby="imagePanelTitle">
+        <div class="image-panel-head">
+          <h2 id="imagePanelTitle">Import images</h2>
+          <button id="imagePanelToggle" class="image-panel-toggle" type="button" aria-expanded="false" aria-controls="imagePanelBody">Open</button>
+        </div>
+        <div id="imagePanelBody" class="image-panel-body hidden">
+          <p class="image-panel-note">Imported images are compressed to WebP in supported browsers, or JPEG when WebP conversion is unavailable, and embedded in the HTML within 18,000 Base64 characters. Characters such as parentheses that can cause problems in Markdown filenames are removed automatically. Insert “[Insert image](filename)” into your content to use an image.</p>
+          <div class="uni-photo-dropbox">
+            <label id="imageDropZone" class="uni-photo-dropbox__zone">
+              <span class="uni-photo-dropbox__inner">
+                <span class="uni-photo-dropbox__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2">
+                    <rect x="3" y="5" width="18" height="14" rx="3"></rect>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </span>
+                <span class="uni-photo-dropbox__copy">
+                  <span class="uni-photo-dropbox__title">Add images</span>
+                  <span class="uni-photo-dropbox__guide">Click to select, or drag files here</span>
+                  <span class="uni-photo-dropbox__meta">JPG, PNG, WebP, and other image formats supported · Multiple files allowed</span>
+                </span>
+              </span>
+              <input id="imageFileInput" class="uni-photo-dropbox__input" type="file" accept="image/*" multiple aria-label="Select images to add">
+            </label>
+          </div>
+          <div class="image-options">
+            <label class="image-option-check"><input id="insertAtCursorCheck" type="checkbox">Automatically insert images at the cursor position</label>
+          </div>
+          <ol id="imageList" class="image-list"></ol>
+        </div>
+      </section>
+
+      <div class="controls">
+        <button id="saveButton" class="primary-button" type="button">Save as Viewer Site</button>
+        <button id="saveEditorButton" class="secondary-button" type="button">Save</button>
+        <button id="urlSaveButton" class="secondary-button" type="button" aria-expanded="false" aria-controls="urlSavePanel">Save URL</button>
+        <button id="viewButton" class="secondary-button" type="button">View Here</button>
+        <button id="noteEditButton" class="secondary-button" type="button" aria-expanded="false" aria-controls="notePanel">Edit Notes</button>
+        <button id="sampleButton" class="secondary-button" type="button">Load Example</button>
+        <div hidden><button id="clearButton" class="secondary-button" type="button">Clear Input</button></div>
+      </div>
+
+      <section id="urlSavePanel" class="url-save-panel hidden" aria-labelledby="urlSaveTitle">
+        <h2 id="urlSaveTitle">Save as URL</h2>
+        <p class="url-save-description">
+          Compress the current content and store it in the URL. Anyone who opens the copied URL can view the content on this page.
+        </p>
+        <div class="url-save-actions">
+          <button id="copyViewerUrlButton" class="primary-button" type="button">Copy the “Save as Viewer Site”<br>URL</button>
+          <button id="copyDiscordLinkButton" class="secondary-button" type="button">Copy the “View the document”<br>link for Discord</button>
+          <button id="copyEditorUrlButton" class="secondary-button" type="button">Copy the “Save” URL</button>
+        </div>
+        <p id="urlSizeInfo" class="url-size-info"></p>
+      </section>
+
+      <div id="notePanel" class="note-panel hidden">
+        <div class="field-label">
+          <label for="noteText">Notes</label>
+          <small>Optional notes, such as the editor's name</small>
+        </div>
+        <textarea id="noteText" class="text-input" placeholder="e.g., Editor: Name"></textarea>
+      </div>
+
+      <div class="helper">Saved HTML files include the Markdown content.</div>
+      <div id="status" class="status" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <main id="viewerMode" class="app hidden">
+    <article class="panel document">
+      <div class="viewer-actions">
+        <div hidden><button id="copyNoteButton" class="secondary-button" type="button">Try copying in note format</button></div>
+        <div hidden><button id="copyMarkdownButton" class="secondary-button" type="button">Copy Markdown</button></div>
+        <button id="editButton" class="secondary-button" type="button">Edit</button>
+      </div>
+      <h1 id="viewTitle"></h1>
+      <div id="viewContent"></div>
+      <footer id="viewMeta" class="meta"></footer>
+    </article>
+  </main>
+
+  <script id="initialData" type="application/json">
+{"title":"","source":"","createdAt":"","note":"","startMode":"auto","images":[]}
+</script>
+  <script>
+window.addEventListener("DOMContentLoaded", async function () {
+    "use strict";
+
+    const editorMode = document.getElementById("editorMode");
+    const viewerMode = document.getElementById("viewerMode");
+    const titleInput = document.getElementById("pageTitle");
+    const sourceText = document.getElementById("sourceText");
+    const noteText = document.getElementById("noteText");
+    const notePanel = document.getElementById("notePanel");
+    const noteEditButton = document.getElementById("noteEditButton");
+    const charCount = document.getElementById("charCount");
+    const status = document.getElementById("status");
+    const viewTitle = document.getElementById("viewTitle");
+    const viewContent = document.getElementById("viewContent");
+    const viewMeta = document.getElementById("viewMeta");
+    const imageFileInput = document.getElementById("imageFileInput");
+    const imageList = document.getElementById("imageList");
+    const imagePanelToggle = document.getElementById("imagePanelToggle");
+    const imagePanelBody = document.getElementById("imagePanelBody");
+    const imageDropZone = document.getElementById("imageDropZone");
+    const insertAtCursorCheck = document.getElementById("insertAtCursorCheck");
+    const urlSaveButton = document.getElementById("urlSaveButton");
+    const urlSavePanel = document.getElementById("urlSavePanel");
+    const copyViewerUrlButton = document.getElementById("copyViewerUrlButton");
+    const copyDiscordLinkButton = document.getElementById("copyDiscordLinkButton");
+    const copyEditorUrlButton = document.getElementById("copyEditorUrlButton");
+    const urlSizeInfo = document.getElementById("urlSizeInfo");
+
+    const IMAGE_BASE64_LIMIT = 18000;
+    const URL_BASE64_LIMIT = 9000;
+    const URL_HASH_PREFIX = "#saved=";
+    const compressionSteps = [
+      [768, 0.72], [640, 0.66], [560, 0.60], [480, 0.54], [420, 0.48],
+      [360, 0.42], [320, 0.36], [280, 0.30], [240, 0.24], [200, 0.18], [160, 0.12]
+    ];
+    let images = [];
+    let urlSizeUpdateTimer = 0;
+    let urlSizeUpdateSerial = 0;
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function safeUrl(value) {
+      try {
+        const url = new URL(value, location.href);
+        return ["http:", "https:", "mailto:"].includes(url.protocol) ? url.href : "#";
+      } catch (error) {
+        return "#";
+      }
+    }
+
+    function getImageByName(fileName) {
+      return images.find(function (image) { return image.fileName === fileName; }) || null;
+    }
+
+    function parseInlineMarkdown(text) {
+      const codeTokens = [];
+      const imageTokens = [];
+      let value = String(text).replace(/`([^`]+)`/g, function (_, code) {
+        const token = "@@CODE" + codeTokens.length + "@@";
+        codeTokens.push("<code>" + escapeHtml(code) + "</code>");
+        return token;
+      });
+
+      value = value.replace(new RegExp(String.raw`\[(?:Insert image|\u753b\u50cf\u633f\u5165)\]\(([^)\r\n]+)\)`, "g"), function (_, rawFileName) {
+        const fileName = String(rawFileName).trim();
+        const image = getImageByName(fileName);
+        const token = "@@EMBEDIMAGE" + imageTokens.length + "@@";
+        imageTokens.push(image
+          ? '<img src="' + escapeHtml(image.dataUrl) + '" alt="' + escapeHtml(fileName) + '">'
+          : '<span class="image-missing">Image not found: ' + escapeHtml(fileName) + '</span>');
+        return token;
+      });
+
+      value = escapeHtml(value);
+      value = value.replace(/!\[([^\]]*)\]\(([^\s)]+)(?:\s+["']([^"']*)["'])?\)/g, function (_, alt, url, title) {
+        const titleAttr = title ? ' title="' + escapeHtml(title) + '"' : "";
+        return '<img src="' + escapeHtml(safeUrl(url)) + '" alt="' + alt + '"' + titleAttr + ">";
+      });
+      value = value.replace(/\[([^\]]+)\]\(([^\s)]+)(?:\s+["']([^"']*)["'])?\)/g, function (_, label, url, title) {
+        const titleAttr = title ? ' title="' + escapeHtml(title) + '"' : "";
+        return '<a href="' + escapeHtml(safeUrl(url)) + '" target="_blank" rel="noopener noreferrer"' + titleAttr + '>' + label + "</a>";
+      });
+      value = value.replace(/(^|[\s(])((?:https?:\/\/)[^\s<]+)/g, function (_, prefix, url) {
+        return prefix + '<a href="' + escapeHtml(safeUrl(url)) + '" target="_blank" rel="noopener noreferrer">' + url + "</a>";
+      });
+      value = value.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+      value = value.replace(/__([^_]+)__/g, "<strong>$1</strong>");
+      value = value.replace(/~~([^~]+)~~/g, "<del>$1</del>");
+      value = value.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+      value = value.replace(/(^|[^_])_([^_\n]+)_/g, "$1<em>$2</em>");
+      value = value.replace(/  $/g, "<br>");
+      codeTokens.forEach(function (html, index) { value = value.replace("@@CODE" + index + "@@", html); });
+      imageTokens.forEach(function (html, index) { value = value.replace("@@EMBEDIMAGE" + index + "@@", html); });
+      return value;
+    }
+
+    function splitTableRow(line) {
+      return line.trim().replace(/^\||\|$/g, "").split("|").map(function (cell) { return cell.trim(); });
+    }
+
+    function isTableDivider(line) {
+      const cells = splitTableRow(line);
+      if (!line.includes("|") || !cells.length) return false;
+      return cells.every(function (cell) { return cell === "" || /^:?-+:?$/.test(cell); });
+    }
+
+    function isTableCandidate(line) {
+      if (!line || !line.includes("|")) return false;
+      return splitTableRow(line).length >= 2;
+    }
+
+    function parseMarkdownToHtml(markdown) {
+      const normalized = String(markdown).replace(/\r\n?/g, "\n").trim();
+      if (!normalized) return "<p>No Markdown content has been entered.</p>";
+
+      const lines = normalized.split("\n");
+      const output = [];
+      let paragraph = [];
+      let listType = "";
+      let listItems = [];
+      let quoteLines = [];
+      let inCode = false;
+      let codeLanguage = "";
+      let codeLines = [];
+
+      function flushParagraph() {
+        if (!paragraph.length) return;
+        output.push("<p>" + paragraph.map(parseInlineMarkdown).join("\n") + "</p>");
+        paragraph = [];
+      }
+
+      function flushList() {
+        if (!listItems.length) return;
+        const tag = listType || "ul";
+        output.push("<" + tag + ">" + listItems.map(function (item) {
+          const task = item.match(/^\[([ xX])\]\s+(.+)$/);
+          if (task) {
+            return '<li class="task-item"><input type="checkbox" disabled' + (task[1].toLowerCase() === "x" ? " checked" : "") + "> " + parseInlineMarkdown(task[2]) + "</li>";
+          }
+          return "<li>" + parseInlineMarkdown(item) + "</li>";
+        }).join("") + "</" + tag + ">");
+        listItems = [];
+        listType = "";
+      }
+
+      function flushQuote() {
+        if (!quoteLines.length) return;
+        output.push("<blockquote>" + quoteLines.map(parseInlineMarkdown).join("<br>") + "</blockquote>");
+        quoteLines = [];
+      }
+
+      function flushAll() {
+        flushParagraph();
+        flushList();
+        flushQuote();
+      }
+
+      for (let index = 0; index < lines.length; index++) {
+        const raw = lines[index];
+        const trimmed = raw.trim();
+
+        if (inCode) {
+          if (/^```/.test(trimmed)) {
+            output.push('<pre><code' + (codeLanguage ? ' class="language-' + escapeHtml(codeLanguage) + '"' : "") + '>' + escapeHtml(codeLines.join("\n")) + "</code></pre>");
+            inCode = false;
+            codeLanguage = "";
+            codeLines = [];
+          } else {
+            codeLines.push(raw);
+          }
+          continue;
+        }
+
+        const fence = trimmed.match(/^```\s*([\w-]*)\s*$/);
+        if (fence) {
+          flushAll();
+          inCode = true;
+          codeLanguage = fence[1] || "";
+          continue;
+        }
+
+        if (!trimmed) {
+          flushAll();
+          continue;
+        }
+
+        if (isTableCandidate(raw)) {
+          const nextLine = index + 1 < lines.length ? lines[index + 1] : "";
+          const hasFollowingTableLine = isTableCandidate(nextLine);
+          const looksExplicit = /^\s*\|.*\|\s*$/.test(raw);
+
+          if (hasFollowingTableLine || looksExplicit) {
+            flushAll();
+            const headers = splitTableRow(raw);
+            const secondLineIsDivider = isTableDivider(nextLine);
+            const dividerCells = secondLineIsDivider ? splitTableRow(nextLine) : [];
+            const aligns = headers.map(function (_, i) {
+              const cell = dividerCells[i] || "";
+              if (/^:-+:$/.test(cell)) return "center";
+              if (/^-+:$/.test(cell)) return "right";
+              return "left";
+            });
+            const rows = [];
+            index += secondLineIsDivider ? 2 : 1;
+            while (index < lines.length && isTableCandidate(lines[index]) && lines[index].trim()) {
+              rows.push(splitTableRow(lines[index]));
+              index++;
+            }
+            index--;
+            let html = '<div class="table-wrap"><table><thead><tr>';
+            headers.forEach(function (cell, i) { html += '<th style="text-align:' + aligns[i] + '">' + parseInlineMarkdown(cell) + "</th>"; });
+            html += "</tr></thead><tbody>";
+            rows.forEach(function (row) {
+              html += "<tr>";
+              headers.forEach(function (_, i) { html += '<td style="text-align:' + aligns[i] + '">' + parseInlineMarkdown(row[i] || "") + "</td>"; });
+              html += "</tr>";
+            });
+            html += "</tbody></table></div>";
+            output.push(html);
+            continue;
+          }
+        }
+
+        const heading = trimmed.match(/^(#{1,6})\s+(.+)$/);
+        if (heading) {
+          flushAll();
+          const level = heading[1].length;
+          output.push("<h" + level + ">" + parseInlineMarkdown(heading[2]) + "</h" + level + ">");
+          continue;
+        }
+
+        if (/^(?:-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
+          flushAll();
+          output.push("<hr>");
+          continue;
+        }
+
+        const quote = trimmed.match(/^>\s?(.*)$/);
+        if (quote) {
+          flushParagraph();
+          flushList();
+          quoteLines.push(quote[1]);
+          continue;
+        }
+
+        const unordered = trimmed.match(/^[-+*]\s+(.+)$/);
+        const ordered = trimmed.match(/^\d+[.)]\s+(.+)$/);
+        if (unordered || ordered) {
+          flushParagraph();
+          flushQuote();
+          const nextType = ordered ? "ol" : "ul";
+          if (listType && listType !== nextType) flushList();
+          listType = nextType;
+          listItems.push((unordered || ordered)[1]);
+          continue;
+        }
+
+        flushList();
+        flushQuote();
+        paragraph.push(raw);
+      }
+
+      if (inCode) {
+        output.push('<pre><code' + (codeLanguage ? ' class="language-' + escapeHtml(codeLanguage) + '"' : "") + '>' + escapeHtml(codeLines.join("\n")) + "</code></pre>");
+      }
+      flushAll();
+      return output.join("\n");
+    }
+
+    function parseTextToHtml(text) { return parseMarkdownToHtml(text); }
+    function parseTextToMarkdown(text) { return String(text).replace(/\r\n?/g, "\n").trim(); }
+
+    function encodeStoredText(value) {
+      return String(value).replace(/`/g, "jfasofklasflkd").replace(/<\//g, "<gsafnasdfhags/");
+    }
+
+    function decodeStoredText(value) {
+      return String(value).replace(/<gsafnasdfhags\//g, "</").replace(/jfasofklasflkd/g, String.fromCharCode(96));
+    }
+
+    function readInitialData() {
+      try {
+        const raw = decodeStoredText(document.getElementById("initialData").textContent || "");
+        const parsed = JSON.parse(raw);
+        return {
+          title: typeof parsed.title === "string" ? parsed.title : "",
+          source: typeof parsed.source === "string" ? parsed.source : "",
+          createdAt: typeof parsed.createdAt === "string" ? parsed.createdAt : "",
+          note: typeof parsed.note === "string" ? parsed.note : "",
+          startMode: parsed.startMode === "editor" ? "editor" : "auto",
+          images: Array.isArray(parsed.images) ? parsed.images.filter(function (image) {
+            return image && typeof image.fileName === "string" && typeof image.dataUrl === "string" && /^data:image\/(?:webp|jpeg|png);base64,/.test(image.dataUrl);
+          }).map(function (image) {
+            return { id: typeof image.id === "string" ? image.id : "image-" + Math.random().toString(36).slice(2), fileName: image.fileName, dataUrl: image.dataUrl, width: Number(image.width) || 0, height: Number(image.height) || 0 };
+          }) : []
+        };
+      } catch (error) {
+        return { title: "", source: "", createdAt: "", note: "", startMode: "auto", images: [] };
+      }
+    }
+
+    function getBase64Length(dataUrl) {
+      const commaIndex = String(dataUrl).indexOf(",");
+      return commaIndex >= 0 ? String(dataUrl).slice(commaIndex + 1).length : String(dataUrl).length;
+    }
+
+    function readFileAsDataUrl(file) {
+      return new Promise(function (resolve, reject) {
+        const reader = new FileReader();
+        reader.onload = function () { resolve(String(reader.result || "")); };
+        reader.onerror = function () { reject(reader.error || new Error("Could not read the image.")); };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function loadImage(src) {
+      return new Promise(function (resolve, reject) {
+        const image = new Image();
+        image.onload = function () { resolve(image); };
+        image.onerror = function () { reject(new Error("Could not display the image.")); };
+        image.src = src;
+      });
+    }
+
+    function canvasSupportsMimeType(mimeType) {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 1;
+        canvas.height = 1;
+        return canvas.toDataURL(mimeType, 0.8).startsWith("data:" + mimeType + ";base64,");
+      } catch (error) {
+        return false;
+      }
+    }
+
+    async function renderCompressedImage(sourceImage, maxSize, quality, mimeType) {
+      const width = sourceImage.naturalWidth || sourceImage.width;
+      const height = sourceImage.naturalHeight || sourceImage.height;
+      const scale = Math.min(maxSize / width, maxSize / height, 1);
+      const outputWidth = Math.max(1, Math.round(width * scale));
+      const outputHeight = Math.max(1, Math.round(height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = outputWidth;
+      canvas.height = outputHeight;
+      const context = canvas.getContext("2d", { alpha: false });
+      if (!context) throw new Error("Could not initialize the canvas.");
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, outputWidth, outputHeight);
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "high";
+      context.drawImage(sourceImage, 0, 0, outputWidth, outputHeight);
+      const dataUrl = canvas.toDataURL(mimeType, quality);
+      if (!dataUrl.startsWith("data:" + mimeType + ";base64,")) throw new Error("This browser cannot convert images.");
+      return { dataUrl: dataUrl, width: outputWidth, height: outputHeight, mimeType: mimeType };
+    }
+
+    async function compressImageFile(file) {
+      const sourceDataUrl = await readFileAsDataUrl(file);
+      const sourceImage = await loadImage(sourceDataUrl);
+      const preferredMimeType = canvasSupportsMimeType("image/webp") ? "image/webp" : "image/jpeg";
+      let smallest = null;
+      for (const step of compressionSteps) {
+        const result = await renderCompressedImage(sourceImage, step[0], step[1], preferredMimeType);
+        if (!smallest || getBase64Length(result.dataUrl) < getBase64Length(smallest.dataUrl)) smallest = result;
+        if (getBase64Length(result.dataUrl) <= IMAGE_BASE64_LIMIT) return result;
+      }
+      throw new Error("Even the smallest settings could not compress the Base64 payload to within 18,000 characters." + (smallest ? " Smallest result: " + getBase64Length(smallest.dataUrl).toLocaleString("en-US") + " characters" : ""));
+    }
+
+    function sanitizeImageFileName(name) {
+      const raw = String(name || "image.webp").trim();
+      const dot = raw.lastIndexOf(".");
+      const rawStem = dot > 0 ? raw.slice(0, dot) : raw;
+      const rawExt = dot > 0 ? raw.slice(dot) : "";
+      const unsafePattern = /[\\/:*?"'`<>()[\]{}（）［］【】「」『』〈〉《》]/g;
+      const stem = rawStem.replace(unsafePattern, "").replace(/\s+/g, " ").trim() || "image";
+      const ext = rawExt.replace(/[^.A-Za-z0-9]/g, "").slice(0, 12);
+      return stem + ext;
+    }
+
+    function makeUniqueImageName(name, exceptId) {
+      const original = sanitizeImageFileName(name);
+      const dot = original.lastIndexOf(".");
+      const stem = dot > 0 ? original.slice(0, dot) : original;
+      const ext = dot > 0 ? original.slice(dot) : "";
+      let candidate = original;
+      let index = 2;
+      while (images.some(function (image) { return image.id !== exceptId && image.fileName === candidate; })) {
+        candidate = stem + "-" + index + ext;
+        index++;
+      }
+      return candidate;
+    }
+
+    function replaceImageReferences(oldName, newName) {
+      if (!oldName || oldName === newName) return;
+      const escapedOld = oldName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const pattern = new RegExp(String.raw`\[(?:Insert image|\u753b\u50cf\u633f\u5165)\]\(${escapedOld}\)`, "g");
+      sourceText.value = sourceText.value.replace(pattern, "[Insert image](" + newName + ")");
+      updateCount();
+    }
+
+    function getEmbedText(image) { return "[Insert image](" + image.fileName + ")"; }
+
+    async function copyText(value) {
+      try {
+        await navigator.clipboard.writeText(value);
+      } catch (error) {
+        const textarea = document.createElement("textarea");
+        textarea.value = value;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      }
+    }
+
+    function bytesToBase64Url(bytes) {
+      let binary = "";
+      const chunkSize = 0x8000;
+      for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+        const chunk = bytes.subarray(offset, offset + chunkSize);
+        for (let i = 0; i < chunk.length; i++) binary += String.fromCharCode(chunk[i]);
+      }
+      return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+    }
+
+    function base64UrlToBytes(value) {
+      const base64 = String(value).replace(/-/g, "+").replace(/_/g, "/");
+      const padded = base64 + "=".repeat((4 - base64.length % 4) % 4);
+      const binary = atob(padded);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    }
+
+    async function compressBytes(bytes) {
+      if (!("CompressionStream" in window)) throw new Error("This browser does not support compression for URL saving.");
+      const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip"));
+      return new Uint8Array(await new Response(stream).arrayBuffer());
+    }
+
+    async function decompressBytes(bytes) {
+      if (!("DecompressionStream" in window)) throw new Error("This browser does not support expanding saved URL data.");
+      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+      return new Uint8Array(await new Response(stream).arrayBuffer());
+    }
+
+    function makeUrlSaveData(startMode) {
+      return {
+        v: 1,
+        t: titleInput.value,
+        s: sourceText.value,
+        n: noteText.value,
+        m: startMode === "editor" ? "editor" : "auto",
+        i: images.map(function (image) { return { id: image.id, fileName: image.fileName, dataUrl: image.dataUrl, width: image.width, height: image.height }; })
+      };
+    }
+
+    async function encodeUrlSaveData(startMode) {
+      const json = JSON.stringify(makeUrlSaveData(startMode));
+      const compressedBytes = await compressBytes(new TextEncoder().encode(json));
+      return bytesToBase64Url(compressedBytes);
+    }
+
+    async function decodeUrlSaveData(encoded) {
+      const decompressedBytes = await decompressBytes(base64UrlToBytes(encoded));
+      const data = JSON.parse(new TextDecoder().decode(decompressedBytes));
+      if (!data || data.v !== 1) throw new Error("This URL save data is not supported.");
+      return {
+        title: typeof data.t === "string" ? data.t : "",
+        source: typeof data.s === "string" ? data.s : "",
+        createdAt: "",
+        note: typeof data.n === "string" ? data.n : "",
+        startMode: data.m === "editor" ? "editor" : "auto",
+        images: Array.isArray(data.i) ? data.i.filter(function (image) {
+          return image && typeof image.fileName === "string" && typeof image.dataUrl === "string" && /^data:image\/(?:webp|jpeg|png);base64,/.test(image.dataUrl);
+        }).map(function (image) {
+          return { id: typeof image.id === "string" ? image.id : "image-" + Math.random().toString(36).slice(2), fileName: image.fileName, dataUrl: image.dataUrl, width: Number(image.width) || 0, height: Number(image.height) || 0 };
+        }) : []
+      };
+    }
+
+    async function readUrlSaveData() {
+      if (!location.hash.startsWith(URL_HASH_PREFIX)) return null;
+      const encoded = location.hash.slice(URL_HASH_PREFIX.length);
+      if (!encoded) return null;
+      try {
+        return await decodeUrlSaveData(encoded);
+      } catch (error) {
+        console.error(error);
+        showStatus(error && error.message ? "Could not open the saved URL data: " + error.message : "Could not open the saved URL data.", true);
+        return null;
+      }
+    }
+
+    function buildUrlWithPayload(encoded) {
+      const url = new URL(location.href);
+      url.hash = "saved=" + encoded;
+      return url.href;
+    }
+
+    async function createSavedUrl(startMode) {
+      applyMarkdownTitle();
+      if (!sourceText.value.length && !titleInput.value.length) throw new Error("Enter at least one character in the content or title.");
+      const encoded = await encodeUrlSaveData(startMode);
+      if (encoded.length >= URL_BASE64_LIMIT) throw new Error("The compressed Base64 data is 9,000 characters or longer, so it cannot be saved as a URL.");
+      return { url: buildUrlWithPayload(encoded), encodedLength: encoded.length };
+    }
+
+    async function copySavedUrl(startMode, button) {
+      const originalText = button.textContent;
+      try {
+        button.disabled = true;
+        button.textContent = "Creating URL…";
+        const result = await createSavedUrl(startMode);
+        await copyText(result.url);
+        button.textContent = "URL copied";
+        showStatus("Copied the URL to the clipboard. Compressed Base64: " + result.encodedLength.toLocaleString("en-US") + " characters");
+      } catch (error) {
+        button.textContent = "Could not copy";
+        showStatus(error && error.message ? error.message : "Failed to create the URL.", true);
+      } finally {
+        setTimeout(function () { button.textContent = originalText; button.disabled = false; }, 1600);
+      }
+    }
+
+    async function copyDiscordSavedLink(button) {
+      const originalText = button.textContent;
+      try {
+        button.disabled = true;
+        button.textContent = "Creating link…";
+        const result = await createSavedUrl("auto");
+        await copyText("[View the document](<" + result.url + ">)");
+        button.textContent = "Link copied";
+        showStatus("Copied the Discord “View the document” link to the clipboard. Compressed Base64: " + result.encodedLength.toLocaleString("en-US") + " characters");
+      } catch (error) {
+        button.textContent = "Could not copy";
+        showStatus(error && error.message ? error.message : "Failed to create the share link.", true);
+      } finally {
+        setTimeout(function () { button.textContent = originalText; button.disabled = false; }, 1600);
+      }
+    }
+
+    async function updateUrlSaveAvailability() {
+      const serial = ++urlSizeUpdateSerial;
+      if (!("CompressionStream" in window) || !("DecompressionStream" in window)) {
+        urlSaveButton.classList.add("hidden");
+        urlSavePanel.classList.add("hidden");
+        urlSaveButton.setAttribute("aria-expanded", "false");
+        return;
+      }
+      try {
+        const encoded = await encodeUrlSaveData("auto");
+        if (serial !== urlSizeUpdateSerial) return;
+        const tooLarge = encoded.length >= URL_BASE64_LIMIT;
+        urlSaveButton.classList.toggle("hidden", tooLarge);
+        if (tooLarge) {
+          urlSavePanel.classList.add("hidden");
+          urlSaveButton.setAttribute("aria-expanded", "false");
+        }
+        urlSizeInfo.textContent = "Compressed Base64: " + encoded.length.toLocaleString("en-US") + " / " + URL_BASE64_LIMIT.toLocaleString("en-US") + " characters" + (tooLarge ? " (URL save limit exceeded)" : "");
+      } catch (error) {
+        if (serial !== urlSizeUpdateSerial) return;
+        urlSaveButton.classList.add("hidden");
+        urlSavePanel.classList.add("hidden");
+        urlSaveButton.setAttribute("aria-expanded", "false");
+      }
+    }
+
+    function scheduleUrlSaveAvailabilityUpdate() {
+      clearTimeout(urlSizeUpdateTimer);
+      urlSizeUpdateTimer = setTimeout(updateUrlSaveAvailability, 300);
+    }
+
+    function renderImageList() {
+      imageList.replaceChildren();
+      images.forEach(function (image, index) {
+        const item = document.createElement("li");
+        item.className = "image-item";
+        const preview = document.createElement("img");
+        preview.className = "image-thumb";
+        preview.src = image.dataUrl;
+        preview.alt = image.fileName;
+        const main = document.createElement("div");
+        main.className = "image-item-main";
+        const name = document.createElement("p");
+        name.className = "image-name";
+        name.textContent = image.fileName;
+        const meta = document.createElement("p");
+        meta.className = "image-meta";
+        meta.textContent = (image.width && image.height ? image.width + " × " + image.height + "px / " : "") + "Base64 " + getBase64Length(image.dataUrl).toLocaleString("en-US") + " characters";
+        const output = document.createElement("textarea");
+        output.className = "embed-output";
+        output.readOnly = true;
+        output.value = getEmbedText(image);
+        output.setAttribute("aria-label", image.fileName + " embed code");
+        const actions = document.createElement("div");
+        actions.className = "image-actions";
+        const copyButton = document.createElement("button");
+        copyButton.type = "button";
+        copyButton.textContent = "Copy";
+        copyButton.addEventListener("click", async function () {
+          await copyText(getEmbedText(image));
+          const original = copyButton.textContent;
+          copyButton.textContent = "Copied";
+          setTimeout(function () { copyButton.textContent = original; }, 1200);
+        });
+        const renameButton = document.createElement("button");
+        renameButton.type = "button";
+        renameButton.textContent = "Rename file";
+        renameButton.addEventListener("click", function () {
+          const requested = window.prompt("Enter a new filename.", image.fileName);
+          if (requested === null) return;
+          const trimmed = requested.trim();
+          if (!trimmed) return;
+          const oldName = image.fileName;
+          image.fileName = makeUniqueImageName(trimmed, image.id);
+          replaceImageReferences(oldName, image.fileName);
+          renderImageList();
+        });
+        const upButton = document.createElement("button");
+        upButton.type = "button";
+        upButton.textContent = "↑ Move up";
+        upButton.disabled = index === 0;
+        upButton.addEventListener("click", function () {
+          if (index <= 0) return;
+          const moved = images.splice(index, 1)[0];
+          images.splice(index - 1, 0, moved);
+          renderImageList();
+        });
+        const downButton = document.createElement("button");
+        downButton.type = "button";
+        downButton.textContent = "↓ Move down";
+        downButton.disabled = index >= images.length - 1;
+        downButton.addEventListener("click", function () {
+          if (index >= images.length - 1) return;
+          const moved = images.splice(index, 1)[0];
+          images.splice(index + 1, 0, moved);
+          renderImageList();
+        });
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "delete-image-button";
+        deleteButton.textContent = "Delete";
+        deleteButton.addEventListener("click", function () {
+          if (!window.confirm("Delete “" + image.fileName + "” from the image list?")) return;
+          images.splice(index, 1);
+          renderImageList();
+        });
+        actions.append(copyButton, renameButton, upButton, downButton, deleteButton);
+        main.append(name, meta, output, actions);
+        item.append(preview, main);
+        imageList.appendChild(item);
+      });
+      scheduleUrlSaveAvailabilityUpdate();
+    }
+
+    function insertTextAtCursor(text) {
+      const start = Number.isInteger(sourceText.selectionStart) ? sourceText.selectionStart : sourceText.value.length;
+      const end = Number.isInteger(sourceText.selectionEnd) ? sourceText.selectionEnd : start;
+      const before = sourceText.value.slice(0, start);
+      const after = sourceText.value.slice(end);
+      const prefix = before && !before.endsWith("\n") ? "\n\n" : "";
+      const suffix = after && !after.startsWith("\n") ? "\n\n" : "";
+      const inserted = prefix + text + suffix;
+      sourceText.value = before + inserted + after;
+      const cursor = before.length + inserted.length;
+      sourceText.focus();
+      sourceText.setSelectionRange(cursor, cursor);
+      updateCount();
+      scheduleUrlSaveAvailabilityUpdate();
+    }
+
+    async function addImageFiles(fileList) {
+      const files = Array.from(fileList || []).filter(function (file) { return file && file.type && file.type.startsWith("image/"); });
+      if (!files.length) return;
+      imageFileInput.disabled = true;
+      try {
+        for (const file of files) {
+          showStatus("Compressing image: " + file.name);
+          const result = await compressImageFile(file);
+          const image = { id: "image-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8), fileName: makeUniqueImageName(file.name), dataUrl: result.dataUrl, width: result.width, height: result.height };
+          images.push(image);
+          if (insertAtCursorCheck.checked) insertTextAtCursor(getEmbedText(image));
+          renderImageList();
+        }
+        showStatus(files.length.toLocaleString("en-US") + (files.length === 1 ? " image" : " images") + " loaded. Each Base64 payload is within 18,000 characters.");
+      } catch (error) {
+        showStatus(error && error.message ? error.message : "Failed to compress the image.", true);
+      } finally {
+        imageFileInput.disabled = false;
+        imageFileInput.value = "";
+      }
+    }
+
+    function applyMarkdownTitle() {
+      if (titleInput.value.trim()) return;
+      const normalized = sourceText.value.replace(/\r\n?/g, "\n");
+      const lines = normalized.split("\n");
+      const firstLine = lines[0] || "";
+      const match = firstLine.match(/^#\s+(.+?)\s*$/);
+      if (!match) return;
+      titleInput.value = match[1].trim();
+      lines.shift();
+      while (lines.length && !lines[0].trim()) lines.shift();
+      sourceText.value = lines.join("\n").trim();
+      updateCount();
+    }
+
+    function showStatus(message, isError) {
+      status.textContent = message;
+      status.classList.toggle("error", Boolean(isError));
+    }
+
+    function updateCount() { charCount.textContent = sourceText.value.length.toLocaleString("en-US") + " characters"; }
+
+    function showEditor() {
+      viewerMode.classList.add("hidden");
+      editorMode.classList.remove("hidden");
+      document.title = "Create a Readable Site from Markdown";
+      updateCount();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function showViewer() {
+      applyMarkdownTitle();
+      const title = titleInput.value.trim() || "Viewer Page";
+      const source = sourceText.value;
+      if (!source.length && !titleInput.value.length) {
+        showStatus("Enter at least one character in the content or title.", true);
+        sourceText.focus();
+        return false;
+      }
+      viewTitle.textContent = title;
+      viewContent.innerHTML = parseTextToHtml(source);
+      const savedData = readInitialData();
+      const dateText = savedData.createdAt || new Intl.DateTimeFormat("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date());
+      viewMeta.replaceChildren();
+      if (noteText.value.trim()) {
+        const noteLine = document.createElement("div");
+        noteLine.style.whiteSpace = "pre-wrap";
+        noteLine.style.marginTop = "6px";
+        noteLine.textContent = noteText.value.trim();
+        viewMeta.appendChild(noteLine);
+      }
+      const createdLine = document.createElement("div");
+      createdLine.textContent = "Created: " + dateText;
+      viewMeta.appendChild(createdLine);
+      editorMode.classList.add("hidden");
+      viewerMode.classList.remove("hidden");
+      document.title = title;
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return true;
+    }
+
+    function makeFileName() {
+      const base = titleInput.value.trim() || "Viewer Page";
+      const safe = base.replace(/[\\/:*?"<>|]/g, "_").replace(/\s+/g, " ").trim().slice(0, 60);
+      return (safe || "Viewer Page") + ".html";
+    }
+
+    function bytesToBase64(bytes) {
+      let binary = "";
+      const chunkSize = 0x8000;
+      for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+        const chunk = bytes.subarray(offset, offset + chunkSize);
+        for (let i = 0; i < chunk.length; i++) binary += String.fromCharCode(chunk[i]);
+      }
+      return btoa(binary);
+    }
+
+    async function compressWithFormat(bytes, format) {
+      const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream(format));
+      return new Uint8Array(await new Response(stream).arrayBuffer());
+    }
+
+    async function decompressWithFormat(bytes, format) {
+      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream(format));
+      return new Uint8Array(await new Response(stream).arrayBuffer());
+    }
+
+    function sameBytes(a, b) {
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+      return true;
+    }
+
+    async function findBestSafeCompression(bytes) {
+      if (!("CompressionStream" in window) || !("DecompressionStream" in window)) {
+        throw new Error("This browser does not support compression and decompression for HTML saving.");
+      }
+      const formats = ["brotli", "deflate-raw", "gzip"];
+      const results = [];
+      for (const format of formats) {
+        try {
+          new DecompressionStream(format);
+          const compressed = await compressWithFormat(bytes, format);
+          const restored = await decompressWithFormat(compressed, format);
+          if (sameBytes(bytes, restored)) results.push({ format: format, bytes: compressed });
+        } catch (error) {
+          // Ignore unsupported formats and compare the available formats.
+        }
+      }
+      if (!results.length) throw new Error("No usable compression format is available for HTML saving.");
+      results.sort(function (a, b) { return a.bytes.length - b.bytes.length; });
+      return results[0];
+    }
+
+    function makeSafePackedHtml(base64, format) {
+      return '<!doctype html><meta charset=utf-8><script>' +
+        'let b=' + JSON.stringify(base64) + ',f=' + JSON.stringify(format) + ';' +
+        '(async()=>{try{' +
+        'let x=Uint8Array.from(atob(b),c=>c.charCodeAt(0)),' +
+        's=new Blob([x]).stream().pipeThrough(new DecompressionStream(f));' +
+        'document.open();document.write(new TextDecoder().decode(await new Response(s).arrayBuffer()));document.close()' +
+        '}catch(e){document.body.textContent="Decompression error: "+e.message}})()' +
+        '<\/script>';
+    }
+
+    async function packSelfHtmlSafely(html) {
+      const sourceBytes = new TextEncoder().encode(html);
+      const best = await findBestSafeCompression(sourceBytes);
+      const restored = await decompressWithFormat(best.bytes, best.format);
+      if (!sameBytes(sourceBytes, restored)) throw new Error("The restoration check failed. The original HTML does not match the restored result.");
+      const packedHtml = makeSafePackedHtml(bytesToBase64(best.bytes), best.format);
+      return {
+        html: packedHtml,
+        format: best.format,
+        sourceBytes: sourceBytes.length,
+        packedBytes: new TextEncoder().encode(packedHtml).length
+      };
+    }
+
+    function buildSelfHtml(startMode) {
+      applyMarkdownTitle();
+      const clone = document.documentElement.cloneNode(true);
+      const dataNode = clone.querySelector("#initialData");
+      const data = {
+        title: titleInput.value,
+        source: sourceText.value,
+        createdAt: new Intl.DateTimeFormat("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date()),
+        note: noteText.value,
+        startMode: startMode === "editor" ? "editor" : "auto",
+        images: images.map(function (image) { return { id: image.id, fileName: image.fileName, dataUrl: image.dataUrl, width: image.width, height: image.height }; })
+      };
+      dataNode.textContent = encodeStoredText(JSON.stringify(data));
+      clone.querySelector("#editorMode").classList.add("hidden");
+      clone.querySelector("#viewerMode").classList.remove("hidden");
+      clone.querySelector("#pageTitle").value = "";
+      clone.querySelector("#sourceText").textContent = "";
+      clone.querySelector("#noteText").textContent = "";
+      clone.querySelector("#imageList").replaceChildren();
+      clone.querySelector("#status").textContent = "";
+      return "<!DOCTYPE html>\n" + clone.outerHTML;
+    }
+
+    async function downloadSelf(startMode) {
+      applyMarkdownTitle();
+      if (!sourceText.value.length && !titleInput.value.length) {
+        showStatus("Enter at least one character in the content or title.", true);
+        sourceText.focus();
+        return;
+      }
+      try {
+        showStatus("Creating the HTML file with safe compression…");
+        const originalHtml = buildSelfHtml(startMode);
+        const packed = await packSelfHtmlSafely(originalHtml);
+        const blob = new Blob([packed.html], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = makeFileName();
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        const reduction = packed.sourceBytes ? Math.max(0, 100 - packed.packedBytes / packed.sourceBytes * 100) : 0;
+        const modeText = startMode === "editor" ? "HTML that starts in the editor" : "HTML that starts in the viewer";
+        showStatus(modeText + " saved with safe compression. Format: " + packed.format + " / approximately " + reduction.toFixed(1) + "% smaller");
+      } catch (error) {
+        showStatus(error && error.message ? "Failed to save: " + error.message : "Failed to save.", true);
+      }
+    }
+
+    document.getElementById("saveButton").addEventListener("click", function () { downloadSelf("auto"); });
+    document.getElementById("saveEditorButton").addEventListener("click", function () { downloadSelf("editor"); });
+    urlSaveButton.addEventListener("click", function () {
+      const willOpen = urlSavePanel.classList.contains("hidden");
+      urlSavePanel.classList.toggle("hidden", !willOpen);
+      urlSaveButton.setAttribute("aria-expanded", String(willOpen));
+      if (willOpen) updateUrlSaveAvailability();
+    });
+    copyViewerUrlButton.addEventListener("click", function () { copySavedUrl("auto", copyViewerUrlButton); });
+    copyDiscordLinkButton.addEventListener("click", function () { copyDiscordSavedLink(copyDiscordLinkButton); });
+    copyEditorUrlButton.addEventListener("click", function () { copySavedUrl("editor", copyEditorUrlButton); });
+    document.getElementById("viewButton").addEventListener("click", showViewer);
+    document.getElementById("editButton").addEventListener("click", showEditor);
+    noteEditButton.addEventListener("click", function () {
+      const willOpen = notePanel.classList.contains("hidden");
+      notePanel.classList.toggle("hidden", !willOpen);
+      noteEditButton.setAttribute("aria-expanded", String(willOpen));
+      if (willOpen) noteText.focus();
+    });
+
+    function buildNoteCopyHtml() {
+      const title = escapeHtml(titleInput.value.trim() || "Viewer Page");
+      return "<article><h1>" + title + "</h1>" + parseTextToHtml(sourceText.value) + "</article>";
+    }
+
+    function buildNoteCopyText() {
+      const title = titleInput.value.trim();
+      const body = parseTextToMarkdown(sourceText.value);
+      return (title ? title + (body ? "\n\n" : "") : "") + body;
+    }
+
+    async function copyRichText(html, plainText) {
+      if (navigator.clipboard && window.ClipboardItem) {
+        const item = new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([plainText], { type: "text/plain" }) });
+        await navigator.clipboard.write([item]);
+        return;
+      }
+      const holder = document.createElement("div");
+      holder.contentEditable = "true";
+      holder.setAttribute("aria-hidden", "true");
+      holder.style.position = "fixed";
+      holder.style.left = "-9999px";
+      holder.innerHTML = html;
+      document.body.appendChild(holder);
+      const range = document.createRange();
+      range.selectNodeContents(holder);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      const copied = document.execCommand("copy");
+      selection.removeAllRanges();
+      holder.remove();
+      if (!copied) throw new Error("Failed to copy rich text.");
+    }
+
+    document.getElementById("copyNoteButton").addEventListener("click", async function () {
+      const button = this;
+      const original = button.textContent;
+      try {
+        await copyRichText(buildNoteCopyHtml(), buildNoteCopyText());
+        button.textContent = "Copied";
+      } catch (error) {
+        try { await navigator.clipboard.writeText(buildNoteCopyText()); button.textContent = "Copied as plain text"; }
+        catch (fallbackError) { button.textContent = "Could not copy"; }
+      }
+      setTimeout(function () { button.textContent = original; }, 1800);
+    });
+
+    document.getElementById("copyMarkdownButton").addEventListener("click", async function () {
+      const title = titleInput.value.trim();
+      const body = parseTextToMarkdown(sourceText.value);
+      const markdown = (title ? "# " + title + (body ? "\n\n" : "") : "") + body;
+      try {
+        await navigator.clipboard.writeText(markdown);
+        const button = this;
+        const original = button.textContent;
+        button.textContent = "Copied";
+        setTimeout(function () { button.textContent = original; }, 1400);
+      } catch (error) {
+        const textarea = document.createElement("textarea");
+        textarea.value = markdown;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      }
+    });
+
+    imagePanelToggle.addEventListener("click", function () {
+      const willOpen = imagePanelBody.classList.contains("hidden");
+      imagePanelBody.classList.toggle("hidden", !willOpen);
+      imagePanelToggle.setAttribute("aria-expanded", String(willOpen));
+      imagePanelToggle.textContent = willOpen ? "Close" : "Open";
+    });
+
+    imageFileInput.addEventListener("change", function () { addImageFiles(imageFileInput.files); });
+
+    ["dragenter", "dragover"].forEach(function (eventName) {
+      imageDropZone.addEventListener(eventName, function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+        imageDropZone.classList.add("is-dragging");
+      });
+    });
+    ["dragleave", "drop"].forEach(function (eventName) {
+      imageDropZone.addEventListener(eventName, function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        imageDropZone.classList.remove("is-dragging");
+      });
+    });
+    imageDropZone.addEventListener("drop", function (event) {
+      if (event.dataTransfer && event.dataTransfer.files) addImageFiles(event.dataTransfer.files);
+    });
+
+    document.getElementById("sampleButton").addEventListener("click", function () {
+      titleInput.value = "Travel Plan";
+      sourceText.value = "## Meeting point\n\nMeet at the Marunouchi South Exit of Tokyo Station by 9:00 a.m.\n\n## What to bring\n\n- Smartphone\n- Charger\n- Drink\n- Folding umbrella\n\n> The plan may change in case of rain.\n\nReference: [JR East](https://www.jreast.co.jp/)";
+      updateCount();
+      scheduleUrlSaveAvailabilityUpdate();
+      showStatus("Example loaded.");
+    });
+
+    document.getElementById("clearButton").addEventListener("click", function () {
+      titleInput.value = "";
+      sourceText.value = "";
+      noteText.value = "";
+      updateCount();
+      scheduleUrlSaveAvailabilityUpdate();
+      showStatus("Input cleared.");
+      sourceText.focus();
+    });
+
+    sourceText.addEventListener("paste", function () {
+      setTimeout(function () {
+        const normalized = sourceText.value.replace(/\r\n?/g, "\n");
+        const lines = normalized.split("\n");
+        if (/^#\s+.+\s*$/.test(lines[0] || "") && lines.length >= 2 && (lines[1] || "").trim() === "") applyMarkdownTitle();
+        scheduleUrlSaveAvailabilityUpdate();
+      }, 0);
+    });
+
+    sourceText.addEventListener("input", function () { updateCount(); scheduleUrlSaveAvailabilityUpdate(); });
+    titleInput.addEventListener("input", scheduleUrlSaveAvailabilityUpdate);
+    noteText.addEventListener("input", scheduleUrlSaveAvailabilityUpdate);
+
+    document.addEventListener("keydown", function (event) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        downloadSelf("editor");
+      }
+    });
+
+    const urlInitialData = await readUrlSaveData();
+    const initialData = urlInitialData || readInitialData();
+    titleInput.value = initialData.title;
+    sourceText.value = initialData.source;
+    noteText.value = initialData.note;
+    images = initialData.images || [];
+    renderImageList();
+    if (noteText.value.trim()) {
+      notePanel.classList.remove("hidden");
+      noteEditButton.setAttribute("aria-expanded", "true");
+    }
+    updateCount();
+    await updateUrlSaveAvailability();
+
+    if (initialData.startMode !== "editor" && (initialData.title + initialData.source).length >= 1) showViewer();
+    else showEditor();
+  });
+</script>
+</body>
+</html>
