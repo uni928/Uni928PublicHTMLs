@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Display Markdown as an easy-to-read page and save it as a single HTML file.">
-  <title>Create a Readable Site from Markdown</title>
+  <meta name="description" content="Display Markdown as a readable web page and save it as a single HTML file.">
+  <title>Create a Viewable Site from Markdown</title>
   <style>
 @layer base,layout,editor,viewer,responsive;
 @layer base{
@@ -44,9 +44,15 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .status.error{color:var(--danger);}
 .note-panel{margin-top:14px;padding:16px;border:1px solid var(--line);border-radius:14px;background:#f8fafc;}
 .note-panel .text-input{min-height:120px;background:#fff;}
-.url-save-panel{margin-top:14px;padding:16px;border:1px solid var(--line);border-radius:14px;background:#f8fafc;}
-.url-save-panel h2{margin:0 0 8px;font-size:1.05rem;}
-.url-save-description{margin:0 0 14px;color:var(--muted);font-size:.92rem;line-height:1.75;}
+.url-save-panel,.file-save-panel{margin-top:14px;padding:16px;border:1px solid var(--line);border-radius:14px;background:#f8fafc;}
+.url-save-panel h2,.file-save-panel h2{margin:0 0 8px;font-size:1.05rem;}
+.url-save-description,.file-save-description{margin:0 0 14px;color:var(--muted);font-size:.92rem;line-height:1.75;}
+.file-save-groups{display:grid;gap:14px;}
+.file-save-group{padding:14px;border:1px solid var(--line);border-radius:13px;background:#fff;}
+.file-save-group h3{margin:0 0 6px;font-size:1rem;}
+.file-save-group p{margin:0 0 10px;color:var(--muted);font-size:.86rem;line-height:1.6;}
+.file-save-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+.file-save-actions button{width:100%;}
 .url-save-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
 .url-save-actions button{width:100%;}
 .url-size-info{margin:12px 0 0;color:var(--muted);font-size:.84rem;line-height:1.6;}
@@ -64,7 +70,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .uni-photo-dropbox__inner{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:22px;text-align:center;pointer-events:none;}
 .uni-photo-dropbox__icon{display:grid;place-items:center;width:54px;height:54px;border-radius:18px;background:linear-gradient(135deg,rgba(117,103,220,0.12),rgba(217,137,180,0.16));}
 .uni-photo-dropbox__icon svg{width:25px;height:25px;stroke:#6e65ad;}
-.uni-photo-dropbox__copy{display:grid;gap:5px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",sans-serif;}
+.uni-photo-dropbox__copy{display:grid;gap:5px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;}
 .uni-photo-dropbox__title{color:#182033;font-size:16px;font-weight:800;line-height:1.35;letter-spacing:.01em;}
 .uni-photo-dropbox__guide{color:#667085;font-size:13px;font-weight:600;line-height:1.55;}
 .uni-photo-dropbox__meta{color:#98a2b3;font-size:11px;font-weight:500;line-height:1.4;}
@@ -125,7 +131,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .uni-photo-dropbox__zone{height:190px;}
 .controls{flex-direction:column;}
 .controls button{width:100%;}
-.url-save-actions{grid-template-columns:1fr;}
+.url-save-actions,.file-save-actions{grid-template-columns:1fr;}
 .viewer-actions{position:static;justify-content:flex-end;margin:-4px 0 14px;}
 .document h1{margin-right:0;}
 }
@@ -135,30 +141,30 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 <body>
   <main id="editorMode" class="app">
     <header class="hero">
-      <h1>Create a Readable Site from Markdown</h1>
-      <p>Enter Markdown and click “Save as Viewer Site” to download a visually formatted HTML file.</p>
+      <h1>Create a Viewable Site from Markdown</h1>
+      <p>Enter Markdown text and save it as an easy-to-read HTML page.</p>
     </header>
 
     <section class="panel editor-panel" aria-labelledby="editorTitle">
       <div class="field-label">
-        <label for="pageTitle" id="editorTitle">Page title</label>
-        <small>Optional</small>
+        <label for="pageTitle" id="editorTitle">Page Title</label>
+        <small>Can be left blank</small>
       </div>
-      <input id="pageTitle" class="title-input" type="text" placeholder="e.g., Travel Plan, Work Instructions, Reference Notes">
+      <input id="pageTitle" class="title-input" type="text" placeholder="Example: Travel Plan, Work Instructions, Reference Notes">
 
       <div class="field-label">
-        <label for="sourceText">Markdown content</label>
-        <small id="charCount">0 characters</small>
+        <label for="sourceText">Markdown Content</label>
+        <small id="charCount">0 chars</small>
       </div>
-      <textarea id="sourceText" class="text-input" placeholder="Enter your Markdown here."></textarea>
+      <textarea id="sourceText" class="text-input" placeholder="Enter Markdown content here."></textarea>
 
       <section class="image-panel" aria-labelledby="imagePanelTitle">
         <div class="image-panel-head">
-          <h2 id="imagePanelTitle">Import images</h2>
+          <h2 id="imagePanelTitle">Images</h2>
           <button id="imagePanelToggle" class="image-panel-toggle" type="button" aria-expanded="false" aria-controls="imagePanelBody">Open</button>
         </div>
         <div id="imagePanelBody" class="image-panel-body hidden">
-          <p class="image-panel-note">Imported images are compressed to WebP in supported browsers, or JPEG when WebP conversion is unavailable, and embedded in the HTML within 18,000 Base64 characters. Characters such as parentheses that can cause problems in Markdown filenames are removed automatically. Insert “[Insert image](filename)” into your content to use an image.</p>
+          <p class="image-panel-note">Loaded images are compressed to WebP in supported browsers, or JPEG when WebP conversion is unavailable, and stored in the HTML with each Base64 payload limited to 18,000 characters. Symbols that may cause problems in Markdown are automatically removed from image file names. Insert images in the content using `[Insert Image](filename)`.</p>
           <div class="uni-photo-dropbox">
             <label id="imageDropZone" class="uni-photo-dropbox__zone">
               <span class="uni-photo-dropbox__inner">
@@ -169,40 +175,64 @@ a{color:var(--accent);overflow-wrap:anywhere;}
                   </svg>
                 </span>
                 <span class="uni-photo-dropbox__copy">
-                  <span class="uni-photo-dropbox__title">Add images</span>
-                  <span class="uni-photo-dropbox__guide">Click to select, or drag files here</span>
-                  <span class="uni-photo-dropbox__meta">JPG, PNG, WebP, and other image formats supported · Multiple files allowed</span>
+                  <span class="uni-photo-dropbox__title">Add Images</span>
+                  <span class="uni-photo-dropbox__guide">Tap/click to select, or drag files here</span>
+                  <span class="uni-photo-dropbox__meta">Supports JPG, PNG, WebP, and more / Multiple files allowed</span>
                 </span>
               </span>
               <input id="imageFileInput" class="uni-photo-dropbox__input" type="file" accept="image/*" multiple aria-label="Select images to add">
             </label>
           </div>
           <div class="image-options">
-            <label class="image-option-check"><input id="insertAtCursorCheck" type="checkbox">Automatically insert images at the cursor position</label>
+            <label class="image-option-check"><input id="insertAtCursorCheck" type="checkbox">Automatically insert added images at the cursor position</label>
           </div>
           <ol id="imageList" class="image-list"></ol>
         </div>
       </section>
 
       <div class="controls">
-        <button id="saveButton" class="primary-button" type="button">Save as Viewer Site</button>
-        <button id="saveEditorButton" class="secondary-button" type="button">Save</button>
-        <button id="urlSaveButton" class="secondary-button" type="button" aria-expanded="false" aria-controls="urlSavePanel">Save URL</button>
-        <button id="viewButton" class="secondary-button" type="button">View Here</button>
+        <button id="saveMethodButton" class="primary-button" type="button" aria-expanded="false" aria-controls="fileSavePanel">Save</button>
+        <button id="urlSaveButton" class="secondary-button" type="button" aria-expanded="false" aria-controls="urlSavePanel">URLSave</button>
+        <button id="viewButton" class="secondary-button" type="button">Preview Here</button>
         <button id="noteEditButton" class="secondary-button" type="button" aria-expanded="false" aria-controls="notePanel">Edit Notes</button>
-        <button id="sampleButton" class="secondary-button" type="button">Load Example</button>
+        <button id="sampleButton" class="secondary-button" type="button">Insert Example</button>
         <div hidden><button id="clearButton" class="secondary-button" type="button">Clear Input</button></div>
       </div>
+
+
+      <section id="fileSavePanel" class="file-save-panel hidden" aria-labelledby="fileSaveTitle">
+        <h2 id="fileSaveTitle">Save Method</h2>
+        <p class="file-save-description">Choose a save method. Continued-editing saves preserve the current content so it can be restored in the editor.</p>
+        <div class="file-save-groups">
+          <section class="file-save-group">
+            <h3>Standard Save</h3>
+            <p>Saves without the compact redirect format. Recommended when compatibility is the priority.</p>
+            <div class="file-save-actions">
+              <button id="saveViewerNormalButton" class="primary-button" type="button">Save as View-Only Site</button>
+              <button id="saveEditorNormalButton" class="secondary-button" type="button">Save for Continued Editing</button>
+            </div>
+          </section>
+          <section id="packedSaveGroup" class="file-save-group">
+            <h3>Compact Save</h3>
+            <p>Compares supported compression formats and uses the smallest result.</p>
+            <div class="file-save-actions">
+              <button id="saveViewerPackedButton" class="primary-button" type="button">Save as View-Only Site</button>
+              <button id="saveEditorPackedButton" class="secondary-button" type="button">Save for Continued Editing</button>
+            </div>
+            <p id="packedSaveSizeInfo" class="url-size-info"></p>
+          </section>
+        </div>
+      </section>
 
       <section id="urlSavePanel" class="url-save-panel hidden" aria-labelledby="urlSaveTitle">
         <h2 id="urlSaveTitle">Save as URL</h2>
         <p class="url-save-description">
-          Compress the current content and store it in the URL. Anyone who opens the copied URL can view the content on this page.
+          Compresses the current content into the URL. Opening the copied URL restores the content on this page.
         </p>
         <div class="url-save-actions">
-          <button id="copyViewerUrlButton" class="primary-button" type="button">Copy the “Save as Viewer Site”<br>URL</button>
-          <button id="copyDiscordLinkButton" class="secondary-button" type="button">Copy the “View the document”<br>link for Discord</button>
-          <button id="copyEditorUrlButton" class="secondary-button" type="button">Copy the “Save” URL</button>
+          <button id="copyViewerUrlButton" class="primary-button" type="button">Copy URL for<br>View-Only Site</button>
+          <button id="copyDiscordLinkButton" class="secondary-button" type="button">Copy “View Document”<br>link for Discord</button>
+          <button id="copyEditorUrlButton" class="secondary-button" type="button">Copy URL for<br>Continued Editing</button>
         </div>
         <p id="urlSizeInfo" class="url-size-info"></p>
       </section>
@@ -210,9 +240,9 @@ a{color:var(--accent);overflow-wrap:anywhere;}
       <div id="notePanel" class="note-panel hidden">
         <div class="field-label">
           <label for="noteText">Notes</label>
-          <small>Optional notes, such as the editor's name</small>
+          <small>You can enter editor information or other notes</small>
         </div>
-        <textarea id="noteText" class="text-input" placeholder="e.g., Editor: Name"></textarea>
+        <textarea id="noteText" class="text-input" placeholder="Example: Editor: Alex"></textarea>
       </div>
 
       <div class="helper">Saved HTML files include the Markdown content.</div>
@@ -223,7 +253,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
   <main id="viewerMode" class="app hidden">
     <article class="panel document">
       <div class="viewer-actions">
-        <div hidden><button id="copyNoteButton" class="secondary-button" type="button">Try copying in note format</button></div>
+        <div hidden><button id="copyNoteButton" class="secondary-button" type="button">Try Copying for note</button></div>
         <div hidden><button id="copyMarkdownButton" class="secondary-button" type="button">Copy Markdown</button></div>
         <button id="editButton" class="secondary-button" type="button">Edit</button>
       </div>
@@ -258,6 +288,14 @@ window.addEventListener("DOMContentLoaded", async function () {
     const imagePanelBody = document.getElementById("imagePanelBody");
     const imageDropZone = document.getElementById("imageDropZone");
     const insertAtCursorCheck = document.getElementById("insertAtCursorCheck");
+    const saveMethodButton = document.getElementById("saveMethodButton");
+    const fileSavePanel = document.getElementById("fileSavePanel");
+    const saveViewerNormalButton = document.getElementById("saveViewerNormalButton");
+    const saveEditorNormalButton = document.getElementById("saveEditorNormalButton");
+    const saveViewerPackedButton = document.getElementById("saveViewerPackedButton");
+    const saveEditorPackedButton = document.getElementById("saveEditorPackedButton");
+    const packedSaveGroup = document.getElementById("packedSaveGroup");
+    const packedSaveSizeInfo = document.getElementById("packedSaveSizeInfo");
     const urlSaveButton = document.getElementById("urlSaveButton");
     const urlSavePanel = document.getElementById("urlSavePanel");
     const copyViewerUrlButton = document.getElementById("copyViewerUrlButton");
@@ -267,7 +305,17 @@ window.addEventListener("DOMContentLoaded", async function () {
 
     const IMAGE_BASE64_LIMIT = 18000;
     const URL_BASE64_LIMIT = 1920;
-    const URL_HASH_PREFIX = "#saved=";
+    const PACKED_SAVE_BASE64_LIMIT = 8000;
+    const LONG_URL_BASE = "https://uni928.github.io/Uni928PublicHTMLs/index80.html";
+    const SHORT_URL_BASE = "https://x.gd/sm9K2";
+    const SHORT_URL_COPY_THRESHOLD = 1950;
+    const URL_COMPRESSION_FORMATS = [
+      { format: "brotli", hashKey: "br" },
+      { format: "deflate-raw", hashKey: "dr" },
+      { format: "gzip", hashKey: "gz" }
+    ];
+    const LEGACY_URL_HASH_KEY = "saved";
+    const EDITOR_TRANSFER_STORAGE_KEY = "uni928-index80-editor-transfer-v1";
     const compressionSteps = [
       [768, 0.72], [640, 0.66], [560, 0.60], [480, 0.54], [420, 0.48],
       [360, 0.42], [320, 0.36], [280, 0.30], [240, 0.24], [200, 0.18], [160, 0.12]
@@ -307,7 +355,7 @@ window.addEventListener("DOMContentLoaded", async function () {
         return token;
       });
 
-      value = value.replace(new RegExp(String.raw`\[(?:Insert image|\u753b\u50cf\u633f\u5165)\]\(([^)\r\n]+)\)`, "g"), function (_, rawFileName) {
+      value = value.replace(/\[Insert Image\]\(([^)\r\n]+)\)/g, function (_, rawFileName) {
         const fileName = String(rawFileName).trim();
         const image = getImageByName(fileName);
         const token = "@@EMBEDIMAGE" + imageTokens.length + "@@";
@@ -610,7 +658,7 @@ window.addEventListener("DOMContentLoaded", async function () {
         if (!smallest || getBase64Length(result.dataUrl) < getBase64Length(smallest.dataUrl)) smallest = result;
         if (getBase64Length(result.dataUrl) <= IMAGE_BASE64_LIMIT) return result;
       }
-      throw new Error("Even the smallest settings could not compress the Base64 payload to within 18,000 characters." + (smallest ? " Smallest result: " + getBase64Length(smallest.dataUrl).toLocaleString("en-US") + " characters" : ""));
+      throw new Error("Could not compress the Base64 payload to 18,000 characters or fewer even at the smallest setting." + (smallest ? " Smallest result: " + getBase64Length(smallest.dataUrl).toLocaleString("ja-JP") + " chars" : ""));
     }
 
     function sanitizeImageFileName(name) {
@@ -618,7 +666,7 @@ window.addEventListener("DOMContentLoaded", async function () {
       const dot = raw.lastIndexOf(".");
       const rawStem = dot > 0 ? raw.slice(0, dot) : raw;
       const rawExt = dot > 0 ? raw.slice(dot) : "";
-      const unsafePattern = /[\\/:*?"'`<>()[\]{}（）［］【】「」『』〈〉《》]/g;
+      const unsafePattern = /[\\/:*?"'`<>()[\]{}（）［］【】“”『』〈〉《》]/g;
       const stem = rawStem.replace(unsafePattern, "").replace(/\s+/g, " ").trim() || "image";
       const ext = rawExt.replace(/[^.A-Za-z0-9]/g, "").slice(0, 12);
       return stem + ext;
@@ -641,12 +689,12 @@ window.addEventListener("DOMContentLoaded", async function () {
     function replaceImageReferences(oldName, newName) {
       if (!oldName || oldName === newName) return;
       const escapedOld = oldName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const pattern = new RegExp(String.raw`\[(?:Insert image|\u753b\u50cf\u633f\u5165)\]\(${escapedOld}\)`, "g");
-      sourceText.value = sourceText.value.replace(pattern, "[Insert image](" + newName + ")");
+      const pattern = new RegExp(String.raw`\[Insert Image\]\(${escapedOld}\)`, "g");
+      sourceText.value = sourceText.value.replace(pattern, "[Insert Image](" + newName + ")");
       updateCount();
     }
 
-    function getEmbedText(image) { return "[Insert image](" + image.fileName + ")"; }
+    function getEmbedText(image) { return "[Insert Image](" + image.fileName + ")"; }
 
     async function copyText(value) {
       try {
@@ -682,18 +730,6 @@ window.addEventListener("DOMContentLoaded", async function () {
       return bytes;
     }
 
-    async function compressBytes(bytes) {
-      if (!("CompressionStream" in window)) throw new Error("This browser does not support compression for URL saving.");
-      const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip"));
-      return new Uint8Array(await new Response(stream).arrayBuffer());
-    }
-
-    async function decompressBytes(bytes) {
-      if (!("DecompressionStream" in window)) throw new Error("This browser does not support expanding saved URL data.");
-      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
-      return new Uint8Array(await new Response(stream).arrayBuffer());
-    }
-
     function makeUrlSaveData(startMode) {
       return {
         v: 1,
@@ -705,16 +741,43 @@ window.addEventListener("DOMContentLoaded", async function () {
       };
     }
 
-    async function encodeUrlSaveData(startMode) {
-      const json = JSON.stringify(makeUrlSaveData(startMode));
-      const compressedBytes = await compressBytes(new TextEncoder().encode(json));
-      return bytesToBase64Url(compressedBytes);
+    async function getUrlCompressionCandidates(bytes) {
+      if (!("CompressionStream" in window) || !("DecompressionStream" in window)) {
+        throw new Error("This browser does not support compression for URL saving.");
+      }
+      const candidates = [];
+      for (const definition of URL_COMPRESSION_FORMATS) {
+        try {
+          new DecompressionStream(definition.format);
+          const compressedBytes = await compressWithFormat(bytes, definition.format);
+          const restored = await decompressWithFormat(compressedBytes, definition.format);
+          if (sameBytes(bytes, restored)) {
+            candidates.push({
+              format: definition.format,
+              hashKey: definition.hashKey,
+              encoded: bytesToBase64Url(compressedBytes)
+            });
+          }
+        } catch (error) {
+          // Ignore compression formats that are not supported by the browser.
+        }
+      }
+      if (!candidates.length) throw new Error("No supported compression format is available for URL saving.");
+      candidates.sort(function (a, b) {
+        return (a.hashKey.length + a.encoded.length) - (b.hashKey.length + b.encoded.length);
+      });
+      return candidates;
     }
 
-    async function decodeUrlSaveData(encoded) {
-      const decompressedBytes = await decompressBytes(base64UrlToBytes(encoded));
+    async function encodeUrlSaveData(startMode) {
+      const bytes = new TextEncoder().encode(JSON.stringify(makeUrlSaveData(startMode)));
+      return (await getUrlCompressionCandidates(bytes))[0];
+    }
+
+    async function decodeUrlSaveData(encoded, format) {
+      const decompressedBytes = await decompressWithFormat(base64UrlToBytes(encoded), format);
       const data = JSON.parse(new TextDecoder().decode(decompressedBytes));
-      if (!data || data.v !== 1) throw new Error("This URL save data is not supported.");
+      if (!data || data.v !== 1) throw new Error("Unsupported URL-save data.");
       return {
         title: typeof data.t === "string" ? data.t : "",
         source: typeof data.s === "string" ? data.s : "",
@@ -729,31 +792,41 @@ window.addEventListener("DOMContentLoaded", async function () {
       };
     }
 
+    function readUrlHashPayload() {
+      const match = location.hash.match(/^#([^=]+)=([A-Za-z0-9_-]+)$/);
+      if (!match) return null;
+      if (match[1] === LEGACY_URL_HASH_KEY) return { encoded: match[2], format: "gzip" };
+      const definition = URL_COMPRESSION_FORMATS.find(function (item) { return item.hashKey === match[1]; });
+      return definition ? { encoded: match[2], format: definition.format } : null;
+    }
+
     async function readUrlSaveData() {
-      if (!location.hash.startsWith(URL_HASH_PREFIX)) return null;
-      const encoded = location.hash.slice(URL_HASH_PREFIX.length);
-      if (!encoded) return null;
+      const payload = readUrlHashPayload();
+      if (!payload) return null;
       try {
-        return await decodeUrlSaveData(encoded);
+        return await decodeUrlSaveData(payload.encoded, payload.format);
       } catch (error) {
         console.error(error);
-        showStatus(error && error.message ? "Could not open the saved URL data: " + error.message : "Could not open the saved URL data.", true);
+        showStatus(error && error.message ? "Could not open URL-save data: " + error.message : "Could not open URL-save data.", true);
         return null;
       }
     }
 
-    function buildUrlWithPayload(encoded) {
-      const url = new URL(location.href);
-      url.hash = "saved=" + encoded;
-      return url.href;
+    function buildUrlWithPayload(payload) {
+      return LONG_URL_BASE + "#" + payload.hashKey + "=" + payload.encoded;
+    }
+
+    function makeCopyUrl(url) {
+      return url.length >= SHORT_URL_COPY_THRESHOLD ? url.replace(LONG_URL_BASE, SHORT_URL_BASE) : url;
     }
 
     async function createSavedUrl(startMode) {
       applyMarkdownTitle();
-      if (!sourceText.value.length && !titleInput.value.length) throw new Error("Enter at least one character in the content or title.");
-      const encoded = await encodeUrlSaveData(startMode);
-      if (encoded.length >= URL_BASE64_LIMIT) throw new Error("The compressed Base64 data is 9,000 characters or longer, so it cannot be saved as a URL.");
-      return { url: buildUrlWithPayload(encoded), encodedLength: encoded.length };
+      if (!sourceText.value.length && !titleInput.value.length) throw new Error("Enter at least one character in the title or content.");
+      const payload = await encodeUrlSaveData(startMode);
+      if (payload.encoded.length >= URL_BASE64_LIMIT) throw new Error("The compressed Base64 data is " + URL_BASE64_LIMIT.toLocaleString("ja-JP") + " characters or more, so it cannot be saved as a URL.");
+      const url = buildUrlWithPayload(payload);
+      return { url: url, copyUrl: makeCopyUrl(url), encodedLength: payload.encoded.length, format: payload.format };
     }
 
     async function copySavedUrl(startMode, button) {
@@ -762,12 +835,12 @@ window.addEventListener("DOMContentLoaded", async function () {
         button.disabled = true;
         button.textContent = "Creating URL…";
         const result = await createSavedUrl(startMode);
-        await copyText(result.url);
+        await copyText(result.copyUrl);
         button.textContent = "URL copied";
-        showStatus("Copied the URL to the clipboard. Compressed Base64: " + result.encodedLength.toLocaleString("en-US") + " characters");
+        showStatus("The URL was copied to the clipboard. Compression: " + result.format + ", compressed Base64: " + result.encodedLength.toLocaleString("ja-JP") + " chars" + (result.copyUrl !== result.url ? " (short URL used because the original is long)" : ""));
       } catch (error) {
         button.textContent = "Could not copy";
-        showStatus(error && error.message ? error.message : "Failed to create the URL.", true);
+        showStatus(error && error.message ? error.message : "Could not create the URL.", true);
       } finally {
         setTimeout(function () { button.textContent = originalText; button.disabled = false; }, 1600);
       }
@@ -779,12 +852,13 @@ window.addEventListener("DOMContentLoaded", async function () {
         button.disabled = true;
         button.textContent = "Creating link…";
         const result = await createSavedUrl("auto");
-        await copyText("[View the document](<" + result.url + ">)");
+        const discordLink = "[View Document](<" + result.copyUrl + ">)";
+        await copyText(discordLink.length >= SHORT_URL_COPY_THRESHOLD ? "[View Document](<" + makeCopyUrl(result.url) + ">)" : discordLink);
         button.textContent = "Link copied";
-        showStatus("Copied the Discord “View the document” link to the clipboard. Compressed Base64: " + result.encodedLength.toLocaleString("en-US") + " characters");
+        showStatus("The Discord “View Document” link was copied to the clipboard. Compression: " + result.format + ", compressed Base64: " + result.encodedLength.toLocaleString("ja-JP") + " chars" + (discordLink.length >= SHORT_URL_COPY_THRESHOLD ? " (short URL used because the original is long)" : ""));
       } catch (error) {
         button.textContent = "Could not copy";
-        showStatus(error && error.message ? error.message : "Failed to create the share link.", true);
+        showStatus(error && error.message ? error.message : "Could not create the sharing link.", true);
       } finally {
         setTimeout(function () { button.textContent = originalText; button.disabled = false; }, 1600);
       }
@@ -796,23 +870,29 @@ window.addEventListener("DOMContentLoaded", async function () {
         urlSaveButton.classList.add("hidden");
         urlSavePanel.classList.add("hidden");
         urlSaveButton.setAttribute("aria-expanded", "false");
+        packedSaveGroup.classList.add("hidden");
         return;
       }
       try {
-        const encoded = await encodeUrlSaveData("auto");
+        const [viewerPayload, editorPayload] = await Promise.all([encodeUrlSaveData("auto"), encodeUrlSaveData("editor")]);
         if (serial !== urlSizeUpdateSerial) return;
-        const tooLarge = encoded.length >= URL_BASE64_LIMIT;
-        urlSaveButton.classList.toggle("hidden", tooLarge);
-        if (tooLarge) {
+        const payload = viewerPayload.encoded.length >= editorPayload.encoded.length ? viewerPayload : editorPayload;
+        const urlTooLarge = viewerPayload.encoded.length >= URL_BASE64_LIMIT;
+        const packedTooLarge = payload.encoded.length >= PACKED_SAVE_BASE64_LIMIT;
+        urlSaveButton.classList.toggle("hidden", urlTooLarge);
+        if (urlTooLarge) {
           urlSavePanel.classList.add("hidden");
           urlSaveButton.setAttribute("aria-expanded", "false");
         }
-        urlSizeInfo.textContent = "Compressed Base64: " + encoded.length.toLocaleString("en-US") + " / " + URL_BASE64_LIMIT.toLocaleString("en-US") + " characters" + (tooLarge ? " (URL save limit exceeded)" : "");
+        packedSaveGroup.classList.toggle("hidden", packedTooLarge);
+        urlSizeInfo.textContent = "Current shortest format (" + viewerPayload.format + ") compressed Base64: " + viewerPayload.encoded.length.toLocaleString("ja-JP") + " / " + URL_BASE64_LIMIT.toLocaleString("ja-JP") + " chars" + (urlTooLarge ? " (exceeds the URL save limit)" : "");
+        packedSaveSizeInfo.textContent = "Current shortest format (" + payload.format + ") compressed Base64: " + payload.encoded.length.toLocaleString("ja-JP") + " / " + PACKED_SAVE_BASE64_LIMIT.toLocaleString("ja-JP") + " chars";
       } catch (error) {
         if (serial !== urlSizeUpdateSerial) return;
         urlSaveButton.classList.add("hidden");
         urlSavePanel.classList.add("hidden");
         urlSaveButton.setAttribute("aria-expanded", "false");
+        packedSaveGroup.classList.add("hidden");
       }
     }
 
@@ -837,12 +917,12 @@ window.addEventListener("DOMContentLoaded", async function () {
         name.textContent = image.fileName;
         const meta = document.createElement("p");
         meta.className = "image-meta";
-        meta.textContent = (image.width && image.height ? image.width + " × " + image.height + "px / " : "") + "Base64 " + getBase64Length(image.dataUrl).toLocaleString("en-US") + " characters";
+        meta.textContent = (image.width && image.height ? image.width + " × " + image.height + "px / " : "") + "Base64 " + getBase64Length(image.dataUrl).toLocaleString("ja-JP") + " chars";
         const output = document.createElement("textarea");
         output.className = "embed-output";
         output.readOnly = true;
         output.value = getEmbedText(image);
-        output.setAttribute("aria-label", image.fileName + " embed code");
+        output.setAttribute("aria-label", image.fileName + " embed text");
         const actions = document.createElement("div");
         actions.className = "image-actions";
         const copyButton = document.createElement("button");
@@ -856,9 +936,9 @@ window.addEventListener("DOMContentLoaded", async function () {
         });
         const renameButton = document.createElement("button");
         renameButton.type = "button";
-        renameButton.textContent = "Rename file";
+        renameButton.textContent = "Rename File";
         renameButton.addEventListener("click", function () {
-          const requested = window.prompt("Enter a new filename.", image.fileName);
+          const requested = window.prompt("Enter a new file name.", image.fileName);
           if (requested === null) return;
           const trimmed = requested.trim();
           if (!trimmed) return;
@@ -869,7 +949,7 @@ window.addEventListener("DOMContentLoaded", async function () {
         });
         const upButton = document.createElement("button");
         upButton.type = "button";
-        upButton.textContent = "↑ Move up";
+        upButton.textContent = "↑ Up";
         upButton.disabled = index === 0;
         upButton.addEventListener("click", function () {
           if (index <= 0) return;
@@ -879,7 +959,7 @@ window.addEventListener("DOMContentLoaded", async function () {
         });
         const downButton = document.createElement("button");
         downButton.type = "button";
-        downButton.textContent = "↓ Move down";
+        downButton.textContent = "↓ Down";
         downButton.disabled = index >= images.length - 1;
         downButton.addEventListener("click", function () {
           if (index >= images.length - 1) return;
@@ -892,7 +972,7 @@ window.addEventListener("DOMContentLoaded", async function () {
         deleteButton.className = "delete-image-button";
         deleteButton.textContent = "Delete";
         deleteButton.addEventListener("click", function () {
-          if (!window.confirm("Delete “" + image.fileName + "” from the image list?")) return;
+          if (!window.confirm("“" + image.fileName + "” from the image list?")) return;
           images.splice(index, 1);
           renderImageList();
         });
@@ -933,9 +1013,9 @@ window.addEventListener("DOMContentLoaded", async function () {
           if (insertAtCursorCheck.checked) insertTextAtCursor(getEmbedText(image));
           renderImageList();
         }
-        showStatus(files.length.toLocaleString("en-US") + (files.length === 1 ? " image" : " images") + " loaded. Each Base64 payload is within 18,000 characters.");
+        showStatus(files.length.toLocaleString("ja-JP") + " image(s) loaded. Each Base64 payload is within 18,000 characters.");
       } catch (error) {
-        showStatus(error && error.message ? error.message : "Failed to compress the image.", true);
+        showStatus(error && error.message ? error.message : "Image compression failed.", true);
       } finally {
         imageFileInput.disabled = false;
         imageFileInput.value = "";
@@ -961,29 +1041,29 @@ window.addEventListener("DOMContentLoaded", async function () {
       status.classList.toggle("error", Boolean(isError));
     }
 
-    function updateCount() { charCount.textContent = sourceText.value.length.toLocaleString("en-US") + " characters"; }
+    function updateCount() { charCount.textContent = sourceText.value.length.toLocaleString("ja-JP") + " chars"; }
 
     function showEditor() {
       viewerMode.classList.add("hidden");
       editorMode.classList.remove("hidden");
-      document.title = "Create a Readable Site from Markdown";
+      document.title = "Create a Viewable Site from Markdown";
       updateCount();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
     function showViewer() {
       applyMarkdownTitle();
-      const title = titleInput.value.trim() || "Viewer Page";
+      const title = titleInput.value.trim() || "View Page";
       const source = sourceText.value;
       if (!source.length && !titleInput.value.length) {
-        showStatus("Enter at least one character in the content or title.", true);
+        showStatus("Enter at least one character in the title or content.", true);
         sourceText.focus();
         return false;
       }
       viewTitle.textContent = title;
       viewContent.innerHTML = parseTextToHtml(source);
       const savedData = readInitialData();
-      const dateText = savedData.createdAt || new Intl.DateTimeFormat("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date());
+      const dateText = savedData.createdAt || new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date());
       viewMeta.replaceChildren();
       if (noteText.value.trim()) {
         const noteLine = document.createElement("div");
@@ -1003,9 +1083,9 @@ window.addEventListener("DOMContentLoaded", async function () {
     }
 
     function makeFileName() {
-      const base = titleInput.value.trim() || "Viewer Page";
+      const base = titleInput.value.trim() || "View Page";
       const safe = base.replace(/[\\/:*?"<>|]/g, "_").replace(/\s+/g, " ").trim().slice(0, 60);
-      return (safe || "Viewer Page") + ".html";
+      return (safe || "View Page") + ".html";
     }
 
     function bytesToBase64(bytes) {
@@ -1036,7 +1116,7 @@ window.addEventListener("DOMContentLoaded", async function () {
 
     async function findBestSafeCompression(bytes) {
       if (!("CompressionStream" in window) || !("DecompressionStream" in window)) {
-        throw new Error("This browser does not support compression and decompression for HTML saving.");
+        throw new Error("This browser does not support HTML compression/decompression.");
       }
       const formats = ["brotli", "deflate-raw", "gzip"];
       const results = [];
@@ -1047,10 +1127,10 @@ window.addEventListener("DOMContentLoaded", async function () {
           const restored = await decompressWithFormat(compressed, format);
           if (sameBytes(bytes, restored)) results.push({ format: format, bytes: compressed });
         } catch (error) {
-          // Ignore unsupported formats and compare the available formats.
+          // Ignore unsupported formats and compare only available formats.
         }
       }
-      if (!results.length) throw new Error("No usable compression format is available for HTML saving.");
+      if (!results.length) throw new Error("No supported compression format is available for HTML saving.");
       results.sort(function (a, b) { return a.bytes.length - b.bytes.length; });
       return results[0];
     }
@@ -1070,7 +1150,7 @@ window.addEventListener("DOMContentLoaded", async function () {
       const sourceBytes = new TextEncoder().encode(html);
       const best = await findBestSafeCompression(sourceBytes);
       const restored = await decompressWithFormat(best.bytes, best.format);
-      if (!sameBytes(sourceBytes, restored)) throw new Error("The restoration check failed. The original HTML does not match the restored result.");
+      if (!sameBytes(sourceBytes, restored)) throw new Error("Restore verification failed. The restored HTML does not match the original.");
       const packedHtml = makeSafePackedHtml(bytesToBase64(best.bytes), best.format);
       return {
         html: packedHtml,
@@ -1080,6 +1160,115 @@ window.addEventListener("DOMContentLoaded", async function () {
       };
     }
 
+    function textToBase64(value) {
+      const bytes = new TextEncoder().encode(String(value));
+      return bytesToBase64(bytes);
+    }
+
+    function base64ToText(value) {
+      const binary = atob(String(value));
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return new TextDecoder().decode(bytes);
+    }
+
+    function makeEditorTransferData() {
+      applyMarkdownTitle();
+      return {
+        v: 1,
+        title: titleInput.value,
+        source: sourceText.value,
+        note: noteText.value,
+        images: images.map(function (image) { return { id: image.id, fileName: image.fileName, dataUrl: image.dataUrl, width: image.width, height: image.height }; })
+      };
+    }
+
+    async function saveEditorTransfer(useCompression, button) {
+      const originalText = button.textContent;
+      try {
+        applyMarkdownTitle();
+        if (!sourceText.value.length && !titleInput.value.length) throw new Error("Enter at least one character in the title or content.");
+        button.disabled = true;
+        button.textContent = "Saving…";
+        const json = JSON.stringify(makeEditorTransferData());
+        let payload;
+        if (useCompression) {
+          const bytes = new TextEncoder().encode(json);
+          const best = await findBestSafeCompression(bytes);
+          payload = { v: 1, packed: true, format: best.format, base64: bytesToBase64(best.bytes) };
+        } else {
+          payload = { v: 1, packed: false, base64: textToBase64(json) };
+        }
+        localStorage.setItem(EDITOR_TRANSFER_STORAGE_KEY, JSON.stringify(payload));
+        location.href = LONG_URL_BASE;
+      } catch (error) {
+        button.textContent = "Could not save";
+        showStatus(error && error.message ? "Save failed: " + error.message : "Save failed.", true);
+        setTimeout(function () { button.textContent = originalText; button.disabled = false; }, 1600);
+      }
+    }
+
+    async function readEditorTransferData() {
+      let stored = null;
+      try {
+        stored = localStorage.getItem(EDITOR_TRANSFER_STORAGE_KEY);
+        if (!stored) return null;
+        const payload = JSON.parse(stored);
+        if (!payload || payload.v !== 1 || typeof payload.base64 !== "string") throw new Error("Invalid data format.");
+        let json;
+        if (payload.packed) {
+          const compressed = Uint8Array.from(atob(payload.base64), function (c) { return c.charCodeAt(0); });
+          const restored = await decompressWithFormat(compressed, payload.format);
+          json = new TextDecoder().decode(restored);
+        } else {
+          json = base64ToText(payload.base64);
+        }
+        const data = JSON.parse(json);
+        return {
+          title: typeof data.title === "string" ? data.title : "",
+          source: typeof data.source === "string" ? data.source : "",
+          createdAt: "",
+          note: typeof data.note === "string" ? data.note : "",
+          startMode: "editor",
+          images: Array.isArray(data.images) ? data.images.filter(function (image) {
+            return image && typeof image.fileName === "string" && typeof image.dataUrl === "string" && /^data:image\/(?:webp|jpeg|png);base64,/.test(image.dataUrl);
+          }).map(function (image) {
+            return { id: typeof image.id === "string" ? image.id : "image-" + Math.random().toString(36).slice(2), fileName: image.fileName, dataUrl: image.dataUrl, width: Number(image.width) || 0, height: Number(image.height) || 0 };
+          }) : []
+        };
+      } catch (error) {
+        console.error(error);
+        showStatus("Could not load the continued-editing data.", true);
+        return null;
+      } finally {
+        if (stored !== null) localStorage.removeItem(EDITOR_TRANSFER_STORAGE_KEY);
+      }
+    }
+
+    function downloadPlainSelf(startMode) {
+      applyMarkdownTitle();
+      if (!sourceText.value.length && !titleInput.value.length) {
+        showStatus("Enter at least one character in the title or content.", true);
+        sourceText.focus();
+        return;
+      }
+      try {
+        const html = buildSelfHtml(startMode);
+        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = makeFileName();
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        showStatus(startMode === "editor" ? "Saved a standard continued-editing HTML file." : "Saved a standard view-only HTML file.");
+      } catch (error) {
+        showStatus(error && error.message ? "Save failed: " + error.message : "Save failed.", true);
+      }
+    }
+
     function buildSelfHtml(startMode) {
       applyMarkdownTitle();
       const clone = document.documentElement.cloneNode(true);
@@ -1087,7 +1276,7 @@ window.addEventListener("DOMContentLoaded", async function () {
       const data = {
         title: titleInput.value,
         source: sourceText.value,
-        createdAt: new Intl.DateTimeFormat("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date()),
+        createdAt: new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date()),
         note: noteText.value,
         startMode: startMode === "editor" ? "editor" : "auto",
         images: images.map(function (image) { return { id: image.id, fileName: image.fileName, dataUrl: image.dataUrl, width: image.width, height: image.height }; })
@@ -1103,18 +1292,26 @@ window.addEventListener("DOMContentLoaded", async function () {
       return "<!DOCTYPE html>\n" + clone.outerHTML;
     }
 
-    async function downloadSelf(startMode) {
+    function makeLightweightRedirectHtml(targetUrl) {
+      return '<!doctype html><meta charset="utf-8"><script>location.replace(' + JSON.stringify(targetUrl) + ')<\/script>';
+    }
+
+    async function downloadLightweightRedirect(startMode, button) {
+      const originalText = button.textContent;
       applyMarkdownTitle();
       if (!sourceText.value.length && !titleInput.value.length) {
-        showStatus("Enter at least one character in the content or title.", true);
+        showStatus("Enter at least one character in the title or content.", true);
         sourceText.focus();
         return;
       }
       try {
-        showStatus("Creating the HTML file with safe compression…");
-        const originalHtml = buildSelfHtml(startMode);
-        const packed = await packSelfHtmlSafely(originalHtml);
-        const blob = new Blob([packed.html], { type: "text/html;charset=utf-8" });
+        button.disabled = true;
+        button.textContent = "Creating compact file…";
+        const payload = await encodeUrlSaveData(startMode);
+        if (payload.encoded.length >= PACKED_SAVE_BASE64_LIMIT) throw new Error("The compressed Base64 data is " + PACKED_SAVE_BASE64_LIMIT.toLocaleString("ja-JP") + " characters or more, so Compact Save is unavailable.");
+        const targetUrl = buildUrlWithPayload(payload);
+        const html = makeLightweightRedirectHtml(targetUrl);
+        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const anchor = document.createElement("a");
         anchor.href = url;
@@ -1123,18 +1320,44 @@ window.addEventListener("DOMContentLoaded", async function () {
         anchor.click();
         anchor.remove();
         setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-        const reduction = packed.sourceBytes ? Math.max(0, 100 - packed.packedBytes / packed.sourceBytes * 100) : 0;
-        const modeText = startMode === "editor" ? "HTML that starts in the editor" : "HTML that starts in the viewer";
-        showStatus(modeText + " saved with safe compression. Format: " + packed.format + " / approximately " + reduction.toFixed(1) + "% smaller");
+        const htmlBytes = new TextEncoder().encode(html).length;
+        const modeText = startMode === "editor" ? "continued-editing HTML" : "view-only HTML";
+        showStatus(modeText + " saved with Compact Save. Content compression: " + payload.format + " and the saved HTML contains only the redirect logic. File size: about " + htmlBytes.toLocaleString("ja-JP") + " bytes");
       } catch (error) {
-        showStatus(error && error.message ? "Failed to save: " + error.message : "Failed to save.", true);
+        showStatus(error && error.message ? "Save failed: " + error.message : "Save failed.", true);
+      } finally {
+        button.textContent = originalText;
+        button.disabled = false;
       }
     }
 
-    document.getElementById("saveButton").addEventListener("click", function () { downloadSelf("auto"); });
-    document.getElementById("saveEditorButton").addEventListener("click", function () { downloadSelf("editor"); });
+    function closeTopPanels(exceptPanel) {
+      const panels = [
+        { panel: fileSavePanel, button: saveMethodButton },
+        { panel: urlSavePanel, button: urlSaveButton },
+        { panel: notePanel, button: noteEditButton }
+      ];
+      panels.forEach(function (item) {
+        if (item.panel === exceptPanel) return;
+        item.panel.classList.add("hidden");
+        item.button.setAttribute("aria-expanded", "false");
+      });
+    }
+
+    saveMethodButton.addEventListener("click", function () {
+      const willOpen = fileSavePanel.classList.contains("hidden");
+      if (willOpen) closeTopPanels(fileSavePanel);
+      fileSavePanel.classList.toggle("hidden", !willOpen);
+      saveMethodButton.setAttribute("aria-expanded", String(willOpen));
+      if (willOpen) updateUrlSaveAvailability();
+    });
+    saveViewerNormalButton.addEventListener("click", function () { downloadPlainSelf("auto"); });
+    saveEditorNormalButton.addEventListener("click", function () { downloadPlainSelf("editor"); });
+    saveViewerPackedButton.addEventListener("click", function () { downloadLightweightRedirect("auto", saveViewerPackedButton); });
+    saveEditorPackedButton.addEventListener("click", function () { downloadLightweightRedirect("editor", saveEditorPackedButton); });
     urlSaveButton.addEventListener("click", function () {
       const willOpen = urlSavePanel.classList.contains("hidden");
+      if (willOpen) closeTopPanels(urlSavePanel);
       urlSavePanel.classList.toggle("hidden", !willOpen);
       urlSaveButton.setAttribute("aria-expanded", String(willOpen));
       if (willOpen) updateUrlSaveAvailability();
@@ -1146,13 +1369,14 @@ window.addEventListener("DOMContentLoaded", async function () {
     document.getElementById("editButton").addEventListener("click", showEditor);
     noteEditButton.addEventListener("click", function () {
       const willOpen = notePanel.classList.contains("hidden");
+      if (willOpen) closeTopPanels(notePanel);
       notePanel.classList.toggle("hidden", !willOpen);
       noteEditButton.setAttribute("aria-expanded", String(willOpen));
       if (willOpen) noteText.focus();
     });
 
     function buildNoteCopyHtml() {
-      const title = escapeHtml(titleInput.value.trim() || "Viewer Page");
+      const title = escapeHtml(titleInput.value.trim() || "View Page");
       return "<article><h1>" + title + "</h1>" + parseTextToHtml(sourceText.value) + "</article>";
     }
 
@@ -1183,7 +1407,7 @@ window.addEventListener("DOMContentLoaded", async function () {
       const copied = document.execCommand("copy");
       selection.removeAllRanges();
       holder.remove();
-      if (!copied) throw new Error("Failed to copy rich text.");
+      if (!copied) throw new Error("Could not copy rich text.");
     }
 
     document.getElementById("copyNoteButton").addEventListener("click", async function () {
@@ -1193,7 +1417,7 @@ window.addEventListener("DOMContentLoaded", async function () {
         await copyRichText(buildNoteCopyHtml(), buildNoteCopyText());
         button.textContent = "Copied";
       } catch (error) {
-        try { await navigator.clipboard.writeText(buildNoteCopyText()); button.textContent = "Copied as plain text"; }
+        try { await navigator.clipboard.writeText(buildNoteCopyText()); button.textContent = "Copied plain text only"; }
         catch (fallbackError) { button.textContent = "Could not copy"; }
       }
       setTimeout(function () { button.textContent = original; }, 1800);
@@ -1251,10 +1475,10 @@ window.addEventListener("DOMContentLoaded", async function () {
 
     document.getElementById("sampleButton").addEventListener("click", function () {
       titleInput.value = "Travel Plan";
-      sourceText.value = "## Meeting point\n\nMeet at the Marunouchi South Exit of Tokyo Station by 9:00 a.m.\n\n## What to bring\n\n- Smartphone\n- Charger\n- Drink\n- Folding umbrella\n\n> The plan may change in case of rain.\n\nReference: [JR East](https://www.jreast.co.jp/)";
+      sourceText.value = "## Meeting Point\n\nMeet at the Marunouchi South Exit of Tokyo Station by 9:00 AM.\n\n## What to Bring\n\n- Smartphone\n- Charger\n- Drink\n- Folding umbrella\n\n> Plans may change in case of rain.\n\nReference: [JR East](https://www.jreast.co.jp/)";
       updateCount();
       scheduleUrlSaveAvailabilityUpdate();
-      showStatus("Example loaded.");
+      showStatus("Example inserted.");
     });
 
     document.getElementById("clearButton").addEventListener("click", function () {
@@ -1283,12 +1507,17 @@ window.addEventListener("DOMContentLoaded", async function () {
     document.addEventListener("keydown", function (event) {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
         event.preventDefault();
-        downloadSelf("editor");
+        const willOpen = fileSavePanel.classList.contains("hidden");
+        if (willOpen) closeTopPanels(fileSavePanel);
+        fileSavePanel.classList.toggle("hidden", !willOpen);
+        saveMethodButton.setAttribute("aria-expanded", String(willOpen));
+        if (willOpen) updateUrlSaveAvailability();
       }
     });
 
-    const urlInitialData = await readUrlSaveData();
-    const initialData = urlInitialData || readInitialData();
+    const editorTransferData = await readEditorTransferData();
+    const urlInitialData = editorTransferData ? null : await readUrlSaveData();
+    const initialData = editorTransferData || urlInitialData || readInitialData();
     titleInput.value = initialData.title;
     sourceText.value = initialData.source;
     noteText.value = initialData.note;
