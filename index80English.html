@@ -142,29 +142,29 @@ a{color:var(--accent);overflow-wrap:anywhere;}
   <main id="editorMode" class="app">
     <header class="hero">
       <h1>Create a Viewable Site from Markdown</h1>
-      <p>Enter Markdown text and save it as an easy-to-read HTML page.</p>
+      <p>Enter Markdown text and click “Save as View-Only Site” to download a clean, readable HTML page.</p>
     </header>
 
     <section class="panel editor-panel" aria-labelledby="editorTitle">
       <div class="field-label">
         <label for="pageTitle" id="editorTitle">Page Title</label>
-        <small>Can be left blank</small>
+        <small>You can save even if this is blank</small>
       </div>
-      <input id="pageTitle" class="title-input" type="text" placeholder="Example: Travel Plan, Work Instructions, Reference Notes">
+      <input id="pageTitle" class="title-input" type="text" placeholder="e.g. Travel Plan, Work Instructions, Reference Notes">
 
       <div class="field-label">
-        <label for="sourceText">Markdown Content</label>
-        <small id="charCount">0 chars</small>
+        <label for="sourceText">Markdown Text</label>
+        <small id="charCount">0 characters</small>
       </div>
-      <textarea id="sourceText" class="text-input" placeholder="Enter Markdown content here."></textarea>
+      <textarea id="sourceText" class="text-input" placeholder="Enter your Markdown text here."></textarea>
 
       <section class="image-panel" aria-labelledby="imagePanelTitle">
         <div class="image-panel-head">
-          <h2 id="imagePanelTitle">Images</h2>
+          <h2 id="imagePanelTitle">Image Import</h2>
           <button id="imagePanelToggle" class="image-panel-toggle" type="button" aria-expanded="false" aria-controls="imagePanelBody">Open</button>
         </div>
         <div id="imagePanelBody" class="image-panel-body hidden">
-          <p class="image-panel-note">Loaded images are compressed to WebP in supported browsers, or JPEG when WebP conversion is unavailable, and stored in the HTML with each Base64 payload limited to 18,000 characters. Symbols that may cause problems in Markdown are automatically removed from image file names. Insert images in the content using `[Insert Image](filename)`.</p>
+          <p class="image-panel-note">Imported images are compressed to WebP in supported browsers, or JPEG when WebP conversion is unavailable, and stored inside the HTML with each Base64 payload limited to 18,000 characters. Characters that may cause Markdown issues, such as brackets, are automatically removed from image names. Insert an image in the text using “[Insert Image](filename)”.</p>
           <div class="uni-photo-dropbox">
             <label id="imageDropZone" class="uni-photo-dropbox__zone">
               <span class="uni-photo-dropbox__inner">
@@ -176,15 +176,15 @@ a{color:var(--accent);overflow-wrap:anywhere;}
                 </span>
                 <span class="uni-photo-dropbox__copy">
                   <span class="uni-photo-dropbox__title">Add Images</span>
-                  <span class="uni-photo-dropbox__guide">Tap/click to select, or drag files here</span>
-                  <span class="uni-photo-dropbox__meta">Supports JPG, PNG, WebP, and more / Multiple files allowed</span>
+                  <span class="uni-photo-dropbox__guide">Tap or click to select, or drag files here</span>
+                  <span class="uni-photo-dropbox__meta">Supports JPG, PNG, WebP, and more · Multiple files allowed</span>
                 </span>
               </span>
               <input id="imageFileInput" class="uni-photo-dropbox__input" type="file" accept="image/*" multiple aria-label="Select images to add">
             </label>
           </div>
           <div class="image-options">
-            <label class="image-option-check"><input id="insertAtCursorCheck" type="checkbox">Automatically insert added images at the cursor position</label>
+            <label class="image-option-check"><input id="insertAtCursorCheck" type="checkbox">Automatically insert at the cursor when adding an image</label>
           </div>
           <ol id="imageList" class="image-list"></ol>
         </div>
@@ -201,23 +201,31 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 
 
       <section id="fileSavePanel" class="file-save-panel hidden" aria-labelledby="fileSaveTitle">
-        <h2 id="fileSaveTitle">Save Method</h2>
-        <p class="file-save-description">Choose a save method.</p>
+        <h2 id="fileSaveTitle">Save Options</h2>
+        <p class="file-save-description">Choose how you want to save the page.</p>
         <div class="file-save-groups">
           <section class="file-save-group">
             <h3>Standard Save</h3>
-            <p>Saves without the compact redirect format. Recommended when compatibility is the priority.</p>
+            <p>Downloads the complete site itself. It will not be affected by future updates.</p>
             <div class="file-save-actions">
               <button id="saveViewerNormalButton" class="primary-button" type="button">Save as View-Only Site</button>
-              <button id="saveEditorNormalButton" class="secondary-button" type="button">Save for Continued Editing</button>
+              <button id="saveEditorNormalButton" class="secondary-button" type="button">Save as Editable Site</button>
+            </div>
+          </section>
+          <section class="file-save-group">
+            <h3>Compressed Save</h3>
+            <p>Downloads the complete site in compressed form. When opened, it is decompressed in the browser and displayed. It will not be affected by future updates.</p>
+            <div class="file-save-actions">
+              <button id="saveViewerCompressedButton" class="primary-button" type="button">Save as View-Only Site</button>
+              <button id="saveEditorCompressedButton" class="secondary-button" type="button">Save as Editable Site</button>
             </div>
           </section>
           <section id="packedSaveGroup" class="file-save-group">
-            <h3>Compact Save</h3>
-            <p>Compares supported compression formats and uses the smallest result.</p>
+            <h3>Lightweight Save</h3>
+            <p>Downloads a lightweight HTML file that opens the hosted site. Because it relies on the hosted version, future updates may affect it.<br>The smallest supported compression format is selected automatically.</p>
             <div class="file-save-actions">
               <button id="saveViewerPackedButton" class="primary-button" type="button">Save as View-Only Site</button>
-              <button id="saveEditorPackedButton" class="secondary-button" type="button">Save for Continued Editing</button>
+              <button id="saveEditorPackedButton" class="secondary-button" type="button">Save as Editable Site</button>
             </div>
             <p id="packedSaveSizeInfo" class="url-size-info"></p>
           </section>
@@ -227,12 +235,12 @@ a{color:var(--accent);overflow-wrap:anywhere;}
       <section id="urlSavePanel" class="url-save-panel hidden" aria-labelledby="urlSaveTitle">
         <h2 id="urlSaveTitle">Save as URL</h2>
         <p class="url-save-description">
-          Compresses the current content into the URL. Opening the copied URL restores the content on this page.
+          Compresses the current content and stores it inside the URL. Opening the copied URL restores the content on this page.
         </p>
         <div class="url-save-actions">
-          <button id="copyViewerUrlButton" class="primary-button" type="button">Copy URL for<br>View-Only Site</button>
-          <button id="copyDiscordLinkButton" class="secondary-button" type="button">Copy “View Document”<br>link for Discord</button>
-          <button id="copyEditorUrlButton" class="secondary-button" type="button">Copy URL for<br>Continued Editing</button>
+          <button id="copyViewerUrlButton" class="primary-button" type="button">Copy URL for<br>“Save as View-Only Site”</button>
+          <button id="copyDiscordLinkButton" class="secondary-button" type="button">Copy a Discord-ready<br>“View Document” link</button>
+          <button id="copyEditorUrlButton" class="secondary-button" type="button">Copy URL for<br>“Save as Editable Site”</button>
         </div>
         <p id="urlSizeInfo" class="url-size-info"></p>
       </section>
@@ -240,12 +248,12 @@ a{color:var(--accent);overflow-wrap:anywhere;}
       <div id="notePanel" class="note-panel hidden">
         <div class="field-label">
           <label for="noteText">Notes</label>
-          <small>You can enter editor information or other notes</small>
+          <small>You can enter an editor name or any other notes</small>
         </div>
-        <textarea id="noteText" class="text-input" placeholder="Example: Editor: Alex"></textarea>
+        <textarea id="noteText" class="text-input" placeholder="e.g. Editor: Alex"></textarea>
       </div>
 
-      <div class="helper">Saved HTML files include the Markdown content.</div>
+      <div class="helper">The saved HTML contains the Markdown text.</div>
       <div id="status" class="status" aria-live="polite"></div>
     </section>
   </main>
@@ -253,7 +261,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
   <main id="viewerMode" class="app hidden">
     <article class="panel document">
       <div class="viewer-actions">
-        <div hidden><button id="copyNoteButton" class="secondary-button" type="button">Try Copying for note</button></div>
+        <div hidden><button id="copyNoteButton" class="secondary-button" type="button">Try Copying as Rich Text</button></div>
         <div hidden><button id="copyMarkdownButton" class="secondary-button" type="button">Copy Markdown</button></div>
         <button id="editButton" class="secondary-button" type="button">Edit</button>
       </div>
@@ -267,7 +275,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 {"title":"","source":"","createdAt":"","note":"","startMode":"auto","images":[]}
 </script>
   <script>
-window.addEventListener("DOMContentLoaded", async function () {
+async function initApp() {
     "use strict";
 
     const editorMode = document.getElementById("editorMode");
@@ -292,6 +300,8 @@ window.addEventListener("DOMContentLoaded", async function () {
     const fileSavePanel = document.getElementById("fileSavePanel");
     const saveViewerNormalButton = document.getElementById("saveViewerNormalButton");
     const saveEditorNormalButton = document.getElementById("saveEditorNormalButton");
+    const saveViewerCompressedButton = document.getElementById("saveViewerCompressedButton");
+    const saveEditorCompressedButton = document.getElementById("saveEditorCompressedButton");
     const saveViewerPackedButton = document.getElementById("saveViewerPackedButton");
     const saveEditorPackedButton = document.getElementById("saveEditorPackedButton");
     const packedSaveGroup = document.getElementById("packedSaveGroup");
@@ -306,7 +316,7 @@ window.addEventListener("DOMContentLoaded", async function () {
     const IMAGE_BASE64_LIMIT = 18000;
     const URL_BASE64_LIMIT = 1920;
     const PACKED_SAVE_BASE64_LIMIT = 8000;
-    const LONG_URL_BASE = "https://uni928.github.io/Uni928PublicHTMLs/index80.html";
+    const LONG_URL_BASE = "https://uni928.github.io/Uni928PublicHTMLs/index80English.html";
     const SHORT_URL_BASE = "https://x.gd/sm9K2";
     const SHORT_URL_COPY_THRESHOLD = 1950;
     const URL_COMPRESSION_FORMATS = [
@@ -405,7 +415,7 @@ window.addEventListener("DOMContentLoaded", async function () {
 
     function parseMarkdownToHtml(markdown) {
       const normalized = String(markdown).replace(/\r\n?/g, "\n").trim();
-      if (!normalized) return "<p>No Markdown content has been entered.</p>";
+      if (!normalized) return "<p>No Markdown text has been entered.</p>";
 
       const lines = normalized.split("\n");
       const output = [];
@@ -644,7 +654,7 @@ window.addEventListener("DOMContentLoaded", async function () {
       context.imageSmoothingQuality = "high";
       context.drawImage(sourceImage, 0, 0, outputWidth, outputHeight);
       const dataUrl = canvas.toDataURL(mimeType, quality);
-      if (!dataUrl.startsWith("data:" + mimeType + ";base64,")) throw new Error("This browser cannot convert images.");
+      if (!dataUrl.startsWith("data:" + mimeType + ";base64,")) throw new Error("Image conversion is not available in this browser.");
       return { dataUrl: dataUrl, width: outputWidth, height: outputHeight, mimeType: mimeType };
     }
 
@@ -658,7 +668,7 @@ window.addEventListener("DOMContentLoaded", async function () {
         if (!smallest || getBase64Length(result.dataUrl) < getBase64Length(smallest.dataUrl)) smallest = result;
         if (getBase64Length(result.dataUrl) <= IMAGE_BASE64_LIMIT) return result;
       }
-      throw new Error("Could not compress the Base64 payload to 18,000 characters or fewer even at the smallest setting." + (smallest ? " Smallest result: " + getBase64Length(smallest.dataUrl).toLocaleString("ja-JP") + " chars" : ""));
+      throw new Error("Could not compress the Base64 payload to 18,000 characters or fewer even at the smallest setting." + (smallest ? " Smallest result: " + getBase64Length(smallest.dataUrl).toLocaleString("en-US") + " characters" : ""));
     }
 
     function sanitizeImageFileName(name) {
@@ -743,7 +753,7 @@ window.addEventListener("DOMContentLoaded", async function () {
 
     async function getUrlCompressionCandidates(bytes) {
       if (!("CompressionStream" in window) || !("DecompressionStream" in window)) {
-        throw new Error("This browser does not support compression for URL saving.");
+        throw new Error("This browser does not support the compression features required for URL saving.");
       }
       const candidates = [];
       for (const definition of URL_COMPRESSION_FORMATS) {
@@ -777,7 +787,7 @@ window.addEventListener("DOMContentLoaded", async function () {
     async function decodeUrlSaveData(encoded, format) {
       const decompressedBytes = await decompressWithFormat(base64UrlToBytes(encoded), format);
       const data = JSON.parse(new TextDecoder().decode(decompressedBytes));
-      if (!data || data.v !== 1) throw new Error("Unsupported URL-save data.");
+      if (!data || data.v !== 1) throw new Error("This URL save data format is not supported.");
       return {
         title: typeof data.t === "string" ? data.t : "",
         source: typeof data.s === "string" ? data.s : "",
@@ -807,7 +817,7 @@ window.addEventListener("DOMContentLoaded", async function () {
         return await decodeUrlSaveData(payload.encoded, payload.format);
       } catch (error) {
         console.error(error);
-        showStatus(error && error.message ? "Could not open URL-save data: " + error.message : "Could not open URL-save data.", true);
+        showStatus(error && error.message ? "Could not open the saved URL data: " + error.message : "Could not open the saved URL data.", true);
         return null;
       }
     }
@@ -822,9 +832,9 @@ window.addEventListener("DOMContentLoaded", async function () {
 
     async function createSavedUrl(startMode) {
       applyMarkdownTitle();
-      if (!sourceText.value.length && !titleInput.value.length) throw new Error("Enter at least one character in the title or content.");
+      if (!sourceText.value.length && !titleInput.value.length) throw new Error("Enter at least one character in the title or text.");
       const payload = await encodeUrlSaveData(startMode);
-      if (payload.encoded.length >= URL_BASE64_LIMIT) throw new Error("The compressed Base64 data is " + URL_BASE64_LIMIT.toLocaleString("ja-JP") + " characters or more, so it cannot be saved as a URL.");
+      if (payload.encoded.length >= URL_BASE64_LIMIT) throw new Error("The compressed Base64 data is " + URL_BASE64_LIMIT.toLocaleString("en-US") + " characters or more, so it cannot be saved as a URL.");
       const url = buildUrlWithPayload(payload);
       return { url: url, copyUrl: makeCopyUrl(url), encodedLength: payload.encoded.length, format: payload.format };
     }
@@ -836,11 +846,11 @@ window.addEventListener("DOMContentLoaded", async function () {
         button.textContent = "Creating URL…";
         const result = await createSavedUrl(startMode);
         await copyText(result.copyUrl);
-        button.textContent = "URL copied";
-        showStatus("The URL was copied to the clipboard. Compression: " + result.format + ", compressed Base64: " + result.encodedLength.toLocaleString("ja-JP") + " chars" + (result.copyUrl !== result.url ? " (short URL used because the original is long)" : ""));
+        button.textContent = "URL Copied";
+        showStatus("Copied the URL to the clipboard. Compression format: " + result.format + ", compressed Base64: " + result.encodedLength.toLocaleString("en-US") + " characters" + (result.copyUrl !== result.url ? " (short URL used because the original was long)" : ""));
       } catch (error) {
-        button.textContent = "Could not copy";
-        showStatus(error && error.message ? error.message : "Could not create the URL.", true);
+        button.textContent = "Could Not Copy";
+        showStatus(error && error.message ? error.message : "Failed to create the URL.", true);
       } finally {
         setTimeout(function () { button.textContent = originalText; button.disabled = false; }, 1600);
       }
@@ -850,15 +860,15 @@ window.addEventListener("DOMContentLoaded", async function () {
       const originalText = button.textContent;
       try {
         button.disabled = true;
-        button.textContent = "Creating link…";
+        button.textContent = "Creating Link…";
         const result = await createSavedUrl("auto");
         const discordLink = "[View Document](<" + result.copyUrl + ">)";
         await copyText(discordLink.length >= SHORT_URL_COPY_THRESHOLD ? "[View Document](<" + makeCopyUrl(result.url) + ">)" : discordLink);
-        button.textContent = "Link copied";
-        showStatus("The Discord “View Document” link was copied to the clipboard. Compression: " + result.format + ", compressed Base64: " + result.encodedLength.toLocaleString("ja-JP") + " chars" + (discordLink.length >= SHORT_URL_COPY_THRESHOLD ? " (short URL used because the original is long)" : ""));
+        button.textContent = "Link Copied";
+        showStatus("Copied a Discord-ready “View Document” link to the clipboard. Compression format: " + result.format + ", compressed Base64: " + result.encodedLength.toLocaleString("en-US") + " characters" + (discordLink.length >= SHORT_URL_COPY_THRESHOLD ? " (short URL used because the original was long)" : ""));
       } catch (error) {
-        button.textContent = "Could not copy";
-        showStatus(error && error.message ? error.message : "Could not create the sharing link.", true);
+        button.textContent = "Could Not Copy";
+        showStatus(error && error.message ? error.message : "Failed to create the share link.", true);
       } finally {
         setTimeout(function () { button.textContent = originalText; button.disabled = false; }, 1600);
       }
@@ -885,8 +895,8 @@ window.addEventListener("DOMContentLoaded", async function () {
           urlSaveButton.setAttribute("aria-expanded", "false");
         }
         packedSaveGroup.classList.toggle("hidden", packedTooLarge);
-        urlSizeInfo.textContent = "Current shortest format (" + viewerPayload.format + ") compressed Base64: " + viewerPayload.encoded.length.toLocaleString("ja-JP") + " / " + URL_BASE64_LIMIT.toLocaleString("ja-JP") + " chars" + (urlTooLarge ? " (exceeds the URL save limit)" : "");
-        packedSaveSizeInfo.textContent = "Current shortest format (" + payload.format + ") compressed Base64: " + payload.encoded.length.toLocaleString("ja-JP") + " / " + PACKED_SAVE_BASE64_LIMIT.toLocaleString("ja-JP") + " chars";
+        urlSizeInfo.textContent = "Current smallest format (" + viewerPayload.format + "), compressed Base64: " + viewerPayload.encoded.length.toLocaleString("en-US") + " / " + URL_BASE64_LIMIT.toLocaleString("en-US") + " characters" + (urlTooLarge ? " (exceeds the URL-save limit)" : "");
+        packedSaveSizeInfo.textContent = "Current smallest format (" + payload.format + "), compressed Base64: " + payload.encoded.length.toLocaleString("en-US") + " / " + PACKED_SAVE_BASE64_LIMIT.toLocaleString("en-US") + " characters";
       } catch (error) {
         if (serial !== urlSizeUpdateSerial) return;
         urlSaveButton.classList.add("hidden");
@@ -917,7 +927,7 @@ window.addEventListener("DOMContentLoaded", async function () {
         name.textContent = image.fileName;
         const meta = document.createElement("p");
         meta.className = "image-meta";
-        meta.textContent = (image.width && image.height ? image.width + " × " + image.height + "px / " : "") + "Base64 " + getBase64Length(image.dataUrl).toLocaleString("ja-JP") + " chars";
+        meta.textContent = (image.width && image.height ? image.width + " × " + image.height + "px / " : "") + "Base64 " + getBase64Length(image.dataUrl).toLocaleString("en-US") + " characters";
         const output = document.createElement("textarea");
         output.className = "embed-output";
         output.readOnly = true;
@@ -949,7 +959,7 @@ window.addEventListener("DOMContentLoaded", async function () {
         });
         const upButton = document.createElement("button");
         upButton.type = "button";
-        upButton.textContent = "↑ Up";
+        upButton.textContent = "↑ Move Up";
         upButton.disabled = index === 0;
         upButton.addEventListener("click", function () {
           if (index <= 0) return;
@@ -959,7 +969,7 @@ window.addEventListener("DOMContentLoaded", async function () {
         });
         const downButton = document.createElement("button");
         downButton.type = "button";
-        downButton.textContent = "↓ Down";
+        downButton.textContent = "↓ Move Down";
         downButton.disabled = index >= images.length - 1;
         downButton.addEventListener("click", function () {
           if (index >= images.length - 1) return;
@@ -1013,7 +1023,7 @@ window.addEventListener("DOMContentLoaded", async function () {
           if (insertAtCursorCheck.checked) insertTextAtCursor(getEmbedText(image));
           renderImageList();
         }
-        showStatus(files.length.toLocaleString("ja-JP") + " image(s) loaded. Each Base64 payload is within 18,000 characters.");
+        showStatus(files.length.toLocaleString("en-US") + " image(s) imported. Each Base64 payload is within 18,000 characters.");
       } catch (error) {
         showStatus(error && error.message ? error.message : "Image compression failed.", true);
       } finally {
@@ -1041,7 +1051,7 @@ window.addEventListener("DOMContentLoaded", async function () {
       status.classList.toggle("error", Boolean(isError));
     }
 
-    function updateCount() { charCount.textContent = sourceText.value.length.toLocaleString("ja-JP") + " chars"; }
+    function updateCount() { charCount.textContent = sourceText.value.length.toLocaleString("en-US") + " characters"; }
 
     function showEditor() {
       viewerMode.classList.add("hidden");
@@ -1053,17 +1063,17 @@ window.addEventListener("DOMContentLoaded", async function () {
 
     function showViewer() {
       applyMarkdownTitle();
-      const title = titleInput.value.trim() || "View Page";
+      const title = titleInput.value.trim() || "Viewable Page";
       const source = sourceText.value;
       if (!source.length && !titleInput.value.length) {
-        showStatus("Enter at least one character in the title or content.", true);
+        showStatus("Enter at least one character in the title or text.", true);
         sourceText.focus();
         return false;
       }
       viewTitle.textContent = title;
       viewContent.innerHTML = parseTextToHtml(source);
       const savedData = readInitialData();
-      const dateText = savedData.createdAt || new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date());
+      const dateText = savedData.createdAt || new Intl.DateTimeFormat("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date());
       viewMeta.replaceChildren();
       if (noteText.value.trim()) {
         const noteLine = document.createElement("div");
@@ -1083,9 +1093,9 @@ window.addEventListener("DOMContentLoaded", async function () {
     }
 
     function makeFileName() {
-      const base = titleInput.value.trim() || "View Page";
+      const base = titleInput.value.trim() || "Viewable Page";
       const safe = base.replace(/[\\/:*?"<>|]/g, "_").replace(/\s+/g, " ").trim().slice(0, 60);
-      return (safe || "View Page") + ".html";
+      return (safe || "Viewable Page") + ".html";
     }
 
     function bytesToBase64(bytes) {
@@ -1116,7 +1126,7 @@ window.addEventListener("DOMContentLoaded", async function () {
 
     async function findBestSafeCompression(bytes) {
       if (!("CompressionStream" in window) || !("DecompressionStream" in window)) {
-        throw new Error("This browser does not support HTML compression/decompression.");
+        throw new Error("This browser does not support the compression/decompression features required for HTML saving.");
       }
       const formats = ["brotli", "deflate-raw", "gzip"];
       const results = [];
@@ -1140,8 +1150,11 @@ window.addEventListener("DOMContentLoaded", async function () {
         'let b=' + JSON.stringify(base64) + ',f=' + JSON.stringify(format) + ';' +
         '(async()=>{try{' +
         'let x=Uint8Array.from(atob(b),c=>c.charCodeAt(0)),' +
-        's=new Blob([x]).stream().pipeThrough(new DecompressionStream(f));' +
-        'document.open();document.write(new TextDecoder().decode(await new Response(s).arrayBuffer()));document.close()' +
+        's=new Blob([x]).stream().pipeThrough(new DecompressionStream(f)),' +
+        'h=new TextDecoder().decode(await new Response(s).arrayBuffer());' +
+        'window.__UNI928_DECOMPRESSED_SOURCE_HTML__=h;' +
+        'document.open();document.write(h);document.close();' +
+        'window.__UNI928_DECOMPRESSED_SOURCE_HTML__=h' +
         '}catch(e){document.body.textContent="Decompression error: "+e.message}})()' +
         '<\/script>';
     }
@@ -1150,7 +1163,7 @@ window.addEventListener("DOMContentLoaded", async function () {
       const sourceBytes = new TextEncoder().encode(html);
       const best = await findBestSafeCompression(sourceBytes);
       const restored = await decompressWithFormat(best.bytes, best.format);
-      if (!sameBytes(sourceBytes, restored)) throw new Error("Restore verification failed. The restored HTML does not match the original.");
+      if (!sameBytes(sourceBytes, restored)) throw new Error("Restoration check failed. The restored HTML does not match the original HTML.");
       const packedHtml = makeSafePackedHtml(bytesToBase64(best.bytes), best.format);
       return {
         html: packedHtml,
@@ -1187,7 +1200,7 @@ window.addEventListener("DOMContentLoaded", async function () {
       const originalText = button.textContent;
       try {
         applyMarkdownTitle();
-        if (!sourceText.value.length && !titleInput.value.length) throw new Error("Enter at least one character in the title or content.");
+        if (!sourceText.value.length && !titleInput.value.length) throw new Error("Enter at least one character in the title or text.");
         button.disabled = true;
         button.textContent = "Saving…";
         const json = JSON.stringify(makeEditorTransferData());
@@ -1202,7 +1215,7 @@ window.addEventListener("DOMContentLoaded", async function () {
         localStorage.setItem(EDITOR_TRANSFER_STORAGE_KEY, JSON.stringify(payload));
         location.href = LONG_URL_BASE;
       } catch (error) {
-        button.textContent = "Could not save";
+        button.textContent = "Could Not Save";
         showStatus(error && error.message ? "Save failed: " + error.message : "Save failed.", true);
         setTimeout(function () { button.textContent = originalText; button.disabled = false; }, 1600);
       }
@@ -1238,7 +1251,7 @@ window.addEventListener("DOMContentLoaded", async function () {
         };
       } catch (error) {
         console.error(error);
-        showStatus("Could not load the continued-editing data.", true);
+        showStatus("Could not load the editable-site data.", true);
         return null;
       } finally {
         if (stored !== null) localStorage.removeItem(EDITOR_TRANSFER_STORAGE_KEY);
@@ -1248,7 +1261,7 @@ window.addEventListener("DOMContentLoaded", async function () {
     function downloadPlainSelf(startMode) {
       applyMarkdownTitle();
       if (!sourceText.value.length && !titleInput.value.length) {
-        showStatus("Enter at least one character in the title or content.", true);
+        showStatus("Enter at least one character in the title or text.", true);
         sourceText.focus();
         return;
       }
@@ -1263,20 +1276,71 @@ window.addEventListener("DOMContentLoaded", async function () {
         anchor.click();
         anchor.remove();
         setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-        showStatus(startMode === "editor" ? "Saved a standard continued-editing HTML file." : "Saved a standard view-only HTML file.");
+        showStatus(startMode === "editor" ? "Saved the editable HTML without compression." : "Saved the view-only HTML without compression.");
       } catch (error) {
         showStatus(error && error.message ? "Save failed: " + error.message : "Save failed.", true);
       }
     }
 
+    async function downloadCompressedSelf(startMode, button) {
+      const originalText = button.textContent;
+      applyMarkdownTitle();
+      if (!sourceText.value.length && !titleInput.value.length) {
+        showStatus("Enter at least one character in the title or text.", true);
+        sourceText.focus();
+        return;
+      }
+      try {
+        const html = buildSelfHtml(startMode);
+        button.disabled = true;
+        button.textContent = "Compressing…";
+        const sourceBytes = new TextEncoder().encode(html);
+        const format = "deflate-raw";
+        const compressedBytes = await compressWithFormat(sourceBytes, format);
+        const restoredBytes = await decompressWithFormat(compressedBytes, format);
+        if (!sameBytes(sourceBytes, restoredBytes)) throw new Error("Restoration check failed. The restored HTML does not match the original HTML.");
+        const packedHtml = makeSafePackedHtml(bytesToBase64(compressedBytes), format);
+        const packed = {
+          html: packedHtml,
+          format: format,
+          sourceBytes: sourceBytes.length,
+          packedBytes: new TextEncoder().encode(packedHtml).length
+        };
+        const blob = new Blob([packed.html], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = makeFileName();
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        const modeText = startMode === "editor" ? "Editable HTML" : "View-only HTML";
+        showStatus(modeText + " saved with compression. Compression format: " + packed.format + ", before compression: approx. " + packed.sourceBytes.toLocaleString("en-US") + " bytes, saved file: approx. " + packed.packedBytes.toLocaleString("en-US") + " bytes");
+      } catch (error) {
+        showStatus(error && error.message ? "Compressed Save failed: " + error.message : "Compressed Save failed.", true);
+      } finally {
+        button.textContent = originalText;
+        button.disabled = false;
+      }
+    }
+
     function buildSelfHtml(startMode) {
       applyMarkdownTitle();
-      const clone = document.documentElement.cloneNode(true);
+      let clone;
+      const decompressedSourceHtml = typeof window.__UNI928_DECOMPRESSED_SOURCE_HTML__ === "string" ? window.__UNI928_DECOMPRESSED_SOURCE_HTML__ : "";
+      if (decompressedSourceHtml) {
+        const parsed = new DOMParser().parseFromString(decompressedSourceHtml, "text/html");
+        clone = parsed.documentElement.cloneNode(true);
+      } else {
+        clone = document.documentElement.cloneNode(true);
+      }
       const dataNode = clone.querySelector("#initialData");
+      if (!dataNode) throw new Error("Could not find the initial-data area required for saving.");
       const data = {
         title: titleInput.value,
         source: sourceText.value,
-        createdAt: new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date()),
+        createdAt: new Intl.DateTimeFormat("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date()),
         note: noteText.value,
         startMode: startMode === "editor" ? "editor" : "auto",
         images: images.map(function (image) { return { id: image.id, fileName: image.fileName, dataUrl: image.dataUrl, width: image.width, height: image.height }; })
@@ -1300,15 +1364,15 @@ window.addEventListener("DOMContentLoaded", async function () {
       const originalText = button.textContent;
       applyMarkdownTitle();
       if (!sourceText.value.length && !titleInput.value.length) {
-        showStatus("Enter at least one character in the title or content.", true);
+        showStatus("Enter at least one character in the title or text.", true);
         sourceText.focus();
         return;
       }
       try {
         button.disabled = true;
-        button.textContent = "Creating compact file…";
+        button.textContent = "Creating Lightweight File…";
         const payload = await encodeUrlSaveData(startMode);
-        if (payload.encoded.length >= PACKED_SAVE_BASE64_LIMIT) throw new Error("The compressed Base64 data is " + PACKED_SAVE_BASE64_LIMIT.toLocaleString("ja-JP") + " characters or more, so Compact Save is unavailable.");
+        if (payload.encoded.length >= PACKED_SAVE_BASE64_LIMIT) throw new Error("The compressed Base64 data is " + PACKED_SAVE_BASE64_LIMIT.toLocaleString("en-US") + " characters or more, so a lightweight save cannot be created.");
         const targetUrl = buildUrlWithPayload(payload);
         const html = makeLightweightRedirectHtml(targetUrl);
         const blob = new Blob([html], { type: "text/html;charset=utf-8" });
@@ -1321,8 +1385,8 @@ window.addEventListener("DOMContentLoaded", async function () {
         anchor.remove();
         setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
         const htmlBytes = new TextEncoder().encode(html).length;
-        const modeText = startMode === "editor" ? "continued-editing HTML" : "view-only HTML";
-        showStatus(modeText + " saved with Compact Save. Content compression: " + payload.format + " and the saved HTML contains only the redirect logic. File size: about " + htmlBytes.toLocaleString("ja-JP") + " bytes");
+        const modeText = startMode === "editor" ? "Editable HTML" : "View-only HTML";
+        showStatus(modeText + " saved as a lightweight file. Content was compressed with " + payload.format + ", and the saved HTML contains only redirect logic. File: approx. " + htmlBytes.toLocaleString("en-US") + " bytes");
       } catch (error) {
         showStatus(error && error.message ? "Save failed: " + error.message : "Save failed.", true);
       } finally {
@@ -1353,6 +1417,8 @@ window.addEventListener("DOMContentLoaded", async function () {
     });
     saveViewerNormalButton.addEventListener("click", function () { downloadPlainSelf("auto"); });
     saveEditorNormalButton.addEventListener("click", function () { downloadPlainSelf("editor"); });
+    saveViewerCompressedButton.addEventListener("click", function () { downloadCompressedSelf("auto", saveViewerCompressedButton); });
+    saveEditorCompressedButton.addEventListener("click", function () { downloadCompressedSelf("editor", saveEditorCompressedButton); });
     saveViewerPackedButton.addEventListener("click", function () { downloadLightweightRedirect("auto", saveViewerPackedButton); });
     saveEditorPackedButton.addEventListener("click", function () { downloadLightweightRedirect("editor", saveEditorPackedButton); });
     urlSaveButton.addEventListener("click", function () {
@@ -1376,7 +1442,7 @@ window.addEventListener("DOMContentLoaded", async function () {
     });
 
     function buildNoteCopyHtml() {
-      const title = escapeHtml(titleInput.value.trim() || "View Page");
+      const title = escapeHtml(titleInput.value.trim() || "Viewable Page");
       return "<article><h1>" + title + "</h1>" + parseTextToHtml(sourceText.value) + "</article>";
     }
 
@@ -1407,7 +1473,7 @@ window.addEventListener("DOMContentLoaded", async function () {
       const copied = document.execCommand("copy");
       selection.removeAllRanges();
       holder.remove();
-      if (!copied) throw new Error("Could not copy rich text.");
+      if (!copied) throw new Error("Failed to copy rich text.");
     }
 
     document.getElementById("copyNoteButton").addEventListener("click", async function () {
@@ -1417,8 +1483,8 @@ window.addEventListener("DOMContentLoaded", async function () {
         await copyRichText(buildNoteCopyHtml(), buildNoteCopyText());
         button.textContent = "Copied";
       } catch (error) {
-        try { await navigator.clipboard.writeText(buildNoteCopyText()); button.textContent = "Copied plain text only"; }
-        catch (fallbackError) { button.textContent = "Could not copy"; }
+        try { await navigator.clipboard.writeText(buildNoteCopyText()); button.textContent = "Copied Text Only"; }
+        catch (fallbackError) { button.textContent = "Could Not Copy"; }
       }
       setTimeout(function () { button.textContent = original; }, 1800);
     });
@@ -1475,7 +1541,7 @@ window.addEventListener("DOMContentLoaded", async function () {
 
     document.getElementById("sampleButton").addEventListener("click", function () {
       titleInput.value = "Travel Plan";
-      sourceText.value = "## Meeting Point\n\nMeet at the Marunouchi South Exit of Tokyo Station by 9:00 AM.\n\n## What to Bring\n\n- Smartphone\n- Charger\n- Drink\n- Folding umbrella\n\n> Plans may change in case of rain.\n\nReference: [JR East](https://www.jreast.co.jp/)";
+      sourceText.value = "## Meeting Point\n\nMeet at the Marunouchi South Exit of Tokyo Station by 9:00 AM.\n\n## What to Bring\n\n- Smartphone\n- Charger\n- Drink\n- Folding umbrella\n\n> The plan may change if it rains.\n\nReference: [JR East](https://www.jreast.co.jp/e/)";
       updateCount();
       scheduleUrlSaveAvailabilityUpdate();
       showStatus("Example inserted.");
@@ -1532,7 +1598,10 @@ window.addEventListener("DOMContentLoaded", async function () {
 
     if (initialData.startMode !== "editor" && (initialData.title + initialData.source).length >= 1) showViewer();
     else showEditor();
-  });
+  }
+
+  if (document.readyState === "loading") window.addEventListener("DOMContentLoaded", initApp, { once: true });
+  else initApp();
 </script>
 </body>
 </html>
