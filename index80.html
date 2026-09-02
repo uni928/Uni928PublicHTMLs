@@ -212,6 +212,14 @@ a{color:var(--accent);overflow-wrap:anywhere;}
               <button id="saveEditorNormalButton" class="secondary-button" type="button">編集作業継続用サイトを保存</button>
             </div>
           </section>
+          <section class="file-save-group">
+            <h3>圧縮保存</h3>
+            <p>資料サイトそのものを圧縮してダウンロードします。開くとブラウザ上で解凍して表示します。アップデートの影響を受けません。</p>
+            <div class="file-save-actions">
+              <button id="saveViewerCompressedButton" class="primary-button" type="button">閲覧用サイトとして保存</button>
+              <button id="saveEditorCompressedButton" class="secondary-button" type="button">編集作業継続用サイトを保存</button>
+            </div>
+          </section>
           <section id="packedSaveGroup" class="file-save-group">
             <h3>容量削減保存</h3>
             <p>資料サイトにアクセスする形式でダウンロードします。アップデートの影響を受けるため注意が必要です。<br>対応ブラウザで利用できる圧縮方式を比較し、最も小さい方式を使用します。</p>
@@ -267,7 +275,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 {"title":"","source":"","createdAt":"","note":"","startMode":"auto","images":[]}
 </script>
   <script>
-window.addEventListener("DOMContentLoaded", async function () {
+async function initApp() {
     "use strict";
 
     const editorMode = document.getElementById("editorMode");
@@ -292,6 +300,8 @@ window.addEventListener("DOMContentLoaded", async function () {
     const fileSavePanel = document.getElementById("fileSavePanel");
     const saveViewerNormalButton = document.getElementById("saveViewerNormalButton");
     const saveEditorNormalButton = document.getElementById("saveEditorNormalButton");
+    const saveViewerCompressedButton = document.getElementById("saveViewerCompressedButton");
+    const saveEditorCompressedButton = document.getElementById("saveEditorCompressedButton");
     const saveViewerPackedButton = document.getElementById("saveViewerPackedButton");
     const saveEditorPackedButton = document.getElementById("saveEditorPackedButton");
     const packedSaveGroup = document.getElementById("packedSaveGroup");
@@ -1140,8 +1150,11 @@ window.addEventListener("DOMContentLoaded", async function () {
         'let b=' + JSON.stringify(base64) + ',f=' + JSON.stringify(format) + ';' +
         '(async()=>{try{' +
         'let x=Uint8Array.from(atob(b),c=>c.charCodeAt(0)),' +
-        's=new Blob([x]).stream().pipeThrough(new DecompressionStream(f));' +
-        'document.open();document.write(new TextDecoder().decode(await new Response(s).arrayBuffer()));document.close()' +
+        's=new Blob([x]).stream().pipeThrough(new DecompressionStream(f)),' +
+        'h=new TextDecoder().decode(await new Response(s).arrayBuffer());' +
+        'window.__UNI928_DECOMPRESSED_SOURCE_HTML__=h;' +
+        'document.open();document.write(h);document.close();' +
+        'window.__UNI928_DECOMPRESSED_SOURCE_HTML__=h' +
         '}catch(e){document.body.textContent="解凍エラー: "+e.message}})()' +
         '<\/script>';
     }
@@ -1269,10 +1282,61 @@ window.addEventListener("DOMContentLoaded", async function () {
       }
     }
 
+    async function downloadCompressedSelf(startMode, button) {
+      const originalText = button.textContent;
+      applyMarkdownTitle();
+      if (!sourceText.value.length && !titleInput.value.length) {
+        showStatus("文章またはタイトルを1文字以上入力してください。", true);
+        sourceText.focus();
+        return;
+      }
+      try {
+        const html = buildSelfHtml(startMode);
+        button.disabled = true;
+        button.textContent = "圧縮中…";
+        const sourceBytes = new TextEncoder().encode(html);
+        const format = "deflate-raw";
+        const compressedBytes = await compressWithFormat(sourceBytes, format);
+        const restoredBytes = await decompressWithFormat(compressedBytes, format);
+        if (!sameBytes(sourceBytes, restoredBytes)) throw new Error("復元チェックに失敗しました。元HTMLと復元結果が一致しません。");
+        const packedHtml = makeSafePackedHtml(bytesToBase64(compressedBytes), format);
+        const packed = {
+          html: packedHtml,
+          format: format,
+          sourceBytes: sourceBytes.length,
+          packedBytes: new TextEncoder().encode(packedHtml).length
+        };
+        const blob = new Blob([packed.html], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = makeFileName();
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        const modeText = startMode === "editor" ? "編集作業継続用HTML" : "閲覧用HTML";
+        showStatus(modeText + "を圧縮保存しました。圧縮形式：" + packed.format + "、圧縮前：約" + packed.sourceBytes.toLocaleString("ja-JP") + " bytes、保存ファイル：約" + packed.packedBytes.toLocaleString("ja-JP") + " bytes");
+      } catch (error) {
+        showStatus(error && error.message ? "圧縮保存に失敗しました：" + error.message : "圧縮保存に失敗しました。", true);
+      } finally {
+        button.textContent = originalText;
+        button.disabled = false;
+      }
+    }
+
     function buildSelfHtml(startMode) {
       applyMarkdownTitle();
-      const clone = document.documentElement.cloneNode(true);
+      let clone;
+      const decompressedSourceHtml = typeof window.__UNI928_DECOMPRESSED_SOURCE_HTML__ === "string" ? window.__UNI928_DECOMPRESSED_SOURCE_HTML__ : "";
+      if (decompressedSourceHtml) {
+        const parsed = new DOMParser().parseFromString(decompressedSourceHtml, "text/html");
+        clone = parsed.documentElement.cloneNode(true);
+      } else {
+        clone = document.documentElement.cloneNode(true);
+      }
       const dataNode = clone.querySelector("#initialData");
+      if (!dataNode) throw new Error("保存用の初期データ領域を取得できませんでした。");
       const data = {
         title: titleInput.value,
         source: sourceText.value,
@@ -1353,6 +1417,8 @@ window.addEventListener("DOMContentLoaded", async function () {
     });
     saveViewerNormalButton.addEventListener("click", function () { downloadPlainSelf("auto"); });
     saveEditorNormalButton.addEventListener("click", function () { downloadPlainSelf("editor"); });
+    saveViewerCompressedButton.addEventListener("click", function () { downloadCompressedSelf("auto", saveViewerCompressedButton); });
+    saveEditorCompressedButton.addEventListener("click", function () { downloadCompressedSelf("editor", saveEditorCompressedButton); });
     saveViewerPackedButton.addEventListener("click", function () { downloadLightweightRedirect("auto", saveViewerPackedButton); });
     saveEditorPackedButton.addEventListener("click", function () { downloadLightweightRedirect("editor", saveEditorPackedButton); });
     urlSaveButton.addEventListener("click", function () {
@@ -1532,7 +1598,10 @@ window.addEventListener("DOMContentLoaded", async function () {
 
     if (initialData.startMode !== "editor" && (initialData.title + initialData.source).length >= 1) showViewer();
     else showEditor();
-  });
+  }
+
+  if (document.readyState === "loading") window.addEventListener("DOMContentLoaded", initApp, { once: true });
+  else initApp();
 </script>
 </body>
 </html>
