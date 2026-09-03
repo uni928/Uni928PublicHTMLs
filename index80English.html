@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Display Markdown text as a clean, readable webpage and save it as a single HTML file.">
+  <meta name="description" content="Display Markdown text as an easy-to-read web page and save it as a single HTML file.">
   <title>Create a Viewable Site from Markdown</title>
   <style>
 @layer base,layout,editor,viewer,responsive;
@@ -24,6 +24,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 #viewerMode[data-text-size="small"]{width:min(780px,calc(100% - 28px));}
 #viewerMode[data-text-size="medium"]{width:min(820px,calc(100% - 28px));}
 #viewerMode[data-text-size="large"]{width:min(860px,calc(100% - 28px));}
+#viewerMode[data-text-size="xlarge"]{width:min(980px,calc(100% - 28px));}
 .hero{margin-bottom:18px;text-align:center;}
 .hero h1{margin:0;font-size:clamp(1.7rem,4vw,2.6rem);letter-spacing:-.04em;}
 .hero p{max-width:740px;margin:10px auto 0;color:var(--muted);line-height:1.8;}
@@ -115,9 +116,15 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 /* Apply the selected font candidates to the viewer. */
 .document{position:relative;padding:clamp(24px,4.5vw,42px);border-radius:18px;box-shadow:0 14px 36px rgba(30,41,59,.08);}
 #viewerMode .document{font-family:var(--viewer-font-stack,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif);}
-.viewer-actions{position:absolute;top:16px;right:16px;display:flex;gap:8px;}
+.viewer-actions{position:absolute;top:16px;right:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
 .viewer-actions button{min-height:42px;}
-.document h1{margin:0 110px 28px 0;font-size:clamp(1.7rem,4.6vw,2.55rem);line-height:1.25;letter-spacing:-.035em;}
+/* Allow readers to switch text size directly in the viewer. */
+.viewer-size-switch{display:flex;align-items:center;gap:4px;padding:4px;border:1px solid var(--line);border-radius:12px;background:#f8fafc;}
+.viewer-size-switch button{min-width:42px;min-height:34px;padding:0 10px;border:0;border-radius:8px;background:transparent;color:var(--muted);font-weight:800;}
+.viewer-size-switch button[aria-pressed="true"]{background:var(--accent);color:#fff;}
+.viewer-size-switch button:hover{background:var(--accent-soft);color:var(--accent-dark);}
+.viewer-size-switch button[aria-pressed="true"]:hover{background:var(--accent-dark);color:#fff;}
+.document h1{margin:0 240px 28px 0;font-size:clamp(1.7rem,4.6vw,2.55rem);line-height:1.25;letter-spacing:-.035em;}
 .document h2{margin:34px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--accent-soft);font-size:clamp(1.14rem,2.8vw,1.45rem);line-height:1.45;}
 .document p,.document li,.document blockquote{font-size:clamp(.96rem,2vw,1.03rem);line-height:1.9;}
 .document p{margin:0 0 18px;}
@@ -151,11 +158,24 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 #viewerMode[data-text-size="large"] .document p,#viewerMode[data-text-size="large"] .document li,#viewerMode[data-text-size="large"] .document blockquote{font-size:clamp(1rem,2.1vw,1.08rem);}
 #viewerMode[data-text-size="large"] .document code{font-size:.92em;}
 #viewerMode[data-text-size="large"] .meta{font-size:.86rem;}
+/* Viewer-only Extra Large mode prioritizes legibility over visual balance. */
+#viewerMode[data-text-size="xlarge"] .document{font-size:1.45rem;}
+#viewerMode[data-text-size="xlarge"] .document h1{font-size:clamp(2.55rem,7vw,3.7rem);line-height:1.2;}
+#viewerMode[data-text-size="xlarge"] .document h2{font-size:clamp(1.9rem,5vw,2.55rem);line-height:1.35;}
+#viewerMode[data-text-size="xlarge"] .document h3{font-size:1.9rem;line-height:1.4;}
+#viewerMode[data-text-size="xlarge"] .document h4{font-size:1.7rem;}
+#viewerMode[data-text-size="xlarge"] .document h5{font-size:1.55rem;}
+#viewerMode[data-text-size="xlarge"] .document h6{font-size:1.45rem;}
+#viewerMode[data-text-size="xlarge"] .document p,#viewerMode[data-text-size="xlarge"] .document li,#viewerMode[data-text-size="xlarge"] .document blockquote{font-size:clamp(1.42rem,3.7vw,1.72rem);line-height:2;}
+#viewerMode[data-text-size="xlarge"] .document th,#viewerMode[data-text-size="xlarge"] .document td{font-size:1.35rem;line-height:1.8;}
+#viewerMode[data-text-size="xlarge"] .document pre{font-size:1.22rem;line-height:1.8;}
+#viewerMode[data-text-size="xlarge"] .document code{font-size:.96em;}
+#viewerMode[data-text-size="xlarge"] .meta{font-size:1.15rem;line-height:1.8;}
 }
 @layer responsive{
 @media (max-width:620px){
 .app{width:min(100% - 16px,920px);padding-top:10px;}
-#viewerMode,#viewerMode[data-text-size="small"],#viewerMode[data-text-size="medium"],#viewerMode[data-text-size="large"]{width:min(100% - 16px,820px);}
+#viewerMode,#viewerMode[data-text-size="small"],#viewerMode[data-text-size="medium"],#viewerMode[data-text-size="large"],#viewerMode[data-text-size="xlarge"]{width:min(100% - 16px,820px);}
 .editor-panel,.document{padding:18px;border-radius:18px;}
 .text-input{min-height:55vh;}
 .note-panel .text-input{min-height:120px;}
@@ -167,6 +187,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .controls button{width:100%;}
 .url-save-actions,.file-save-actions{grid-template-columns:1fr;}
 .viewer-actions{position:static;justify-content:flex-end;margin:-4px 0 14px;}
+.viewer-size-switch{order:-1;}
 .document h1{margin-right:0;}
 }
 }
@@ -176,21 +197,21 @@ a{color:var(--accent);overflow-wrap:anywhere;}
   <main id="editorMode" class="app">
     <header class="hero">
       <h1>Create a Viewable Site from Markdown</h1>
-      <p>Enter Markdown text and click “Save as Viewer Site” to download a clean, easy-to-read HTML page.</p>
+      <p>Enter Markdown text and click “Save as Viewer Site” to download a visually readable HTML page.</p>
     </header>
 
     <section class="panel editor-panel" aria-labelledby="editorTitle">
       <div class="field-label">
-        <label for="pageTitle" id="editorTitle">Page Title</label>
-        <small>Can be left blank</small>
+        <label for="pageTitle" id="editorTitle">Page title</label>
+        <small>You can save it even if left blank</small>
       </div>
-      <input id="pageTitle" class="title-input" type="text" placeholder="e.g. Travel Plan, Work Instructions, Reference Notes">
+      <input id="pageTitle" class="title-input" type="text" placeholder="Example: Travel plan, work instructions, reference material">
 
       <div class="field-label">
-        <label for="sourceText">Markdown Text</label>
+        <label for="sourceText">Markdown text</label>
         <small id="charCount">0 characters</small>
       </div>
-      <textarea id="sourceText" class="text-input" placeholder="Enter your Markdown text here."></textarea>
+      <textarea id="sourceText" class="text-input" placeholder="Enter Markdown text here."></textarea>
 
       <section class="image-panel" aria-labelledby="imagePanelTitle">
         <div class="image-panel-head">
@@ -198,7 +219,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
           <button id="imagePanelToggle" class="image-panel-toggle" type="button" aria-expanded="false" aria-controls="imagePanelBody">Open</button>
         </div>
         <div id="imagePanelBody" class="image-panel-body hidden">
-          <p class="image-panel-note">Imported images are compressed to WebP in supported browsers, or JPEG when WebP conversion is unavailable, and stored in the HTML with Base64 data limited to 18,000 characters per image. Symbols such as brackets that may cause problems in Markdown are automatically removed from image file names. Insert an image in the text with “[Insert Image](filename)”.</p>
+          <p class="image-panel-note">Imported images are compressed to WebP in supported browsers, or JPEG where WebP conversion is unavailable, and stored in the HTML with a Base64 payload of up to 18,000 characters. Characters that may cause problems in Markdown are removed from image file names automatically. Insert images into the text using `[Insert Image](filename)`.</p>
           <div class="uni-photo-dropbox">
             <label id="imageDropZone" class="uni-photo-dropbox__zone">
               <span class="uni-photo-dropbox__inner">
@@ -218,7 +239,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
             </label>
           </div>
           <div class="image-options">
-            <label class="image-option-check"><input id="insertAtCursorCheck" type="checkbox">Automatically insert new images at the cursor position</label>
+            <label class="image-option-check"><input id="insertAtCursorCheck" type="checkbox">Automatically insert at the cursor when adding an image</label>
           </div>
           <ol id="imageList" class="image-list"></ol>
         </div>
@@ -226,11 +247,11 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 
       <section class="size-panel" aria-labelledby="sizePanelTitle">
         <div class="image-panel-head">
-          <h2 id="sizePanelTitle">Display Size</h2>
+          <h2 id="sizePanelTitle">Text Size Settings</h2>
           <button id="sizePanelToggle" class="image-panel-toggle" type="button" aria-expanded="false" aria-controls="sizePanelBody">Open</button>
         </div>
         <div id="sizePanelBody" class="size-panel-body hidden">
-          <p class="size-panel-note">Choose the overall text size for the viewer. Medium is the current standard size.</p>
+          <p class="size-panel-note">Choose the text size for the viewer. Medium is the current standard size.</p>
           <div class="size-options" role="radiogroup" aria-label="Viewer text size">
             <label class="size-option"><input type="radio" name="viewerTextSize" value="large">Large</label>
             <label class="size-option"><input type="radio" name="viewerTextSize" value="medium" checked>Medium</label>
@@ -238,7 +259,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
           </div>
           <div class="font-setting">
             <p class="font-setting-title">Fonts to Use</p>
-            <p class="font-setting-note">Enabled fonts are tried from left to right. Fonts unavailable on the device and fonts set to OFF are skipped. ON/OFF settings are kept after reloading.</p>
+            <p class="font-setting-note">Enabled fonts are tried from left to right. Fonts unavailable on the device and disabled fonts are skipped. ON/OFF states are kept after reloading.</p>
             <div class="font-options" aria-label="Fonts used in the viewer">
               <label class="font-option"><input type="checkbox" name="viewerFont" value="noto-sans-jp" checked><span>Noto Sans JP</span><span class="font-option-state" aria-hidden="true"></span></label>
               <label class="font-option"><input type="checkbox" name="viewerFont" value="meiryo" checked><span>Meiryo</span><span class="font-option-state" aria-hidden="true"></span></label>
@@ -262,31 +283,31 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 
 
       <section id="fileSavePanel" class="file-save-panel hidden" aria-labelledby="fileSaveTitle">
-        <h2 id="fileSaveTitle">Save Options</h2>
+        <h2 id="fileSaveTitle">Save Method</h2>
         <p class="file-save-description">Choose a save method.</p>
         <div class="file-save-groups">
           <section class="file-save-group">
             <h3>Standard Save</h3>
-            <p>Downloads the full document site itself. It is not affected by future updates.</p>
+            <p>Download the full page itself. It will not be affected by future updates.</p>
             <div class="file-save-actions">
               <button id="saveViewerNormalButton" class="primary-button" type="button">Save as Viewer Site</button>
-              <button id="saveEditorNormalButton" class="secondary-button" type="button">Save Editable Working Site</button>
+              <button id="saveEditorNormalButton" class="secondary-button" type="button">Save Editable Site</button>
             </div>
           </section>
           <section class="file-save-group">
             <h3>Compressed Save</h3>
-            <p>Compresses and downloads the full document site. It is decompressed in the browser when opened and is not affected by future updates.</p>
+            <p>Download the full page in compressed form. It is decompressed in the browser when opened and is not affected by future updates.</p>
             <div class="file-save-actions">
               <button id="saveViewerCompressedButton" class="primary-button" type="button">Save as Viewer Site</button>
-              <button id="saveEditorCompressedButton" class="secondary-button" type="button">Save Editable Working Site</button>
+              <button id="saveEditorCompressedButton" class="secondary-button" type="button">Save Editable Site</button>
             </div>
           </section>
           <section id="packedSaveGroup" class="file-save-group">
             <h3>Reduced-Size Save</h3>
-            <p>Downloads a lightweight HTML file that opens the document through this hosted site. Because it depends on the hosted page, future updates may affect it.<br>Available compression methods are compared in supported browsers, and the smallest result is used.<br>If the compressed Base64 data exceeds 8,000 characters, some browsers may not be able to open the resulting long URL.</p>
+            <p>Download a lightweight file that opens the hosted page. Because it depends on the hosted page, future updates may affect it.<br>Supported compression methods are compared and the smallest result is used.<br>If the compressed Base64 exceeds 8,000 characters, some browsers may have trouble opening the long URL.</p>
             <div class="file-save-actions">
               <button id="saveViewerPackedButton" class="primary-button" type="button">Save as Viewer Site</button>
-              <button id="saveEditorPackedButton" class="secondary-button" type="button">Save Editable Working Site</button>
+              <button id="saveEditorPackedButton" class="secondary-button" type="button">Save Editable Site</button>
             </div>
             <p id="packedSaveSizeInfo" class="url-size-info"></p>
           </section>
@@ -296,12 +317,12 @@ a{color:var(--accent);overflow-wrap:anywhere;}
       <section id="urlSavePanel" class="url-save-panel hidden" aria-labelledby="urlSaveTitle">
         <h2 id="urlSaveTitle">Save as URL</h2>
         <p class="url-save-description">
-          Compresses the current content and stores it inside the URL. Opening the copied URL restores the content on this page.
+          Compress the current content into the URL. Opening the copied URL will display this page with the saved content.
         </p>
         <div class="url-save-actions">
-          <button id="copyViewerUrlButton" class="primary-button" type="button">Copy URL for<br>“Save as Viewer Site”</button>
-          <button id="copyDiscordLinkButton" class="secondary-button" type="button">Copy a Discord-ready<br>“View Document” link</button>
-          <button id="copyEditorUrlButton" class="secondary-button" type="button">Copy URL for<br>“Save Editable Working Site”</button>
+          <button id="copyViewerUrlButton" class="primary-button" type="button">Copy “Save as Viewer Site”<br>URL</button>
+          <button id="copyDiscordLinkButton" class="secondary-button" type="button">Copy “View Document” link<br>for Discord</button>
+          <button id="copyEditorUrlButton" class="secondary-button" type="button">Copy “Save Editable Site”<br>URL</button>
         </div>
         <p id="urlSizeInfo" class="url-size-info"></p>
       </section>
@@ -309,9 +330,9 @@ a{color:var(--accent);overflow-wrap:anywhere;}
       <div id="notePanel" class="note-panel hidden">
         <div class="field-label">
           <label for="noteText">Notes</label>
-          <small>Enter an editor name or any other note</small>
+          <small>You can enter an editor name or other notes</small>
         </div>
-        <textarea id="noteText" class="text-input" placeholder="e.g. Editor: Alex"></textarea>
+        <textarea id="noteText" class="text-input" placeholder="Example: Editor: Alex"></textarea>
       </div>
 
       <div class="helper">The saved HTML contains the Markdown text.</div>
@@ -322,7 +343,13 @@ a{color:var(--accent);overflow-wrap:anywhere;}
   <main id="viewerMode" class="app hidden">
     <article class="panel document">
       <div class="viewer-actions">
-        <div hidden><button id="copyNoteButton" class="secondary-button" type="button">Try Copying in note Format</button></div>
+        <div class="viewer-size-switch" role="group" aria-label="Text size">
+          <button type="button" data-viewer-size="xlarge" aria-pressed="false">Extra Large</button>
+          <button type="button" data-viewer-size="large" aria-pressed="false">Large</button>
+          <button type="button" data-viewer-size="medium" aria-pressed="false">Medium</button>
+          <button type="button" data-viewer-size="small" aria-pressed="false">Small</button>
+        </div>
+        <div hidden><button id="copyNoteButton" class="secondary-button" type="button">Try Copying for note</button></div>
         <div hidden><button id="copyMarkdownButton" class="secondary-button" type="button">Copy Markdown</button></div>
         <button id="editButton" class="secondary-button" type="button">Edit</button>
       </div>
@@ -358,6 +385,7 @@ async function initApp() {
     const sizePanelToggle = document.getElementById("sizePanelToggle");
     const sizePanelBody = document.getElementById("sizePanelBody");
     const viewerTextSizeInputs = Array.from(document.querySelectorAll('input[name="viewerTextSize"]'));
+    const viewerSizeButtons = Array.from(document.querySelectorAll('[data-viewer-size]'));
     const viewerFontInputs = Array.from(document.querySelectorAll('input[name="viewerFont"]'));
     const imageDropZone = document.getElementById("imageDropZone");
     const insertAtCursorCheck = document.getElementById("insertAtCursorCheck");
@@ -379,11 +407,10 @@ async function initApp() {
     const urlSizeInfo = document.getElementById("urlSizeInfo");
 
     const IMAGE_BASE64_LIMIT = 18000;
-    const URL_BASE64_LIMIT = 1920;
+    const DISCORD_BASE64_LIMIT = 1920;
+    const URL_BASE64_LIMIT = 10000;
     const PACKED_SAVE_BASE64_LIMIT = 1000000;
     const LONG_URL_BASE = "https://uni928.github.io/Uni928PublicHTMLs/index80English.html";
-    const SHORT_URL_BASE = LONG_URL_BASE;
-    const SHORT_URL_COPY_THRESHOLD = 1950;
     const URL_COMPRESSION_FORMATS = [
       { format: "brotli", hashKey: "br" },
       { format: "deflate-raw", hashKey: "dr" },
@@ -441,7 +468,7 @@ async function initApp() {
         return token;
       });
 
-      value = value.replace(/\[(?:Insert Image|画像挿入)\]\(([^)\r\n]+)\)/g, function (_, rawFileName) {
+      value = value.replace(/\[Insert Image\]\(([^)\r\n]+)\)/g, function (_, rawFileName) {
         const fileName = String(rawFileName).trim();
         const image = getImageByName(fileName);
         const token = "@@EMBEDIMAGE" + imageTokens.length + "@@";
@@ -732,7 +759,7 @@ async function initApp() {
       context.imageSmoothingQuality = "high";
       context.drawImage(sourceImage, 0, 0, outputWidth, outputHeight);
       const dataUrl = canvas.toDataURL(mimeType, quality);
-      if (!dataUrl.startsWith("data:" + mimeType + ";base64,")) throw new Error("Image conversion is not supported in this browser.");
+      if (!dataUrl.startsWith("data:" + mimeType + ";base64,")) throw new Error("Image conversion is not available in this browser.");
       return { dataUrl: dataUrl, width: outputWidth, height: outputHeight, mimeType: mimeType };
     }
 
@@ -746,7 +773,7 @@ async function initApp() {
         if (!smallest || getBase64Length(result.dataUrl) < getBase64Length(smallest.dataUrl)) smallest = result;
         if (getBase64Length(result.dataUrl) <= IMAGE_BASE64_LIMIT) return result;
       }
-      throw new Error("Even at the smallest setting, the Base64 data could not be compressed below 18,000 characters." + (smallest ? " Smallest result: " + getBase64Length(smallest.dataUrl).toLocaleString("en-US") + " characters" : ""));
+      throw new Error("Could not compress the Base64 payload to 18,000 characters or fewer even at the smallest setting." + (smallest ? " Smallest result: " + getBase64Length(smallest.dataUrl).toLocaleString("en-US") + " characters" : ""));
     }
 
     function sanitizeImageFileName(name) {
@@ -777,7 +804,7 @@ async function initApp() {
     function replaceImageReferences(oldName, newName) {
       if (!oldName || oldName === newName) return;
       const escapedOld = oldName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const pattern = new RegExp(String.raw`\[(?:Insert Image|画像挿入)\]\(${escapedOld}\)`, "g");
+      const pattern = new RegExp(String.raw`\[Insert Image\]\(${escapedOld}\)`, "g");
       sourceText.value = sourceText.value.replace(pattern, "[Insert Image](" + newName + ")");
       updateCount();
     }
@@ -824,9 +851,14 @@ async function initApp() {
     }
 
     function applyViewerTextSize(value) {
-      const size = ["large", "medium"].includes(value) ? value : "small";
+      const isViewerOnlyXlarge = value === "xlarge";
+      const size = isViewerOnlyXlarge ? "xlarge" : (["large", "medium"].includes(value) ? value : "small");
       viewerMode.dataset.textSize = size;
-      viewerTextSizeInputs.forEach(function (input) { input.checked = input.value === size; });
+      // Extra Large is viewer-only and does not change the editor-side Large/Medium/Small save setting.
+      if (!isViewerOnlyXlarge) viewerTextSizeInputs.forEach(function (input) { input.checked = input.value === size; });
+      viewerSizeButtons.forEach(function (button) {
+        button.setAttribute("aria-pressed", String(button.dataset.viewerSize === size));
+      });
     }
 
     function normalizeViewerFontIds(value) {
@@ -862,7 +894,7 @@ async function initApp() {
       try {
         localStorage.setItem(getViewerFontStorageKey(), JSON.stringify(getEnabledViewerFontIds()));
       } catch (error) {
-        // Apply the setting to the current page even if persistent storage is unavailable.
+        // Apply the setting to the current view even when storage is unavailable.
       }
     }
 
@@ -898,7 +930,7 @@ async function initApp() {
 
     async function getUrlCompressionCandidates(bytes) {
       if (!("CompressionStream" in window) || !("DecompressionStream" in window)) {
-        throw new Error("This browser does not support the compression features required for URL saving.");
+        throw new Error("This browser does not support the compression feature required for URL saving.");
       }
       const candidates = [];
       for (const definition of URL_COMPRESSION_FORMATS) {
@@ -914,10 +946,10 @@ async function initApp() {
             });
           }
         } catch (error) {
-          // Exclude compression formats not supported by the browser.
+          // Exclude compression formats unsupported by the browser.
         }
       }
-      if (!candidates.length) throw new Error("No supported compression method is available for URL saving.");
+      if (!candidates.length) throw new Error("No supported compression format is available for URL saving.");
       candidates.sort(function (a, b) {
         return (a.hashKey.length + a.encoded.length) - (b.hashKey.length + b.encoded.length);
       });
@@ -932,7 +964,7 @@ async function initApp() {
     async function decodeUrlSaveData(encoded, format) {
       const decompressedBytes = await decompressWithFormat(base64UrlToBytes(encoded), format);
       const data = JSON.parse(new TextDecoder().decode(decompressedBytes));
-      if (!data || data.v !== 1) throw new Error("This URL-save data format is not supported.");
+      if (!data || data.v !== 1) throw new Error("This URL save data format is not supported.");
       return {
         title: typeof data.t === "string" ? data.t : "",
         source: typeof data.s === "string" ? data.s : "",
@@ -964,7 +996,7 @@ async function initApp() {
         return await decodeUrlSaveData(payload.encoded, payload.format);
       } catch (error) {
         console.error(error);
-        showStatus(error && error.message ? "Could not open the URL-save data: " + error.message : "Could not open the URL-save data.", true);
+        showStatus(error && error.message ? "Could not open the URL save data: " + error.message : "Could not open the URL save data.", true);
         return null;
       }
     }
@@ -973,17 +1005,13 @@ async function initApp() {
       return LONG_URL_BASE + "#" + payload.hashKey + "=" + payload.encoded;
     }
 
-    function makeCopyUrl(url) {
-      return url.length >= SHORT_URL_COPY_THRESHOLD ? url.replace(LONG_URL_BASE, SHORT_URL_BASE) : url;
-    }
-
     async function createSavedUrl(startMode) {
       applyMarkdownTitle();
-      if (!sourceText.value.length && !titleInput.value.length) throw new Error("Enter at least one character in the title or body.");
+      if (!sourceText.value.length && !titleInput.value.length) throw new Error("Enter at least one character in the text or title.");
       const payload = await encodeUrlSaveData(startMode);
       if (payload.encoded.length >= URL_BASE64_LIMIT) throw new Error("The compressed Base64 data is " + URL_BASE64_LIMIT.toLocaleString("en-US") + " characters or more, so it cannot be saved as a URL.");
       const url = buildUrlWithPayload(payload);
-      return { url: url, copyUrl: makeCopyUrl(url), encodedLength: payload.encoded.length, format: payload.format };
+      return { url: url, copyUrl: url, encodedLength: payload.encoded.length, format: payload.format };
     }
 
     async function copySavedUrl(startMode, button) {
@@ -994,7 +1022,7 @@ async function initApp() {
         const result = await createSavedUrl(startMode);
         await copyText(result.copyUrl);
         button.textContent = "URL copied";
-        showStatus("Copied the URL to the clipboard. Compression: " + result.format + ", compressed Base64: " + result.encodedLength.toLocaleString("en-US") + " characters" + (result.copyUrl !== result.url ? " (short URL used because the original is long)" : ""));
+        showStatus("URL copied to the clipboard. Compression format: " + result.format + ", Base64 after compression: " + result.encodedLength.toLocaleString("en-US") + " characters");
       } catch (error) {
         button.textContent = "Could not copy";
         showStatus(error && error.message ? error.message : "Failed to create the URL.", true);
@@ -1009,10 +1037,11 @@ async function initApp() {
         button.disabled = true;
         button.textContent = "Creating link…";
         const result = await createSavedUrl("auto");
+        if (result.encodedLength >= DISCORD_BASE64_LIMIT) throw new Error("The compressed Base64 data is " + DISCORD_BASE64_LIMIT.toLocaleString("en-US") + " characters or more, so a Discord share link cannot be created.");
         const discordLink = "[View Document](<" + result.copyUrl + ">)";
-        await copyText(discordLink.length >= SHORT_URL_COPY_THRESHOLD ? "[View Document](<" + makeCopyUrl(result.url) + ">)" : discordLink);
+        await copyText(discordLink);
         button.textContent = "Link copied";
-        showStatus("Copied the Discord-ready “View Document” link to the clipboard. Compression: " + result.format + ", compressed Base64: " + result.encodedLength.toLocaleString("en-US") + " characters" + (discordLink.length >= SHORT_URL_COPY_THRESHOLD ? " (short URL used because the original is long)" : ""));
+        showStatus("Copied the Discord “View Document” link to the clipboard. Compression format: " + result.format + ", Base64 after compression: " + result.encodedLength.toLocaleString("en-US") + " characters");
       } catch (error) {
         button.textContent = "Could not copy";
         showStatus(error && error.message ? error.message : "Failed to create the share link.", true);
@@ -1025,6 +1054,7 @@ async function initApp() {
       const serial = ++urlSizeUpdateSerial;
       if (!("CompressionStream" in window) || !("DecompressionStream" in window)) {
         urlSaveButton.classList.add("hidden");
+        copyDiscordLinkButton.classList.add("hidden");
         urlSavePanel.classList.add("hidden");
         urlSaveButton.setAttribute("aria-expanded", "false");
         packedSaveGroup.classList.add("hidden");
@@ -1034,19 +1064,22 @@ async function initApp() {
         const [viewerPayload, editorPayload] = await Promise.all([encodeUrlSaveData("auto"), encodeUrlSaveData("editor")]);
         if (serial !== urlSizeUpdateSerial) return;
         const payload = viewerPayload.encoded.length >= editorPayload.encoded.length ? viewerPayload : editorPayload;
-        const urlTooLarge = viewerPayload.encoded.length >= URL_BASE64_LIMIT;
+        const urlTooLarge = payload.encoded.length >= URL_BASE64_LIMIT;
+        const discordTooLarge = viewerPayload.encoded.length >= DISCORD_BASE64_LIMIT;
         const packedTooLarge = payload.encoded.length >= PACKED_SAVE_BASE64_LIMIT;
         urlSaveButton.classList.toggle("hidden", urlTooLarge);
+        copyDiscordLinkButton.classList.toggle("hidden", discordTooLarge);
         if (urlTooLarge) {
           urlSavePanel.classList.add("hidden");
           urlSaveButton.setAttribute("aria-expanded", "false");
         }
         packedSaveGroup.classList.toggle("hidden", packedTooLarge);
-        urlSizeInfo.textContent = "Current shortest format (" + viewerPayload.format + ") compressed Base64: " + viewerPayload.encoded.length.toLocaleString("en-US") + " / " + URL_BASE64_LIMIT.toLocaleString("en-US") + " characters" + (urlTooLarge ? " (exceeds the URL-save limit)" : "");
+        urlSizeInfo.textContent = "Current shortest format (" + viewerPayload.format + ") compressed Base64: " + viewerPayload.encoded.length.toLocaleString("en-US") + " characters / URL save limit " + URL_BASE64_LIMIT.toLocaleString("en-US") + " characters" + (discordTooLarge ? " (Discord share link hidden at " + DISCORD_BASE64_LIMIT.toLocaleString("en-US") + " characters or more)" : "");
         packedSaveSizeInfo.textContent = "Current shortest format (" + payload.format + ") compressed Base64: " + payload.encoded.length.toLocaleString("en-US") + " / " + PACKED_SAVE_BASE64_LIMIT.toLocaleString("en-US") + " characters";
       } catch (error) {
         if (serial !== urlSizeUpdateSerial) return;
         urlSaveButton.classList.add("hidden");
+        copyDiscordLinkButton.classList.add("hidden");
         urlSavePanel.classList.add("hidden");
         urlSaveButton.setAttribute("aria-expanded", "false");
         packedSaveGroup.classList.add("hidden");
@@ -1189,7 +1222,7 @@ async function initApp() {
           if (insertAtCursorCheck.checked) insertTextAtCursor(getEmbedText(image));
           renderImageList();
         }
-        showStatus(files.length.toLocaleString("en-US") + " image(s) loaded. Each image uses no more than 18,000 Base64 characters.");
+        showStatus(files.length.toLocaleString("en-US") + " images loaded. Each Base64 payload is within 18,000 characters.");
       } catch (error) {
         showStatus(error && error.message ? error.message : "Image compression failed.", true);
       } finally {
@@ -1232,7 +1265,7 @@ async function initApp() {
       const title = titleInput.value.trim() || "Viewer Page";
       const source = sourceText.value;
       if (!source.length && !titleInput.value.length) {
-        showStatus("Enter at least one character in the title or body.", true);
+        showStatus("Enter at least one character in the text or title.", true);
         sourceText.focus();
         return false;
       }
@@ -1317,7 +1350,7 @@ async function initApp() {
         stored = localStorage.getItem(EDITOR_TRANSFER_STORAGE_KEY);
         if (!stored) return null;
         const payload = JSON.parse(stored);
-        if (!payload || payload.v !== 1 || typeof payload.base64 !== "string") throw new Error("Invalid data format.");
+        if (!payload || payload.v !== 1 || typeof payload.base64 !== "string") throw new Error("Invalid format.");
         let json;
         if (payload.packed) {
           const compressed = Uint8Array.from(atob(payload.base64), function (c) { return c.charCodeAt(0); });
@@ -1343,7 +1376,7 @@ async function initApp() {
         };
       } catch (error) {
         console.error(error);
-        showStatus("Could not load the editable working data.", true);
+        showStatus("Could not load the editable data.", true);
         return null;
       } finally {
         if (stored !== null) localStorage.removeItem(EDITOR_TRANSFER_STORAGE_KEY);
@@ -1353,7 +1386,7 @@ async function initApp() {
     function downloadPlainSelf(startMode) {
       applyMarkdownTitle();
       if (!sourceText.value.length && !titleInput.value.length) {
-        showStatus("Enter at least one character in the title or body.", true);
+        showStatus("Enter at least one character in the text or title.", true);
         sourceText.focus();
         return;
       }
@@ -1368,7 +1401,7 @@ async function initApp() {
         anchor.click();
         anchor.remove();
         setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-        showStatus(startMode === "editor" ? "Editable working HTML saved with Standard Save." : "Viewer HTML saved with Standard Save.");
+        showStatus(startMode === "editor" ? "Editable HTML saved normally." : "Viewer HTML saved normally.");
       } catch (error) {
         showStatus(error && error.message ? "Save failed: " + error.message : "Save failed.", true);
       }
@@ -1378,7 +1411,7 @@ async function initApp() {
       const originalText = button.textContent;
       applyMarkdownTitle();
       if (!sourceText.value.length && !titleInput.value.length) {
-        showStatus("Enter at least one character in the title or body.", true);
+        showStatus("Enter at least one character in the text or title.", true);
         sourceText.focus();
         return;
       }
@@ -1390,7 +1423,7 @@ async function initApp() {
         const format = "deflate-raw";
         const compressedBytes = await compressWithFormat(sourceBytes, format);
         const restoredBytes = await decompressWithFormat(compressedBytes, format);
-        if (!sameBytes(sourceBytes, restoredBytes)) throw new Error("Verification failed: the restored HTML does not match the original HTML.");
+        if (!sameBytes(sourceBytes, restoredBytes)) throw new Error("Restoration check failed. The restored HTML does not match the original.");
         const packedHtml = makeSafePackedHtml(bytesToBase64(compressedBytes), format);
         const packed = {
           html: packedHtml,
@@ -1407,8 +1440,8 @@ async function initApp() {
         anchor.click();
         anchor.remove();
         setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-        const modeText = startMode === "editor" ? "Editable working HTML" : "Viewer HTML";
-        showStatus(modeText + " saved with compression. Format: " + packed.format + ", before compression: approx. " + packed.sourceBytes.toLocaleString("en-US") + " bytes, saved file: approx. " + packed.packedBytes.toLocaleString("en-US") + " bytes");
+        const modeText = startMode === "editor" ? "Editable HTML" : "Viewer HTML";
+        showStatus(modeText + " saved in compressed form. Compression format: " + packed.format + ", before compression: about " + packed.sourceBytes.toLocaleString("en-US") + " bytes, saved file: about " + packed.packedBytes.toLocaleString("en-US") + " bytes");
       } catch (error) {
         showStatus(error && error.message ? "Compressed save failed: " + error.message : "Compressed save failed.", true);
       } finally {
@@ -1421,7 +1454,7 @@ async function initApp() {
       applyMarkdownTitle();
       const clone = document.documentElement.cloneNode(true);
       const dataNode = clone.querySelector("#initialData");
-      if (!dataNode) throw new Error("Could not access the initial data area used for saving.");
+      if (!dataNode) throw new Error("Could not find the initial data area for saving.");
       const data = {
         title: titleInput.value,
         source: sourceText.value,
@@ -1455,15 +1488,15 @@ async function initApp() {
       const originalText = button.textContent;
       applyMarkdownTitle();
       if (!sourceText.value.length && !titleInput.value.length) {
-        showStatus("Enter at least one character in the title or body.", true);
+        showStatus("Enter at least one character in the text or title.", true);
         sourceText.focus();
         return;
       }
       try {
         button.disabled = true;
-        button.textContent = "Reducing file size…";
+        button.textContent = "Reducing size…";
         const payload = await encodeUrlSaveData(startMode);
-        if (payload.encoded.length >= PACKED_SAVE_BASE64_LIMIT) throw new Error("The compressed Base64 data is " + PACKED_SAVE_BASE64_LIMIT.toLocaleString("en-US") + " characters or more, so Reduced-Size Save cannot be used.");
+        if (payload.encoded.length >= PACKED_SAVE_BASE64_LIMIT) throw new Error("The compressed Base64 data is " + PACKED_SAVE_BASE64_LIMIT.toLocaleString("en-US") + " characters or more, so reduced-size saving is unavailable.");
         const targetUrl = buildUrlWithPayload(payload);
         const html = makeLightweightRedirectHtml(targetUrl);
         const blob = new Blob([html], { type: "text/html;charset=utf-8" });
@@ -1476,8 +1509,8 @@ async function initApp() {
         anchor.remove();
         setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
         const htmlBytes = new TextEncoder().encode(html).length;
-        const modeText = startMode === "editor" ? "Editable working HTML" : "Viewer HTML";
-        showStatus(modeText + " saved with Reduced-Size Save. The content was compressed with " + payload.format + ", and the saved HTML contains only the redirect logic. File: approx. " + htmlBytes.toLocaleString("en-US") + " bytes");
+        const modeText = startMode === "editor" ? "Editable HTML" : "Viewer HTML";
+        showStatus(modeText + " saved using reduced-size mode. The content was compressed with " + payload.format + " and the saved HTML contains only the redirect logic. File size: about " + htmlBytes.toLocaleString("en-US") + " bytes");
       } catch (error) {
         showStatus(error && error.message ? "Save failed: " + error.message : "Save failed.", true);
       } finally {
@@ -1574,7 +1607,7 @@ async function initApp() {
         await copyRichText(buildNoteCopyHtml(), buildNoteCopyText());
         button.textContent = "Copied";
       } catch (error) {
-        try { await navigator.clipboard.writeText(buildNoteCopyText()); button.textContent = "Copied as plain text"; }
+        try { await navigator.clipboard.writeText(buildNoteCopyText()); button.textContent = "Copied text only"; }
         catch (fallbackError) { button.textContent = "Could not copy"; }
       }
       setTimeout(function () { button.textContent = original; }, 1800);
@@ -1621,6 +1654,12 @@ async function initApp() {
         if (!input.checked) return;
         applyViewerTextSize(input.value);
         scheduleUrlSaveAvailabilityUpdate();
+      });
+    });
+
+    viewerSizeButtons.forEach(function (button) {
+      button.addEventListener("click", function () {
+        applyViewerTextSize(button.dataset.viewerSize);
       });
     });
 
