@@ -333,6 +333,8 @@ async function initApp() {
     let images = [];
     let urlSizeUpdateTimer = 0;
     let urlSizeUpdateSerial = 0;
+    let lastSourceSelectionStart = 0;
+    let lastSourceSelectionEnd = 0;
 
     function escapeHtml(value) {
       return String(value)
@@ -944,6 +946,12 @@ async function initApp() {
           copyButton.textContent = "コピー済み";
           setTimeout(function () { copyButton.textContent = original; }, 1200);
         });
+        const insertButton = document.createElement("button");
+        insertButton.type = "button";
+        insertButton.textContent = "カーソル位置に挿入";
+        insertButton.addEventListener("click", function () {
+          insertTextAtLastCursor(getEmbedText(image));
+        });
         const renameButton = document.createElement("button");
         renameButton.type = "button";
         renameButton.textContent = "ファイル名変更";
@@ -986,7 +994,7 @@ async function initApp() {
           images.splice(index, 1);
           renderImageList();
         });
-        actions.append(copyButton, renameButton, upButton, downButton, deleteButton);
+        actions.append(copyButton, insertButton, renameButton, upButton, downButton, deleteButton);
         main.append(name, meta, output, actions);
         item.append(preview, main);
         imageList.appendChild(item);
@@ -997,6 +1005,17 @@ async function initApp() {
     function insertTextAtCursor(text) {
       const start = Number.isInteger(sourceText.selectionStart) ? sourceText.selectionStart : sourceText.value.length;
       const end = Number.isInteger(sourceText.selectionEnd) ? sourceText.selectionEnd : start;
+      insertTextAtRange(text, start, end);
+    }
+
+    function insertTextAtLastCursor(text) {
+      const max = sourceText.value.length;
+      const start = Math.min(Math.max(0, lastSourceSelectionStart), max);
+      const end = Math.min(Math.max(start, lastSourceSelectionEnd), max);
+      insertTextAtRange(text, start, end);
+    }
+
+    function insertTextAtRange(text, start, end) {
       const before = sourceText.value.slice(0, start);
       const after = sourceText.value.slice(end);
       const prefix = before && !before.endsWith("\n") ? "\n\n" : "";
@@ -1004,6 +1023,8 @@ async function initApp() {
       const inserted = prefix + text + suffix;
       sourceText.value = before + inserted + after;
       const cursor = before.length + inserted.length;
+      lastSourceSelectionStart = cursor;
+      lastSourceSelectionEnd = cursor;
       sourceText.focus();
       sourceText.setSelectionRange(cursor, cursor);
       updateCount();
@@ -1566,6 +1587,14 @@ async function initApp() {
       }, 0);
     });
 
+    function rememberSourceSelection() {
+      if (!Number.isInteger(sourceText.selectionStart) || !Number.isInteger(sourceText.selectionEnd)) return;
+      lastSourceSelectionStart = sourceText.selectionStart;
+      lastSourceSelectionEnd = sourceText.selectionEnd;
+    }
+    ["click", "keyup", "select", "focus", "input"].forEach(function (eventName) {
+      sourceText.addEventListener(eventName, rememberSourceSelection);
+    });
     sourceText.addEventListener("input", function () { updateCount(); scheduleUrlSaveAvailabilityUpdate(); });
     titleInput.addEventListener("input", scheduleUrlSaveAvailabilityUpdate);
     noteText.addEventListener("input", scheduleUrlSaveAvailabilityUpdate);
