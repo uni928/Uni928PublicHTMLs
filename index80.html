@@ -24,6 +24,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 #viewerMode[data-text-size="small"]{width:min(780px,calc(100% - 28px));}
 #viewerMode[data-text-size="medium"]{width:min(820px,calc(100% - 28px));}
 #viewerMode[data-text-size="large"]{width:min(860px,calc(100% - 28px));}
+#viewerMode[data-text-size="xlarge"]{width:min(980px,calc(100% - 28px));}
 .hero{margin-bottom:18px;text-align:center;}
 .hero h1{margin:0;font-size:clamp(1.7rem,4vw,2.6rem);letter-spacing:-.04em;}
 .hero p{max-width:740px;margin:10px auto 0;color:var(--muted);line-height:1.8;}
@@ -115,9 +116,15 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 /* 選択中のフォント候補を閲覧部分へ適用。 */
 .document{position:relative;padding:clamp(24px,4.5vw,42px);border-radius:18px;box-shadow:0 14px 36px rgba(30,41,59,.08);}
 #viewerMode .document{font-family:var(--viewer-font-stack,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif);}
-.viewer-actions{position:absolute;top:16px;right:16px;display:flex;gap:8px;}
+.viewer-actions{position:absolute;top:16px;right:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
 .viewer-actions button{min-height:42px;}
-.document h1{margin:0 110px 28px 0;font-size:clamp(1.7rem,4.6vw,2.55rem);line-height:1.25;letter-spacing:-.035em;}
+/* 閲覧者が閲覧画面上で文字サイズを切り替えられる操作を追加。 */
+.viewer-size-switch{display:flex;align-items:center;gap:4px;padding:4px;border:1px solid var(--line);border-radius:12px;background:#f8fafc;}
+.viewer-size-switch button{min-width:42px;min-height:34px;padding:0 10px;border:0;border-radius:8px;background:transparent;color:var(--muted);font-weight:800;}
+.viewer-size-switch button[aria-pressed="true"]{background:var(--accent);color:#fff;}
+.viewer-size-switch button:hover{background:var(--accent-soft);color:var(--accent-dark);}
+.viewer-size-switch button[aria-pressed="true"]:hover{background:var(--accent-dark);color:#fff;}
+.document h1{margin:0 240px 28px 0;font-size:clamp(1.7rem,4.6vw,2.55rem);line-height:1.25;letter-spacing:-.035em;}
 .document h2{margin:34px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--accent-soft);font-size:clamp(1.14rem,2.8vw,1.45rem);line-height:1.45;}
 .document p,.document li,.document blockquote{font-size:clamp(.96rem,2vw,1.03rem);line-height:1.9;}
 .document p{margin:0 0 18px;}
@@ -151,11 +158,24 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 #viewerMode[data-text-size="large"] .document p,#viewerMode[data-text-size="large"] .document li,#viewerMode[data-text-size="large"] .document blockquote{font-size:clamp(1rem,2.1vw,1.08rem);}
 #viewerMode[data-text-size="large"] .document code{font-size:.92em;}
 #viewerMode[data-text-size="large"] .meta{font-size:.86rem;}
+/* 閲覧側専用の「特大」。視認性を最優先し、レイアウトの美しさより文字の大きさを優先する。 */
+#viewerMode[data-text-size="xlarge"] .document{font-size:1.45rem;}
+#viewerMode[data-text-size="xlarge"] .document h1{font-size:clamp(2.55rem,7vw,3.7rem);line-height:1.2;}
+#viewerMode[data-text-size="xlarge"] .document h2{font-size:clamp(1.9rem,5vw,2.55rem);line-height:1.35;}
+#viewerMode[data-text-size="xlarge"] .document h3{font-size:1.9rem;line-height:1.4;}
+#viewerMode[data-text-size="xlarge"] .document h4{font-size:1.7rem;}
+#viewerMode[data-text-size="xlarge"] .document h5{font-size:1.55rem;}
+#viewerMode[data-text-size="xlarge"] .document h6{font-size:1.45rem;}
+#viewerMode[data-text-size="xlarge"] .document p,#viewerMode[data-text-size="xlarge"] .document li,#viewerMode[data-text-size="xlarge"] .document blockquote{font-size:clamp(1.42rem,3.7vw,1.72rem);line-height:2;}
+#viewerMode[data-text-size="xlarge"] .document th,#viewerMode[data-text-size="xlarge"] .document td{font-size:1.35rem;line-height:1.8;}
+#viewerMode[data-text-size="xlarge"] .document pre{font-size:1.22rem;line-height:1.8;}
+#viewerMode[data-text-size="xlarge"] .document code{font-size:.96em;}
+#viewerMode[data-text-size="xlarge"] .meta{font-size:1.15rem;line-height:1.8;}
 }
 @layer responsive{
 @media (max-width:620px){
 .app{width:min(100% - 16px,920px);padding-top:10px;}
-#viewerMode,#viewerMode[data-text-size="small"],#viewerMode[data-text-size="medium"],#viewerMode[data-text-size="large"]{width:min(100% - 16px,820px);}
+#viewerMode,#viewerMode[data-text-size="small"],#viewerMode[data-text-size="medium"],#viewerMode[data-text-size="large"],#viewerMode[data-text-size="xlarge"]{width:min(100% - 16px,820px);}
 .editor-panel,.document{padding:18px;border-radius:18px;}
 .text-input{min-height:55vh;}
 .note-panel .text-input{min-height:120px;}
@@ -167,6 +187,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .controls button{width:100%;}
 .url-save-actions,.file-save-actions{grid-template-columns:1fr;}
 .viewer-actions{position:static;justify-content:flex-end;margin:-4px 0 14px;}
+.viewer-size-switch{order:-1;}
 .document h1{margin-right:0;}
 }
 }
@@ -322,6 +343,12 @@ a{color:var(--accent);overflow-wrap:anywhere;}
   <main id="viewerMode" class="app hidden">
     <article class="panel document">
       <div class="viewer-actions">
+        <div class="viewer-size-switch" role="group" aria-label="文字サイズ">
+          <button type="button" data-viewer-size="xlarge" aria-pressed="false">特大</button>
+          <button type="button" data-viewer-size="large" aria-pressed="false">大</button>
+          <button type="button" data-viewer-size="medium" aria-pressed="false">中</button>
+          <button type="button" data-viewer-size="small" aria-pressed="false">小</button>
+        </div>
         <div hidden><button id="copyNoteButton" class="secondary-button" type="button">note形式でのコピーに試みる</button></div>
         <div hidden><button id="copyMarkdownButton" class="secondary-button" type="button">Markdownをコピー</button></div>
         <button id="editButton" class="secondary-button" type="button">編集する</button>
@@ -358,6 +385,7 @@ async function initApp() {
     const sizePanelToggle = document.getElementById("sizePanelToggle");
     const sizePanelBody = document.getElementById("sizePanelBody");
     const viewerTextSizeInputs = Array.from(document.querySelectorAll('input[name="viewerTextSize"]'));
+    const viewerSizeButtons = Array.from(document.querySelectorAll('[data-viewer-size]'));
     const viewerFontInputs = Array.from(document.querySelectorAll('input[name="viewerFont"]'));
     const imageDropZone = document.getElementById("imageDropZone");
     const insertAtCursorCheck = document.getElementById("insertAtCursorCheck");
@@ -379,7 +407,8 @@ async function initApp() {
     const urlSizeInfo = document.getElementById("urlSizeInfo");
 
     const IMAGE_BASE64_LIMIT = 18000;
-    const URL_BASE64_LIMIT = 1920;
+    const DISCORD_BASE64_LIMIT = 1920;
+    const URL_BASE64_LIMIT = 10000;
     const PACKED_SAVE_BASE64_LIMIT = 1000000;
     const LONG_URL_BASE = "https://uni928.github.io/Uni928PublicHTMLs/index80.html";
     const URL_COMPRESSION_FORMATS = [
@@ -822,9 +851,14 @@ async function initApp() {
     }
 
     function applyViewerTextSize(value) {
-      const size = ["large", "medium"].includes(value) ? value : "small";
+      const isViewerOnlyXlarge = value === "xlarge";
+      const size = isViewerOnlyXlarge ? "xlarge" : (["large", "medium"].includes(value) ? value : "small");
       viewerMode.dataset.textSize = size;
-      viewerTextSizeInputs.forEach(function (input) { input.checked = input.value === size; });
+      // 「特大」は閲覧側専用。編集側の大・中・小の保存設定は変更しない。
+      if (!isViewerOnlyXlarge) viewerTextSizeInputs.forEach(function (input) { input.checked = input.value === size; });
+      viewerSizeButtons.forEach(function (button) {
+        button.setAttribute("aria-pressed", String(button.dataset.viewerSize === size));
+      });
     }
 
     function normalizeViewerFontIds(value) {
@@ -1003,6 +1037,7 @@ async function initApp() {
         button.disabled = true;
         button.textContent = "リンクを作成中…";
         const result = await createSavedUrl("auto");
+        if (result.encodedLength >= DISCORD_BASE64_LIMIT) throw new Error("圧縮後のBase64データが" + DISCORD_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため、Discode共有用リンクを作成できません。");
         const discordLink = "[資料はこちら](<" + result.copyUrl + ">)";
         await copyText(discordLink);
         button.textContent = "リンクをコピーしました";
@@ -1019,6 +1054,7 @@ async function initApp() {
       const serial = ++urlSizeUpdateSerial;
       if (!("CompressionStream" in window) || !("DecompressionStream" in window)) {
         urlSaveButton.classList.add("hidden");
+        copyDiscordLinkButton.classList.add("hidden");
         urlSavePanel.classList.add("hidden");
         urlSaveButton.setAttribute("aria-expanded", "false");
         packedSaveGroup.classList.add("hidden");
@@ -1028,19 +1064,22 @@ async function initApp() {
         const [viewerPayload, editorPayload] = await Promise.all([encodeUrlSaveData("auto"), encodeUrlSaveData("editor")]);
         if (serial !== urlSizeUpdateSerial) return;
         const payload = viewerPayload.encoded.length >= editorPayload.encoded.length ? viewerPayload : editorPayload;
-        const urlTooLarge = viewerPayload.encoded.length >= URL_BASE64_LIMIT;
+        const urlTooLarge = payload.encoded.length >= URL_BASE64_LIMIT;
+        const discordTooLarge = viewerPayload.encoded.length >= DISCORD_BASE64_LIMIT;
         const packedTooLarge = payload.encoded.length >= PACKED_SAVE_BASE64_LIMIT;
         urlSaveButton.classList.toggle("hidden", urlTooLarge);
+        copyDiscordLinkButton.classList.toggle("hidden", discordTooLarge);
         if (urlTooLarge) {
           urlSavePanel.classList.add("hidden");
           urlSaveButton.setAttribute("aria-expanded", "false");
         }
         packedSaveGroup.classList.toggle("hidden", packedTooLarge);
-        urlSizeInfo.textContent = "現在の最短形式（" + viewerPayload.format + "）の圧縮後Base64：" + viewerPayload.encoded.length.toLocaleString("ja-JP") + " / " + URL_BASE64_LIMIT.toLocaleString("ja-JP") + "文字" + (urlTooLarge ? "（URL保存の上限を超えています）" : "");
+        urlSizeInfo.textContent = "現在の最短形式（" + viewerPayload.format + "）の圧縮後Base64：" + viewerPayload.encoded.length.toLocaleString("ja-JP") + "文字 / URL保存上限 " + URL_BASE64_LIMIT.toLocaleString("ja-JP") + "文字" + (discordTooLarge ? "（Discode共有用リンクは" + DISCORD_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため非表示）" : "");
         packedSaveSizeInfo.textContent = "現在の最短形式（" + payload.format + "）の圧縮後Base64：" + payload.encoded.length.toLocaleString("ja-JP") + " / " + PACKED_SAVE_BASE64_LIMIT.toLocaleString("ja-JP") + "文字";
       } catch (error) {
         if (serial !== urlSizeUpdateSerial) return;
         urlSaveButton.classList.add("hidden");
+        copyDiscordLinkButton.classList.add("hidden");
         urlSavePanel.classList.add("hidden");
         urlSaveButton.setAttribute("aria-expanded", "false");
         packedSaveGroup.classList.add("hidden");
@@ -1615,6 +1654,12 @@ async function initApp() {
         if (!input.checked) return;
         applyViewerTextSize(input.value);
         scheduleUrlSaveAvailabilityUpdate();
+      });
+    });
+
+    viewerSizeButtons.forEach(function (button) {
+      button.addEventListener("click", function () {
+        applyViewerTextSize(button.dataset.viewerSize);
       });
     });
 
