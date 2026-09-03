@@ -21,6 +21,9 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 @layer layout{
 .app{width:min(920px,calc(100% - 28px));margin:0 auto;padding:28px 0 52px;}
 #viewerMode{width:min(820px,calc(100% - 28px));}
+#viewerMode[data-text-size="small"]{width:min(780px,calc(100% - 28px));}
+#viewerMode[data-text-size="medium"]{width:min(820px,calc(100% - 28px));}
+#viewerMode[data-text-size="large"]{width:min(860px,calc(100% - 28px));}
 .hero{margin-bottom:18px;text-align:center;}
 .hero h1{margin:0;font-size:clamp(1.7rem,4vw,2.6rem);letter-spacing:-.04em;}
 .hero p{max-width:740px;margin:10px auto 0;color:var(--muted);line-height:1.8;}
@@ -90,6 +93,13 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .image-actions button{min-height:36px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--text);font-weight:700;}
 .image-actions .delete-image-button{color:var(--danger);}
 .image-missing{display:inline-block;margin:10px 0;padding:9px 12px;border:1px dashed var(--danger);border-radius:10px;color:var(--danger);background:#fff;}
+.size-panel{margin-top:12px;padding:16px;border:1px solid var(--line);border-radius:14px;background:#f8fafc;}
+.size-panel-body{margin-top:12px;}
+.size-panel-note{margin:0 0 10px;color:var(--muted);font-size:.9rem;line-height:1.65;}
+.size-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+.size-option{display:flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:#fff;font-weight:800;cursor:pointer;}
+.size-option:has(input:checked){border-color:var(--accent);background:var(--accent-soft);color:var(--accent-dark);}
+.size-option input{inline-size:17px;block-size:17px;margin:0;}
 }
 @layer viewer{
 .document{position:relative;padding:clamp(24px,4.5vw,42px);border-radius:18px;box-shadow:0 14px 36px rgba(30,41,59,.08);}
@@ -117,11 +127,23 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .document img{display:block;max-width:100%;height:auto;margin:20px auto;border-radius:12px;}
 .task-item{list-style:none;margin-left:-1.3em;}
 #viewTitle{margin-top:36px;}
+#viewerMode[data-text-size="small"] .document h1{font-size:clamp(1.58rem,4.4vw,2.38rem);}
+#viewerMode[data-text-size="small"] .document h2{font-size:clamp(1.08rem,2.6vw,1.36rem);}
+#viewerMode[data-text-size="small"] .document h3{font-size:1.08rem;}
+#viewerMode[data-text-size="small"] .document p,#viewerMode[data-text-size="small"] .document li,#viewerMode[data-text-size="small"] .document blockquote{font-size:clamp(.92rem,1.9vw,.99rem);}
+#viewerMode[data-text-size="small"] .document code{font-size:.88em;}
+#viewerMode[data-text-size="small"] .meta{font-size:.78rem;}
+#viewerMode[data-text-size="large"] .document h1{font-size:clamp(1.82rem,4.8vw,2.7rem);}
+#viewerMode[data-text-size="large"] .document h2{font-size:clamp(1.2rem,2.9vw,1.52rem);}
+#viewerMode[data-text-size="large"] .document h3{font-size:1.2rem;}
+#viewerMode[data-text-size="large"] .document p,#viewerMode[data-text-size="large"] .document li,#viewerMode[data-text-size="large"] .document blockquote{font-size:clamp(1rem,2.1vw,1.08rem);}
+#viewerMode[data-text-size="large"] .document code{font-size:.92em;}
+#viewerMode[data-text-size="large"] .meta{font-size:.86rem;}
 }
 @layer responsive{
 @media (max-width:620px){
 .app{width:min(100% - 16px,920px);padding-top:10px;}
-#viewerMode{width:min(100% - 16px,820px);}
+#viewerMode,#viewerMode[data-text-size="small"],#viewerMode[data-text-size="medium"],#viewerMode[data-text-size="large"]{width:min(100% - 16px,820px);}
 .editor-panel,.document{padding:18px;border-radius:18px;}
 .text-input{min-height:55vh;}
 .note-panel .text-input{min-height:120px;}
@@ -187,6 +209,21 @@ a{color:var(--accent);overflow-wrap:anywhere;}
             <label class="image-option-check"><input id="insertAtCursorCheck" type="checkbox">画像を追加する際に、カーソル位置へ自動挿入する</label>
           </div>
           <ol id="imageList" class="image-list"></ol>
+        </div>
+      </section>
+
+      <section class="size-panel" aria-labelledby="sizePanelTitle">
+        <div class="image-panel-head">
+          <h2 id="sizePanelTitle">サイズ感設定</h2>
+          <button id="sizePanelToggle" class="image-panel-toggle" type="button" aria-expanded="false" aria-controls="sizePanelBody">開く</button>
+        </div>
+        <div id="sizePanelBody" class="size-panel-body hidden">
+          <p class="size-panel-note">閲覧画面のサイズ感を選択できます。中が現在の標準サイズです。</p>
+          <div class="size-options" role="radiogroup" aria-label="閲覧画面の文字サイズ感">
+            <label class="size-option"><input type="radio" name="viewerTextSize" value="large">大</label>
+            <label class="size-option"><input type="radio" name="viewerTextSize" value="medium" checked>中</label>
+            <label class="size-option"><input type="radio" name="viewerTextSize" value="small">小</label>
+          </div>
         </div>
       </section>
 
@@ -272,7 +309,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
   </main>
 
   <script id="initialData" type="application/json">
-{"title":"","source":"","createdAt":"","note":"","startMode":"auto","images":[]}
+{"title":"","source":"","createdAt":"","note":"","startMode":"auto","textSize":"small","images":[]}
 </script>
   <script>
 async function initApp() {
@@ -294,6 +331,9 @@ async function initApp() {
     const imageList = document.getElementById("imageList");
     const imagePanelToggle = document.getElementById("imagePanelToggle");
     const imagePanelBody = document.getElementById("imagePanelBody");
+    const sizePanelToggle = document.getElementById("sizePanelToggle");
+    const sizePanelBody = document.getElementById("sizePanelBody");
+    const viewerTextSizeInputs = Array.from(document.querySelectorAll('input[name="viewerTextSize"]'));
     const imageDropZone = document.getElementById("imageDropZone");
     const insertAtCursorCheck = document.getElementById("insertAtCursorCheck");
     const saveMethodButton = document.getElementById("saveMethodButton");
@@ -594,6 +634,7 @@ async function initApp() {
           createdAt: typeof parsed.createdAt === "string" ? parsed.createdAt : "",
           note: typeof parsed.note === "string" ? parsed.note : "",
           startMode: parsed.startMode === "editor" ? "editor" : "auto",
+          textSize: ["large", "medium"].includes(parsed.textSize) ? parsed.textSize : "small",
           images: Array.isArray(parsed.images) ? parsed.images.filter(function (image) {
             return image && typeof image.fileName === "string" && typeof image.dataUrl === "string" && /^data:image\/(?:webp|jpeg|png);base64,/.test(image.dataUrl);
           }).map(function (image) {
@@ -601,7 +642,7 @@ async function initApp() {
           }) : []
         };
       } catch (error) {
-        return { title: "", source: "", createdAt: "", note: "", startMode: "auto", images: [] };
+        return { title: "", source: "", createdAt: "", note: "", startMode: "auto", textSize: "medium", images: [] };
       }
     }
 
@@ -742,6 +783,17 @@ async function initApp() {
       return bytes;
     }
 
+    function getViewerTextSize() {
+      const selected = viewerTextSizeInputs.find(function (input) { return input.checked; });
+      return selected && ["large", "medium", "small"].includes(selected.value) ? selected.value : "small";
+    }
+
+    function applyViewerTextSize(value) {
+      const size = ["large", "medium"].includes(value) ? value : "small";
+      viewerMode.dataset.textSize = size;
+      viewerTextSizeInputs.forEach(function (input) { input.checked = input.value === size; });
+    }
+
     function makeUrlSaveData(startMode) {
       return {
         v: 1,
@@ -749,6 +801,7 @@ async function initApp() {
         s: sourceText.value,
         n: noteText.value,
         m: startMode === "editor" ? "editor" : "auto",
+        z: getViewerTextSize(),
         i: images.map(function (image) { return { id: image.id, fileName: image.fileName, dataUrl: image.dataUrl, width: image.width, height: image.height }; })
       };
     }
@@ -796,6 +849,7 @@ async function initApp() {
         createdAt: "",
         note: typeof data.n === "string" ? data.n : "",
         startMode: data.m === "editor" ? "editor" : "auto",
+        textSize: ["large", "medium"].includes(data.z) ? data.z : "small",
         images: Array.isArray(data.i) ? data.i.filter(function (image) {
           return image && typeof image.fileName === "string" && typeof image.dataUrl === "string" && /^data:image\/(?:webp|jpeg|png);base64,/.test(image.dataUrl);
         }).map(function (image) {
@@ -1188,6 +1242,7 @@ async function initApp() {
           createdAt: "",
           note: typeof data.note === "string" ? data.note : "",
           startMode: "editor",
+          textSize: ["large", "medium"].includes(data.textSize) ? data.textSize : "small",
           images: Array.isArray(data.images) ? data.images.filter(function (image) {
             return image && typeof image.fileName === "string" && typeof image.dataUrl === "string" && /^data:image\/(?:webp|jpeg|png);base64,/.test(image.dataUrl);
           }).map(function (image) {
@@ -1281,6 +1336,7 @@ async function initApp() {
         createdAt: new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date()),
         note: noteText.value,
         startMode: startMode === "editor" ? "editor" : "auto",
+        textSize: getViewerTextSize(),
         images: images.map(function (image) { return { id: image.id, fileName: image.fileName, dataUrl: image.dataUrl, width: image.width, height: image.height }; })
       };
       dataNode.textContent = encodeStoredText(JSON.stringify(data));
@@ -1290,6 +1346,10 @@ async function initApp() {
       clone.querySelector("#sourceText").textContent = "";
       clone.querySelector("#noteText").textContent = "";
       clone.querySelector("#imageList").replaceChildren();
+      const clonedSizePanelBody = clone.querySelector("#sizePanelBody");
+      const clonedSizePanelToggle = clone.querySelector("#sizePanelToggle");
+      if (clonedSizePanelBody) clonedSizePanelBody.classList.add("hidden");
+      if (clonedSizePanelToggle) { clonedSizePanelToggle.setAttribute("aria-expanded", "false"); clonedSizePanelToggle.textContent = "開く"; }
       clone.querySelector("#status").textContent = "";
       return "<!DOCTYPE html>\n" + clone.outerHTML;
     }
@@ -1456,6 +1516,21 @@ async function initApp() {
       imagePanelToggle.textContent = willOpen ? "閉じる" : "開く";
     });
 
+    sizePanelToggle.addEventListener("click", function () {
+      const willOpen = sizePanelBody.classList.contains("hidden");
+      sizePanelBody.classList.toggle("hidden", !willOpen);
+      sizePanelToggle.setAttribute("aria-expanded", String(willOpen));
+      sizePanelToggle.textContent = willOpen ? "閉じる" : "開く";
+    });
+
+    viewerTextSizeInputs.forEach(function (input) {
+      input.addEventListener("change", function () {
+        if (!input.checked) return;
+        applyViewerTextSize(input.value);
+        scheduleUrlSaveAvailabilityUpdate();
+      });
+    });
+
     imageFileInput.addEventListener("change", function () { addImageFiles(imageFileInput.files); });
 
     ["dragenter", "dragover"].forEach(function (eventName) {
@@ -1533,6 +1608,7 @@ async function initApp() {
     titleInput.value = initialData.title;
     sourceText.value = initialData.source;
     noteText.value = initialData.note;
+    applyViewerTextSize(initialData.textSize);
     images = initialData.images || [];
     renderImageList();
     if (noteText.value.trim()) {
