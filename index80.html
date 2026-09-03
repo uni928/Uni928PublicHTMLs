@@ -382,8 +382,6 @@ async function initApp() {
     const URL_BASE64_LIMIT = 1920;
     const PACKED_SAVE_BASE64_LIMIT = 1000000;
     const LONG_URL_BASE = "https://uni928.github.io/Uni928PublicHTMLs/index80.html";
-    const SHORT_URL_BASE = "https://x.gd/sm9K2";
-    const SHORT_URL_COPY_THRESHOLD = 1950;
     const URL_COMPRESSION_FORMATS = [
       { format: "brotli", hashKey: "br" },
       { format: "deflate-raw", hashKey: "dr" },
@@ -973,17 +971,13 @@ async function initApp() {
       return LONG_URL_BASE + "#" + payload.hashKey + "=" + payload.encoded;
     }
 
-    function makeCopyUrl(url) {
-      return url.length >= SHORT_URL_COPY_THRESHOLD ? url.replace(LONG_URL_BASE, SHORT_URL_BASE) : url;
-    }
-
     async function createSavedUrl(startMode) {
       applyMarkdownTitle();
       if (!sourceText.value.length && !titleInput.value.length) throw new Error("文章またはタイトルを1文字以上入力してください。");
       const payload = await encodeUrlSaveData(startMode);
       if (payload.encoded.length >= URL_BASE64_LIMIT) throw new Error("圧縮後のBase64データが" + URL_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため、URLとして保存できません。");
       const url = buildUrlWithPayload(payload);
-      return { url: url, copyUrl: makeCopyUrl(url), encodedLength: payload.encoded.length, format: payload.format };
+      return { url: url, copyUrl: url, encodedLength: payload.encoded.length, format: payload.format };
     }
 
     async function copySavedUrl(startMode, button) {
@@ -994,7 +988,7 @@ async function initApp() {
         const result = await createSavedUrl(startMode);
         await copyText(result.copyUrl);
         button.textContent = "URLをコピーしました";
-        showStatus("URLをクリップボードへコピーしました。圧縮形式：" + result.format + "、圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字" + (result.copyUrl !== result.url ? "（長いため短いURLを使用）" : ""));
+        showStatus("URLをクリップボードへコピーしました。圧縮形式：" + result.format + "、圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字");
       } catch (error) {
         button.textContent = "コピーできませんでした";
         showStatus(error && error.message ? error.message : "URLの作成に失敗しました。", true);
@@ -1010,9 +1004,9 @@ async function initApp() {
         button.textContent = "リンクを作成中…";
         const result = await createSavedUrl("auto");
         const discordLink = "[資料はこちら](<" + result.copyUrl + ">)";
-        await copyText(discordLink.length >= SHORT_URL_COPY_THRESHOLD ? "[資料はこちら](<" + makeCopyUrl(result.url) + ">)" : discordLink);
+        await copyText(discordLink);
         button.textContent = "リンクをコピーしました";
-        showStatus("Discode共有用の「資料はこちら」リンクをクリップボードへコピーしました。圧縮形式：" + result.format + "、圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字" + (discordLink.length >= SHORT_URL_COPY_THRESHOLD ? "（長いため短いURLを使用）" : ""));
+        showStatus("Discode共有用の「資料はこちら」リンクをクリップボードへコピーしました。圧縮形式：" + result.format + "、圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字");
       } catch (error) {
         button.textContent = "コピーできませんでした";
         showStatus(error && error.message ? error.message : "共有用リンクの作成に失敗しました。", true);
