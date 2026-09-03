@@ -326,9 +326,6 @@ async function initApp() {
     ];
     const LEGACY_URL_HASH_KEY = "saved";
     const EDITOR_TRANSFER_STORAGE_KEY = "uni928-index80-editor-transfer-v1";
-    const POSTMESSAGE_TRANSFER_PREFIX = "uni928-index80-postmessage-transfer-v1:";
-    const POSTMESSAGE_HASH_KEY = "pm";
-    const POSTMESSAGE_LOAD_HASH_KEY = "pmload";
     const compressionSteps = [
       [768, 0.72], [640, 0.66], [560, 0.60], [480, 0.54], [420, 0.48],
       [360, 0.42], [320, 0.36], [280, 0.30], [240, 0.24], [200, 0.18], [160, 0.12]
@@ -891,14 +888,15 @@ async function initApp() {
         if (serial !== urlSizeUpdateSerial) return;
         const payload = viewerPayload.encoded.length >= editorPayload.encoded.length ? viewerPayload : editorPayload;
         const urlTooLarge = viewerPayload.encoded.length >= URL_BASE64_LIMIT;
+        const packedTooLarge = payload.encoded.length >= PACKED_SAVE_BASE64_LIMIT;
         urlSaveButton.classList.toggle("hidden", urlTooLarge);
         if (urlTooLarge) {
           urlSavePanel.classList.add("hidden");
           urlSaveButton.setAttribute("aria-expanded", "false");
         }
-        packedSaveGroup.classList.remove("hidden");
+        packedSaveGroup.classList.toggle("hidden", packedTooLarge);
         urlSizeInfo.textContent = "現在の最短形式（" + viewerPayload.format + "）の圧縮後Base64：" + viewerPayload.encoded.length.toLocaleString("ja-JP") + " / " + URL_BASE64_LIMIT.toLocaleString("ja-JP") + "文字" + (urlTooLarge ? "（URL保存の上限を超えています）" : "");
-        packedSaveSizeInfo.textContent = "現在の最短形式（" + payload.format + "）の圧縮後Base64：" + payload.encoded.length.toLocaleString("ja-JP") + "文字" + (payload.encoded.length >= PACKED_SAVE_BASE64_LIMIT ? "（保存時はページ間転送方式を使用）" : "");
+        packedSaveSizeInfo.textContent = "現在の最短形式（" + payload.format + "）の圧縮後Base64：" + payload.encoded.length.toLocaleString("ja-JP") + " / " + PACKED_SAVE_BASE64_LIMIT.toLocaleString("ja-JP") + "文字";
       } catch (error) {
         if (serial !== urlSizeUpdateSerial) return;
         urlSaveButton.classList.add("hidden");
@@ -1187,14 +1185,13 @@ async function initApp() {
       return new TextDecoder().decode(bytes);
     }
 
-    function makeEditorTransferData(startMode) {
+    function makeEditorTransferData() {
       applyMarkdownTitle();
       return {
         v: 1,
         title: titleInput.value,
         source: sourceText.value,
         note: noteText.value,
-        startMode: startMode === "auto" ? "auto" : "editor",
         images: images.map(function (image) { return { id: image.id, fileName: image.fileName, dataUrl: image.dataUrl, width: image.width, height: image.height }; })
       };
     }
@@ -1206,7 +1203,7 @@ async function initApp() {
         if (!sourceText.value.length && !titleInput.value.length) throw new Error("文章またはタイトルを1文字以上入力してください。");
         button.disabled = true;
         button.textContent = "保存中…";
-        const json = JSON.stringify(makeEditorTransferData("editor"));
+        const json = JSON.stringify(makeEditorTransferData());
         let payload;
         if (useCompression) {
           const bytes = new TextEncoder().encode(json);
@@ -1224,80 +1221,34 @@ async function initApp() {
       }
     }
 
-    function readPostMessageHash(key) {
-      const match = location.hash.match(new RegExp("^#" + key + "=([A-Za-z0-9_-]{16,})$"));
-      return match ? match[1] : "";
-    }
-
-    async function decodeEditorTransferPayload(payload) {
-      if (!payload || payload.v !== 1 || typeof payload.base64 !== "string") throw new Error("形式が正しくありません。");
-      let json;
-      if (payload.packed) {
-        const compressed = Uint8Array.from(atob(payload.base64), function (c) { return c.charCodeAt(0); });
-        const restored = await decompressWithFormat(compressed, payload.format);
-        json = new TextDecoder().decode(restored);
-      } else {
-        json = base64ToText(payload.base64);
-      }
-      const data = JSON.parse(json);
-      return {
-        title: typeof data.title === "string" ? data.title : "",
-        source: typeof data.source === "string" ? data.source : "",
-        createdAt: "",
-        note: typeof data.note === "string" ? data.note : "",
-        startMode: data.startMode === "auto" ? "auto" : "editor",
-        images: Array.isArray(data.images) ? data.images.filter(function (image) {
-          return image && typeof image.fileName === "string" && typeof image.dataUrl === "string" && /^data:image\/(?:webp|jpeg|png);base64,/.test(image.dataUrl);
-        }).map(function (image) {
-          return { id: typeof image.id === "string" ? image.id : "image-" + Math.random().toString(36).slice(2), fileName: image.fileName, dataUrl: image.dataUrl, width: Number(image.width) || 0, height: Number(image.height) || 0 };
-        }) : []
-      };
-    }
-
-    function startPostMessageReceiver() {
-      const nonce = readPostMessageHash(POSTMESSAGE_HASH_KEY);
-      if (!nonce || window.parent === window) return;
-      const storageKey = POSTMESSAGE_TRANSFER_PREFIX + nonce;
-      function receive(event) {
-        const message = event.data;
-        if (!message || message.type !== "uni928-index80-transfer" || message.nonce !== nonce) return;
-        try {
-          localStorage.setItem(storageKey, JSON.stringify(message.payload));
-          window.parent.postMessage({ type: "uni928-index80-transfer-stored", nonce: nonce }, "*");
-        } catch (error) {
-          window.parent.postMessage({ type: "uni928-index80-transfer-error", nonce: nonce, message: error && error.message ? error.message : "一時保存に失敗しました。" }, "*");
-        }
-      }
-      window.addEventListener("message", receive);
-      window.parent.postMessage({ type: "uni928-index80-transfer-ready", nonce: nonce }, "*");
-    }
-
-    async function readPostMessageTransferData() {
-      const nonce = readPostMessageHash(POSTMESSAGE_LOAD_HASH_KEY);
-      if (!nonce) return null;
-      const storageKey = POSTMESSAGE_TRANSFER_PREFIX + nonce;
-      let stored = null;
-      try {
-        stored = localStorage.getItem(storageKey);
-        if (!stored) throw new Error("受け渡しデータが見つかりませんでした。");
-        return await decodeEditorTransferPayload(JSON.parse(stored));
-      } catch (error) {
-        console.error(error);
-        showStatus(error && error.message ? "容量削減保存データを読み込めませんでした：" + error.message : "容量削減保存データを読み込めませんでした。", true);
-        return null;
-      } finally {
-        if (stored !== null) localStorage.removeItem(storageKey);
-        if (history && history.replaceState) history.replaceState(null, "", location.pathname + location.search);
-      }
-    }
-
     async function readEditorTransferData() {
       let stored = null;
       try {
         stored = localStorage.getItem(EDITOR_TRANSFER_STORAGE_KEY);
         if (!stored) return null;
         const payload = JSON.parse(stored);
-        return await decodeEditorTransferPayload(payload);
+        if (!payload || payload.v !== 1 || typeof payload.base64 !== "string") throw new Error("形式が正しくありません。");
+        let json;
+        if (payload.packed) {
+          const compressed = Uint8Array.from(atob(payload.base64), function (c) { return c.charCodeAt(0); });
+          const restored = await decompressWithFormat(compressed, payload.format);
+          json = new TextDecoder().decode(restored);
+        } else {
+          json = base64ToText(payload.base64);
+        }
+        const data = JSON.parse(json);
+        return {
+          title: typeof data.title === "string" ? data.title : "",
+          source: typeof data.source === "string" ? data.source : "",
+          createdAt: "",
+          note: typeof data.note === "string" ? data.note : "",
+          startMode: "editor",
+          images: Array.isArray(data.images) ? data.images.filter(function (image) {
+            return image && typeof image.fileName === "string" && typeof image.dataUrl === "string" && /^data:image\/(?:webp|jpeg|png);base64,/.test(image.dataUrl);
+          }).map(function (image) {
+            return { id: typeof image.id === "string" ? image.id : "image-" + Math.random().toString(36).slice(2), fileName: image.fileName, dataUrl: image.dataUrl, width: Number(image.width) || 0, height: Number(image.height) || 0 };
+          }) : []
+        };
       } catch (error) {
         console.error(error);
         showStatus("編集作業継続用データを読み込めませんでした。", true);
@@ -1409,23 +1360,6 @@ async function initApp() {
       return '<!doctype html><meta charset="utf-8"><script>location.replace(' + JSON.stringify(targetUrl) + ')<\/script>';
     }
 
-    function makePostMessageTransferHtml(payload, targetUrl) {
-      const nonce = crypto.getRandomValues(new Uint32Array(4));
-      const nonceText = Array.from(nonce, function (value) { return value.toString(36); }).join("");
-      const receiverUrl = targetUrl + "#" + POSTMESSAGE_HASH_KEY + "=" + nonceText;
-      const finalUrl = targetUrl + "#" + POSTMESSAGE_LOAD_HASH_KEY + "=" + nonceText;
-      const targetOrigin = new URL(targetUrl).origin;
-      return '<!doctype html><meta charset="utf-8"><title>移動中...</title><body><script>' +
-        'const n=' + JSON.stringify(nonceText) + ',o=' + JSON.stringify(targetOrigin) + ',r=' + JSON.stringify(receiverUrl) + ',f=' + JSON.stringify(finalUrl) + ',p=' + JSON.stringify(payload) + ';' +
-        'const i=document.createElement("iframe");i.hidden=true;i.src=r;document.body.appendChild(i);' +
-        'let t=setTimeout(()=>{document.body.textContent="受け渡し先を開けませんでした。"},15000);' +
-        'addEventListener("message",e=>{let m=e.data;if(e.source!==i.contentWindow||!m||m.nonce!==n)return;' +
-        'if(m.type==="uni928-index80-transfer-ready")i.contentWindow.postMessage({type:"uni928-index80-transfer",nonce:n,payload:p},o);' +
-        'else if(m.type==="uni928-index80-transfer-stored"){clearTimeout(t);location.replace(f)}' +
-        'else if(m.type==="uni928-index80-transfer-error"){clearTimeout(t);document.body.textContent="受け渡しに失敗しました: "+(m.message||"")}});' +
-        '<\/script>';
-    }
-
     async function downloadLightweightRedirect(startMode, button) {
       const originalText = button.textContent;
       applyMarkdownTitle();
@@ -1438,20 +1372,9 @@ async function initApp() {
         button.disabled = true;
         button.textContent = "容量削減中…";
         const payload = await encodeUrlSaveData(startMode);
-        let html;
-        let transferMode;
-        if (payload.encoded.length < PACKED_SAVE_BASE64_LIMIT) {
-          const targetUrl = buildUrlWithPayload(payload);
-          html = makeLightweightRedirectHtml(targetUrl);
-          transferMode = "URL埋め込み";
-        } else {
-          const json = JSON.stringify(makeEditorTransferData(startMode));
-          const bytes = new TextEncoder().encode(json);
-          const best = await findBestSafeCompression(bytes);
-          const transferPayload = { v: 1, packed: true, format: best.format, base64: bytesToBase64(best.bytes) };
-          html = makePostMessageTransferHtml(transferPayload, LONG_URL_BASE);
-          transferMode = "ページ間転送";
-        }
+        if (payload.encoded.length >= PACKED_SAVE_BASE64_LIMIT) throw new Error("圧縮後のBase64データが" + PACKED_SAVE_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため、容量削減保存できません。");
+        const targetUrl = buildUrlWithPayload(payload);
+        const html = makeLightweightRedirectHtml(targetUrl);
         const blob = new Blob([html], { type: "text/html;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const anchor = document.createElement("a");
@@ -1463,7 +1386,7 @@ async function initApp() {
         setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
         const htmlBytes = new TextEncoder().encode(html).length;
         const modeText = startMode === "editor" ? "編集作業継続用HTML" : "閲覧用HTML";
-        showStatus(modeText + "を容量削減保存しました。方式：" + transferMode + "、圧縮形式：" + payload.format + "、ファイル：約" + htmlBytes.toLocaleString("ja-JP") + " bytes");
+        showStatus(modeText + "を容量削減保存しました。内容を" + payload.format + "で圧縮し、保存HTMLはリダイレクト処理だけを保持します。ファイル：約" + htmlBytes.toLocaleString("ja-JP") + " bytes");
       } catch (error) {
         showStatus(error && error.message ? "保存に失敗しました：" + error.message : "保存に失敗しました。", true);
       } finally {
@@ -1658,11 +1581,9 @@ async function initApp() {
       }
     });
 
-    startPostMessageReceiver();
-    const postMessageTransferData = await readPostMessageTransferData();
-    const editorTransferData = postMessageTransferData ? null : await readEditorTransferData();
-    const urlInitialData = (postMessageTransferData || editorTransferData) ? null : await readUrlSaveData();
-    const initialData = postMessageTransferData || editorTransferData || urlInitialData || readInitialData();
+    const editorTransferData = await readEditorTransferData();
+    const urlInitialData = editorTransferData ? null : await readUrlSaveData();
+    const initialData = editorTransferData || urlInitialData || readInitialData();
     titleInput.value = initialData.title;
     sourceText.value = initialData.source;
     noteText.value = initialData.note;
