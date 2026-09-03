@@ -100,9 +100,21 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .size-option{display:flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:#fff;font-weight:800;cursor:pointer;}
 .size-option:has(input:checked){border-color:var(--accent);background:var(--accent-soft);color:var(--accent-dark);}
 .size-option input{inline-size:17px;block-size:17px;margin:0;}
+/* フォント候補を左から順に試せるON/OFF設定を追加。 */
+.font-setting{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);}
+.font-setting-title{margin:0 0 5px;font-size:.94rem;font-weight:800;}
+.font-setting-note{margin:0 0 10px;color:var(--muted);font-size:.82rem;line-height:1.6;}
+.font-options{display:flex;flex-wrap:wrap;gap:8px;}
+.font-option{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:.86rem;font-weight:700;cursor:pointer;}
+.font-option:has(input:checked){border-color:var(--accent);background:var(--accent-soft);color:var(--accent-dark);}
+.font-option input{inline-size:17px;block-size:17px;margin:0;}
+.font-option-state::after{content:"OFF";color:var(--muted);font-size:.72rem;font-weight:800;}
+.font-option input:checked~.font-option-state::after{content:"ON";color:var(--accent-dark);}
 }
 @layer viewer{
+/* 選択中のフォント候補を閲覧部分へ適用。 */
 .document{position:relative;padding:clamp(24px,4.5vw,42px);border-radius:18px;box-shadow:0 14px 36px rgba(30,41,59,.08);}
+#viewerMode .document{font-family:var(--viewer-font-stack,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif);}
 .viewer-actions{position:absolute;top:16px;right:16px;display:flex;gap:8px;}
 .viewer-actions button{min-height:42px;}
 .document h1{margin:0 110px 28px 0;font-size:clamp(1.7rem,4.6vw,2.55rem);line-height:1.25;letter-spacing:-.035em;}
@@ -224,6 +236,18 @@ a{color:var(--accent);overflow-wrap:anywhere;}
             <label class="size-option"><input type="radio" name="viewerTextSize" value="medium" checked>中</label>
             <label class="size-option"><input type="radio" name="viewerTextSize" value="small">小</label>
           </div>
+          <div class="font-setting">
+            <p class="font-setting-title">使用するフォント</p>
+            <p class="font-setting-note">ONの候補を左から順に試します。端末にないフォントとOFFの候補はスキップします。ON/OFF状態は再読み込み後も保持します。</p>
+            <div class="font-options" aria-label="閲覧画面で使用するフォント">
+              <label class="font-option"><input type="checkbox" name="viewerFont" value="yu-gothic-ui" checked><span>游ゴシック UI</span><span class="font-option-state" aria-hidden="true"></span></label>
+              <label class="font-option"><input type="checkbox" name="viewerFont" value="biz-udp-gothic" checked><span>BIZ UDPゴシック</span><span class="font-option-state" aria-hidden="true"></span></label>
+              <label class="font-option"><input type="checkbox" name="viewerFont" value="hiragino-sans" checked><span>ヒラギノ角ゴ</span><span class="font-option-state" aria-hidden="true"></span></label>
+              <label class="font-option"><input type="checkbox" name="viewerFont" value="noto-sans-jp" checked><span>Noto Sans JP</span><span class="font-option-state" aria-hidden="true"></span></label>
+              <label class="font-option"><input type="checkbox" name="viewerFont" value="meiryo" checked><span>メイリオ</span><span class="font-option-state" aria-hidden="true"></span></label>
+              <label class="font-option"><input type="checkbox" name="viewerFont" value="system-ui" checked><span>システムUI</span><span class="font-option-state" aria-hidden="true"></span></label>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -309,7 +333,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
   </main>
 
   <script id="initialData" type="application/json">
-{"title":"","source":"","createdAt":"","note":"","startMode":"auto","textSize":"small","images":[]}
+{"title":"","source":"","createdAt":"","note":"","startMode":"auto","textSize":"small","fonts":["yu-gothic-ui","biz-udp-gothic","hiragino-sans","noto-sans-jp","meiryo","system-ui"],"images":[]}
 </script>
   <script>
 async function initApp() {
@@ -334,6 +358,7 @@ async function initApp() {
     const sizePanelToggle = document.getElementById("sizePanelToggle");
     const sizePanelBody = document.getElementById("sizePanelBody");
     const viewerTextSizeInputs = Array.from(document.querySelectorAll('input[name="viewerTextSize"]'));
+    const viewerFontInputs = Array.from(document.querySelectorAll('input[name="viewerFont"]'));
     const imageDropZone = document.getElementById("imageDropZone");
     const insertAtCursorCheck = document.getElementById("insertAtCursorCheck");
     const saveMethodButton = document.getElementById("saveMethodButton");
@@ -366,10 +391,19 @@ async function initApp() {
     ];
     const LEGACY_URL_HASH_KEY = "saved";
     const EDITOR_TRANSFER_STORAGE_KEY = "uni928-index80-editor-transfer-v1";
+    const VIEWER_FONT_STORAGE_KEY = "uni928-index80-viewer-fonts-v1";
     const compressionSteps = [
       [768, 0.72], [640, 0.66], [560, 0.60], [480, 0.54], [420, 0.48],
       [360, 0.42], [320, 0.36], [280, 0.30], [240, 0.24], [200, 0.18], [160, 0.12]
     ];
+    const VIEWER_FONT_CHOICES = {
+      "yu-gothic-ui": '"Yu Gothic UI"',
+      "biz-udp-gothic": '"BIZ UDPGothic"',
+      "hiragino-sans": '"Hiragino Sans"',
+      "noto-sans-jp": '"Noto Sans JP"',
+      "meiryo": "Meiryo",
+      "system-ui": "system-ui"
+    };
     let images = [];
     let urlSizeUpdateTimer = 0;
     let urlSizeUpdateSerial = 0;
@@ -635,6 +669,7 @@ async function initApp() {
           note: typeof parsed.note === "string" ? parsed.note : "",
           startMode: parsed.startMode === "editor" ? "editor" : "auto",
           textSize: ["large", "medium"].includes(parsed.textSize) ? parsed.textSize : "small",
+          fonts: normalizeViewerFontIds(parsed.fonts),
           images: Array.isArray(parsed.images) ? parsed.images.filter(function (image) {
             return image && typeof image.fileName === "string" && typeof image.dataUrl === "string" && /^data:image\/(?:webp|jpeg|png);base64,/.test(image.dataUrl);
           }).map(function (image) {
@@ -642,7 +677,7 @@ async function initApp() {
           }) : []
         };
       } catch (error) {
-        return { title: "", source: "", createdAt: "", note: "", startMode: "auto", textSize: "medium", images: [] };
+        return { title: "", source: "", createdAt: "", note: "", startMode: "auto", textSize: "medium", fonts: Object.keys(VIEWER_FONT_CHOICES), images: [] };
       }
     }
 
@@ -794,6 +829,50 @@ async function initApp() {
       viewerTextSizeInputs.forEach(function (input) { input.checked = input.value === size; });
     }
 
+    function normalizeViewerFontIds(value) {
+      const allIds = Object.keys(VIEWER_FONT_CHOICES);
+      if (!Array.isArray(value)) return allIds;
+      return allIds.filter(function (id) { return value.includes(id); });
+    }
+
+    function getEnabledViewerFontIds() {
+      return viewerFontInputs.filter(function (input) { return input.checked; }).map(function (input) { return input.value; });
+    }
+
+    function readStoredViewerFontIds() {
+      try {
+        const stored = localStorage.getItem(VIEWER_FONT_STORAGE_KEY);
+        return stored === null ? null : normalizeViewerFontIds(JSON.parse(stored));
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function saveViewerFontIds() {
+      try {
+        localStorage.setItem(VIEWER_FONT_STORAGE_KEY, JSON.stringify(getEnabledViewerFontIds()));
+      } catch (error) {
+        // 保存領域が利用できない環境でも、現在の画面では設定を反映する。
+      }
+    }
+
+    function applyViewerFontIds(value) {
+      const enabledIds = normalizeViewerFontIds(value);
+      viewerFontInputs.forEach(function (input) { input.checked = enabledIds.includes(input.value); });
+      applyViewerFontStack();
+    }
+
+    function applyViewerFontStack() {
+      const enabledFonts = viewerFontInputs.filter(function (input) { return input.checked; }).map(function (input) {
+        return VIEWER_FONT_CHOICES[input.value];
+      }).filter(Boolean);
+      enabledFonts.push("sans-serif");
+      viewerMode.style.setProperty("--viewer-font-stack", enabledFonts.join(","));
+      viewerFontInputs.forEach(function (input) {
+        input.setAttribute("aria-label", input.parentElement.textContent.trim() + (input.checked ? " ON" : " OFF"));
+      });
+    }
+
     function makeUrlSaveData(startMode) {
       return {
         v: 1,
@@ -802,6 +881,7 @@ async function initApp() {
         n: noteText.value,
         m: startMode === "editor" ? "editor" : "auto",
         z: getViewerTextSize(),
+        f: getEnabledViewerFontIds(),
         i: images.map(function (image) { return { id: image.id, fileName: image.fileName, dataUrl: image.dataUrl, width: image.width, height: image.height }; })
       };
     }
@@ -850,6 +930,7 @@ async function initApp() {
         note: typeof data.n === "string" ? data.n : "",
         startMode: data.m === "editor" ? "editor" : "auto",
         textSize: ["large", "medium"].includes(data.z) ? data.z : "small",
+        fonts: normalizeViewerFontIds(data.f),
         images: Array.isArray(data.i) ? data.i.filter(function (image) {
           return image && typeof image.fileName === "string" && typeof image.dataUrl === "string" && /^data:image\/(?:webp|jpeg|png);base64,/.test(image.dataUrl);
         }).map(function (image) {
@@ -1243,6 +1324,7 @@ async function initApp() {
           note: typeof data.note === "string" ? data.note : "",
           startMode: "editor",
           textSize: ["large", "medium"].includes(data.textSize) ? data.textSize : "small",
+          fonts: normalizeViewerFontIds(data.fonts),
           images: Array.isArray(data.images) ? data.images.filter(function (image) {
             return image && typeof image.fileName === "string" && typeof image.dataUrl === "string" && /^data:image\/(?:webp|jpeg|png);base64,/.test(image.dataUrl);
           }).map(function (image) {
@@ -1337,6 +1419,7 @@ async function initApp() {
         note: noteText.value,
         startMode: startMode === "editor" ? "editor" : "auto",
         textSize: getViewerTextSize(),
+        fonts: getEnabledViewerFontIds(),
         images: images.map(function (image) { return { id: image.id, fileName: image.fileName, dataUrl: image.dataUrl, width: image.width, height: image.height }; })
       };
       dataNode.textContent = encodeStoredText(JSON.stringify(data));
@@ -1531,6 +1614,13 @@ async function initApp() {
       });
     });
 
+    viewerFontInputs.forEach(function (input) {
+      input.addEventListener("change", function () {
+        applyViewerFontStack();
+        saveViewerFontIds();
+      });
+    });
+
     imageFileInput.addEventListener("change", function () { addImageFiles(imageFileInput.files); });
 
     ["dragenter", "dragover"].forEach(function (eventName) {
@@ -1609,6 +1699,8 @@ async function initApp() {
     sourceText.value = initialData.source;
     noteText.value = initialData.note;
     applyViewerTextSize(initialData.textSize);
+    const storedViewerFontIds = readStoredViewerFontIds();
+    applyViewerFontIds(storedViewerFontIds === null ? initialData.fonts : storedViewerFontIds);
     images = initialData.images || [];
     renderImageList();
     if (noteText.value.trim()) {
