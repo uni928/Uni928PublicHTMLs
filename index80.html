@@ -240,11 +240,11 @@ a{color:var(--accent);overflow-wrap:anywhere;}
             <p class="font-setting-title">使用するフォント</p>
             <p class="font-setting-note">ONの候補を左から順に試します。端末にないフォントとOFFの候補はスキップします。ON/OFF状態は再読み込み後も保持します。</p>
             <div class="font-options" aria-label="閲覧画面で使用するフォント">
+              <label class="font-option"><input type="checkbox" name="viewerFont" value="noto-sans-jp" checked><span>Noto Sans JP</span><span class="font-option-state" aria-hidden="true"></span></label>
+              <label class="font-option"><input type="checkbox" name="viewerFont" value="meiryo" checked><span>メイリオ</span><span class="font-option-state" aria-hidden="true"></span></label>
               <label class="font-option"><input type="checkbox" name="viewerFont" value="yu-gothic-ui" checked><span>游ゴシック UI</span><span class="font-option-state" aria-hidden="true"></span></label>
               <label class="font-option"><input type="checkbox" name="viewerFont" value="biz-udp-gothic" checked><span>BIZ UDPゴシック</span><span class="font-option-state" aria-hidden="true"></span></label>
               <label class="font-option"><input type="checkbox" name="viewerFont" value="hiragino-sans" checked><span>ヒラギノ角ゴ</span><span class="font-option-state" aria-hidden="true"></span></label>
-              <label class="font-option"><input type="checkbox" name="viewerFont" value="noto-sans-jp" checked><span>Noto Sans JP</span><span class="font-option-state" aria-hidden="true"></span></label>
-              <label class="font-option"><input type="checkbox" name="viewerFont" value="meiryo" checked><span>メイリオ</span><span class="font-option-state" aria-hidden="true"></span></label>
               <label class="font-option"><input type="checkbox" name="viewerFont" value="system-ui" checked><span>システムUI</span><span class="font-option-state" aria-hidden="true"></span></label>
             </div>
           </div>
@@ -333,7 +333,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
   </main>
 
   <script id="initialData" type="application/json">
-{"title":"","source":"","createdAt":"","note":"","startMode":"auto","textSize":"small","fonts":["yu-gothic-ui","biz-udp-gothic","hiragino-sans","noto-sans-jp","meiryo","system-ui"],"images":[]}
+{"title":"","source":"","createdAt":"","note":"","startMode":"auto","textSize":"small","fonts":["noto-sans-jp","meiryo","yu-gothic-ui","biz-udp-gothic","hiragino-sans","system-ui"],"images":[]}
 </script>
   <script>
 async function initApp() {
