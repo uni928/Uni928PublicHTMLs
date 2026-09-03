@@ -20,6 +20,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 }
 @layer layout{
 .app{width:min(920px,calc(100% - 28px));margin:0 auto;padding:28px 0 52px;}
+#viewerMode{width:min(820px,calc(100% - 28px));}
 .hero{margin-bottom:18px;text-align:center;}
 .hero h1{margin:0;font-size:clamp(1.7rem,4vw,2.6rem);letter-spacing:-.04em;}
 .hero p{max-width:740px;margin:10px auto 0;color:var(--muted);line-height:1.8;}
@@ -50,7 +51,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .file-save-groups{display:grid;gap:14px;}
 .file-save-group{padding:14px;border:1px solid var(--line);border-radius:13px;background:#fff;}
 .file-save-group h3{margin:0 0 6px;font-size:1rem;}
-.file-save-group p{margin:0 0 10px;color:var(--muted);font-size:.86rem;line-height:1.6;}
+.file-save-group p{margin:0 0 10px;color:var(--muted);font-size:.82rem;line-height:1.6;}
 .file-save-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
 .file-save-actions button{width:100%;}
 .url-save-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
@@ -91,24 +92,22 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .image-missing{display:inline-block;margin:10px 0;padding:9px 12px;border:1px dashed var(--danger);border-radius:10px;color:var(--danger);background:#fff;}
 }
 @layer viewer{
-.document{position:relative;padding:clamp(24px,5vw,48px);}
+.document{position:relative;padding:clamp(24px,4.5vw,42px);border-radius:18px;box-shadow:0 14px 36px rgba(30,41,59,.08);}
 .viewer-actions{position:absolute;top:16px;right:16px;display:flex;gap:8px;}
 .viewer-actions button{min-height:42px;}
-.document h1{margin:0 110px 28px 0;font-size:clamp(1.8rem,5vw,2.8rem);line-height:1.25;letter-spacing:-.035em;}
-.document h2{margin:34px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--accent-soft);font-size:clamp(1.2rem,3vw,1.55rem);line-height:1.45;}
-.document p,.document li,.document blockquote{font-size:clamp(1rem,2.2vw,1.08rem);line-height:1.9;}
+.document h1{margin:0 110px 28px 0;font-size:clamp(1.7rem,4.6vw,2.55rem);line-height:1.25;letter-spacing:-.035em;}
+.document h2{margin:34px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--accent-soft);font-size:clamp(1.14rem,2.8vw,1.45rem);line-height:1.45;}
+.document p,.document li,.document blockquote{font-size:clamp(.96rem,2vw,1.03rem);line-height:1.9;}
 .document p{margin:0 0 18px;}
 .document ul{margin:0 0 22px;padding-left:1.5em;}
 .document li + li{margin-top:8px;}
 .document blockquote{margin:20px 0;padding:15px 18px;border-left:5px solid var(--accent);border-radius:0 12px 12px 0;background:var(--accent-soft);}
-.link-card{margin:20px 0;}
-.link-card a{display:block;padding:16px 18px;border:1px solid #bfd2f5;border-radius:14px;background:var(--accent-soft);text-decoration:none;font-weight:700;}
-.meta{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:.86rem;}
-.document h3{margin:28px 0 12px;font-size:1.2rem;}
+.meta{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem;}
+.document h3{margin:28px 0 12px;font-size:1.14rem;}
 .document h4,.document h5,.document h6{margin:24px 0 10px;line-height:1.5;}
 .document ol{margin:0 0 22px;padding-left:1.7em;}
 .document pre{overflow-x:auto;margin:20px 0;padding:16px;border-radius:14px;background:#0f172a;color:#e2e8f0;line-height:1.65;}
-.document code{padding:.14em .38em;border-radius:6px;background:#eef2f7;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.92em;}
+.document code{padding:.14em .38em;border-radius:6px;background:#eef2f7;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.9em;}
 .document pre code{padding:0;background:transparent;color:inherit;}
 .document hr{margin:30px 0;border:0;border-top:1px solid var(--line);}
 .table-wrap{overflow-x:auto;margin:20px 0;}
@@ -122,6 +121,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 @layer responsive{
 @media (max-width:620px){
 .app{width:min(100% - 16px,920px);padding-top:10px;}
+#viewerMode{width:min(100% - 16px,820px);}
 .editor-panel,.document{padding:18px;border-radius:18px;}
 .text-input{min-height:55vh;}
 .note-panel .text-input{min-height:120px;}
@@ -1145,27 +1145,6 @@ async function initApp() {
       return true;
     }
 
-    async function findBestSafeCompression(bytes) {
-      if (!("CompressionStream" in window) || !("DecompressionStream" in window)) {
-        throw new Error("This browser does not support the compression/decompression features required for HTML saving.");
-      }
-      const formats = ["brotli", "deflate-raw", "gzip"];
-      const results = [];
-      for (const format of formats) {
-        try {
-          new DecompressionStream(format);
-          const compressed = await compressWithFormat(bytes, format);
-          const restored = await decompressWithFormat(compressed, format);
-          if (sameBytes(bytes, restored)) results.push({ format: format, bytes: compressed });
-        } catch (error) {
-          // Ignore unsupported formats and compare only available ones.
-        }
-      }
-      if (!results.length) throw new Error("No supported compression method is available for HTML saving.");
-      results.sort(function (a, b) { return a.bytes.length - b.bytes.length; });
-      return results[0];
-    }
-
     function makeSafePackedHtml(base64, format) {
       return '<!doctype html><meta charset=utf-8><script>' +
         'let b=' + JSON.stringify(base64) + ',f=' + JSON.stringify(format) + ';' +
@@ -1180,66 +1159,11 @@ async function initApp() {
         '<\/script>';
     }
 
-    async function packSelfHtmlSafely(html) {
-      const sourceBytes = new TextEncoder().encode(html);
-      const best = await findBestSafeCompression(sourceBytes);
-      const restored = await decompressWithFormat(best.bytes, best.format);
-      if (!sameBytes(sourceBytes, restored)) throw new Error("Restore verification failed. The restored HTML does not match the original.");
-      const packedHtml = makeSafePackedHtml(bytesToBase64(best.bytes), best.format);
-      return {
-        html: packedHtml,
-        format: best.format,
-        sourceBytes: sourceBytes.length,
-        packedBytes: new TextEncoder().encode(packedHtml).length
-      };
-    }
-
-    function textToBase64(value) {
-      const bytes = new TextEncoder().encode(String(value));
-      return bytesToBase64(bytes);
-    }
-
     function base64ToText(value) {
       const binary = atob(String(value));
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
       return new TextDecoder().decode(bytes);
-    }
-
-    function makeEditorTransferData() {
-      applyMarkdownTitle();
-      return {
-        v: 1,
-        title: titleInput.value,
-        source: sourceText.value,
-        note: noteText.value,
-        images: images.map(function (image) { return { id: image.id, fileName: image.fileName, dataUrl: image.dataUrl, width: image.width, height: image.height }; })
-      };
-    }
-
-    async function saveEditorTransfer(useCompression, button) {
-      const originalText = button.textContent;
-      try {
-        applyMarkdownTitle();
-        if (!sourceText.value.length && !titleInput.value.length) throw new Error("Enter at least one character in the title or content.");
-        button.disabled = true;
-        button.textContent = "Saving…";
-        const json = JSON.stringify(makeEditorTransferData());
-        let payload;
-        if (useCompression) {
-          const bytes = new TextEncoder().encode(json);
-          const best = await findBestSafeCompression(bytes);
-          payload = { v: 1, packed: true, format: best.format, base64: bytesToBase64(best.bytes) };
-        } else {
-          payload = { v: 1, packed: false, base64: textToBase64(json) };
-        }
-        localStorage.setItem(EDITOR_TRANSFER_STORAGE_KEY, JSON.stringify(payload));
-        location.href = LONG_URL_BASE;
-      } catch (error) {
-        button.textContent = "Could not save";
-        showStatus(error && error.message ? "Save failed: " + error.message : "Save failed.", true);
-        setTimeout(function () { button.textContent = originalText; button.disabled = false; }, 1600);
-      }
     }
 
     async function readEditorTransferData() {
@@ -1348,14 +1272,7 @@ async function initApp() {
 
     function buildSelfHtml(startMode) {
       applyMarkdownTitle();
-      let clone;
-      const decompressedSourceHtml = typeof window.__UNI928_DECOMPRESSED_SOURCE_HTML__ === "string" ? window.__UNI928_DECOMPRESSED_SOURCE_HTML__ : "";
-      if (decompressedSourceHtml) {
-        const parsed = new DOMParser().parseFromString(decompressedSourceHtml, "text/html");
-        clone = parsed.documentElement.cloneNode(true);
-      } else {
-        clone = document.documentElement.cloneNode(true);
-      }
+      const clone = document.documentElement.cloneNode(true);
       const dataNode = clone.querySelector("#initialData");
       if (!dataNode) throw new Error("Could not find the initial data area for saving.");
       const data = {
