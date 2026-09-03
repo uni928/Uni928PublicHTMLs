@@ -326,10 +326,6 @@ async function initApp() {
     ];
     const LEGACY_URL_HASH_KEY = "saved";
     const EDITOR_TRANSFER_STORAGE_KEY = "uni928-index80-editor-transfer-v1";
-    const OPENER_TRANSFER_HASH_PREFIX = "#transfer=";
-    const OPENER_TRANSFER_MESSAGE_TYPE = "uni928-index80-transfer-v1";
-    const OPENER_TRANSFER_READY_TYPE = "uni928-index80-transfer-ready-v1";
-    const OPENER_TRANSFER_ORIGIN = new URL(LONG_URL_BASE).origin;
     const compressionSteps = [
       [768, 0.72], [640, 0.66], [560, 0.60], [480, 0.54], [420, 0.48],
       [360, 0.42], [320, 0.36], [280, 0.30], [240, 0.24], [200, 0.18], [160, 0.12]
@@ -826,54 +822,6 @@ async function initApp() {
       }
     }
 
-    function getOpenerTransferNonce() {
-      if (!location.hash.startsWith(OPENER_TRANSFER_HASH_PREFIX)) return "";
-      const nonce = location.hash.slice(OPENER_TRANSFER_HASH_PREFIX.length);
-      return /^[A-Za-z0-9_-]{16,128}$/.test(nonce) ? nonce : "";
-    }
-
-    async function readOpenerTransferData() {
-      const nonce = getOpenerTransferNonce();
-      if (!nonce) return null;
-      return await new Promise(function (resolve) {
-        let finished = false;
-        let timeoutId = 0;
-        const finish = function (value) {
-          if (finished) return;
-          finished = true;
-          clearTimeout(timeoutId);
-          window.removeEventListener("message", onMessage);
-          if (value) {
-            try { history.replaceState(null, "", location.pathname + location.search); } catch (error) {}
-          }
-          resolve(value);
-        };
-        const onMessage = async function (event) {
-          const message = event.data;
-          if (!message || message.type !== OPENER_TRANSFER_MESSAGE_TYPE || message.nonce !== nonce) return;
-          if (event.origin !== "null") return;
-          const payload = message.payload;
-          if (!payload || typeof payload.encoded !== "string" || typeof payload.format !== "string") return;
-          try {
-            const data = await decodeUrlSaveData(payload.encoded, payload.format);
-            try {
-              if (event.source) event.source.postMessage({ type: "uni928-index80-transfer-complete-v1", nonce: nonce }, "*");
-            } catch (error) {}
-            finish(data);
-          } catch (error) {
-            console.error(error);
-            showStatus(error && error.message ? "受け渡しデータを開けませんでした：" + error.message : "受け渡しデータを開けませんでした。", true);
-            finish(null);
-          }
-        };
-        window.addEventListener("message", onMessage);
-        timeoutId = setTimeout(function () {
-          showStatus("受け渡しデータを受信できませんでした。元のローカルHTMLを開いたまま再試行してください。", true);
-          finish(null);
-        }, 20000);
-      });
-    }
-
     function buildUrlWithPayload(payload) {
       return LONG_URL_BASE + "#" + payload.hashKey + "=" + payload.encoded;
     }
@@ -940,14 +888,15 @@ async function initApp() {
         if (serial !== urlSizeUpdateSerial) return;
         const payload = viewerPayload.encoded.length >= editorPayload.encoded.length ? viewerPayload : editorPayload;
         const urlTooLarge = viewerPayload.encoded.length >= URL_BASE64_LIMIT;
+        const packedTooLarge = payload.encoded.length >= PACKED_SAVE_BASE64_LIMIT;
         urlSaveButton.classList.toggle("hidden", urlTooLarge);
         if (urlTooLarge) {
           urlSavePanel.classList.add("hidden");
           urlSaveButton.setAttribute("aria-expanded", "false");
         }
-        packedSaveGroup.classList.remove("hidden");
+        packedSaveGroup.classList.toggle("hidden", packedTooLarge);
         urlSizeInfo.textContent = "現在の最短形式（" + viewerPayload.format + "）の圧縮後Base64：" + viewerPayload.encoded.length.toLocaleString("ja-JP") + " / " + URL_BASE64_LIMIT.toLocaleString("ja-JP") + "文字" + (urlTooLarge ? "（URL保存の上限を超えています）" : "");
-        packedSaveSizeInfo.textContent = "現在の最短形式（" + payload.format + "）の圧縮後Base64：" + payload.encoded.length.toLocaleString("ja-JP") + "文字" + (payload.encoded.length >= PACKED_SAVE_BASE64_LIMIT ? "（大容量のためページ間転送方式を使用）" : "");
+        packedSaveSizeInfo.textContent = "現在の最短形式（" + payload.format + "）の圧縮後Base64：" + payload.encoded.length.toLocaleString("ja-JP") + " / " + PACKED_SAVE_BASE64_LIMIT.toLocaleString("ja-JP") + "文字";
       } catch (error) {
         if (serial !== urlSizeUpdateSerial) return;
         urlSaveButton.classList.add("hidden");
@@ -1411,26 +1360,6 @@ async function initApp() {
       return '<!doctype html><meta charset="utf-8"><script>location.replace(' + JSON.stringify(targetUrl) + ')<\/script>';
     }
 
-    function makeTransferNonce() {
-      const bytes = new Uint8Array(18);
-      crypto.getRandomValues(bytes);
-      return bytesToBase64Url(bytes);
-    }
-
-    function makeOpenerTransferHtml(payload, nonce) {
-      const targetUrl = LONG_URL_BASE + OPENER_TRANSFER_HASH_PREFIX + nonce;
-      const packed = { encoded: payload.encoded, format: payload.format };
-      return '<!doctype html><meta charset=utf-8><title>移動中...</title><body><button id=b hidden>閲覧用サイトを開く</button><p id=s>移動中...</p><script>' +
-        'const u=' + JSON.stringify(targetUrl) + ',o=' + JSON.stringify(OPENER_TRANSFER_ORIGIN) + ',n=' + JSON.stringify(nonce) + ',p=' + JSON.stringify(packed) + ';let w=null,done=false,t=0;' +
-        'const b=document.getElementById("b"),s=document.getElementById("s");' +
-        'function stop(){if(t){clearInterval(t);t=0}}' +
-        'function send(){if(!w||w.closed){stop();return}try{w.postMessage({type:"' + OPENER_TRANSFER_MESSAGE_TYPE + '",nonce:n,payload:p},o)}catch(e){}}' +
-        'function go(){stop();done=false;b.hidden=true;s.textContent="移動中...";w=open("about:blank","_blank");if(!w){b.hidden=false;s.textContent="自動で開けませんでした。";return}try{w.location.replace(u)}catch(e){w.location.href=u}send();t=setInterval(send,250);setTimeout(()=>{if(!done){b.hidden=false;s.textContent="受け渡し中です。進まない場合はボタンを押してください。"}},2000)}' +
-        'addEventListener("message",e=>{if(!w||e.source!==w||e.origin!==o||!e.data||e.data.nonce!==n)return;if(e.data.type==="uni928-index80-transfer-complete-v1"){done=true;stop();b.hidden=true;s.textContent="閲覧用サイトを開きました。"}});' +
-        'b.onclick=go;go();' +
-        '<\/script></body>';
-    }
-
     async function downloadLightweightRedirect(startMode, button) {
       const originalText = button.textContent;
       applyMarkdownTitle();
@@ -1443,10 +1372,9 @@ async function initApp() {
         button.disabled = true;
         button.textContent = "容量削減中…";
         const payload = await encodeUrlSaveData(startMode);
-        const usesTransfer = payload.encoded.length >= PACKED_SAVE_BASE64_LIMIT;
-        const html = usesTransfer
-          ? makeOpenerTransferHtml(payload, makeTransferNonce())
-          : makeLightweightRedirectHtml(buildUrlWithPayload(payload));
+        if (payload.encoded.length >= PACKED_SAVE_BASE64_LIMIT) throw new Error("圧縮後のBase64データが" + PACKED_SAVE_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため、容量削減保存できません。");
+        const targetUrl = buildUrlWithPayload(payload);
+        const html = makeLightweightRedirectHtml(targetUrl);
         const blob = new Blob([html], { type: "text/html;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const anchor = document.createElement("a");
@@ -1458,7 +1386,7 @@ async function initApp() {
         setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
         const htmlBytes = new TextEncoder().encode(html).length;
         const modeText = startMode === "editor" ? "編集作業継続用HTML" : "閲覧用HTML";
-        showStatus(modeText + "を容量削減保存しました。" + (usesTransfer ? "大容量のためページ間転送方式を使用します。" : "URL埋め込み方式を使用します。") + " 圧縮形式：" + payload.format + "、ファイル：約" + htmlBytes.toLocaleString("ja-JP") + " bytes");
+        showStatus(modeText + "を容量削減保存しました。内容を" + payload.format + "で圧縮し、保存HTMLはリダイレクト処理だけを保持します。ファイル：約" + htmlBytes.toLocaleString("ja-JP") + " bytes");
       } catch (error) {
         showStatus(error && error.message ? "保存に失敗しました：" + error.message : "保存に失敗しました。", true);
       } finally {
@@ -1653,10 +1581,9 @@ async function initApp() {
       }
     });
 
-    const openerTransferData = await readOpenerTransferData();
-    const editorTransferData = openerTransferData ? null : await readEditorTransferData();
-    const urlInitialData = openerTransferData || editorTransferData ? null : await readUrlSaveData();
-    const initialData = openerTransferData || editorTransferData || urlInitialData || readInitialData();
+    const editorTransferData = await readEditorTransferData();
+    const urlInitialData = editorTransferData ? null : await readUrlSaveData();
+    const initialData = editorTransferData || urlInitialData || readInitialData();
     titleInput.value = initialData.title;
     sourceText.value = initialData.source;
     noteText.value = initialData.note;
