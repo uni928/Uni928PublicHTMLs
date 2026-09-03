@@ -391,7 +391,7 @@ async function initApp() {
     ];
     const LEGACY_URL_HASH_KEY = "saved";
     const EDITOR_TRANSFER_STORAGE_KEY = "uni928-index80-editor-transfer-v1";
-    const VIEWER_FONT_STORAGE_KEY = "uni928-index80-viewer-fonts-v1";
+    const VIEWER_FONT_STORAGE_PREFIX = "uni928-index80-viewer-fonts-v1:";
     const compressionSteps = [
       [768, 0.72], [640, 0.66], [560, 0.60], [480, 0.54], [420, 0.48],
       [360, 0.42], [320, 0.36], [280, 0.30], [240, 0.24], [200, 0.18], [160, 0.12]
@@ -839,9 +839,19 @@ async function initApp() {
       return viewerFontInputs.filter(function (input) { return input.checked; }).map(function (input) { return input.value; });
     }
 
+    function getViewerFontStorageKey() {
+      const pageIdentity = location.href;
+      let hash = 2166136261;
+      for (let index = 0; index < pageIdentity.length; index++) {
+        hash ^= pageIdentity.charCodeAt(index);
+        hash = Math.imul(hash, 16777619);
+      }
+      return VIEWER_FONT_STORAGE_PREFIX + (hash >>> 0).toString(36);
+    }
+
     function readStoredViewerFontIds() {
       try {
-        const stored = localStorage.getItem(VIEWER_FONT_STORAGE_KEY);
+        const stored = localStorage.getItem(getViewerFontStorageKey());
         return stored === null ? null : normalizeViewerFontIds(JSON.parse(stored));
       } catch (error) {
         return null;
@@ -850,7 +860,7 @@ async function initApp() {
 
     function saveViewerFontIds() {
       try {
-        localStorage.setItem(VIEWER_FONT_STORAGE_KEY, JSON.stringify(getEnabledViewerFontIds()));
+        localStorage.setItem(getViewerFontStorageKey(), JSON.stringify(getEnabledViewerFontIds()));
       } catch (error) {
         // 保存領域が利用できない環境でも、現在の画面では設定を反映する。
       }
