@@ -1694,11 +1694,7 @@ async function initApp() {
     document.addEventListener("keydown", function (event) {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
         event.preventDefault();
-        const willOpen = fileSavePanel.classList.contains("hidden");
-        if (willOpen) closeTopPanels(fileSavePanel);
-        fileSavePanel.classList.toggle("hidden", !willOpen);
-        saveMethodButton.setAttribute("aria-expanded", String(willOpen));
-        if (willOpen) updateUrlSaveAvailability();
+        if (!saveEditorPackedButton.disabled) saveEditorPackedButton.click();
       }
     });
 
