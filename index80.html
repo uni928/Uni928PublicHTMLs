@@ -1955,6 +1955,9 @@ async function initApp() {
 
     if (initialData.startMode !== "editor" && (initialData.title + initialData.source).length >= 1) showViewer();
     else showEditor();
+
+    // 読み込み完了後、保存済みのフォント設定を最後にもう一度反映する。
+    applyViewerFontIds(storedViewerFontIds === null ? initialData.fonts : storedViewerFontIds);
   }
 
   if (document.readyState === "loading") window.addEventListener("DOMContentLoaded", initApp, { once: true });
