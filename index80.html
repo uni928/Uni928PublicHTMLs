@@ -44,6 +44,9 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .text-input{min-height:430px;padding:16px;resize:vertical;line-height:1.75;}
 .controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
 .controls .primary-button{flex:1 1 300px;}
+/* 説明サイトへの導線を画面右上へ配置。 */
+.help-site-button{position:fixed;top:16px;right:16px;z-index:20;min-height:40px;padding:0 14px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--accent-dark);font-weight:800;box-shadow:0 8px 24px rgba(30,41,59,.10);}
+.help-site-button:hover{background:var(--accent-soft);}
 .helper{margin-top:14px;padding:14px 16px;border-radius:14px;background:#f8fafc;color:var(--muted);line-height:1.7;font-size:.94rem;}
 .status{min-height:24px;margin-top:12px;color:var(--muted);font-size:.93rem;}
 .status.error{color:var(--danger);}
@@ -190,6 +193,8 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .uni-photo-dropbox__zone{height:190px;}
 .controls{flex-direction:column;}
 .controls button{width:100%;}
+/* モバイルでは右上ボタンを少し小さくする。 */
+.help-site-button{top:8px;right:8px;min-height:36px;padding:0 10px;font-size:.82rem;}
 .password-setting-row{grid-template-columns:1fr;}
 .password-setting-row button{width:100%;}
 .url-save-actions,.file-save-actions{grid-template-columns:1fr;}
@@ -202,6 +207,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 </head>
 <body>
   <main id="editorMode" class="app">
+    <button id="helpSiteButton" class="help-site-button" type="button">説明サイトを見る</button>
     <header class="hero">
       <h1>Markdownから閲覧用サイトを作成</h1>
       <p>Markdown形式の文章を入力して「閲覧用サイトとして保存」ボタンを押す事で、視覚的に見やすい閲覧用HTMLをダウンロードできます。</p>
@@ -1743,6 +1749,9 @@ async function initApp() {
     copyDiscordLinkButton.addEventListener("click", function () { copyDiscordSavedLink(copyDiscordLinkButton); });
     copyEditorUrlButton.addEventListener("click", function () { copySavedUrl("editor", copyEditorUrlButton); });
     document.getElementById("viewButton").addEventListener("click", showViewer);
+    document.getElementById("helpSiteButton").addEventListener("click", function () {
+      window.open("https://uni928.github.io/Uni928PublicHTMLs/index80exp1.html", "_blank", "noopener,noreferrer");
+    });
     document.getElementById("editButton").addEventListener("click", showEditor);
     noteEditButton.addEventListener("click", function () {
       const willOpen = notePanel.classList.contains("hidden");
