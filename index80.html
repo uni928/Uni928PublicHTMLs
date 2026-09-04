@@ -103,6 +103,11 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .size-option input{inline-size:17px;block-size:17px;margin:0;}
 /* フォント候補を左から順に試せるON/OFF設定を追加。 */
 .font-setting{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);}
+/* 保存データ暗号化用パスワード設定。 */
+.password-setting{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);}
+.password-setting-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:stretch;}
+.password-setting-row .password-input{margin:0;min-height:48px;}
+.password-setting-row button{white-space:nowrap;}
 .font-setting-title{margin:0 0 5px;font-size:.94rem;font-weight:800;}
 .font-setting-note{margin:0 0 10px;color:var(--muted);font-size:.82rem;line-height:1.6;}
 .font-options{display:flex;flex-wrap:wrap;gap:8px;}
@@ -185,6 +190,8 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .uni-photo-dropbox__zone{height:190px;}
 .controls{flex-direction:column;}
 .controls button{width:100%;}
+.password-setting-row{grid-template-columns:1fr;}
+.password-setting-row button{width:100%;}
 .url-save-actions,.file-save-actions{grid-template-columns:1fr;}
 .viewer-actions{position:static;justify-content:flex-end;margin:-4px 0 14px;}
 .viewer-size-switch{order:-1;}
@@ -247,7 +254,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 
       <section class="size-panel" aria-labelledby="sizePanelTitle">
         <div class="image-panel-head">
-          <h2 id="sizePanelTitle">サイズ感設定</h2>
+          <h2 id="sizePanelTitle">設定</h2>
           <button id="sizePanelToggle" class="image-panel-toggle" type="button" aria-expanded="false" aria-controls="sizePanelBody">開く</button>
         </div>
         <div id="sizePanelBody" class="size-panel-body hidden">
@@ -267,6 +274,14 @@ a{color:var(--accent);overflow-wrap:anywhere;}
               <label class="font-option"><input type="checkbox" name="viewerFont" value="biz-udp-gothic" checked><span>BIZ UDPゴシック</span><span class="font-option-state" aria-hidden="true"></span></label>
               <label class="font-option"><input type="checkbox" name="viewerFont" value="hiragino-sans" checked><span>ヒラギノ角ゴ</span><span class="font-option-state" aria-hidden="true"></span></label>
               <label class="font-option"><input type="checkbox" name="viewerFont" value="system-ui" checked><span>システムUI</span><span class="font-option-state" aria-hidden="true"></span></label>
+            </div>
+          </div>
+          <div class="password-setting">
+            <label class="font-setting-title" for="savePassword">保存用パスワード</label>
+            <p class="font-setting-note">空欄なら暗号化しません。入力時は保存データをAES-GCMで暗号化します。パスワードは暗号化保存または復号に成功した場合のみ、このブラウザのIndexedDBへ平文で保存されます。</p>
+            <div class="password-setting-row">
+              <input id="savePassword" class="title-input password-input" type="password" value="" autocomplete="new-password" placeholder="パスワード（空欄なら暗号化なし）">
+              <button id="randomPasswordButton" class="secondary-button" type="button">ランダムなパスワードを設定</button>
             </div>
           </div>
         </div>
@@ -387,6 +402,8 @@ async function initApp() {
     const viewerTextSizeInputs = Array.from(document.querySelectorAll('input[name="viewerTextSize"]'));
     const viewerSizeButtons = Array.from(document.querySelectorAll('[data-viewer-size]'));
     const viewerFontInputs = Array.from(document.querySelectorAll('input[name="viewerFont"]'));
+    const savePasswordInput = document.getElementById("savePassword");
+    const randomPasswordButton = document.getElementById("randomPasswordButton");
     const imageDropZone = document.getElementById("imageDropZone");
     const insertAtCursorCheck = document.getElementById("insertAtCursorCheck");
     const saveMethodButton = document.getElementById("saveMethodButton");
@@ -419,6 +436,9 @@ async function initApp() {
     const LEGACY_URL_HASH_KEY = "saved";
     const EDITOR_TRANSFER_STORAGE_KEY = "uni928-index80-editor-transfer-v1";
     const VIEWER_FONT_STORAGE_PREFIX = "uni928-index80-viewer-fonts-v1:";
+    const PASSWORD_DB_NAME = "uni928-index80-passwords-v1";
+    const PASSWORD_STORE_NAME = "passwords";
+    const PASSWORD_KDF_ITERATIONS = 200000;
     const compressionSteps = [
       [768, 0.72], [640, 0.66], [560, 0.60], [480, 0.54], [420, 0.48],
       [360, 0.42], [320, 0.36], [280, 0.30], [240, 0.24], [200, 0.18], [160, 0.12]
@@ -694,6 +714,7 @@ async function initApp() {
           source: typeof parsed.source === "string" ? parsed.source : "",
           createdAt: typeof parsed.createdAt === "string" ? parsed.createdAt : "",
           note: typeof parsed.note === "string" ? parsed.note : "",
+          savePassword: typeof parsed.savePassword === "string" ? parsed.savePassword : "",
           startMode: parsed.startMode === "editor" ? "editor" : "auto",
           textSize: ["large", "medium"].includes(parsed.textSize) ? parsed.textSize : "small",
           fonts: normalizeViewerFontIds(parsed.fonts),
@@ -704,7 +725,7 @@ async function initApp() {
           }) : []
         };
       } catch (error) {
-        return { title: "", source: "", createdAt: "", note: "", startMode: "auto", textSize: "medium", fonts: Object.keys(VIEWER_FONT_CHOICES), images: [] };
+        return { title: "", source: "", createdAt: "", note: "", savePassword: "", startMode: "auto", textSize: "medium", fonts: Object.keys(VIEWER_FONT_CHOICES), images: [] };
       }
     }
 
@@ -845,6 +866,124 @@ async function initApp() {
       return bytes;
     }
 
+
+    function concatBytes() {
+      const arrays = Array.from(arguments);
+      const total = arrays.reduce(function (sum, value) { return sum + value.length; }, 0);
+      const output = new Uint8Array(total);
+      let offset = 0;
+      arrays.forEach(function (value) { output.set(value, offset); offset += value.length; });
+      return output;
+    }
+
+    function randomBase64Password32() {
+      const bytes = crypto.getRandomValues(new Uint8Array(24));
+      return bytesToBase64(bytes);
+    }
+
+    function openPasswordDb() {
+      return new Promise(function (resolve, reject) {
+        if (!("indexedDB" in window)) { reject(new Error("IndexedDBを利用できません。")); return; }
+        const request = indexedDB.open(PASSWORD_DB_NAME, 1);
+        request.onupgradeneeded = function () {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(PASSWORD_STORE_NAME)) db.createObjectStore(PASSWORD_STORE_NAME, { keyPath: "id" });
+        };
+        request.onsuccess = function () { resolve(request.result); };
+        request.onerror = function () { reject(request.error || new Error("IndexedDBを開けませんでした。")); };
+      });
+    }
+
+    async function saveSuccessfulPassword(id, password) {
+      if (!id || !password) return;
+      try {
+        const db = await openPasswordDb();
+        await new Promise(function (resolve, reject) {
+          const tx = db.transaction(PASSWORD_STORE_NAME, "readwrite");
+          tx.objectStore(PASSWORD_STORE_NAME).put({ id: id, password: password, savedAt: Date.now() });
+          tx.oncomplete = resolve;
+          tx.onerror = function () { reject(tx.error); };
+          tx.onabort = function () { reject(tx.error); };
+        });
+        db.close();
+      } catch (error) {
+        console.warn("パスワードをIndexedDBへ保存できませんでした。", error);
+      }
+    }
+
+    async function readSuccessfulPassword(id) {
+      if (!id) return "";
+      try {
+        const db = await openPasswordDb();
+        const value = await new Promise(function (resolve, reject) {
+          const tx = db.transaction(PASSWORD_STORE_NAME, "readonly");
+          const request = tx.objectStore(PASSWORD_STORE_NAME).get(id);
+          request.onsuccess = function () { resolve(request.result && typeof request.result.password === "string" ? request.result.password : ""); };
+          request.onerror = function () { reject(request.error); };
+        });
+        db.close();
+        return value;
+      } catch (error) {
+        return "";
+      }
+    }
+
+    async function deriveEncryptionKey(password, salt) {
+      const material = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]);
+      return crypto.subtle.deriveKey({ name: "PBKDF2", hash: "SHA-256", salt: salt, iterations: PASSWORD_KDF_ITERATIONS }, material, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+    }
+
+    async function encryptBytes(bytes, password) {
+      if (!password) return null;
+      if (!crypto || !crypto.subtle) throw new Error("このブラウザは暗号化機能に対応していません。");
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const idBytes = crypto.getRandomValues(new Uint8Array(16));
+      const id = bytesToBase64Url(idBytes);
+      const key = await deriveEncryptionKey(password, salt);
+      const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, bytes));
+      const packed = concatBytes(new Uint8Array([1]), idBytes, salt, iv, encrypted);
+      return { encoded: bytesToBase64Url(packed), id: id };
+    }
+
+    function parseEncryptedBytes(encoded) {
+      const packed = base64UrlToBytes(encoded);
+      if (packed.length < 46 || packed[0] !== 1) throw new Error("暗号化データの形式が正しくありません。");
+      return { id: bytesToBase64Url(packed.slice(1, 17)), salt: packed.slice(17, 33), iv: packed.slice(33, 45), encrypted: packed.slice(45) };
+    }
+
+    async function decryptBytesWithPassword(encoded, password) {
+      const payload = parseEncryptedBytes(encoded);
+      const key = await deriveEncryptionKey(password, payload.salt);
+      try {
+        const plain = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: payload.iv }, key, payload.encrypted));
+        return { bytes: plain, id: payload.id };
+      } catch (error) {
+        throw new Error("パスワードが違うか、暗号化データが破損しています。");
+      }
+    }
+
+    async function decryptBytesAuto(encoded) {
+      const payload = parseEncryptedBytes(encoded);
+      let password = await readSuccessfulPassword(payload.id);
+      if (password) {
+        try { return await decryptBytesWithPassword(encoded, password); }
+        catch (error) { password = ""; }
+      }
+      while (true) {
+        const entered = window.prompt("この保存データはパスワードで保護されています。パスワードを入力してください。");
+        if (entered === null) throw new Error("パスワード入力がキャンセルされました。");
+        if (!entered) { window.alert("パスワードを入力してください。"); continue; }
+        try {
+          const result = await decryptBytesWithPassword(encoded, entered);
+          await saveSuccessfulPassword(result.id, entered);
+          return result;
+        } catch (error) {
+          window.alert(error.message);
+        }
+      }
+    }
+
     function getViewerTextSize() {
       const selected = viewerTextSizeInputs.find(function (input) { return input.checked; });
       return selected && ["large", "medium", "small"].includes(selected.value) ? selected.value : "small";
@@ -921,6 +1060,7 @@ async function initApp() {
         t: titleInput.value,
         s: sourceText.value,
         n: noteText.value,
+        p: savePasswordInput.value,
         m: startMode === "editor" ? "editor" : "auto",
         z: getViewerTextSize(),
         f: getEnabledViewerFontIds(),
@@ -958,11 +1098,18 @@ async function initApp() {
 
     async function encodeUrlSaveData(startMode) {
       const bytes = new TextEncoder().encode(JSON.stringify(makeUrlSaveData(startMode)));
-      return (await getUrlCompressionCandidates(bytes))[0];
+      const candidate = (await getUrlCompressionCandidates(bytes))[0];
+      const password = savePasswordInput.value;
+      if (!password) return candidate;
+      const encrypted = await encryptBytes(base64UrlToBytes(candidate.encoded), password);
+      return { format: candidate.format, hashKey: "e" + candidate.hashKey, encoded: encrypted.encoded, encrypted: true, passwordId: encrypted.id, password: password };
     }
 
-    async function decodeUrlSaveData(encoded, format) {
-      const decompressedBytes = await decompressWithFormat(base64UrlToBytes(encoded), format);
+    async function decodeUrlSaveData(encoded, format, encrypted) {
+      let compressedBytes;
+      if (encrypted) compressedBytes = (await decryptBytesAuto(encoded)).bytes;
+      else compressedBytes = base64UrlToBytes(encoded);
+      const decompressedBytes = await decompressWithFormat(compressedBytes, format);
       const data = JSON.parse(new TextDecoder().decode(decompressedBytes));
       if (!data || data.v !== 1) throw new Error("対応していないURL保存データです。");
       return {
@@ -970,6 +1117,7 @@ async function initApp() {
         source: typeof data.s === "string" ? data.s : "",
         createdAt: "",
         note: typeof data.n === "string" ? data.n : "",
+        savePassword: typeof data.p === "string" ? data.p : "",
         startMode: data.m === "editor" ? "editor" : "auto",
         textSize: ["large", "medium"].includes(data.z) ? data.z : "small",
         fonts: normalizeViewerFontIds(data.f),
@@ -985,15 +1133,17 @@ async function initApp() {
       const match = location.hash.match(/^#([^=]+)=([A-Za-z0-9_-]+)$/);
       if (!match) return null;
       if (match[1] === LEGACY_URL_HASH_KEY) return { encoded: match[2], format: "gzip" };
-      const definition = URL_COMPRESSION_FORMATS.find(function (item) { return item.hashKey === match[1]; });
-      return definition ? { encoded: match[2], format: definition.format } : null;
+      const encrypted = match[1].startsWith("e");
+      const rawKey = encrypted ? match[1].slice(1) : match[1];
+      const definition = URL_COMPRESSION_FORMATS.find(function (item) { return item.hashKey === rawKey; });
+      return definition ? { encoded: match[2], format: definition.format, encrypted: encrypted } : null;
     }
 
     async function readUrlSaveData() {
       const payload = readUrlHashPayload();
       if (!payload) return null;
       try {
-        return await decodeUrlSaveData(payload.encoded, payload.format);
+        return await decodeUrlSaveData(payload.encoded, payload.format, payload.encrypted);
       } catch (error) {
         console.error(error);
         showStatus(error && error.message ? "URL保存データを開けませんでした：" + error.message : "URL保存データを開けませんでした。", true);
@@ -1011,7 +1161,7 @@ async function initApp() {
       const payload = await encodeUrlSaveData(startMode);
       if (payload.encoded.length >= URL_BASE64_LIMIT) throw new Error("圧縮後のBase64データが" + URL_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため、URLとして保存できません。");
       const url = buildUrlWithPayload(payload);
-      return { url: url, copyUrl: url, encodedLength: payload.encoded.length, format: payload.format };
+      return { url: url, copyUrl: url, encodedLength: payload.encoded.length, format: payload.format, passwordId: payload.passwordId || "", password: payload.password || "" };
     }
 
     async function copySavedUrl(startMode, button) {
@@ -1021,6 +1171,7 @@ async function initApp() {
         button.textContent = "URLを作成中…";
         const result = await createSavedUrl(startMode);
         await copyText(result.copyUrl);
+        if (result.passwordId && result.password) await saveSuccessfulPassword(result.passwordId, result.password);
         button.textContent = "URLをコピーしました";
         showStatus("URLをクリップボードへコピーしました。圧縮形式：" + result.format + "、圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字");
       } catch (error) {
@@ -1040,6 +1191,7 @@ async function initApp() {
         if (result.encodedLength >= DISCORD_BASE64_LIMIT) throw new Error("圧縮後のBase64データが" + DISCORD_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため、Discode共有用リンクを作成できません。");
         const discordLink = "[資料はこちら](<" + result.copyUrl + ">)";
         await copyText(discordLink);
+        if (result.passwordId && result.password) await saveSuccessfulPassword(result.passwordId, result.password);
         button.textContent = "リンクをコピーしました";
         showStatus("Discode共有用の「資料はこちら」リンクをクリップボードへコピーしました。圧縮形式：" + result.format + "、圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字");
       } catch (error) {
@@ -1323,6 +1475,18 @@ async function initApp() {
       return true;
     }
 
+    function makeEncryptedHtml(encoded, compressed, format) {
+      return '<!doctype html><meta charset="utf-8"><title>パスワード保護されたHTML</title><body><p id="m">保護されたデータを開いています…</p><script>' +
+        'const E=' + JSON.stringify(encoded) + ',C=' + JSON.stringify(Boolean(compressed)) + ',F=' + JSON.stringify(format || "") + ',D="uni928-index80-passwords-v1",S="passwords",I=200000;' +
+        'const b64u=s=>{s=s.replace(/-/g,"+").replace(/_/g,"/");s+="=".repeat((4-s.length%4)%4);return Uint8Array.from(atob(s),c=>c.charCodeAt(0))},u=b=>{let x="";for(let i=0;i<b.length;i+=32768)x+=String.fromCharCode(...b.subarray(i,i+32768));return btoa(x).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/g,"")};' +
+        'const parse=e=>{let p=b64u(e);if(p.length<46||p[0]!==1)throw Error("暗号化データの形式が正しくありません。");return{id:u(p.slice(1,17)),salt:p.slice(17,33),iv:p.slice(33,45),data:p.slice(45)}};' +
+        'const db=()=>new Promise((r,j)=>{let q=indexedDB.open(D,1);q.onupgradeneeded=()=>{let d=q.result;if(!d.objectStoreNames.contains(S))d.createObjectStore(S,{keyPath:"id"})};q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error)});' +
+        'const get=async id=>{try{let d=await db(),v=await new Promise((r,j)=>{let q=d.transaction(S).objectStore(S).get(id);q.onsuccess=()=>r(q.result?.password||"");q.onerror=()=>j(q.error)});d.close();return v}catch(e){return""}},put=async(id,password)=>{try{let d=await db();await new Promise((r,j)=>{let t=d.transaction(S,"readwrite");t.objectStore(S).put({id,password,savedAt:Date.now()});t.oncomplete=r;t.onerror=()=>j(t.error)});d.close()}catch(e){}};' +
+        'const dec=async(e,pw)=>{let p=parse(e),m=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]),k=await crypto.subtle.deriveKey({name:"PBKDF2",hash:"SHA-256",salt:p.salt,iterations:I},m,{name:"AES-GCM",length:256},false,["decrypt"]);try{return{id:p.id,bytes:new Uint8Array(await crypto.subtle.decrypt({name:"AES-GCM",iv:p.iv},k,p.data))}}catch(x){throw Error("パスワードが違うか、データが破損しています。")}};' +
+        '(async()=>{try{let id=parse(E).id,pw=await get(id),r;if(pw){try{r=await dec(E,pw)}catch(e){pw=""}}while(!r){pw=prompt("このHTMLはパスワードで保護されています。パスワードを入力してください。");if(pw===null)throw Error("パスワード入力がキャンセルされました。");if(!pw)continue;try{r=await dec(E,pw);await put(r.id,pw)}catch(e){alert(e.message)}}let x=r.bytes;if(C){let st=new Blob([x]).stream().pipeThrough(new DecompressionStream(F));x=new Uint8Array(await new Response(st).arrayBuffer())}let h=new TextDecoder().decode(x);document.open();document.write(h);document.close()}catch(e){document.getElementById("m").textContent="復号エラー: "+e.message}})();' +
+        '<\/script></body>';
+    }
+
     function makeSafePackedHtml(base64, format) {
       return '<!doctype html><meta charset=utf-8><script>' +
         'let b=' + JSON.stringify(base64) + ',f=' + JSON.stringify(format) + ';' +
@@ -1365,6 +1529,7 @@ async function initApp() {
           source: typeof data.source === "string" ? data.source : "",
           createdAt: "",
           note: typeof data.note === "string" ? data.note : "",
+          savePassword: typeof data.savePassword === "string" ? data.savePassword : "",
           startMode: "editor",
           textSize: ["large", "medium"].includes(data.textSize) ? data.textSize : "small",
           fonts: normalizeViewerFontIds(data.fonts),
@@ -1383,7 +1548,7 @@ async function initApp() {
       }
     }
 
-    function downloadPlainSelf(startMode) {
+    async function downloadPlainSelf(startMode) {
       applyMarkdownTitle();
       if (!sourceText.value.length && !titleInput.value.length) {
         showStatus("文章またはタイトルを1文字以上入力してください。", true);
@@ -1391,7 +1556,14 @@ async function initApp() {
         return;
       }
       try {
-        const html = buildSelfHtml(startMode);
+        let html = buildSelfHtml(startMode);
+        let passwordId = "";
+        const password = savePasswordInput.value;
+        if (password) {
+          const encrypted = await encryptBytes(new TextEncoder().encode(html), password);
+          html = makeEncryptedHtml(encrypted.encoded, false, "");
+          passwordId = encrypted.id;
+        }
         const blob = new Blob([html], { type: "text/html;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const anchor = document.createElement("a");
@@ -1401,6 +1573,7 @@ async function initApp() {
         anchor.click();
         anchor.remove();
         setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        if (passwordId) await saveSuccessfulPassword(passwordId, password);
         showStatus(startMode === "editor" ? "編集作業継続用HTMLを通常保存しました。" : "閲覧用HTMLを通常保存しました。");
       } catch (error) {
         showStatus(error && error.message ? "保存に失敗しました：" + error.message : "保存に失敗しました。", true);
@@ -1424,7 +1597,16 @@ async function initApp() {
         const compressedBytes = await compressWithFormat(sourceBytes, format);
         const restoredBytes = await decompressWithFormat(compressedBytes, format);
         if (!sameBytes(sourceBytes, restoredBytes)) throw new Error("復元チェックに失敗しました。元HTMLと復元結果が一致しません。");
-        const packedHtml = makeSafePackedHtml(bytesToBase64(compressedBytes), format);
+        const password = savePasswordInput.value;
+        let passwordId = "";
+        let packedHtml;
+        if (password) {
+          const encrypted = await encryptBytes(compressedBytes, password);
+          packedHtml = makeEncryptedHtml(encrypted.encoded, true, format);
+          passwordId = encrypted.id;
+        } else {
+          packedHtml = makeSafePackedHtml(bytesToBase64(compressedBytes), format);
+        }
         const packed = {
           html: packedHtml,
           format: format,
@@ -1440,6 +1622,7 @@ async function initApp() {
         anchor.click();
         anchor.remove();
         setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        if (passwordId) await saveSuccessfulPassword(passwordId, password);
         const modeText = startMode === "editor" ? "編集作業継続用HTML" : "閲覧用HTML";
         showStatus(modeText + "を圧縮保存しました。圧縮形式：" + packed.format + "、圧縮前：約" + packed.sourceBytes.toLocaleString("ja-JP") + " bytes、保存ファイル：約" + packed.packedBytes.toLocaleString("ja-JP") + " bytes");
       } catch (error) {
@@ -1460,6 +1643,7 @@ async function initApp() {
         source: sourceText.value,
         createdAt: new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date()),
         note: noteText.value,
+        savePassword: savePasswordInput.value,
         startMode: startMode === "editor" ? "editor" : "auto",
         textSize: getViewerTextSize(),
         fonts: getEnabledViewerFontIds(),
@@ -1471,6 +1655,8 @@ async function initApp() {
       clone.querySelector("#pageTitle").value = "";
       clone.querySelector("#sourceText").textContent = "";
       clone.querySelector("#noteText").textContent = "";
+      const clonedPasswordInput = clone.querySelector("#savePassword");
+      if (clonedPasswordInput) { clonedPasswordInput.value = ""; clonedPasswordInput.setAttribute("value", ""); clonedPasswordInput.type = "password"; }
       clone.querySelector("#imageList").replaceChildren();
       const clonedSizePanelBody = clone.querySelector("#sizePanelBody");
       const clonedSizePanelToggle = clone.querySelector("#sizePanelToggle");
@@ -1508,6 +1694,7 @@ async function initApp() {
         anchor.click();
         anchor.remove();
         setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        if (payload.passwordId && payload.password) await saveSuccessfulPassword(payload.passwordId, payload.password);
         const htmlBytes = new TextEncoder().encode(html).length;
         const modeText = startMode === "editor" ? "編集作業継続用HTML" : "閲覧用HTML";
         showStatus(modeText + "を容量削減保存しました。内容を" + payload.format + "で圧縮し、保存HTMLはリダイレクト処理だけを保持します。ファイル：約" + htmlBytes.toLocaleString("ja-JP") + " bytes");
@@ -1635,6 +1822,16 @@ async function initApp() {
       }
     });
 
+    randomPasswordButton.addEventListener("click", function () {
+      savePasswordInput.value = randomBase64Password32();
+      savePasswordInput.type = "text";
+      savePasswordInput.focus();
+      savePasswordInput.select();
+      scheduleUrlSaveAvailabilityUpdate();
+      showStatus("32文字のランダムなBase64パスワードを設定しました。安全な場所へ控えてください。");
+    });
+    savePasswordInput.addEventListener("input", scheduleUrlSaveAvailabilityUpdate);
+
     imagePanelToggle.addEventListener("click", function () {
       const willOpen = imagePanelBody.classList.contains("hidden");
       imagePanelBody.classList.toggle("hidden", !willOpen);
@@ -1743,6 +1940,7 @@ async function initApp() {
     titleInput.value = initialData.title;
     sourceText.value = initialData.source;
     noteText.value = initialData.note;
+    savePasswordInput.value = typeof initialData.savePassword === "string" ? initialData.savePassword : "";
     applyViewerTextSize(initialData.textSize);
     const storedViewerFontIds = readStoredViewerFontIds();
     applyViewerFontIds(storedViewerFontIds === null ? initialData.fonts : storedViewerFontIds);
