@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+<script>
+if (!location.search) {
+  location.replace(location.pathname + '?' + Date.now() + location.hash);
+}
+</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Markdown形式の文章を読みやすい閲覧ページとして表示し、1つのHTMLとして保存できます。">
