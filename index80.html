@@ -2,8 +2,24 @@
 <html lang="ja">
 <head>
 <script>
-if (!location.search) {
-  location.replace(location.pathname + '?' + Date.now() + location.hash);
+try {
+  const query = location.search;
+
+  // クエリがない、または
+  // "?Date.now()" 形式のクエリで5分以上経過している場合
+  if (
+    !query ||
+    (
+      /^\?\d+$/.test(query) &&
+      Date.now() - Number(query.slice(1)) >= 5 * 60 * 1000
+    )
+  ) {
+    location.replace(
+      location.pathname + '?' + Date.now() + location.hash
+    );
+  }
+} catch (error) {
+  console.error(error);
 }
 </script>
   <meta charset="UTF-8">
