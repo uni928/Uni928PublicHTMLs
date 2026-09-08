@@ -1673,7 +1673,10 @@ async function initApp() {
     }
 
     function makeLightweightRedirectHtml(targetUrl) {
-      return '<!doctype html><meta charset="utf-8"><script>location.replace(' + JSON.stringify(targetUrl) + ')<\/script>';
+      return '<!doctype html><meta charset="utf-8"><script>' +
+        'const u=' + JSON.stringify(targetUrl) + ',i=u.indexOf("#");' +
+        'location.replace((i>=0?u.slice(0,i):u)+"?"+Date.now()+(i>=0?u.slice(i):""))' +
+        '<\/script>';
     }
 
     async function downloadLightweightRedirect(startMode, button) {
@@ -1750,7 +1753,10 @@ async function initApp() {
     copyEditorUrlButton.addEventListener("click", function () { copySavedUrl("editor", copyEditorUrlButton); });
     document.getElementById("viewButton").addEventListener("click", showViewer);
     document.getElementById("helpSiteButton").addEventListener("click", function () {
-      window.open("https://uni928.github.io/Uni928PublicHTMLs/index80exp1.html", "_blank", "noopener,noreferrer");
+      const targetUrl = "https://uni928.github.io/Uni928PublicHTMLs/index80exp1.html";
+      const hashIndex = targetUrl.indexOf("#");
+      const timestampedUrl = (hashIndex >= 0 ? targetUrl.slice(0, hashIndex) : targetUrl) + "?" + Date.now() + (hashIndex >= 0 ? targetUrl.slice(hashIndex) : "");
+      window.open(timestampedUrl, "_blank", "noopener,noreferrer");
     });
     document.getElementById("editButton").addEventListener("click", showEditor);
     noteEditButton.addEventListener("click", function () {
