@@ -324,7 +324,8 @@ a{color:var(--accent);overflow-wrap:anywhere;}
           </div>
           <div class="password-setting">
             <label class="font-setting-title" for="savePassword">保存用パスワード</label>
-            <p class="font-setting-note">空欄なら暗号化しません。入力時は保存データをAES-GCMで暗号化します。パスワードは暗号化保存または復号に成功した場合のみ、このブラウザのIndexedDBへ平文で保存されます。</p>
+            <p class="font-setting-note">空欄なら暗号化しません。入力時は保存データをAES-GCMで暗号化します。パスワードを設定した状態で保存系9種のいずれかが正常に完了した場合、パスワードはIndexedDBへ平文で保存されます。また、閲覧者が暗号化されたデータの復号に成功した場合も、閲覧者のブラウザのIndexedDBへ平文で保存されます。
+</p>
             <div class="password-setting-row">
               <input id="savePassword" class="title-input password-input" type="password" value="" autocomplete="new-password" placeholder="パスワード（空欄なら暗号化なし）">
               <button id="randomPasswordButton" class="secondary-button" type="button">ランダムなパスワードを設定</button>
