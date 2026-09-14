@@ -945,6 +945,19 @@ async function initApp() {
       if (!id || !password) return;
       try {
         const db = await openPasswordDb();
+        const alreadyExists = await new Promise(function (resolve, reject) {
+          const tx = db.transaction(PASSWORD_STORE_NAME, "readonly");
+          const request = tx.objectStore(PASSWORD_STORE_NAME).openCursor();
+          request.onsuccess = function () {
+            const cursor = request.result;
+            if (!cursor) { resolve(false); return; }
+            if (cursor.value && cursor.value.password === password) { resolve(true); return; }
+            cursor.continue();
+          };
+          request.onerror = function () { reject(request.error); };
+          tx.onabort = function () { reject(tx.error); };
+        });
+        if (alreadyExists) { db.close(); return; }
         await new Promise(function (resolve, reject) {
           const tx = db.transaction(PASSWORD_STORE_NAME, "readwrite");
           tx.objectStore(PASSWORD_STORE_NAME).put({ id: id, password: password, savedAt: Date.now() });
@@ -1528,7 +1541,7 @@ async function initApp() {
         'const b64u=s=>{s=s.replace(/-/g,"+").replace(/_/g,"/");s+="=".repeat((4-s.length%4)%4);return Uint8Array.from(atob(s),c=>c.charCodeAt(0))},u=b=>{let x="";for(let i=0;i<b.length;i+=32768)x+=String.fromCharCode(...b.subarray(i,i+32768));return btoa(x).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/g,"")};' +
         'const parse=e=>{let p=b64u(e);if(p.length<46||p[0]!==1)throw Error("暗号化データの形式が正しくありません。");return{id:u(p.slice(1,17)),salt:p.slice(17,33),iv:p.slice(33,45),data:p.slice(45)}};' +
         'const db=()=>new Promise((r,j)=>{let q=indexedDB.open(D,1);q.onupgradeneeded=()=>{let d=q.result;if(!d.objectStoreNames.contains(S))d.createObjectStore(S,{keyPath:"id"})};q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error)});' +
-        'const get=async id=>{try{let d=await db(),v=await new Promise((r,j)=>{let q=d.transaction(S).objectStore(S).get(id);q.onsuccess=()=>r(q.result?.password||"");q.onerror=()=>j(q.error)});d.close();return v}catch(e){return""}},put=async(id,password)=>{try{let d=await db();await new Promise((r,j)=>{let t=d.transaction(S,"readwrite");t.objectStore(S).put({id,password,savedAt:Date.now()});t.oncomplete=r;t.onerror=()=>j(t.error)});d.close()}catch(e){}};' +
+        'const get=async id=>{try{let d=await db(),v=await new Promise((r,j)=>{let q=d.transaction(S).objectStore(S).get(id);q.onsuccess=()=>r(q.result?.password||"");q.onerror=()=>j(q.error)});d.close();return v}catch(e){return""}},put=async(id,password)=>{try{let d=await db(),exists=await new Promise((r,j)=>{let t=d.transaction(S),q=t.objectStore(S).openCursor();q.onsuccess=()=>{let c=q.result;if(!c)return r(false);if(c.value?.password===password)return r(true);c.continue()};q.onerror=()=>j(q.error)});if(exists){d.close();return}await new Promise((r,j)=>{let t=d.transaction(S,"readwrite");t.objectStore(S).put({id,password,savedAt:Date.now()});t.oncomplete=r;t.onerror=()=>j(t.error)});d.close()}catch(e){}};' +
         'const dec=async(e,pw)=>{let p=parse(e),m=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]),k=await crypto.subtle.deriveKey({name:"PBKDF2",hash:"SHA-256",salt:p.salt,iterations:I},m,{name:"AES-GCM",length:256},false,["decrypt"]);try{return{id:p.id,bytes:new Uint8Array(await crypto.subtle.decrypt({name:"AES-GCM",iv:p.iv},k,p.data))}}catch(x){throw Error("パスワードが違うか、データが破損しています。")}};' +
         '(async()=>{try{let id=parse(E).id,pw=await get(id),r;if(pw){try{r=await dec(E,pw)}catch(e){pw=""}}while(!r){pw=prompt("このHTMLはパスワードで保護されています。パスワードを入力してください。");if(pw===null)throw Error("パスワード入力がキャンセルされました。");if(!pw)continue;try{r=await dec(E,pw);await put(r.id,pw)}catch(e){alert(e.message)}}let x=r.bytes;if(C){let st=new Blob([x]).stream().pipeThrough(new DecompressionStream(F));x=new Uint8Array(await new Response(st).arrayBuffer())}let h=new TextDecoder().decode(x);document.open();document.write(h);document.close()}catch(e){document.getElementById("m").textContent="復号エラー: "+e.message}})();' +
         '<\/script></body>';
