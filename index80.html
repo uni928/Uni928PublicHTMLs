@@ -101,7 +101,8 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .file-save-group p{margin:0 0 10px;color:var(--muted);font-size:.82rem;line-height:1.6;}
 .file-save-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
 .file-save-actions button{width:100%;}
-.url-save-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+/* 共有URLボタン追加：横長画面では2×2、スマホではresponsiveで1列。 */
+.url-save-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
 .url-save-actions button{width:100%;}
 .url-size-info{margin:12px 0 0;color:var(--muted);font-size:.84rem;line-height:1.6;}
 .image-panel{margin-top:16px;padding:16px;border:1px solid var(--line);border-radius:14px;background:#f8fafc;}
@@ -237,6 +238,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .help-site-button{position:static;display:inline-flex;align-items:center;justify-content:center;margin-top:10px;min-height:36px;padding:0 12px;font-size:.82rem;}
 .password-setting-row{grid-template-columns:1fr;}
 .password-setting-row button{width:100%;}
+/* 共有URLボタン追加：スマホでは1×4。 */
 .url-save-actions,.file-save-actions{grid-template-columns:1fr;}
 .viewer-actions{position:static;justify-content:flex-end;margin:-4px 0 14px;}
 .viewer-size-switch{order:-1;}
@@ -379,12 +381,13 @@ a{color:var(--accent);overflow-wrap:anywhere;}
       <section id="urlSavePanel" class="url-save-panel hidden" aria-labelledby="urlSaveTitle">
         <h2 id="urlSaveTitle">URLとして保存</h2>
         <p class="url-save-description">
-          現在の内容を圧縮してURL内に保存します。コピーしたURLへアクセスすると、このページで内容を開くことができます。<br>共有のために<a href="https://uni928.github.io/ShareURL/">このサイト</a>を使うのも便利です。
+          現在の内容を圧縮してURL内に保存します。コピーしたURLへアクセスすると、このページで内容を開くことができます。
         </p>
         <div class="url-save-actions">
           <button id="copyViewerUrlButton" class="primary-button" type="button">「閲覧用サイトとして保存」<br>のURLをコピー</button>
           <button id="copyDiscordLinkButton" class="secondary-button" type="button">Discodeで共有用の<br>「資料はこちら」リンクをコピー</button>
           <button id="copyEditorUrlButton" class="secondary-button" type="button">「編集作業継続用サイトを保存」<br>のURLをコピー</button>
+          <button id="copyShareUrlButton" class="secondary-button" type="button">共有に適したURLをコピー</button>
         </div>
         <p id="urlSizeInfo" class="url-size-info"></p>
       </section>
@@ -468,6 +471,7 @@ async function initApp() {
     const copyViewerUrlButton = document.getElementById("copyViewerUrlButton");
     const copyDiscordLinkButton = document.getElementById("copyDiscordLinkButton");
     const copyEditorUrlButton = document.getElementById("copyEditorUrlButton");
+    const copyShareUrlButton = document.getElementById("copyShareUrlButton");
     const urlSizeInfo = document.getElementById("urlSizeInfo");
 
     const IMAGE_BASE64_LIMIT = 18000;
@@ -475,6 +479,7 @@ async function initApp() {
     const URL_BASE64_LIMIT = 10000;
     const PACKED_SAVE_BASE64_LIMIT = 1000000;
     const LONG_URL_BASE = "https://uni928.github.io/Uni928PublicHTMLs/index80.html";
+    const URL_SHARE_BASE = "https://uni928.github.io/ShareURL/?url=";
     const URL_COMPRESSION_FORMATS = [
       { format: "brotli", hashKey: "br" },
       { format: "deflate-raw", hashKey: "dr" },
@@ -1262,11 +1267,36 @@ async function initApp() {
       }
     }
 
+    function buildShareUrl(targetUrl) {
+      const withoutProtocol = targetUrl.startsWith("https://") ? targetUrl.slice(8) : targetUrl.startsWith("http://") ? targetUrl.slice(7) : targetUrl;
+      return URL_SHARE_BASE + encodeURIComponent(withoutProtocol);
+    }
+
+    async function copyShareUrl(button) {
+      const originalText = button.textContent;
+      try {
+        button.disabled = true;
+        button.textContent = "共有URLを作成中…";
+        const result = await createSavedUrl("auto");
+        const shareUrl = buildShareUrl(result.copyUrl);
+        await copyText(shareUrl);
+        if (result.passwordId && result.password) await saveSuccessfulPassword(result.passwordId, result.password);
+        button.textContent = "共有URLをコピーしました";
+        showStatus("共有に適したURLをクリップボードへコピーしました。圧縮形式：" + result.format + "、圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字");
+      } catch (error) {
+        button.textContent = "コピーできませんでした";
+        showStatus(error && error.message ? error.message : "共有用URLの作成に失敗しました。", true);
+      } finally {
+        setTimeout(function () { button.textContent = originalText; button.disabled = false; }, 1600);
+      }
+    }
+
     async function updateUrlSaveAvailability() {
       const serial = ++urlSizeUpdateSerial;
       if (!("CompressionStream" in window) || !("DecompressionStream" in window)) {
         urlSaveButton.classList.add("hidden");
         copyDiscordLinkButton.classList.add("hidden");
+        copyShareUrlButton.classList.add("hidden");
         urlSavePanel.classList.add("hidden");
         urlSaveButton.setAttribute("aria-expanded", "false");
         packedSaveGroup.classList.add("hidden");
@@ -1281,6 +1311,7 @@ async function initApp() {
         const packedTooLarge = payload.encoded.length >= PACKED_SAVE_BASE64_LIMIT;
         urlSaveButton.classList.toggle("hidden", urlTooLarge);
         copyDiscordLinkButton.classList.toggle("hidden", discordTooLarge);
+        copyShareUrlButton.classList.toggle("hidden", urlTooLarge);
         if (urlTooLarge) {
           urlSavePanel.classList.add("hidden");
           urlSaveButton.setAttribute("aria-expanded", "false");
@@ -1292,6 +1323,7 @@ async function initApp() {
         if (serial !== urlSizeUpdateSerial) return;
         urlSaveButton.classList.add("hidden");
         copyDiscordLinkButton.classList.add("hidden");
+        copyShareUrlButton.classList.add("hidden");
         urlSavePanel.classList.add("hidden");
         urlSaveButton.setAttribute("aria-expanded", "false");
         packedSaveGroup.classList.add("hidden");
@@ -1805,6 +1837,7 @@ async function initApp() {
     copyViewerUrlButton.addEventListener("click", function () { copySavedUrl("auto", copyViewerUrlButton); });
     copyDiscordLinkButton.addEventListener("click", function () { copyDiscordSavedLink(copyDiscordLinkButton); });
     copyEditorUrlButton.addEventListener("click", function () { copySavedUrl("editor", copyEditorUrlButton); });
+    copyShareUrlButton.addEventListener("click", function () { copyShareUrl(copyShareUrlButton); });
     document.getElementById("viewButton").addEventListener("click", showViewer);
     document.getElementById("helpSiteButton").addEventListener("click", function () {
       const targetUrl = "https://uni928.github.io/Uni928PublicHTMLs/index80exp1.html";
