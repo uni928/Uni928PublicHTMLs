@@ -1278,6 +1278,7 @@ async function initApp() {
         button.disabled = true;
         button.textContent = "共有URLを作成中…";
         const result = await createSavedUrl("auto");
+        if (result.encodedLength >= DISCORD_BASE64_LIMIT) throw new Error("圧縮後のBase64データが" + DISCORD_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため、共有に適したURLを作成できません。");
         const shareUrl = buildShareUrl(result.copyUrl);
         await copyText(shareUrl);
         if (result.passwordId && result.password) await saveSuccessfulPassword(result.passwordId, result.password);
@@ -1311,13 +1312,13 @@ async function initApp() {
         const packedTooLarge = payload.encoded.length >= PACKED_SAVE_BASE64_LIMIT;
         urlSaveButton.classList.toggle("hidden", urlTooLarge);
         copyDiscordLinkButton.classList.toggle("hidden", discordTooLarge);
-        copyShareUrlButton.classList.toggle("hidden", urlTooLarge);
+        copyShareUrlButton.classList.toggle("hidden", discordTooLarge);
         if (urlTooLarge) {
           urlSavePanel.classList.add("hidden");
           urlSaveButton.setAttribute("aria-expanded", "false");
         }
         packedSaveGroup.classList.toggle("hidden", packedTooLarge);
-        urlSizeInfo.textContent = "現在の最短形式（" + viewerPayload.format + "）の圧縮後Base64：" + viewerPayload.encoded.length.toLocaleString("ja-JP") + "文字 / URL保存上限 " + URL_BASE64_LIMIT.toLocaleString("ja-JP") + "文字" + (discordTooLarge ? "（Discode共有用リンクは" + DISCORD_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため非表示）" : "");
+        urlSizeInfo.textContent = "現在の最短形式（" + viewerPayload.format + "）の圧縮後Base64：" + viewerPayload.encoded.length.toLocaleString("ja-JP") + "文字 / URL保存上限 " + URL_BASE64_LIMIT.toLocaleString("ja-JP") + "文字" + (discordTooLarge ? "（Discode共有用リンク・共有に適したURLは" + DISCORD_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため非表示）" : "");
         packedSaveSizeInfo.textContent = "現在の最短形式（" + payload.format + "）の圧縮後Base64：" + payload.encoded.length.toLocaleString("ja-JP") + " / " + PACKED_SAVE_BASE64_LIMIT.toLocaleString("ja-JP") + "文字";
       } catch (error) {
         if (serial !== urlSizeUpdateSerial) return;
