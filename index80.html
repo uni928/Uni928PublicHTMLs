@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Markdown形式の文章を読みやすい閲覧ページとして表示し、1つのHTMLとして保存できます。">
   <title>Markdownから閲覧用サイトを作成</title>
+
 <script>
 /*
 (() => {
@@ -173,6 +174,13 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .viewer-size-switch button[aria-pressed="true"]{background:var(--accent);color:#fff;}
 .viewer-size-switch button:hover{background:var(--accent-soft);color:var(--accent-dark);}
 .viewer-size-switch button[aria-pressed="true"]:hover{background:var(--accent-dark);color:#fff;}
+/* 閲覧画面に現在のURLを共有するQRコード表示を追加。 */
+.viewer-qr-panel{margin:0 0 24px;padding:16px;border:1px solid var(--line);border-radius:14px;background:#f8fafc;}
+.viewer-qr-title{margin:0 0 12px;font-weight:800;}
+.viewer-qr-box{display:grid;place-items:center;min-height:320px;padding:20px;border:1px solid var(--line);border-radius:16px;background:#fff;}
+.viewer-qr-box img,.viewer-qr-box canvas{display:block;max-width:100%;height:auto;}
+.viewer-qr-help{margin:12px 0 0;color:var(--muted);font-size:.9rem;line-height:1.7;}
+.viewer-qr-status{min-height:1.5em;margin:10px 0 0;color:var(--danger);font-size:.86rem;}
 .document h1{margin:0 240px 28px 0;font-size:clamp(1.7rem,4.6vw,2.55rem);line-height:1.25;letter-spacing:-.035em;}
 .document h2{margin:34px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--accent-soft);font-size:clamp(1.14rem,2.8vw,1.45rem);line-height:1.45;}
 .document p,.document li,.document blockquote{font-size:clamp(.96rem,2vw,1.03rem);line-height:1.9;}
@@ -408,6 +416,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
   <main id="viewerMode" class="app hidden">
     <article class="panel document">
       <div class="viewer-actions">
+        <button id="viewerQrButton" class="secondary-button viewer-qr-button" type="button" aria-expanded="false">共有QRコードを表示</button>
         <div class="viewer-size-switch" role="group" aria-label="文字サイズ">
           <button type="button" data-viewer-size="xlarge" aria-pressed="false">特大</button>
           <button type="button" data-viewer-size="large" aria-pressed="false">大</button>
@@ -418,6 +427,12 @@ a{color:var(--accent);overflow-wrap:anywhere;}
         <div hidden><button id="copyMarkdownButton" class="secondary-button" type="button">Markdownをコピー</button></div>
         <button id="editButton" class="secondary-button" type="button">編集する</button>
       </div>
+      <section id="viewerQrPanel" class="viewer-qr-panel hidden" aria-hidden="true">
+        <div class="viewer-qr-title">このURLのQRコード</div>
+        <div id="viewerQrCode" class="viewer-qr-box" role="img" aria-label="閲覧用サイトURLのQRコード"></div>
+        <p class="viewer-qr-help">QRコードは <a href="https://x.gd/1JQYm" target="_blank" rel="noopener noreferrer">x.gd/1JQYm</a> にアクセスし、表示された読み取りサイトから読み取れます。環境によっては先頭に <code>https://</code> が必要です。</p>
+        <p id="viewerQrStatus" class="viewer-qr-status" role="status" aria-live="polite"></p>
+      </section>
       <h1 id="viewTitle"></h1>
       <div id="viewContent"></div>
       <footer id="viewMeta" class="meta"></footer>
@@ -433,6 +448,13 @@ async function initApp() {
 
     const editorMode = document.getElementById("editorMode");
     const viewerMode = document.getElementById("viewerMode");
+    const viewerQrButton = document.getElementById("viewerQrButton");
+    const viewerQrPanel = document.getElementById("viewerQrPanel");
+    const viewerQrCode = document.getElementById("viewerQrCode");
+    const viewerQrStatus = document.getElementById("viewerQrStatus");
+    const QR_CODE_SCRIPT_URL = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
+    const QR_CODE_URL_BASE = "https://uni928.github.io/Uni928PublicHTMLs/index80.html";
+    let qrCodePluginPromise = null;
     const titleInput = document.getElementById("pageTitle");
     const sourceText = document.getElementById("sourceText");
     const noteText = document.getElementById("noteText");
@@ -1298,6 +1320,7 @@ async function initApp() {
         urlSaveButton.classList.add("hidden");
         copyDiscordLinkButton.classList.add("hidden");
         copyShareUrlButton.classList.add("hidden");
+        viewerQrButton.classList.add("hidden");
         urlSavePanel.classList.add("hidden");
         urlSaveButton.setAttribute("aria-expanded", "false");
         packedSaveGroup.classList.add("hidden");
@@ -1313,6 +1336,7 @@ async function initApp() {
         urlSaveButton.classList.toggle("hidden", urlTooLarge);
         copyDiscordLinkButton.classList.toggle("hidden", discordTooLarge);
         copyShareUrlButton.classList.toggle("hidden", discordTooLarge);
+        viewerQrButton.classList.toggle("hidden", discordTooLarge);
         if (urlTooLarge) {
           urlSavePanel.classList.add("hidden");
           urlSaveButton.setAttribute("aria-expanded", "false");
@@ -1325,6 +1349,7 @@ async function initApp() {
         urlSaveButton.classList.add("hidden");
         copyDiscordLinkButton.classList.add("hidden");
         copyShareUrlButton.classList.add("hidden");
+        viewerQrButton.classList.add("hidden");
         urlSavePanel.classList.add("hidden");
         urlSaveButton.setAttribute("aria-expanded", "false");
         packedSaveGroup.classList.add("hidden");
@@ -1497,6 +1522,76 @@ async function initApp() {
 
     function updateCount() { charCount.textContent = sourceText.value.length.toLocaleString("ja-JP") + "文字"; }
 
+    function hideViewerQrCode() {
+      viewerQrPanel.classList.add("hidden");
+      viewerQrPanel.setAttribute("aria-hidden", "true");
+      viewerQrButton.setAttribute("aria-expanded", "false");
+      viewerQrButton.textContent = "共有QRコードを表示";
+    }
+
+    function loadQrCodePlugin() {
+      if (typeof window.QRCode === "function") return Promise.resolve(window.QRCode);
+      if (qrCodePluginPromise) return qrCodePluginPromise;
+      qrCodePluginPromise = new Promise(function (resolve, reject) {
+        const script = document.createElement("script");
+        script.src = QR_CODE_SCRIPT_URL;
+        script.async = true;
+        script.onload = function () {
+          if (typeof window.QRCode !== "function") { reject(new Error("QRコード生成ライブラリを読み込めませんでした。")); return; }
+          resolve(window.QRCode);
+        };
+        script.onerror = function () { reject(new Error("QRコード生成ライブラリの読み込みに失敗しました。")); };
+        document.head.appendChild(script);
+      }).catch(function (error) {
+        qrCodePluginPromise = null;
+        throw error;
+      });
+      return qrCodePluginPromise;
+    }
+
+    async function getViewerQrUrl() {
+      if (location.hash) return QR_CODE_URL_BASE + location.hash;
+      const payload = await encodeUrlSaveData("auto");
+      return QR_CODE_URL_BASE + "#" + payload.hashKey + "=" + payload.encoded;
+    }
+
+    function hideViewerQrCode() {
+      viewerQrPanel.classList.add("hidden");
+      viewerQrPanel.setAttribute("aria-hidden", "true");
+      viewerQrButton.setAttribute("aria-expanded", "false");
+      viewerQrButton.textContent = "共有QRコードを表示";
+    }
+
+    async function showViewerQrCode() {
+      viewerQrButton.disabled = true;
+      viewerQrButton.textContent = "QRコードを読み込み中…";
+      try {
+        const QRCodeClass = await loadQrCodePlugin();
+        viewerQrCode.replaceChildren();
+        viewerQrStatus.textContent = "";
+        new QRCodeClass(viewerQrCode, {
+          text: await getViewerQrUrl(),
+          width: 280,
+          height: 280,
+          colorDark: "#000000",
+          colorLight: "#ffffff",
+          correctLevel: QRCodeClass.CorrectLevel.M
+        });
+        viewerQrPanel.classList.remove("hidden");
+        viewerQrPanel.setAttribute("aria-hidden", "false");
+        viewerQrButton.setAttribute("aria-expanded", "true");
+        viewerQrButton.textContent = "QRコードを隠す";
+      } catch (error) {
+        viewerQrCode.replaceChildren();
+        viewerQrStatus.textContent = error && error.message ? error.message : "QRコードを生成できませんでした。";
+        viewerQrPanel.classList.remove("hidden");
+        viewerQrPanel.setAttribute("aria-hidden", "false");
+        viewerQrButton.setAttribute("aria-expanded", "true");
+        viewerQrButton.textContent = "QRコードを隠す";
+      } finally {
+        viewerQrButton.disabled = false;
+      }
+    }
     function showEditor() {
       viewerMode.classList.add("hidden");
       editorMode.classList.remove("hidden");
@@ -1961,6 +2056,11 @@ async function initApp() {
       button.addEventListener("click", function () {
         applyViewerTextSize(button.dataset.viewerSize);
       });
+    });
+
+    viewerQrButton.addEventListener("click", function () {
+      if (viewerQrPanel.classList.contains("hidden")) showViewerQrCode();
+      else hideViewerQrCode();
     });
 
     viewerFontInputs.forEach(function (input) {
