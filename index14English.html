@@ -233,6 +233,14 @@
       color: var(--muted);
       margin-bottom: 4px;
     }
+
+    /* base layer: show the request volume used for the daily/monthly summary calculations */
+    .summary-requests{
+      font-size: 11px;
+      color: var(--muted);
+      margin: -1px 0 8px;
+      font-variant-numeric: tabular-nums;
+    }
     .pill .v{
       font-size: 18px;
       font-weight: 780;
@@ -429,6 +437,7 @@
             <div class="summary" aria-label="Summary">
               <div class="pill">
                 <div class="t">Per day</div>
+                <div class="summary-requests" id="sumRequestsDay">— requests/day</div>
                 <div class="summary-line">
                   <div class="summary-model">gpt-6-luna Flex</div>
                   <div class="v" id="sumLunaDay">—</div>
@@ -440,6 +449,7 @@
               </div>
               <div class="pill">
                 <div class="t">Per month (30 days)</div>
+                <div class="summary-requests" id="sumRequestsMonth">— requests / 30 days</div>
                 <div class="summary-line">
                   <div class="summary-model">gpt-6-luna Flex</div>
                   <div class="v" id="sumLunaMonth">—</div>
@@ -611,6 +621,8 @@
     const sumMonth = $("sumMonth");
     const sumLunaDay = $("sumLunaDay");
     const sumLunaMonth = $("sumLunaMonth");
+    const sumRequestsDay = $("sumRequestsDay");
+    const sumRequestsMonth = $("sumRequestsMonth");
     const toast = $("toast");
 
     const btnCalc  = $("btnCalc");
@@ -849,6 +861,10 @@ const btnCopyUrl = $("btnCopyUrl");
       const lunaPerDay = lunaPerReq * dayN;
       const lunaPerMonth = lunaPerDay * daysInMonth;
 
+      // Show the request volume from the Table 2 input directly in the summary.
+      sumRequestsDay.textContent = `${Math.round(dayN).toLocaleString("en-US")} requests/day`;
+      sumRequestsMonth.textContent = `${Math.round(dayN * daysInMonth).toLocaleString("en-US")} requests / 30 days`;
+
       sumLunaDay.textContent = formatUSDTotal(lunaPerDay);
       sumLunaMonth.textContent = formatUSDTotal(lunaPerMonth);
       sumDay.textContent = formatUSDTotal(basePerDay);
@@ -914,7 +930,3 @@ applyQueryParams();
   </script>
 </body>
 </html>
-
-
-
-
