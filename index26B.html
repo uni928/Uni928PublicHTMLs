@@ -1,0 +1,7 @@
+<script>
+const version=1;
+const D='index26B',S='pages',K=D+'-content-v'+version,B='./index26BBody.html';
+const goBody=()=>{const u=new URL(B,location.href);new URLSearchParams(location.search).forEach((v,k)=>u.searchParams.append(k,v));u.searchParams.append('_ts',Date.now());u.hash=location.hash;location.replace(u.href)};
+if(!('indexedDB'in window))goBody();
+else{const r=indexedDB.open(D,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(S))r.result.createObjectStore(S)};r.onerror=()=>goBody();r.onsuccess=()=>{const d=r.result,q=d.transaction(S).objectStore(S).get(K);q.onerror=()=>{d.close();goBody()};q.onsuccess=()=>{const h=q.result?.html;d.close();h?(document.open(),document.write(h),document.close()):goBody()}}}
+</script>
