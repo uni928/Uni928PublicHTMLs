@@ -323,6 +323,15 @@ a{color:var(--accent);overflow-wrap:anywhere;}
             <p class="font-setting-title">Fonts</p>
             <p class="font-setting-note">Enabled fonts are tried from left to right. Fonts unavailable on this device and disabled fonts are skipped. Your choices are saved.</p>
             <div class="font-options" aria-label="Fonts used in the reading view">
+              <label class="font-option"><input type="checkbox" name="viewerFont" value="arial" checked><span>Arial</span><span class="font-option-state" aria-hidden="true"></span></label>
+              <label class="font-option"><input type="checkbox" name="viewerFont" value="roboto" checked><span>Roboto</span><span class="font-option-state" aria-hidden="true"></span></label>
+              <label class="font-option"><input type="checkbox" name="viewerFont" value="helvetica" checked><span>Helvetica</span><span class="font-option-state" aria-hidden="true"></span></label>
+              <label class="font-option"><input type="checkbox" name="viewerFont" value="segoe-ui" checked><span>Segoe UI</span><span class="font-option-state" aria-hidden="true"></span></label>
+              <label class="font-option"><input type="checkbox" name="viewerFont" value="times-new-roman" checked><span>Times New Roman</span><span class="font-option-state" aria-hidden="true"></span></label>
+              <label class="font-option"><input type="checkbox" name="viewerFont" value="verdana" checked><span>Verdana</span><span class="font-option-state" aria-hidden="true"></span></label>
+              <label class="font-option"><input type="checkbox" name="viewerFont" value="georgia" checked><span>Georgia</span><span class="font-option-state" aria-hidden="true"></span></label>
+              <label class="font-option"><input type="checkbox" name="viewerFont" value="tahoma" checked><span>Tahoma</span><span class="font-option-state" aria-hidden="true"></span></label>
+              <label class="font-option"><input type="checkbox" name="viewerFont" value="trebuchet-ms" checked><span>Trebuchet MS</span><span class="font-option-state" aria-hidden="true"></span></label>
               <label class="font-option"><input type="checkbox" name="viewerFont" value="noto-sans-jp" checked><span>Noto Sans JP</span><span class="font-option-state" aria-hidden="true"></span></label>
               <label class="font-option"><input type="checkbox" name="viewerFont" value="meiryo" checked><span>Meiryo</span><span class="font-option-state" aria-hidden="true"></span></label>
               <label class="font-option"><input type="checkbox" name="viewerFont" value="yu-gothic-ui" checked><span>Yu Gothic UI</span><span class="font-option-state" aria-hidden="true"></span></label>
@@ -439,7 +448,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
   </main>
 
   <script id="initialData" type="application/json">
-{"title":"","source":"","createdAt":"","note":"","startMode":"auto","textSize":"small","fonts":["noto-sans-jp","meiryo","yu-gothic-ui","biz-udp-gothic","hiragino-sans","system-ui"],"images":[]}
+{"title":"","source":"","createdAt":"","note":"","startMode":"auto","textSize":"small","fonts":["arial","roboto","helvetica","segoe-ui","times-new-roman","verdana","georgia","tahoma","trebuchet-ms","noto-sans-jp","meiryo","yu-gothic-ui","biz-udp-gothic","hiragino-sans","system-ui"],"images":[]}
 </script>
   <script>
 async function initApp() {
@@ -517,11 +526,20 @@ async function initApp() {
       [360, 0.42], [320, 0.36], [280, 0.30], [240, 0.24], [200, 0.18], [160, 0.12]
     ];
     const VIEWER_FONT_CHOICES = {
+      "arial": "Arial",
+      "roboto": "Roboto",
+      "helvetica": "Helvetica",
+      "segoe-ui": '"Segoe UI"',
+      "times-new-roman": '"Times New Roman"',
+      "verdana": "Verdana",
+      "georgia": "Georgia",
+      "tahoma": "Tahoma",
+      "trebuchet-ms": '"Trebuchet MS"',
+      "noto-sans-jp": '"Noto Sans JP"',
+      "meiryo": "Meiryo",
       "yu-gothic-ui": '"Yu Gothic UI"',
       "biz-udp-gothic": '"BIZ UDPGothic"',
       "hiragino-sans": '"Hiragino Sans"',
-      "noto-sans-jp": '"Noto Sans JP"',
-      "meiryo": "Meiryo",
       "system-ui": "system-ui"
     };
     let images = [];
