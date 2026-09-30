@@ -383,6 +383,14 @@ a{color:var(--accent);overflow-wrap:anywhere;}
             </div>
             <p id="packedSaveSizeInfo" class="url-size-info"></p>
           </section>
+          <section id="publicPackedSaveGroup" class="file-save-group">
+            <h3>容量削減保存（一般公開用）</h3>
+            <p>一般公開用のサイトとして保存します。保存HTMLから <code>index80.html</code> を開き、圧縮した内容をURLフラグメントで引き継ぎます。</p>
+            <div class="file-save-actions">
+              <button id="saveViewerPublicPackedButton" class="primary-button" type="button">閲覧用サイトとして保存</button>
+              <button id="saveEditorPublicPackedButton" class="secondary-button" type="button">編集作業継続用サイトを保存</button>
+            </div>
+          </section>
         </div>
       </section>
 
@@ -1238,8 +1246,8 @@ async function initApp() {
       }
     }
 
-    function buildUrlWithPayload(payload) {
-      return LONG_URL_BASE + "#" + payload.hashKey + "=" + payload.encoded;
+    function buildUrlWithPayload(payload, baseUrl) {
+      return (baseUrl || LONG_URL_BASE) + "#" + payload.hashKey + "=" + payload.encoded;
     }
 
     async function createSavedUrl(startMode) {
@@ -1861,7 +1869,7 @@ async function initApp() {
         '<\/script>';
     }
 
-    async function downloadLightweightRedirect(startMode, button) {
+    async function downloadLightweightRedirect(startMode, button, baseUrl) {
       const originalText = button.textContent;
       applyMarkdownTitle();
       if (!sourceText.value.length && !titleInput.value.length) {
@@ -1874,7 +1882,7 @@ async function initApp() {
         button.textContent = "容量削減中…";
         const payload = await encodeUrlSaveData(startMode);
         if (payload.encoded.length >= PACKED_SAVE_BASE64_LIMIT) throw new Error("圧縮後のBase64データが" + PACKED_SAVE_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため、容量削減保存できません。");
-        const targetUrl = buildUrlWithPayload(payload);
+        const targetUrl = buildUrlWithPayload(payload, baseUrl);
         const html = makeLightweightRedirectHtml(targetUrl);
         const blob = new Blob([html], { type: "text/html;charset=utf-8" });
         const url = URL.createObjectURL(blob);
@@ -1921,8 +1929,10 @@ async function initApp() {
     saveEditorNormalButton.addEventListener("click", function () { downloadPlainSelf("editor"); });
     saveViewerCompressedButton.addEventListener("click", function () { downloadCompressedSelf("auto", saveViewerCompressedButton); });
     saveEditorCompressedButton.addEventListener("click", function () { downloadCompressedSelf("editor", saveEditorCompressedButton); });
-    saveViewerPackedButton.addEventListener("click", function () { downloadLightweightRedirect("auto", saveViewerPackedButton); });
-    saveEditorPackedButton.addEventListener("click", function () { downloadLightweightRedirect("editor", saveEditorPackedButton); });
+    saveViewerPackedButton.addEventListener("click", function () { downloadLightweightRedirect("auto", saveViewerPackedButton, "https://uni928.github.io/Uni928PublicHTMLs/index80B.html"); });
+    saveEditorPackedButton.addEventListener("click", function () { downloadLightweightRedirect("editor", saveEditorPackedButton, "https://uni928.github.io/Uni928PublicHTMLs/index80B.html"); });
+    document.getElementById("saveViewerPublicPackedButton").addEventListener("click", function () { downloadLightweightRedirect("auto", this, "https://uni928.github.io/Uni928PublicHTMLs/index80.html"); });
+    document.getElementById("saveEditorPublicPackedButton").addEventListener("click", function () { downloadLightweightRedirect("editor", this, "https://uni928.github.io/Uni928PublicHTMLs/index80.html"); });
     urlSaveButton.addEventListener("click", function () {
       const willOpen = urlSavePanel.classList.contains("hidden");
       if (willOpen) closeTopPanels(urlSavePanel);
