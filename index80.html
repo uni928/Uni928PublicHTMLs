@@ -564,6 +564,12 @@ async function initApp() {
     function parseInlineMarkdown(text) {
       const codeTokens = [];
       const imageTokens = [];
+      const inlineHtmlTokens = [];
+      function reserveInlineHtml(html) {
+        const token = "@@INLINEHTML" + inlineHtmlTokens.length + "@@";
+        inlineHtmlTokens.push(html);
+        return token;
+      }
       let value = String(text).replace(/`([^`]+)`/g, function (_, code) {
         const token = "@@CODE" + codeTokens.length + "@@";
         codeTokens.push("<code>" + escapeHtml(code) + "</code>");
@@ -583,14 +589,16 @@ async function initApp() {
       value = escapeHtml(value);
       value = value.replace(/!\[([^\]]*)\]\(([^\s)]+)(?:\s+["']([^"']*)["'])?\)/g, function (_, alt, url, title) {
         const titleAttr = title ? ' title="' + escapeHtml(title) + '"' : "";
-        return '<img src="' + escapeHtml(safeUrl(url)) + '" alt="' + alt + '"' + titleAttr + ">";
+        return reserveInlineHtml('<img src="' + escapeHtml(safeUrl(url)) + '" alt="' + alt + '"' + titleAttr + ">");
       });
       value = value.replace(/\[([^\]]+)\]\(([^\s)]+)(?:\s+["']([^"']*)["'])?\)/g, function (_, label, url, title) {
         const titleAttr = title ? ' title="' + escapeHtml(title) + '"' : "";
-        return '<a href="' + escapeHtml(safeUrl(url)) + '" target="_blank" rel="noopener noreferrer"' + titleAttr + '>' + label + "</a>";
+        return reserveInlineHtml('<a href="' + escapeHtml(safeUrl(url)) + '" target="_blank" rel="noopener noreferrer"' + titleAttr + '>' + label + "</a>");
       });
       value = value.replace(/(^|[\s(])((?:https?:\/\/)[^\s<]+)/g, function (_, prefix, url) {
-        return prefix + '<a href="' + escapeHtml(safeUrl(url)) + '" target="_blank" rel="noopener noreferrer">' + url + "</a>";
+        let displayUrl = url;
+        try { displayUrl = escapeHtml(decodeURI(url.replace(/&amp;/g, "&"))); } catch (error) { /* 不正なパーセント表記は元の表示を維持する。 */ }
+        return prefix + reserveInlineHtml('<a href="' + escapeHtml(safeUrl(url)) + '" target="_blank" rel="noopener noreferrer">' + displayUrl + "</a>");
       });
       value = value.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
       value = value.replace(/__([^_]+)__/g, "<strong>$1</strong>");
@@ -600,6 +608,7 @@ async function initApp() {
       value = value.replace(/  $/g, "<br>");
       codeTokens.forEach(function (html, index) { value = value.replace("@@CODE" + index + "@@", html); });
       imageTokens.forEach(function (html, index) { value = value.replace("@@EMBEDIMAGE" + index + "@@", html); });
+      inlineHtmlTokens.forEach(function (html, index) { value = value.replace("@@INLINEHTML" + index + "@@", html); });
       return value;
     }
 
