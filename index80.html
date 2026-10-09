@@ -1290,6 +1290,7 @@ async function initApp() {
 
     async function shortenViewerUrlWithXgd(originalUrl) {
       if (lastShortenedUrlPair && lastShortenedUrlPair.originalUrl === originalUrl) return lastShortenedUrlPair.shortUrl;
+if (!confirm("短縮URLは、URLを適当に入力した人にも表示される恐れがあります。個人情報が含まれていないか振り返ってください。それでも短縮URLを発行しますか？")) return;
       const params = new URLSearchParams({ url: originalUrl, key: atob("MDBhN2QyMTIyYTI5OGFkYTE5MzUzZTEwZWE0ZjkwNjk=") });
       const response = await fetch("https://xgd.io/V1/shorten?" + params.toString(), { method: "GET" });
       let data;
