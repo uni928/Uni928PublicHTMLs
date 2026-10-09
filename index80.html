@@ -402,7 +402,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
         <div class="url-save-actions">
           <button id="copyViewerUrlButton" class="primary-button" type="button">「閲覧用サイトとして保存」<br>のURLをコピー</button>
           <button id="copyDiscordLinkButton" class="secondary-button" type="button">Discodeで共有用の<br>「資料はこちら」リンクをコピー</button>
-          <button id="copyEditorUrlButton" class="secondary-button" type="button">「編集作業継続用サイトを保存」<br>のURLをコピー</button>
+          <button id="copyViewerShortUrlButton" class="secondary-button" type="button">閲覧用サイトの<br>短縮URLをコピー</button>
           <button id="copyShareUrlButton" class="secondary-button" type="button">共有に適したURLをコピー</button>
         </div>
         <p id="urlSizeInfo" class="url-size-info"></p>
@@ -500,16 +500,18 @@ async function initApp() {
     const urlSavePanel = document.getElementById("urlSavePanel");
     const copyViewerUrlButton = document.getElementById("copyViewerUrlButton");
     const copyDiscordLinkButton = document.getElementById("copyDiscordLinkButton");
-    const copyEditorUrlButton = document.getElementById("copyEditorUrlButton");
+    const copyViewerShortUrlButton = document.getElementById("copyViewerShortUrlButton");
     const copyShareUrlButton = document.getElementById("copyShareUrlButton");
     const urlSizeInfo = document.getElementById("urlSizeInfo");
 
     const IMAGE_BASE64_LIMIT = 18000;
     const DISCORD_BASE64_LIMIT = 1920;
     const URL_BASE64_LIMIT = 10000;
+    const XGD_ORIGINAL_URL_LIMIT = 1920;
     const PACKED_SAVE_BASE64_LIMIT = 1000000;
     const LONG_URL_BASE = "https://uni928.github.io/Uni928PublicHTMLs/index80.html";
     const URL_SHARE_BASE = "https://uni928.github.io/ShareURL/?url=";
+    let lastShortenedUrlPair = null;
     const URL_COMPRESSION_FORMATS = [
       { format: "brotli", hashKey: "br" },
       { format: "deflate-raw", hashKey: "dr" },
@@ -1286,6 +1288,38 @@ async function initApp() {
       }
     }
 
+    async function shortenViewerUrlWithXgd(originalUrl) {
+      if (lastShortenedUrlPair && lastShortenedUrlPair.originalUrl === originalUrl) return lastShortenedUrlPair.shortUrl;
+      const params = new URLSearchParams({ url: originalUrl, key: atob("MDBhN2QyMTIyYTI5OGFkYTE5MzUzZTEwZWE0ZjkwNjk=") });
+      const response = await fetch("https://xgd.io/V1/shorten?" + params.toString(), { method: "GET" });
+      let data;
+      try { data = await response.json(); } catch (_) { throw new Error("X.gdからJSON形式の応答を受け取れませんでした。"); }
+      if (!response.ok || !data || data.status !== 200 || typeof data.shorturl !== "string") {
+        throw new Error(data && data.message ? "エラー：" + data.message : "短縮URLを作成できませんでした。");
+      }
+      lastShortenedUrlPair = { originalUrl: originalUrl, shortUrl: data.shorturl };
+      return data.shorturl;
+    }
+
+    async function copyViewerShortUrl(button) {
+      const originalText = button.textContent;
+      try {
+        button.disabled = true;
+        button.textContent = "短縮URLを作成中…";
+        const result = await createSavedUrl("auto");
+        const shortUrl = await shortenViewerUrlWithXgd(result.copyUrl);
+        await copyText(shortUrl);
+        if (result.passwordId && result.password) await saveSuccessfulPassword(result.passwordId, result.password);
+        button.textContent = "短縮URLをコピーしました";
+        showStatus("閲覧用サイトの短縮URLをクリップボードへコピーしました。");
+      } catch (error) {
+        button.textContent = "コピーできませんでした";
+        showStatus(error && error.message ? error.message : "短縮URLの作成に失敗しました。", true);
+      } finally {
+        setTimeout(function () { button.textContent = originalText; button.disabled = false; }, 1600);
+      }
+    }
+
     async function copyDiscordSavedLink(button) {
       const originalText = button.textContent;
       try {
@@ -1336,6 +1370,7 @@ async function initApp() {
       if (!("CompressionStream" in window) || !("DecompressionStream" in window)) {
         urlSaveButton.classList.add("hidden");
         copyDiscordLinkButton.classList.add("hidden");
+        copyViewerShortUrlButton.classList.add("hidden");
         copyShareUrlButton.classList.add("hidden");
         viewerQrButton.classList.add("hidden");
         urlSavePanel.classList.add("hidden");
@@ -1349,9 +1384,12 @@ async function initApp() {
         const payload = viewerPayload.encoded.length >= editorPayload.encoded.length ? viewerPayload : editorPayload;
         const urlTooLarge = payload.encoded.length >= URL_BASE64_LIMIT;
         const discordTooLarge = viewerPayload.encoded.length >= DISCORD_BASE64_LIMIT;
+        const viewerUrlLength = buildUrlWithPayload(viewerPayload).length;
+        const xgdUrlTooLarge = viewerUrlLength > XGD_ORIGINAL_URL_LIMIT;
         const packedTooLarge = payload.encoded.length >= PACKED_SAVE_BASE64_LIMIT;
         urlSaveButton.classList.toggle("hidden", urlTooLarge);
         copyDiscordLinkButton.classList.toggle("hidden", discordTooLarge);
+        copyViewerShortUrlButton.classList.toggle("hidden", xgdUrlTooLarge);
         copyShareUrlButton.classList.toggle("hidden", discordTooLarge);
         viewerQrButton.classList.toggle("hidden", discordTooLarge);
         if (urlTooLarge) {
@@ -1359,12 +1397,13 @@ async function initApp() {
           urlSaveButton.setAttribute("aria-expanded", "false");
         }
         packedSaveGroup.classList.toggle("hidden", packedTooLarge);
-        urlSizeInfo.textContent = "現在の最短形式（" + viewerPayload.format + "）の圧縮後Base64：" + viewerPayload.encoded.length.toLocaleString("ja-JP") + "文字 / URL保存上限 " + URL_BASE64_LIMIT.toLocaleString("ja-JP") + "文字" + (discordTooLarge ? "（Discode共有用リンク・共有に適したURLは" + DISCORD_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため非表示）" : "");
+        urlSizeInfo.textContent = "現在の最短形式（" + viewerPayload.format + "）の圧縮後Base64：" + viewerPayload.encoded.length.toLocaleString("ja-JP") + "文字 / URL保存上限 " + URL_BASE64_LIMIT.toLocaleString("ja-JP") + "文字 / 閲覧用URL：" + viewerUrlLength.toLocaleString("ja-JP") + "文字" + (xgdUrlTooLarge ? "（X.gd短縮は元URLが" + XGD_ORIGINAL_URL_LIMIT.toLocaleString("ja-JP") + "文字を超えるため非表示）" : "") + (discordTooLarge ? "（Discode共有用リンク・共有に適したURLは" + DISCORD_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため非表示）" : "");
         packedSaveSizeInfo.textContent = "現在の最短形式（" + payload.format + "）の圧縮後Base64：" + payload.encoded.length.toLocaleString("ja-JP") + " / " + PACKED_SAVE_BASE64_LIMIT.toLocaleString("ja-JP") + "文字";
       } catch (error) {
         if (serial !== urlSizeUpdateSerial) return;
         urlSaveButton.classList.add("hidden");
         copyDiscordLinkButton.classList.add("hidden");
+        copyViewerShortUrlButton.classList.add("hidden");
         copyShareUrlButton.classList.add("hidden");
         viewerQrButton.classList.add("hidden");
         urlSavePanel.classList.add("hidden");
@@ -1950,7 +1989,7 @@ async function initApp() {
     });
     copyViewerUrlButton.addEventListener("click", function () { copySavedUrl("auto", copyViewerUrlButton); });
     copyDiscordLinkButton.addEventListener("click", function () { copyDiscordSavedLink(copyDiscordLinkButton); });
-    copyEditorUrlButton.addEventListener("click", function () { copySavedUrl("editor", copyEditorUrlButton); });
+    copyViewerShortUrlButton.addEventListener("click", function () { copyViewerShortUrl(copyViewerShortUrlButton); });
     copyShareUrlButton.addEventListener("click", function () { copyShareUrl(copyShareUrlButton); });
     document.getElementById("viewButton").addEventListener("click", showViewer);
     document.getElementById("helpSiteButton").addEventListener("click", function () {
