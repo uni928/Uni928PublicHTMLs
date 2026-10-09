@@ -1,5 +1,5 @@
 <script>
-const version=9;
+const version=10;
 const D='index80B',S='pages',K=D+'-content-v'+version,B='./index80BBody.html';
 const goBody=()=>{const u=new URL(B,location.href);u.search=location.search;u.hash=location.hash;location.replace(u.href)};
 if(!('indexedDB'in window))goBody();

@@ -1290,7 +1290,7 @@ async function initApp() {
 
     async function shortenViewerUrlWithXgd(originalUrl) {
       if (lastShortenedUrlPair && lastShortenedUrlPair.originalUrl === originalUrl) return lastShortenedUrlPair.shortUrl;
-if (!confirm("短縮URLは、URLを適当に入力した人にも表示される恐れがあります。個人情報が含まれていないか振り返ってください。それでも短縮URLを発行しますか？")) return;
+if (!confirm("短縮URLは、URLを適当に入力した人にも表示される恐れがあります。個人情報が含まれていないか振り返ってください。それでも短縮URLを発行しますか？")) return "undefined";
       const params = new URLSearchParams({ url: originalUrl, key: atob("MDBhN2QyMTIyYTI5OGFkYTE5MzUzZTEwZWE0ZjkwNjk=") });
       const response = await fetch("https://xgd.io/V1/shorten?" + params.toString(), { method: "GET" });
       let data;
@@ -1309,10 +1309,12 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
         button.textContent = "短縮URLを作成中…";
         const result = await createSavedUrl("auto");
         const shortUrl = await shortenViewerUrlWithXgd(result.copyUrl);
-        await copyText(shortUrl);
-        if (result.passwordId && result.password) await saveSuccessfulPassword(result.passwordId, result.password);
-        button.textContent = "短縮URLをコピーしました";
+        if(shortUrl != "undefined") {
+          await copyText(shortUrl);
+          if (result.passwordId && result.password) await saveSuccessfulPassword(result.passwordId, result.password);
+          button.textContent = "短縮URLをコピーしました";
         showStatus("閲覧用サイトの短縮URLをクリップボードへコピーしました。");
+        }
       } catch (error) {
         button.textContent = "コピーできませんでした";
         showStatus(error && error.message ? error.message : "短縮URLの作成に失敗しました。", true);
