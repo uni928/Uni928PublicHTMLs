@@ -83,6 +83,19 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .title-input:focus,.text-input:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(37,99,235,.12);}
 .title-input{padding:12px 14px;margin-bottom:16px;}
 .text-input{min-height:430px;padding:16px;resize:vertical;line-height:1.75;}
+.markdown-file-actions{display:flex;align-items:center;gap:8px;}
+.markdown-file-button{min-height:34px;padding:0 11px;border:1px solid rgba(117,103,220,.25);border-radius:10px;background:#f5f3ff;color:#5b50a1;font-size:.82rem;font-weight:800;white-space:nowrap;}
+.markdown-file-button:hover{background:#eeebff;}
+.markdown-file-dialog{width:min(560px,calc(100% - 24px));max-width:none;padding:0;border:0;border-radius:24px;background:transparent;box-shadow:0 24px 70px rgba(15,23,42,.28);}
+.markdown-file-dialog::backdrop{background:rgba(15,23,42,.48);backdrop-filter:blur(3px);}
+.markdown-file-dialog-inner{padding:20px;border:1px solid rgba(255,255,255,.9);border-radius:24px;background:rgba(255,255,255,.98);}
+.markdown-file-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;}
+.markdown-file-dialog-head h2{margin:0;color:#182033;font-size:1.08rem;}
+.markdown-file-dialog-close{min-width:38px;min-height:38px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--muted);font-size:1.2rem;}
+.markdown-file-dropbox{padding:0;background:transparent;border:0;border-radius:0;box-shadow:none;}
+.markdown-file-dropbox .uni-photo-dropbox__zone{height:220px;}
+.markdown-file-status{min-height:1.5em;margin:10px 2px 0;color:var(--muted);font-size:.88rem;line-height:1.5;}
+.markdown-file-status.error{color:var(--danger);}
 .controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
 .controls .primary-button{flex:1 1 300px;}
 /* 説明サイトへの導線を画面右上へ配置。 */
@@ -272,9 +285,37 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 
       <div class="field-label">
         <label for="sourceText">Markdown文章</label>
-        <small id="charCount">0文字</small>
+        <span class="markdown-file-actions">
+          <button id="markdownFileOpenButton" class="markdown-file-button" type="button">.mdを読み込む</button>
+          <small id="charCount">0文字</small>
+        </span>
       </div>
       <textarea id="sourceText" class="text-input" placeholder="ここにMarkdown形式の文章を入力してください。"></textarea>
+
+      <dialog id="markdownFileDialog" class="markdown-file-dialog" aria-labelledby="markdownFileDialogTitle">
+        <div class="markdown-file-dialog-inner">
+          <div class="markdown-file-dialog-head">
+            <h2 id="markdownFileDialogTitle">Markdownファイルを読み込む</h2>
+            <button id="markdownFileCloseButton" class="markdown-file-dialog-close" type="button" aria-label="閉じる">×</button>
+          </div>
+          <div class="uni-photo-dropbox markdown-file-dropbox">
+            <label id="markdownFileDropZone" class="uni-photo-dropbox__zone">
+              <span class="uni-photo-dropbox__inner">
+                <span class="uni-photo-dropbox__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6M8 13h8M8 17h8"></path></svg>
+                </span>
+                <span class="uni-photo-dropbox__copy">
+                  <span class="uni-photo-dropbox__title">Markdownファイルを選択</span>
+                  <span class="uni-photo-dropbox__guide">クリックして選択、またはここへドラッグ</span>
+                  <span class="uni-photo-dropbox__meta">.mdファイルに対応</span>
+                </span>
+              </span>
+              <input id="markdownFileInput" class="uni-photo-dropbox__input" type="file" accept=".md,text/markdown,text/plain">
+            </label>
+          </div>
+          <p id="markdownFileStatus" class="markdown-file-status" role="status" aria-live="polite">読み込むと、現在のMarkdown文章が置き換わります。</p>
+        </div>
+      </dialog>
 
       <section class="image-panel" aria-labelledby="imagePanelTitle">
         <div class="image-panel-head">
@@ -2131,6 +2172,66 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
     });
 
     imageFileInput.addEventListener("change", function () { addImageFiles(imageFileInput.files); });
+
+    const markdownFileDialog = document.getElementById("markdownFileDialog");
+    const markdownFileOpenButton = document.getElementById("markdownFileOpenButton");
+    const markdownFileCloseButton = document.getElementById("markdownFileCloseButton");
+    const markdownFileInput = document.getElementById("markdownFileInput");
+    const markdownFileDropZone = document.getElementById("markdownFileDropZone");
+    const markdownFileStatus = document.getElementById("markdownFileStatus");
+    function loadMarkdownFile(file) {
+      if (!file) return;
+      if (!/\.md$/i.test(file.name)) {
+        markdownFileStatus.textContent = " .md形式のファイルを選択してください。".trim();
+        markdownFileStatus.classList.add("error");
+        return;
+      }
+      file.text().then(function (text) {
+        sourceText.value = text.replace(/^\uFEFF/, "");
+        applyMarkdownTitle();
+        updateCount();
+        scheduleUrlSaveAvailabilityUpdate();
+        markdownFileStatus.classList.remove("error");
+        markdownFileStatus.textContent = file.name + "を読み込みました。";
+        sourceText.dispatchEvent(new Event("input", { bubbles: true }));
+        markdownFileDialog.close();
+        sourceText.focus();
+      }).catch(function () {
+        markdownFileStatus.textContent = "ファイルを読み込めませんでした。別のファイルをお試しください。";
+        markdownFileStatus.classList.add("error");
+      });
+    }
+    markdownFileOpenButton.addEventListener("click", function () {
+      markdownFileStatus.classList.remove("error");
+      markdownFileStatus.textContent = "読み込むと、現在のMarkdown文章が置き換わります。";
+      markdownFileDialog.showModal();
+    });
+    markdownFileCloseButton.addEventListener("click", function () { markdownFileDialog.close(); });
+    markdownFileDialog.addEventListener("click", function (event) {
+      if (event.target === markdownFileDialog) markdownFileDialog.close();
+    });
+    markdownFileInput.addEventListener("change", function () {
+      loadMarkdownFile(markdownFileInput.files && markdownFileInput.files[0]);
+      markdownFileInput.value = "";
+    });
+    ["dragenter", "dragover"].forEach(function (eventName) {
+      markdownFileDropZone.addEventListener(eventName, function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+        markdownFileDropZone.classList.add("is-dragging");
+      });
+    });
+    ["dragleave", "drop"].forEach(function (eventName) {
+      markdownFileDropZone.addEventListener(eventName, function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        markdownFileDropZone.classList.remove("is-dragging");
+      });
+    });
+    markdownFileDropZone.addEventListener("drop", function (event) {
+      loadMarkdownFile(event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]);
+    });
 
     ["dragenter", "dragover"].forEach(function (eventName) {
       imageDropZone.addEventListener(eventName, function (event) {
