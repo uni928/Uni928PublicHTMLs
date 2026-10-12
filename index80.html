@@ -96,6 +96,11 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .markdown-file-dropbox .uni-photo-dropbox__zone{height:220px;}
 .markdown-file-status{min-height:1.5em;margin:10px 2px 0;color:var(--muted);font-size:.88rem;line-height:1.5;}
 .markdown-file-status.error{color:var(--danger);}
+/* 短縮API失敗時に、手動短縮の手順をポップアップで案内する。 */
+.short-url-fallback-dialog{width:min(560px,calc(100% - 24px));max-width:none;padding:0;border:0;border-radius:24px;background:transparent;box-shadow:0 24px 70px rgba(15,23,42,.28);}
+.short-url-fallback-dialog::backdrop{background:rgba(15,23,42,.48);backdrop-filter:blur(3px);}
+.short-url-fallback-actions{display:grid;gap:10px;margin-top:16px;}
+.short-url-fallback-actions button{width:100%;}
 .controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
 .controls .primary-button{flex:1 1 300px;}
 /* 説明サイトへの導線を画面右上へ配置。 */
@@ -314,6 +319,19 @@ a{color:var(--accent);overflow-wrap:anywhere;}
             </label>
           </div>
           <p id="markdownFileStatus" class="markdown-file-status" role="status" aria-live="polite">読み込むと、現在のMarkdown文章が置き換わります。</p>
+        </div>
+      </dialog>
+      <dialog id="shortUrlFallbackDialog" class="markdown-file-dialog short-url-fallback-dialog" aria-labelledby="shortUrlFallbackTitle">
+        <div class="markdown-file-dialog-inner">
+          <div class="markdown-file-dialog-head">
+            <h2 id="shortUrlFallbackTitle">短縮URLを手動で作成してください</h2>
+            <button id="shortUrlFallbackCloseButton" class="markdown-file-dialog-close" type="button" aria-label="閉じる">×</button>
+          </div>
+          <p id="shortUrlFallbackMessage" class="url-save-description">短縮サービスのAPIでエラーが発生しました。閲覧用URLをコピーしました。x.gdを開き、入力欄に貼り付けて短縮してください。</p>
+          <div class="short-url-fallback-actions">
+            <button id="openXgdButton" class="primary-button" type="button">x.gdへ移動する</button>
+            <button id="shortUrlFallbackDoneButton" class="secondary-button" type="button">閉じる</button>
+          </div>
         </div>
       </dialog>
 
@@ -544,11 +562,13 @@ async function initApp() {
     const copyViewerShortUrlButton = document.getElementById("copyViewerShortUrlButton");
     const copyShareUrlButton = document.getElementById("copyShareUrlButton");
     const urlSizeInfo = document.getElementById("urlSizeInfo");
+    const shortUrlFallbackDialog = document.getElementById("shortUrlFallbackDialog");
+    const shortUrlFallbackMessage = document.getElementById("shortUrlFallbackMessage");
 
     const IMAGE_BASE64_LIMIT = 18000;
     const DISCORD_BASE64_LIMIT = 1920;
     const URL_BASE64_LIMIT = 10000;
-    const XGD_ORIGINAL_URL_LIMIT = 1920;
+    const XGD_ORIGINAL_URL_LIMIT = 10000;
     const PACKED_SAVE_BASE64_LIMIT = 1000000;
     const LONG_URL_BASE = "https://uni928.github.io/Uni928PublicHTMLs/index80.html";
     const URL_SHARE_BASE = "https://uni928.github.io/ShareURL/?url=";
@@ -1345,19 +1365,31 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
 
     async function copyViewerShortUrl(button) {
       const originalText = button.textContent;
+      let fallbackUrl = "";
       try {
         button.disabled = true;
         button.textContent = "短縮URLを作成中…";
         const result = await createSavedUrl("auto");
+        fallbackUrl = result.copyUrl;
+        if (result.copyUrl.length > XGD_ORIGINAL_URL_LIMIT) throw new Error("閲覧用URLが上限の" + XGD_ORIGINAL_URL_LIMIT.toLocaleString("ja-JP") + "文字を超えています。");
         const shortUrl = await shortenViewerUrlWithXgd(result.copyUrl);
-        if(shortUrl != "undefined") {
-          await copyText(shortUrl);
-          if (result.passwordId && result.password) await saveSuccessfulPassword(result.passwordId, result.password);
-          button.textContent = "短縮URLをコピーしました";
+        if (shortUrl === "undefined") return;
+        await copyText(shortUrl);
+        if (result.passwordId && result.password) await saveSuccessfulPassword(result.passwordId, result.password);
+        button.textContent = "短縮URLをコピーしました";
         showStatus("閲覧用サイトの短縮URLをクリップボードへコピーしました。");
-        }
       } catch (error) {
-        button.textContent = "コピーできませんでした";
+        let copied = false;
+        try {
+          if (!fallbackUrl) fallbackUrl = (await createSavedUrl("auto")).copyUrl;
+          await copyText(fallbackUrl);
+          copied = true;
+        } catch (_) {}
+        shortUrlFallbackMessage.textContent = copied
+          ? "閲覧用URLをクリップボードにコピーしました。x.gdを開き、入力欄に貼り付けて短縮してください。"
+          : "短縮サービスのAPIでエラーが発生し、閲覧用URLもコピーできませんでした。画面のURLコピー機能を使ってURLをコピーしてから、x.gdで短縮してください。";
+        shortUrlFallbackDialog.showModal();
+        button.textContent = "手動で短縮してください";
         showStatus(error && error.message ? error.message : "短縮URLの作成に失敗しました。", true);
       } finally {
         setTimeout(function () { button.textContent = originalText; button.disabled = false; }, 1600);
@@ -2034,6 +2066,15 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
     copyViewerUrlButton.addEventListener("click", function () { copySavedUrl("auto", copyViewerUrlButton); });
     copyDiscordLinkButton.addEventListener("click", function () { copyDiscordSavedLink(copyDiscordLinkButton); });
     copyViewerShortUrlButton.addEventListener("click", function () { copyViewerShortUrl(copyViewerShortUrlButton); });
+    document.getElementById("openXgdButton").addEventListener("click", function () {
+      window.open("https://x.gd/", "_blank", "noopener,noreferrer");
+      shortUrlFallbackDialog.close();
+    });
+    document.getElementById("shortUrlFallbackCloseButton").addEventListener("click", function () { shortUrlFallbackDialog.close(); });
+    document.getElementById("shortUrlFallbackDoneButton").addEventListener("click", function () { shortUrlFallbackDialog.close(); });
+    shortUrlFallbackDialog.addEventListener("click", function (event) {
+      if (event.target === shortUrlFallbackDialog) shortUrlFallbackDialog.close();
+    });
     copyShareUrlButton.addEventListener("click", function () { copyShareUrl(copyShareUrlButton); });
     document.getElementById("viewButton").addEventListener("click", showViewer);
     document.getElementById("helpSiteButton").addEventListener("click", function () {
