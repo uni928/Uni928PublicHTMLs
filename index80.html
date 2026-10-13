@@ -210,7 +210,14 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .document h3{margin:28px 0 12px;font-size:1.14rem;}
 .document h4,.document h5,.document h6{margin:24px 0 10px;line-height:1.5;}
 .document ol{margin:0 0 22px;padding-left:1.7em;}
-.document pre{overflow-x:auto;margin:20px 0;padding:16px;border-radius:14px;background:#0f172a;color:#e2e8f0;line-height:1.65;}
+.document pre{position:relative;overflow-x:auto;margin:20px 0;padding:16px;border-radius:14px;background:#0f172a;color:#e2e8f0;line-height:1.65;}
+/* 名前があるコードブロックだけ、名前の表示領域を確保する。 */
+.document pre[data-code-name]{padding-top:48px;}
+/* コードブロックに任意の名前とコピー操作を表示。 */
+.code-block-name{position:absolute;top:12px;left:16px;color:#cbd5e1;font:700 .78rem/1.4 system-ui,sans-serif;}
+.code-copy-button{position:absolute;top:8px;right:8px;display:grid;place-items:center;width:36px;height:32px;padding:0;border:1px solid #475569;border-radius:8px;background:#1e293b;color:#e2e8f0;}
+.code-copy-button:hover{background:#334155;}
+.code-copy-button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
 .document code{padding:.14em .38em;border-radius:6px;background:#eef2f7;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.9em;}
 .document pre code{padding:0;background:transparent;color:inherit;}
 .document hr{margin:30px 0;border:0;border-top:1px solid var(--line);}
@@ -277,7 +284,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
   <main id="editorMode" class="app">
     <header class="hero">
       <h1>Markdownから閲覧用サイトを作成</h1>
-      <p>視覚的に見やすい閲覧用サイトのダウンロード・共有が簡単にできます。<br>indexeddbにサイト内容を保存して、2回目以降の通信量を削減するバージョンは<a href="https://uni928.github.io/Uni928PublicHTMLs/index80B.html">こちら</a></p>
+      <p>視覚的に見やすい閲覧用サイトのダウンロード・共有が簡単にできます。<br><span id="index80bDescription">indexeddbにサイト内容を保存して、2回目以降の通信量を削減するバージョンは<a href="https://uni928.github.io/Uni928PublicHTMLs/index80B.html">こちら</a></span></p>
       <button id="helpSiteButton" class="help-site-button" type="button">説明サイトを見る</button>
     </header>
 
@@ -462,7 +469,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
           <button id="copyViewerUrlButton" class="primary-button" type="button">「閲覧用サイトとして保存」<br>のURLをコピー</button>
           <button id="copyDiscordLinkButton" class="secondary-button" type="button">Discodeで共有用の<br>「資料はこちら」リンクをコピー</button>
           <button id="copyViewerShortUrlButton" class="secondary-button" type="button">閲覧用サイトの<br>短縮URLをコピー</button>
-          <button id="copyShareUrlButton" class="secondary-button" type="button">共有に適したURLをコピー</button>
+          <button id="copyShareUrlButton" class="secondary-button" type="button">Discode共有リンクをコピー</button>
         </div>
         <p id="urlSizeInfo" class="url-size-info"></p>
       </section>
@@ -514,6 +521,8 @@ async function initApp() {
     "use strict";
 
     const editorMode = document.getElementById("editorMode");
+    const index80bDescription = document.getElementById("index80bDescription");
+    if (index80bDescription && location.href.includes("index80B.html")) index80bDescription.classList.add("hidden");
     const viewerMode = document.getElementById("viewerMode");
     const viewerQrButton = document.getElementById("viewerQrButton");
     const viewerQrPanel = document.getElementById("viewerQrPanel");
@@ -701,7 +710,7 @@ async function initApp() {
       let listItems = [];
       let quoteLines = [];
       let inCode = false;
-      let codeLanguage = "";
+      let codeBlockName = "";
       let codeLines = [];
 
       function flushParagraph() {
@@ -742,9 +751,9 @@ async function initApp() {
 
         if (inCode) {
           if (/^```/.test(trimmed)) {
-            output.push('<pre><code' + (codeLanguage ? ' class="language-' + escapeHtml(codeLanguage) + '"' : "") + '>' + escapeHtml(codeLines.join("\n")) + "</code></pre>");
+            output.push('<pre' + (codeBlockName ? ' data-code-name="' + escapeHtml(codeBlockName) + '"' : '') + '><code' + (/^[\w-]+$/.test(codeBlockName) ? ' class="language-' + escapeHtml(codeBlockName) + '"' : '') + '>' + escapeHtml(codeLines.join("\n")) + "</code></pre>");
             inCode = false;
-            codeLanguage = "";
+            codeBlockName = "";
             codeLines = [];
           } else {
             codeLines.push(raw);
@@ -752,11 +761,11 @@ async function initApp() {
           continue;
         }
 
-        const fence = trimmed.match(/^```\s*([\w-]*)\s*$/);
+        const fence = trimmed.match(/^```\s*(.*?)\s*$/);
         if (fence) {
           flushAll();
           inCode = true;
-          codeLanguage = fence[1] || "";
+          codeBlockName = fence[1] || "";
           continue;
         }
 
@@ -842,7 +851,7 @@ async function initApp() {
       }
 
       if (inCode) {
-        output.push('<pre><code' + (codeLanguage ? ' class="language-' + escapeHtml(codeLanguage) + '"' : "") + '>' + escapeHtml(codeLines.join("\n")) + "</code></pre>");
+        output.push('<pre' + (codeBlockName ? ' data-code-name="' + escapeHtml(codeBlockName) + '"' : '') + '><code' + (/^[\w-]+$/.test(codeBlockName) ? ' class="language-' + escapeHtml(codeBlockName) + '"' : '') + '>' + escapeHtml(codeLines.join("\n")) + "</code></pre>");
       }
       flushAll();
       return output.join("\n");
@@ -1221,11 +1230,16 @@ async function initApp() {
       });
     }
 
+    function formatJapaneseDateTime(date) {
+      return new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(date);
+    }
+
     function makeUrlSaveData(startMode) {
       return {
         v: 1,
         t: titleInput.value,
         s: sourceText.value,
+        c: formatJapaneseDateTime(new Date()),
         n: noteText.value,
         p: savePasswordInput.value,
         m: startMode === "editor" ? "editor" : "auto",
@@ -1282,7 +1296,7 @@ async function initApp() {
       return {
         title: typeof data.t === "string" ? data.t : "",
         source: typeof data.s === "string" ? data.s : "",
-        createdAt: "",
+        createdAt: typeof data.c === "string" ? data.c : "",
         note: typeof data.n === "string" ? data.n : "",
         savePassword: typeof data.p === "string" ? data.p : "",
         startMode: data.m === "editor" ? "editor" : "auto",
@@ -1425,14 +1439,15 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
       const originalText = button.textContent;
       try {
         button.disabled = true;
-        button.textContent = "共有URLを作成中…";
+        button.textContent = "Discode共有リンクを作成中…";
         const result = await createSavedUrl("auto");
         if (result.encodedLength >= DISCORD_BASE64_LIMIT) throw new Error("圧縮後のBase64データが" + DISCORD_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため、共有に適したURLを作成できません。");
         const shareUrl = buildShareUrl(result.copyUrl);
-        await copyText(shareUrl);
+        const pageTitle = (titleInput.value.trim() || "閲覧用ページ").replace(/[\\[\]]/g, "\\$&");
+        await copyText("[" + pageTitle + "](<" + shareUrl + ">)");
         if (result.passwordId && result.password) await saveSuccessfulPassword(result.passwordId, result.password);
-        button.textContent = "共有URLをコピーしました";
-        showStatus("共有に適したURLをクリップボードへコピーしました。圧縮形式：" + result.format + "、圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字");
+        button.textContent = "Discode共有リンクをコピーしました";
+        showStatus("Discode共有リンクをクリップボードへコピーしました。圧縮形式：" + result.format + "、圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字");
       } catch (error) {
         button.textContent = "コピーできませんでした";
         showStatus(error && error.message ? error.message : "共有用URLの作成に失敗しました。", true);
@@ -1732,6 +1747,42 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
+    function addCodeBlockControls() {
+      viewContent.querySelectorAll("pre").forEach(function (pre) {
+        const code = pre.querySelector("code");
+        if (!code) return;
+        const name = pre.dataset.codeName || "";
+        if (name) {
+          const label = document.createElement("span");
+          label.className = "code-block-name";
+          label.textContent = name;
+          pre.appendChild(label);
+        }
+        const button = document.createElement("button");
+        button.className = "code-copy-button";
+        button.type = "button";
+        button.setAttribute("aria-label", "コードをコピー");
+        button.title = "コードをコピー";
+        button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path></svg>';
+        button.addEventListener("click", async function () {
+          try {
+            await copyText(code.textContent);
+            button.setAttribute("aria-label", "コピーしました");
+            button.title = "コピーしました";
+            setTimeout(function () { button.setAttribute("aria-label", "コードをコピー"); button.title = "コードをコピー"; }, 1400);
+          } catch (error) {
+            showStatus("コードをコピーできませんでした。", true);
+          }
+        });
+        pre.appendChild(button);
+      });
+    }
+
+    window.addEventListener("beforeprint", function () {
+      const printLine = document.getElementById("printTimestamp");
+      if (printLine) printLine.textContent = "印刷日時：" + formatJapaneseDateTime(new Date());
+    });
+
     function showViewer() {
       applyMarkdownTitle();
       const title = titleInput.value.trim() || "閲覧用ページ";
@@ -1743,8 +1794,8 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
       }
       viewTitle.textContent = title;
       viewContent.innerHTML = parseTextToHtml(source);
+      addCodeBlockControls();
       const savedData = readInitialData();
-      const dateText = savedData.createdAt || new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date());
       viewMeta.replaceChildren();
       if (noteText.value.trim()) {
         const noteLine = document.createElement("div");
@@ -1753,9 +1804,15 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
         noteLine.textContent = noteText.value.trim();
         viewMeta.appendChild(noteLine);
       }
-      const createdLine = document.createElement("div");
-      createdLine.textContent = "作成日時：" + dateText;
-      viewMeta.appendChild(createdLine);
+      if (savedData.createdAt) {
+        const createdLine = document.createElement("div");
+        createdLine.textContent = "作成日時：" + savedData.createdAt;
+        viewMeta.appendChild(createdLine);
+      }
+      const printLine = document.createElement("div");
+      printLine.id = "printTimestamp";
+      printLine.textContent = "印刷日時：" + formatJapaneseDateTime(new Date());
+      viewMeta.appendChild(printLine);
       editorMode.classList.add("hidden");
       viewerMode.classList.remove("hidden");
       document.title = title;
@@ -1961,7 +2018,7 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
       const data = {
         title: titleInput.value,
         source: sourceText.value,
-        createdAt: new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date()),
+        createdAt: formatJapaneseDateTime(new Date()),
         note: noteText.value,
         savePassword: savePasswordInput.value,
         startMode: startMode === "editor" ? "editor" : "auto",
