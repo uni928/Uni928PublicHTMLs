@@ -361,22 +361,6 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 html{scroll-behavior:auto;}
 *,*::before,*::after{transition:none!important;animation:none!important;}
 }
-@media print{
-html,body{background:#fff!important;color:#000!important;}
-#editorMode,.viewer-actions,.viewer-qr-panel,.document-outline,.code-copy-button{display:none!important;}
-#viewerMode,#viewerMode[data-text-size]{width:100%!important;margin:0;padding:0;}
-.document{padding:0;border:0;border-radius:0;box-shadow:none;}
-.document h1{font-size:24pt!important;margin:0 0 18pt;}
-.document h2{font-size:16pt!important;break-after:avoid;}
-.document h3{font-size:13pt!important;break-after:avoid;}
-.document p,.document li,.document blockquote{font-size:10.5pt!important;line-height:1.7;}
-.document pre{overflow:visible;white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #cbd5e1;background:#f8fafc;color:#111827;}
-.document pre code{white-space:inherit;}
-.code-block-name{color:#475569;}
-.document table{font-size:9pt;}
-.document tr,.document img,.document blockquote{break-inside:avoid;}
-.meta{color:#475569;}
-}
 }
 </style>
 </head>
@@ -626,7 +610,6 @@ html,body{background:#fff!important;color:#000!important;}
   <main id="viewerMode" class="app hidden">
     <article class="panel document">
       <div class="viewer-actions">
-        <button id="printButton" class="secondary-button" type="button" title="印刷画面で「1枚あたりのページ数」を2に設定できます">印刷 / PDF</button>
         <button id="viewerQrButton" class="secondary-button viewer-qr-button" type="button" aria-expanded="false">共有QRコードを表示</button>
         <div class="viewer-size-switch" role="group" aria-label="文字サイズ">
           <button type="button" data-viewer-size="xlarge" aria-pressed="false">特大</button>
@@ -2503,7 +2486,6 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
     document.getElementById("viewButton").addEventListener("click", showViewer);
     livePreviewToggle.addEventListener("click", function () { setLivePreview(!livePreviewEnabled); });
     restoreContentButton.addEventListener("click", restoreReplacedContent);
-    document.getElementById("printButton").addEventListener("click", function () { window.print(); });
     document.querySelectorAll("[data-markdown-action]").forEach(function (button) {
       button.addEventListener("mousedown", function (event) { if (event.button === 0) event.preventDefault(); });
       button.addEventListener("click", function () { applyMarkdownCommand(button.dataset.markdownAction); });
