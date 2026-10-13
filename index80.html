@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Markdown形式の文章を読みやすい閲覧ページとして表示し、1つのHTMLとして保存できます。">
-  <title>Markdownから閲覧用サイトを作成</title>
+  <title>Markdownから読みやすいページを作成</title>
 
 <script>
 /*
@@ -57,6 +57,7 @@ button,input,textarea{font:inherit;}
 button{cursor:pointer;}
 button:disabled{cursor:default;opacity:.62;}
 a{color:var(--accent);overflow-wrap:anywhere;}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid rgba(37,99,235,.42);outline-offset:3px;}
 .hidden{display:none !important;}
 }
 @layer layout{
@@ -66,9 +67,20 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 #viewerMode[data-text-size="medium"]{width:min(820px,calc(100% - 28px));}
 #viewerMode[data-text-size="large"]{width:min(860px,calc(100% - 28px));}
 #viewerMode[data-text-size="xlarge"]{width:min(980px,calc(100% - 28px));}
-.hero{margin-bottom:18px;text-align:center;}
-.hero h1{margin:0;font-size:clamp(1.7rem,4vw,2.6rem);letter-spacing:-.04em;}
-.hero p{max-width:740px;margin:10px auto 0;color:var(--muted);line-height:1.8;}
+#editorMode[data-live-preview="true"]{width:min(1280px,calc(100% - 28px));}
+.hero{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:20px;margin-bottom:18px;padding:30px 28px;border:1px solid rgba(255,255,255,.38);border-radius:24px;background:radial-gradient(circle at 88% 12%,rgba(45,212,191,.2),transparent 28%),linear-gradient(125deg,#0f2742 0%,#124e65 72%,#136b70 100%);color:#f8fafc;box-shadow:0 18px 42px rgba(15,39,66,.18);}
+.hero-copy{position:relative;z-index:1;min-width:0;padding-right:130px;}
+.hero h1{margin:0;font-size:clamp(1.7rem,4vw,2.6rem);letter-spacing:-.04em;line-height:1.2;}
+.hero p{max-width:740px;margin:10px 0 0;color:rgba(241,245,249,.82);line-height:1.8;}
+.hero .hero-eyebrow{display:inline-flex;align-items:center;gap:8px;margin:0 0 11px;color:#a7f3d0;font-size:.76rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;}
+.hero-eyebrow span{width:8px;height:8px;border-radius:50%;background:#5eead4;box-shadow:0 0 0 5px rgba(94,234,212,.14);}
+.workflow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;max-width:680px;margin:20px 0 0;padding:0;list-style:none;}
+.workflow li{display:flex;align-items:center;gap:9px;min-height:46px;padding:7px 10px;border:1px solid rgba(226,232,240,.18);border-radius:12px;background:rgba(15,23,42,.18);}
+.workflow-number{display:grid;place-items:center;flex:0 0 29px;width:29px;height:29px;border:1px solid rgba(167,243,208,.36);border-radius:9px;color:#a7f3d0;font-size:.72rem;font-weight:900;}
+.workflow-label{color:#f8fafc;font-size:.83rem;font-weight:750;line-height:1.25;}
+.hero-resource{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:17px;color:rgba(241,245,249,.68);font-size:.78rem;}
+.hero-resource a{color:#ccfbf1;font-weight:800;}
+.hero-resource a:hover{color:#fff;}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);}
 .primary-button,.secondary-button{min-height:48px;border:0;border-radius:14px;padding:0 18px;font-weight:800;}
 .primary-button{background:var(--accent);color:#fff;}
@@ -83,6 +95,34 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .title-input:focus,.text-input:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(37,99,235,.12);}
 .title-input{padding:12px 14px;margin-bottom:16px;}
 .text-input{min-height:430px;padding:16px;resize:vertical;line-height:1.75;}
+.editor-input-help{margin:8px 2px 0;color:var(--muted);font-size:.84rem;line-height:1.6;}
+.editor-heading{align-items:center;flex-wrap:wrap;}
+.preview-toggle{min-height:34px;padding:0 11px;border:1px solid #b8cce1;border-radius:10px;background:#fff;color:#1d4ed8;font-size:.82rem;font-weight:800;}
+.preview-toggle[aria-expanded="true"]{background:var(--accent-soft);border-color:var(--accent);}
+.writing-workspace{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;}
+.writing-workspace[data-preview="true"]{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
+.writing-pane{min-width:0;}
+.markdown-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:3px;padding:7px;border:1px solid var(--line);border-bottom:0;border-radius:14px 14px 0 0;background:#f8fafc;}
+.markdown-command{min-width:36px;min-height:34px;padding:0 10px;border:0;border-radius:7px;background:transparent;color:#334155;font-size:.82rem;font-weight:700;}
+.markdown-command:hover{background:var(--accent-soft);color:var(--accent-dark);}
+#sourceText{display:block;min-height:460px;border-radius:0 0 14px 14px;font-family:ui-monospace,"Cascadia Code",Consolas,"Meiryo",monospace;font-size:.93rem;tab-size:2;}
+.editor-meta{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px;margin:8px 2px 0;color:var(--muted);font-size:.76rem;line-height:1.5;}
+.live-preview-panel{display:flex;flex-direction:column;min-width:0;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:#fff;}
+.live-preview-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line);background:#f8fafc;}
+.live-preview-heading h2{margin:0;font-size:.9rem;}
+.live-preview-heading span{color:var(--muted);font-size:.73rem;}
+.live-preview-article{flex:1;min-height:300px;max-height:640px;overflow:auto;padding:22px;box-shadow:none;border-radius:0;font-family:var(--viewer-font-stack,system-ui,sans-serif);}
+.live-preview-article.document h1{margin:0 0 22px;font-size:1.6rem;}
+.live-preview-empty{display:grid;place-content:center;min-height:350px;text-align:center;color:var(--muted);}
+.live-preview-empty strong{color:#334155;font-size:1.05rem;}
+.live-preview-empty p{margin:8px 0 0;font-size:.88rem;}
+.recovery-notice{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:12px;padding:10px 12px;border:1px solid #b8d8d2;border-radius:12px;background:#f0fdfa;color:#115e59;font-size:.83rem;}
+.recovery-notice button{min-height:34px;padding:0 11px;border:1px solid #99c9c0;border-radius:8px;background:#fff;color:#115e59;font-weight:800;}
+.save-recommended{display:inline-block;margin-left:8px;padding:3px 8px;border-radius:20px;background:#d1fae5;color:#065f46;font-size:.7rem;vertical-align:middle;}
+.advanced-save-options{border:1px solid var(--line);border-radius:13px;background:#fff;}
+.advanced-save-options>summary{padding:14px;font-size:.9rem;font-weight:800;cursor:pointer;}
+.advanced-save-options[open]>summary{border-bottom:1px solid var(--line);}
+.advanced-save-options .file-save-group{margin:12px;}
 .markdown-file-actions{display:flex;align-items:center;gap:8px;}
 .markdown-file-button{min-height:34px;padding:0 11px;border:1px solid rgba(117,103,220,.25);border-radius:10px;background:#f5f3ff;color:#5b50a1;font-size:.82rem;font-weight:800;white-space:nowrap;}
 .markdown-file-button:hover{background:#eeebff;}
@@ -101,10 +141,11 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .short-url-fallback-dialog::backdrop{background:rgba(15,23,42,.48);backdrop-filter:blur(3px);}
 .short-url-fallback-actions{display:grid;gap:10px;margin-top:16px;}
 .short-url-fallback-actions button{width:100%;}
-.controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;}
-.controls .primary-button{flex:1 1 300px;}
+.controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;}
+.controls button{flex:1 1 140px;min-height:48px;}
+.controls .primary-button{flex-basis:180px;}
 /* 説明サイトへの導線を画面右上へ配置。 */
-.help-site-button{position:absolute;top:16px;right:0;min-height:40px;padding:0 14px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--accent-dark);font-weight:800;box-shadow:0 8px 24px rgba(30,41,59,.10);}
+.help-site-button{position:absolute;top:18px;right:18px;min-height:40px;padding:0 14px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--accent-dark);font-weight:800;box-shadow:0 8px 24px rgba(30,41,59,.10);}
 .help-site-button:hover{background:var(--accent-soft);}
 .helper{margin-top:14px;padding:14px 16px;border-radius:14px;background:#f8fafc;color:var(--muted);line-height:1.7;font-size:.94rem;}
 .status{min-height:24px;margin-top:12px;color:var(--muted);font-size:.93rem;}
@@ -168,9 +209,10 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .font-setting{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);}
 /* 保存データ暗号化用パスワード設定。 */
 .password-setting{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);}
-.password-setting-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:stretch;}
+.password-setting-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:stretch;}
 .password-setting-row .password-input{margin:0;min-height:48px;}
 .password-setting-row button{white-space:nowrap;}
+.font-setting-note.password-security-note{margin:0 0 12px;padding:10px 12px;border:1px solid #f1d8a8;border-radius:11px;background:#fffaf0;color:#7c4a03;font-size:.82rem;line-height:1.65;}
 .font-setting-title{margin:0 0 5px;font-size:.94rem;font-weight:800;}
 .font-setting-note{margin:0 0 10px;color:var(--muted);font-size:.82rem;line-height:1.6;}
 .font-options{display:flex;flex-wrap:wrap;gap:8px;}
@@ -184,7 +226,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 /* 選択中のフォント候補を閲覧部分へ適用。 */
 .document{position:relative;padding:clamp(24px,4.5vw,42px);border-radius:18px;box-shadow:0 14px 36px rgba(30,41,59,.08);}
 #viewerMode .document{font-family:var(--viewer-font-stack,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif);}
-.viewer-actions{position:absolute;top:16px;right:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+.viewer-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:28px;padding-bottom:18px;border-bottom:1px solid var(--line);justify-content:flex-end;}
 .viewer-actions button{min-height:42px;}
 /* 閲覧者が閲覧画面上で文字サイズを切り替えられる操作を追加。 */
 .viewer-size-switch{display:flex;align-items:center;gap:4px;padding:4px;border:1px solid var(--line);border-radius:12px;background:#f8fafc;}
@@ -199,7 +241,15 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .viewer-qr-box img,.viewer-qr-box canvas{display:block;max-width:100%;height:auto;}
 .viewer-qr-help{margin:12px 0 0;color:var(--muted);font-size:.9rem;line-height:1.7;}
 .viewer-qr-status{min-height:1.5em;margin:10px 0 0;color:var(--danger);font-size:.86rem;}
-.document h1{margin:0 240px 28px 0;font-size:clamp(1.7rem,4.6vw,2.55rem);line-height:1.25;letter-spacing:-.035em;}
+.document h1{margin:0 0 28px;font-size:clamp(1.7rem,4.6vw,2.55rem);line-height:1.25;letter-spacing:-.035em;}
+.document-outline{margin:0 0 28px;padding:12px 16px;border:1px solid var(--line);border-radius:12px;background:#f8fafc;}
+.document-outline summary{font-size:.88rem;font-weight:800;cursor:pointer;}
+.document-outline ol{display:grid;gap:6px;margin:calc(12px + .5em) 0 0;padding:0;list-style:none;}
+.document-outline li{margin:0;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:.9rem;line-height:1.5;}
+.document-outline li[data-depth="3"]{margin-left:16px;}
+.document-outline button{display:flex;align-items:center;width:100%;min-height:44px;padding:8px 12px;border:0;border-radius:inherit;background:transparent;color:var(--accent-dark);font:inherit;text-align:left;overflow-wrap:anywhere;}
+.document-outline button:hover{background:var(--accent-soft);}
+.document [id^="doc-section-"]{scroll-margin-top:24px;}
 .document h2{margin:34px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--accent-soft);font-size:clamp(1.14rem,2.8vw,1.45rem);line-height:1.45;}
 .document p,.document li,.document blockquote{font-size:clamp(.96rem,2vw,1.03rem);line-height:1.9;}
 .document p{margin:0 0 18px;}
@@ -227,7 +277,9 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .document th{background:#f8fafc;}
 .document img{display:block;max-width:100%;height:auto;margin:20px auto;border-radius:12px;}
 .task-item{list-style:none;margin-left:-1.3em;}
-#viewTitle{margin-top:36px;}
+.document.live-preview-article{min-height:300px;max-height:640px;overflow:auto;padding:22px;box-shadow:none;border-radius:0;}
+.document.live-preview-article h1{margin:0 0 22px;font-size:1.6rem;}
+#viewTitle{margin-top:0;}
 #viewerMode[data-text-size="small"] .document h1{font-size:clamp(1.58rem,4.4vw,2.38rem);}
 #viewerMode[data-text-size="small"] .document h2{font-size:clamp(1.08rem,2.6vw,1.36rem);}
 #viewerMode[data-text-size="small"] .document h3{font-size:1.08rem;}
@@ -255,18 +307,36 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 #viewerMode[data-text-size="xlarge"] .meta{font-size:1.15rem;line-height:1.8;}
 }
 @layer responsive{
+@media (max-width:900px){
+.writing-workspace[data-preview="true"]{grid-template-columns:minmax(0,1fr);}
+.document.live-preview-article{max-height:520px;}
+}
 @media (max-width:620px){
 .app{width:min(100% - 16px,920px);padding-top:10px;}
+#editorMode[data-live-preview="true"]{width:calc(100% - 16px);}
+.hero{grid-template-columns:1fr;gap:12px;margin-bottom:12px;padding:24px 18px;border-radius:20px;}
+.hero-copy{padding-right:0;}
+.hero h1{max-width:18ch;font-size:clamp(1.7rem,8vw,2.3rem);}
+.workflow{gap:6px;margin-top:16px;}
+.workflow li{flex-direction:column;justify-content:center;gap:3px;min-height:58px;padding:5px 3px;text-align:center;}
+.workflow-number{flex-basis:22px;width:22px;height:22px;font-size:.64rem;}
+.workflow-label{font-size:.7rem;}
+.hero-resource{margin-top:13px;}
 #viewerMode,#viewerMode[data-text-size="small"],#viewerMode[data-text-size="medium"],#viewerMode[data-text-size="large"],#viewerMode[data-text-size="xlarge"]{width:min(100% - 16px,820px);}
 .editor-panel,.document{padding:18px;border-radius:18px;}
 .text-input{min-height:55vh;}
+#sourceText{min-height:380px;}
+.markdown-file-actions{flex-wrap:wrap;gap:6px;}
+.markdown-command{padding:0 8px;}
+.document.live-preview-article{padding:18px;}
 .note-panel .text-input{min-height:120px;}
 .image-item{grid-template-columns:1fr;}
 .image-thumb{width:100%;height:180px;}
 .uni-photo-dropbox{padding:16px;}
 .uni-photo-dropbox__zone{height:190px;}
 .controls{flex-direction:column;}
-.controls button{width:100%;}
+.controls button{flex:0 0 auto;width:100%;}
+.controls .primary-button{flex-basis:auto;}
 /* モバイルではタイトル説明文の続きとして通常配置する。 */
 .help-site-button{position:static;display:inline-flex;align-items:center;justify-content:center;margin-top:10px;min-height:36px;padding:0 12px;font-size:.82rem;}
 .password-setting-row{grid-template-columns:1fr;}
@@ -277,15 +347,44 @@ a{color:var(--accent);overflow-wrap:anywhere;}
 .viewer-size-switch{order:-1;}
 .document h1{margin-right:0;}
 }
+@media (prefers-reduced-motion:reduce){
+html{scroll-behavior:auto;}
+*,*::before,*::after{transition:none!important;animation:none!important;}
+}
+@media print{
+html,body{background:#fff!important;color:#000!important;}
+#editorMode,.viewer-actions,.viewer-qr-panel,.document-outline,.code-copy-button{display:none!important;}
+#viewerMode,#viewerMode[data-text-size]{width:100%!important;margin:0;padding:0;}
+.document{padding:0;border:0;border-radius:0;box-shadow:none;}
+.document h1{font-size:24pt!important;margin:0 0 18pt;}
+.document h2{font-size:16pt!important;break-after:avoid;}
+.document h3{font-size:13pt!important;break-after:avoid;}
+.document p,.document li,.document blockquote{font-size:10.5pt!important;line-height:1.7;}
+.document pre{overflow:visible;white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #cbd5e1;background:#f8fafc;color:#111827;}
+.document pre code{white-space:inherit;}
+.code-block-name{color:#475569;}
+.document table{font-size:9pt;}
+.document tr,.document img,.document blockquote{break-inside:avoid;}
+.meta{color:#475569;}
+}
 }
 </style>
 </head>
 <body>
   <main id="editorMode" class="app">
     <header class="hero">
-      <h1>Markdownから閲覧用サイトを作成</h1>
-      <p>視覚的に見やすい閲覧用サイトのダウンロード・共有が簡単にできます。<br><span id="index80bDescription">indexeddbにサイト内容を保存して、2回目以降の通信量を削減するバージョンは<a href="https://uni928.github.io/Uni928PublicHTMLs/index80B.html">こちら</a></span></p>
-      <button id="helpSiteButton" class="help-site-button" type="button">説明サイトを見る</button>
+      <div class="hero-copy">
+        <p class="hero-eyebrow"><span aria-hidden="true"></span> Markdown → HTML</p>
+        <h1>文章を、読みやすいページに。</h1>
+        <p>Markdownで書いて、閲覧画面で確認。HTMLファイルや共有用URLとして保存できます。</p>
+        <ol class="workflow" aria-label="作成の流れ">
+          <li><span class="workflow-number">01</span><span class="workflow-label">文章を書く</span></li>
+          <li><span class="workflow-number">02</span><span class="workflow-label">表示を確認</span></li>
+          <li><span class="workflow-number">03</span><span class="workflow-label">保存・共有</span></li>
+        </ol>
+        <div class="hero-resource"><span>通信量を抑えたい方へ</span><span id="index80bDescription"><a href="https://uni928.github.io/Uni928PublicHTMLs/index80B.html">IndexedDB対応版</a></span></div>
+      </div>
+      <button id="helpSiteButton" class="help-site-button" type="button">使い方を見る</button>
     </header>
 
     <section class="panel editor-panel" aria-labelledby="editorTitle">
@@ -295,14 +394,36 @@ a{color:var(--accent);overflow-wrap:anywhere;}
       </div>
       <input id="pageTitle" class="title-input" type="text" placeholder="例：旅行の予定、作業手順、参考資料">
 
-      <div class="field-label">
+      <div class="field-label editor-heading">
         <label for="sourceText">Markdown文章</label>
         <span class="markdown-file-actions">
           <button id="markdownFileOpenButton" class="markdown-file-button" type="button">.mdを読み込む</button>
-          <small id="charCount">0文字</small>
+          <button id="livePreviewToggle" class="preview-toggle" type="button" aria-expanded="false" aria-controls="livePreviewPanel">プレビューを表示</button>
         </span>
       </div>
-      <textarea id="sourceText" class="text-input" placeholder="ここにMarkdown形式の文章を入力してください。"></textarea>
+      <div id="writingWorkspace" class="writing-workspace" data-preview="false">
+        <div class="writing-pane">
+          <div class="markdown-toolbar" role="group" aria-label="Markdownの入力補助">
+            <button class="markdown-command" type="button" data-markdown-action="heading" title="行を見出しにする">見出し</button>
+            <button class="markdown-command" type="button" data-markdown-action="bold" aria-label="太字" title="太字（Ctrl / ⌘ + B）"><strong>B</strong></button>
+            <button class="markdown-command" type="button" data-markdown-action="italic" aria-label="斜体" title="斜体（Ctrl / ⌘ + I）"><em>I</em></button>
+            <button class="markdown-command" type="button" data-markdown-action="list" title="行を箇条書きにする">箇条書き</button>
+            <button class="markdown-command" type="button" data-markdown-action="quote" title="行を引用にする">引用</button>
+            <button class="markdown-command" type="button" data-markdown-action="link" title="リンクを挿入">リンク</button>
+            <button class="markdown-command" type="button" data-markdown-action="code" title="コードブロックを挿入">コード</button>
+          </div>
+          <textarea id="sourceText" class="text-input" spellcheck="false" aria-describedby="editorInputHelp editorMetrics" placeholder="## 見出し&#10;&#10;ここに文章を書いてください。&#10;&#10;- 箇条書き&#10;- 参考リンクや画像も追加できます"></textarea>
+          <div class="editor-meta"><span id="charCount">0文字</span><span id="editorMetrics">本文なし</span></div>
+        </div>
+        <section id="livePreviewPanel" class="live-preview-panel hidden" aria-labelledby="livePreviewTitle">
+          <div class="live-preview-heading"><h2 id="livePreviewTitle">プレビュー</h2><span>入力に合わせて更新</span></div>
+          <article id="livePreviewContent" class="document live-preview-article" aria-label="本文のプレビュー"></article>
+        </section>
+      </div>
+      <p id="editorInputHelp" class="editor-input-help">文章を選択して上のボタンを押すと、書式を付けられます。Ctrl / ⌘ + Enterで完成画面を確認できます。</p>
+      <div id="restoreContentPanel" class="recovery-notice hidden" role="status">
+        <span>置き換え前の文章を一時的に保持しています。</span><button id="restoreContentButton" type="button">元に戻す</button>
+      </div>
 
       <dialog id="markdownFileDialog" class="markdown-file-dialog" aria-labelledby="markdownFileDialogTitle">
         <div class="markdown-file-dialog-inner">
@@ -341,6 +462,84 @@ a{color:var(--accent);overflow-wrap:anywhere;}
           </div>
         </div>
       </dialog>
+
+      <div class="controls">
+        <button id="saveMethodButton" class="primary-button" type="button" aria-expanded="false" aria-controls="fileSavePanel">HTMLを保存</button>
+        <button id="urlSaveButton" class="secondary-button" type="button" aria-expanded="false" aria-controls="urlSavePanel">共有リンク</button>
+        <button id="viewButton" class="secondary-button" type="button">完成画面で確認</button>
+        <button id="noteEditButton" class="secondary-button" type="button" aria-expanded="false" aria-controls="notePanel">特記事項編集</button>
+        <button id="sampleButton" class="secondary-button" type="button">入力例を入れる</button>
+        <div hidden><button id="clearButton" class="secondary-button" type="button">入力を消す</button></div>
+      </div>
+
+
+      <section id="fileSavePanel" class="file-save-panel hidden" aria-labelledby="fileSaveTitle">
+        <h2 id="fileSaveTitle">保存方法</h2>
+        <p class="file-save-description">配布するなら「閲覧用HTML」、あとで書き直すなら「編集用HTML」を選んでください。</p>
+        <div class="file-save-groups">
+          <section id="packedSaveGroup" class="file-save-group">
+            <h3>容量削減保存</h3>
+            <p>資料サイトにアクセスする形式でダウンロードします。アップデートの影響を受けるため注意が必要です。<br>対応ブラウザで利用できる圧縮方式を比較し、最も小さい方式を使用します。<br>圧縮後Base64が8,000文字を超える場合、ブラウザによっては長いURLを開けない可能性があります。</p>
+            <div class="file-save-actions">
+              <button id="saveViewerPackedButton" class="primary-button" type="button">閲覧用サイトとして保存</button>
+              <button id="saveEditorPackedButton" class="secondary-button" type="button">編集作業継続用サイトを保存</button>
+            </div>
+            <p id="packedSaveSizeInfo" class="url-size-info"></p>
+          </section>
+          <section id="publicPackedSaveGroup" class="file-save-group">
+            <h3>容量削減保存（一般公開用）</h3>
+            <p>一般公開用のサイトとして保存します。保存HTMLから <code>index80.html</code> を開き、圧縮した内容をURLフラグメントで引き継ぎます。</p>
+            <div class="file-save-actions">
+              <button id="saveViewerPublicPackedButton" class="primary-button" type="button">閲覧用サイトとして保存</button>
+              <button id="saveEditorPublicPackedButton" class="secondary-button" type="button">編集作業継続用サイトを保存</button>
+            </div>
+          </section>
+          <details id="basicSaveOptions" class="advanced-save-options">
+            <summary>通常保存・圧縮保存など</summary>
+            <section class="file-save-group">
+              <h3>通常保存<span class="save-recommended">おすすめ</span></h3>
+              <p>ブラウザーでそのまま開けるHTMLファイルです。アプリの更新に左右されず、文章や画像もファイル内に含まれます。</p>
+              <div class="file-save-actions">
+                <button id="saveViewerNormalButton" class="primary-button" type="button">閲覧用HTMLを保存</button>
+                <button id="saveEditorNormalButton" class="secondary-button" type="button">編集用HTMLを保存</button>
+              </div>
+            </section>
+            <section class="file-save-group">
+              <h3>圧縮保存</h3>
+              <p>資料サイトそのものを圧縮してダウンロードします。開くとブラウザ上で解凍して表示します。アップデートの影響を受けません。</p>
+              <div class="file-save-actions">
+                <button id="saveViewerCompressedButton" class="primary-button" type="button">閲覧用サイトとして保存</button>
+                <button id="saveEditorCompressedButton" class="secondary-button" type="button">編集作業継続用サイトを保存</button>
+              </div>
+            </section>
+          </details>
+        </div>
+      </section>
+
+      <section id="urlSavePanel" class="url-save-panel hidden" aria-labelledby="urlSaveTitle">
+        <h2 id="urlSaveTitle">URLとして保存</h2>
+        <p class="url-save-description">
+          現在の内容を圧縮してURL内に保存します。コピーしたURLへアクセスすると、このページで内容を開くことができます。
+        </p>
+        <div class="url-save-actions">
+          <button id="copyViewerUrlButton" class="primary-button" type="button">「閲覧用サイトとして保存」<br>のURLをコピー</button>
+          <button id="copyDiscordLinkButton" class="secondary-button" type="button">Discordで共有用の<br>「資料はこちら」リンクをコピー</button>
+          <button id="copyViewerShortUrlButton" class="secondary-button" type="button">閲覧用サイトの<br>短縮URLをコピー</button>
+          <button id="copyShareUrlButton" class="secondary-button" type="button">Discord共有リンクをコピー</button>
+        </div>
+        <p id="urlSizeInfo" class="url-size-info"></p>
+      </section>
+
+      <div id="notePanel" class="note-panel hidden">
+        <div class="field-label">
+          <label for="noteText">特記事項</label>
+          <small>編集者名などを自由に入力できます</small>
+        </div>
+        <textarea id="noteText" class="text-input" placeholder="例：編集者：〇〇"></textarea>
+      </div>
+
+      <div class="helper">Ctrl / ⌘ + Sで「容量削減保存」の編集作業継続用HTMLを保存できます（一般公開用ではありません）。</div>
+      <div id="status" class="status" aria-live="polite"></div>
 
       <section class="image-panel" aria-labelledby="imagePanelTitle">
         <div class="image-panel-head">
@@ -400,96 +599,24 @@ a{color:var(--accent);overflow-wrap:anywhere;}
           </div>
           <div class="password-setting">
             <label class="font-setting-title" for="savePassword">保存用パスワード</label>
-            <p class="font-setting-note">空欄なら暗号化しません。入力時は保存データをAES-GCMで暗号化します。パスワードを設定した状態で保存系9種のいずれかが正常に完了した場合、パスワードはIndexedDBへ平文で保存されます。また、閲覧者が暗号化されたデータの復号に成功した場合も、閲覧者のブラウザのIndexedDBへ平文で保存されます。
-</p>
+            <p class="font-setting-note password-security-note"><strong>注意：</strong>設定するとデータはAES-GCMで暗号化されます。保存や復号に成功すると、同じブラウザーのIndexedDBへパスワードが平文保存されます。共有端末を避け、使い回しのパスワードは使わないでください。</p>
             <div class="password-setting-row">
               <input id="savePassword" class="title-input password-input" type="password" value="" autocomplete="new-password" placeholder="パスワード（空欄なら暗号化なし）">
+              <button id="passwordVisibilityButton" class="secondary-button" type="button" aria-pressed="false" aria-label="パスワードを表示">表示</button>
               <button id="randomPasswordButton" class="secondary-button" type="button">ランダムなパスワードを設定</button>
             </div>
           </div>
         </div>
       </section>
 
-      <div class="controls">
-        <button id="saveMethodButton" class="primary-button" type="button" aria-expanded="false" aria-controls="fileSavePanel">保存</button>
-        <button id="urlSaveButton" class="secondary-button" type="button" aria-expanded="false" aria-controls="urlSavePanel">URL保存</button>
-        <button id="viewButton" class="secondary-button" type="button">この画面で閲覧</button>
-        <button id="noteEditButton" class="secondary-button" type="button" aria-expanded="false" aria-controls="notePanel">特記事項編集</button>
-        <button id="sampleButton" class="secondary-button" type="button">入力例を入れる</button>
-        <div hidden><button id="clearButton" class="secondary-button" type="button">入力を消す</button></div>
-      </div>
 
-
-      <section id="fileSavePanel" class="file-save-panel hidden" aria-labelledby="fileSaveTitle">
-        <h2 id="fileSaveTitle">保存方法</h2>
-        <p class="file-save-description">保存方法を選択してください。</p>
-        <div class="file-save-groups">
-          <section class="file-save-group">
-            <h3>通常保存</h3>
-            <p>資料サイトそのものとしてダウンロードします。アップデートの影響を受けません。</p>
-            <div class="file-save-actions">
-              <button id="saveViewerNormalButton" class="primary-button" type="button">閲覧用サイトとして保存</button>
-              <button id="saveEditorNormalButton" class="secondary-button" type="button">編集作業継続用サイトを保存</button>
-            </div>
-          </section>
-          <section class="file-save-group">
-            <h3>圧縮保存</h3>
-            <p>資料サイトそのものを圧縮してダウンロードします。開くとブラウザ上で解凍して表示します。アップデートの影響を受けません。</p>
-            <div class="file-save-actions">
-              <button id="saveViewerCompressedButton" class="primary-button" type="button">閲覧用サイトとして保存</button>
-              <button id="saveEditorCompressedButton" class="secondary-button" type="button">編集作業継続用サイトを保存</button>
-            </div>
-          </section>
-          <section id="packedSaveGroup" class="file-save-group">
-            <h3>容量削減保存</h3>
-            <p>資料サイトにアクセスする形式でダウンロードします。アップデートの影響を受けるため注意が必要です。<br>対応ブラウザで利用できる圧縮方式を比較し、最も小さい方式を使用します。<br>圧縮後Base64が8,000文字を超える場合、ブラウザによっては長いURLを開けない可能性があります。</p>
-            <div class="file-save-actions">
-              <button id="saveViewerPackedButton" class="primary-button" type="button">閲覧用サイトとして保存</button>
-              <button id="saveEditorPackedButton" class="secondary-button" type="button">編集作業継続用サイトを保存</button>
-            </div>
-            <p id="packedSaveSizeInfo" class="url-size-info"></p>
-          </section>
-          <section id="publicPackedSaveGroup" class="file-save-group">
-            <h3>容量削減保存（一般公開用）</h3>
-            <p>一般公開用のサイトとして保存します。保存HTMLから <code>index80.html</code> を開き、圧縮した内容をURLフラグメントで引き継ぎます。</p>
-            <div class="file-save-actions">
-              <button id="saveViewerPublicPackedButton" class="primary-button" type="button">閲覧用サイトとして保存</button>
-              <button id="saveEditorPublicPackedButton" class="secondary-button" type="button">編集作業継続用サイトを保存</button>
-            </div>
-          </section>
-        </div>
-      </section>
-
-      <section id="urlSavePanel" class="url-save-panel hidden" aria-labelledby="urlSaveTitle">
-        <h2 id="urlSaveTitle">URLとして保存</h2>
-        <p class="url-save-description">
-          現在の内容を圧縮してURL内に保存します。コピーしたURLへアクセスすると、このページで内容を開くことができます。
-        </p>
-        <div class="url-save-actions">
-          <button id="copyViewerUrlButton" class="primary-button" type="button">「閲覧用サイトとして保存」<br>のURLをコピー</button>
-          <button id="copyDiscordLinkButton" class="secondary-button" type="button">Discodeで共有用の<br>「資料はこちら」リンクをコピー</button>
-          <button id="copyViewerShortUrlButton" class="secondary-button" type="button">閲覧用サイトの<br>短縮URLをコピー</button>
-          <button id="copyShareUrlButton" class="secondary-button" type="button">Discode共有リンクをコピー</button>
-        </div>
-        <p id="urlSizeInfo" class="url-size-info"></p>
-      </section>
-
-      <div id="notePanel" class="note-panel hidden">
-        <div class="field-label">
-          <label for="noteText">特記事項</label>
-          <small>編集者名などを自由に入力できます</small>
-        </div>
-        <textarea id="noteText" class="text-input" placeholder="例：編集者：〇〇"></textarea>
-      </div>
-
-      <div class="helper">保存されたHTMLにはMarkdown文章が埋め込まれます。</div>
-      <div id="status" class="status" aria-live="polite"></div>
     </section>
   </main>
 
   <main id="viewerMode" class="app hidden">
     <article class="panel document">
       <div class="viewer-actions">
+        <button id="printButton" class="secondary-button" type="button" title="印刷画面で「1枚あたりのページ数」を2に設定できます">印刷 / PDF</button>
         <button id="viewerQrButton" class="secondary-button viewer-qr-button" type="button" aria-expanded="false">共有QRコードを表示</button>
         <div class="viewer-size-switch" role="group" aria-label="文字サイズ">
           <button type="button" data-viewer-size="xlarge" aria-pressed="false">特大</button>
@@ -499,7 +626,7 @@ a{color:var(--accent);overflow-wrap:anywhere;}
         </div>
         <div hidden><button id="copyNoteButton" class="secondary-button" type="button">note形式でのコピーに試みる</button></div>
         <div hidden><button id="copyMarkdownButton" class="secondary-button" type="button">Markdownをコピー</button></div>
-        <button id="editButton" class="secondary-button" type="button">編集する</button>
+        <button id="editButton" class="secondary-button" type="button">編集に戻る</button>
       </div>
       <section id="viewerQrPanel" class="viewer-qr-panel hidden" aria-hidden="true">
         <div class="viewer-qr-title">このURLのQRコード</div>
@@ -507,16 +634,86 @@ a{color:var(--accent);overflow-wrap:anywhere;}
         <p class="viewer-qr-help">QRコードは <a href="https://x.gd/1JQYm" target="_blank" rel="noopener noreferrer">x.gd/1JQYm</a> にアクセスし、表示された読み取りサイトから読み取れます。環境によっては先頭に <code>https://</code> が必要です。</p>
         <p id="viewerQrStatus" class="viewer-qr-status" role="status" aria-live="polite"></p>
       </section>
-      <h1 id="viewTitle"></h1>
+      <h1 id="viewTitle" tabindex="-1"></h1>
+      <nav id="viewerOutline" class="document-outline hidden" aria-label="このページの目次">
+        <details><summary id="viewerOutlineSummary">このページの目次</summary><ol id="viewerOutlineList"></ol></details>
+      </nav>
       <div id="viewContent"></div>
       <footer id="viewMeta" class="meta"></footer>
     </article>
   </main>
 
-  <script id="initialData" type="application/json">
+  <script id="initialData" type="application/json" data-storage-encoding="json-safe">
 {"title":"","source":"","createdAt":"","note":"","startMode":"auto","textSize":"small","fonts":["noto-sans-jp","meiryo","yu-gothic-ui","biz-udp-gothic","hiragino-sans","system-ui"],"images":[]}
 </script>
   <script>
+function createMarkdownEdit(source, selectionStart, selectionEnd, action) {
+  source = String(source);
+  const start = Math.min(source.length, Math.max(0, Number(selectionStart) || 0));
+  const end = Math.min(source.length, Math.max(start, Number(selectionEnd) || 0));
+  const selected = source.slice(start, end);
+  function edit(rangeStart, rangeEnd, text, offset, length) {
+    return { rangeStart: rangeStart, rangeEnd: rangeEnd, text: text, selectionStart: rangeStart + offset, selectionEnd: rangeStart + offset + length };
+  }
+  if (action === "bold" || action === "italic") {
+    const marker = action === "bold" ? "**" : "*";
+    if (selected.startsWith(marker) && selected.endsWith(marker) && selected.length > marker.length * 2) {
+      const body = selected.slice(marker.length, -marker.length);
+      return edit(start, end, body, 0, body.length);
+    }
+    if (start >= marker.length && source.slice(start - marker.length, start) === marker && source.slice(end, end + marker.length) === marker) {
+      return edit(start - marker.length, end + marker.length, selected, 0, selected.length);
+    }
+    const body = selected || (action === "bold" ? "強調する文章" : "斜体の文章");
+    return edit(start, end, marker + body + marker, marker.length, body.length);
+  }
+  if (action === "heading" || action === "list" || action === "quote") {
+    const lineStart = start > 0 ? source.lastIndexOf("\n", start - 1) + 1 : 0;
+    const effectiveEnd = end > start && source[end - 1] === "\n" ? end - 1 : end;
+    const nextBreak = source.indexOf("\n", effectiveEnd);
+    const lineEnd = nextBreak < 0 ? source.length : nextBreak;
+    const prefix = action === "heading" ? "## " : action === "list" ? "- " : "> ";
+    const pattern = action === "heading" ? /^##\s+/ : action === "list" ? /^[-*+]\s+/ : /^>\s?/;
+    const lines = source.slice(lineStart, lineEnd).split("\n");
+    const filled = lines.filter(function (line) { return line.trim(); });
+    const remove = filled.length > 0 && filled.every(function (line) { return pattern.test(line); });
+    const body = lines.map(function (line, index) {
+      if (!line.trim() && lines.length > 1 && (filled.length > 0 || index > 0)) return line;
+      if (remove) return line.replace(pattern, "");
+      const content = action === "heading" ? line.replace(/^#{1,6}\s+/, "") : line.replace(pattern, "");
+      return prefix + (content || (action === "heading" ? "見出し" : action === "list" ? "項目" : "引用する文章"));
+    }).join("\n");
+    const offset = filled.length === 0 && !remove ? prefix.length : 0;
+    return edit(lineStart, lineEnd, body, offset, body.length - offset);
+  }
+  if (action === "link") {
+    const label = selected || "リンク文字";
+    const url = "https://example.com";
+    return edit(start, end, "[" + label + "](" + url + ")", label.length + 3, url.length);
+  }
+  if (action === "code") {
+    const before = source.slice(0, start);
+    const after = source.slice(end);
+    const leading = !before || before.endsWith("\n\n") ? "" : before.endsWith("\n") ? "\n" : "\n\n";
+    const trailing = !after || after.startsWith("\n\n") ? "" : after.startsWith("\n") ? "\n" : "\n\n";
+    const body = selected || "コードを入力";
+    return edit(start, end, leading + "```\n" + body + "\n```" + trailing, leading.length + 4, body.length);
+  }
+  throw new Error("未対応の書式です。");
+}
+
+function getPreviewDocument(title, source) {
+  const lines = String(source).replace(/\r\n?/g, "\n").split("\n");
+  let resolvedTitle = String(title).trim();
+  const match = !resolvedTitle && (lines[0] || "").match(/^#\s+(.+?)\s*$/);
+  if (match) {
+    resolvedTitle = match[1].trim();
+    lines.shift();
+    while (lines.length && !lines[0].trim()) lines.shift();
+  }
+  return { title: resolvedTitle || "閲覧用ページ", source: lines.join("\n") };
+}
+
 async function initApp() {
     "use strict";
 
@@ -533,6 +730,16 @@ async function initApp() {
     let qrCodePluginPromise = null;
     const titleInput = document.getElementById("pageTitle");
     const sourceText = document.getElementById("sourceText");
+    const writingWorkspace = document.getElementById("writingWorkspace");
+    const livePreviewToggle = document.getElementById("livePreviewToggle");
+    const livePreviewPanel = document.getElementById("livePreviewPanel");
+    const livePreviewContent = document.getElementById("livePreviewContent");
+    const editorMetrics = document.getElementById("editorMetrics");
+    const restoreContentPanel = document.getElementById("restoreContentPanel");
+    const restoreContentButton = document.getElementById("restoreContentButton");
+    const viewerOutline = document.getElementById("viewerOutline");
+    const viewerOutlineList = document.getElementById("viewerOutlineList");
+    const viewerOutlineSummary = document.getElementById("viewerOutlineSummary");
     const noteText = document.getElementById("noteText");
     const notePanel = document.getElementById("notePanel");
     const noteEditButton = document.getElementById("noteEditButton");
@@ -552,6 +759,7 @@ async function initApp() {
     const viewerFontInputs = Array.from(document.querySelectorAll('input[name="viewerFont"]'));
     const savePasswordInput = document.getElementById("savePassword");
     const randomPasswordButton = document.getElementById("randomPasswordButton");
+    const passwordVisibilityButton = document.getElementById("passwordVisibilityButton");
     const imageDropZone = document.getElementById("imageDropZone");
     const insertAtCursorCheck = document.getElementById("insertAtCursorCheck");
     const saveMethodButton = document.getElementById("saveMethodButton");
@@ -609,6 +817,11 @@ async function initApp() {
     let urlSizeUpdateSerial = 0;
     let lastSourceSelectionStart = 0;
     let lastSourceSelectionEnd = 0;
+    let livePreviewEnabled = false;
+    let livePreviewTimer = 0;
+    let replacementSnapshot = null;
+    let lastEditorScrollY = 0;
+    let viewerOpenedFromEditor = false;
 
     function escapeHtml(value) {
       return String(value)
@@ -860,7 +1073,7 @@ async function initApp() {
     function parseTextToMarkdown(text) { return String(text).replace(/\r\n?/g, "\n").trim(); }
 
     function encodeStoredText(value) {
-      return String(value).replace(/`/g, "jfasofklasflkd").replace(/<\//g, "<gsafnasdfhags/");
+      return String(value).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
     }
 
     function decodeStoredText(value) {
@@ -869,7 +1082,9 @@ async function initApp() {
 
     function readInitialData() {
       try {
-        const raw = decodeStoredText(document.getElementById("initialData").textContent || "");
+        const dataNode = document.getElementById("initialData");
+        const stored = dataNode.textContent || "";
+        const raw = dataNode.dataset.storageEncoding === "json-safe" ? stored : decodeStoredText(stored);
         const parsed = JSON.parse(raw);
         return {
           title: typeof parsed.title === "string" ? parsed.title : "",
@@ -1224,6 +1439,7 @@ async function initApp() {
       }).filter(Boolean);
       enabledFonts.push("sans-serif");
       viewerMode.style.setProperty("--viewer-font-stack", enabledFonts.join(","));
+      livePreviewContent.style.setProperty("--viewer-font-stack", enabledFonts.join(","));
       viewerFontInputs.forEach(function (input) {
         input.setAttribute("aria-label", input.parentElement.textContent.trim() + (input.checked ? " ON" : " OFF"));
       });
@@ -1415,12 +1631,12 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
         button.disabled = true;
         button.textContent = "リンクを作成中…";
         const result = await createSavedUrl("auto");
-        if (result.encodedLength >= DISCORD_BASE64_LIMIT) throw new Error("圧縮後のBase64データが" + DISCORD_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため、Discode共有用リンクを作成できません。");
+        if (result.encodedLength >= DISCORD_BASE64_LIMIT) throw new Error("圧縮後のBase64データが" + DISCORD_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため、Discord共有用リンクを作成できません。");
         const discordLink = "[資料はこちら](<" + result.copyUrl + ">)";
         await copyText(discordLink);
         if (result.passwordId && result.password) await saveSuccessfulPassword(result.passwordId, result.password);
         button.textContent = "リンクをコピーしました";
-        showStatus("Discode共有用の「資料はこちら」リンクをクリップボードへコピーしました。圧縮形式：" + result.format + "、圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字");
+        showStatus("Discord共有用の「資料はこちら」リンクをクリップボードへコピーしました。圧縮形式：" + result.format + "、圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字");
       } catch (error) {
         button.textContent = "コピーできませんでした";
         showStatus(error && error.message ? error.message : "共有用リンクの作成に失敗しました。", true);
@@ -1433,14 +1649,14 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
       const originalText = button.textContent;
       try {
         button.disabled = true;
-        button.textContent = "Discode共有リンクを作成中…";
+        button.textContent = "Discord共有リンクを作成中…";
         const result = await createSavedUrl("auto");
-        if (result.encodedLength >= DISCORD_BASE64_LIMIT) throw new Error("圧縮後のBase64データが" + DISCORD_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため、Discode共有リンクを作成できません。");
+        if (result.encodedLength >= DISCORD_BASE64_LIMIT) throw new Error("圧縮後のBase64データが" + DISCORD_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため、Discord共有リンクを作成できません。");
         const pageTitle = (titleInput.value.trim() || "閲覧用ページ").replace(/[\\[\]]/g, "\\$&");
         await copyText("[" + pageTitle + "](<" + result.copyUrl + ">)");
         if (result.passwordId && result.password) await saveSuccessfulPassword(result.passwordId, result.password);
-        button.textContent = "Discode共有リンクをコピーしました";
-        showStatus("Discode共有リンクをクリップボードへコピーしました。圧縮形式：" + result.format + "、圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字");
+        button.textContent = "Discord共有リンクをコピーしました";
+        showStatus("Discord共有リンクをクリップボードへコピーしました。圧縮形式：" + result.format + "、圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字");
       } catch (error) {
         button.textContent = "コピーできませんでした";
         showStatus(error && error.message ? error.message : "共有用URLの作成に失敗しました。", true);
@@ -1481,7 +1697,7 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
           urlSaveButton.setAttribute("aria-expanded", "false");
         }
         packedSaveGroup.classList.toggle("hidden", packedTooLarge);
-        urlSizeInfo.textContent = "現在の最短形式（" + viewerPayload.format + "）の圧縮後Base64：" + viewerPayload.encoded.length.toLocaleString("ja-JP") + "文字 / URL保存上限 " + URL_BASE64_LIMIT.toLocaleString("ja-JP") + "文字 / 閲覧用URL：" + viewerUrlLength.toLocaleString("ja-JP") + "文字" + (xgdUrlTooLarge ? "（X.gd短縮は元URLが" + XGD_ORIGINAL_URL_LIMIT.toLocaleString("ja-JP") + "文字を超えるため非表示）" : "") + (discordTooLarge ? "（Discode共有用リンク・共有に適したURLは" + DISCORD_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため非表示）" : "");
+        urlSizeInfo.textContent = "現在の最短形式（" + viewerPayload.format + "）の圧縮後Base64：" + viewerPayload.encoded.length.toLocaleString("ja-JP") + "文字 / URL保存上限 " + URL_BASE64_LIMIT.toLocaleString("ja-JP") + "文字 / 閲覧用URL：" + viewerUrlLength.toLocaleString("ja-JP") + "文字" + (xgdUrlTooLarge ? "（X.gd短縮は元URLが" + XGD_ORIGINAL_URL_LIMIT.toLocaleString("ja-JP") + "文字を超えるため非表示）" : "") + (discordTooLarge ? "（Discord共有用リンク・共有に適したURLは" + DISCORD_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため非表示）" : "");
         packedSaveSizeInfo.textContent = "現在の最短形式（" + payload.format + "）の圧縮後Base64：" + payload.encoded.length.toLocaleString("ja-JP") + " / " + PACKED_SAVE_BASE64_LIMIT.toLocaleString("ja-JP") + "文字";
       } catch (error) {
         if (serial !== urlSizeUpdateSerial) return;
@@ -1588,6 +1804,7 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
         imageList.appendChild(item);
       });
       scheduleUrlSaveAvailabilityUpdate();
+      scheduleLivePreview();
     }
 
     function insertTextAtCursor(text) {
@@ -1641,6 +1858,114 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
       }
     }
 
+    function renderLivePreview() {
+      if (!livePreviewEnabled) return;
+      livePreviewContent.replaceChildren();
+      if (!titleInput.value.trim() && !sourceText.value.trim()) {
+        const empty = document.createElement("div");
+        empty.className = "live-preview-empty";
+        empty.innerHTML = "<strong>文章の仕上がりを、ここで確認</strong><p>入力欄に書くと、表示が更新されます。</p>";
+        livePreviewContent.appendChild(empty);
+        return;
+      }
+      const data = getPreviewDocument(titleInput.value, sourceText.value);
+      const heading = document.createElement("h1");
+      heading.textContent = data.title;
+      const content = document.createElement("div");
+      content.innerHTML = data.source.trim() ? parseTextToHtml(data.source) : '<p class="editor-input-help">本文はまだありません。</p>';
+      livePreviewContent.append(heading, content);
+    }
+
+    function scheduleLivePreview() {
+      clearTimeout(livePreviewTimer);
+      if (livePreviewEnabled) livePreviewTimer = setTimeout(renderLivePreview, 150);
+    }
+
+    function setLivePreview(enabled) {
+      livePreviewEnabled = Boolean(enabled);
+      editorMode.dataset.livePreview = String(livePreviewEnabled);
+      writingWorkspace.dataset.preview = String(livePreviewEnabled);
+      livePreviewPanel.classList.toggle("hidden", !livePreviewEnabled);
+      livePreviewToggle.setAttribute("aria-expanded", String(livePreviewEnabled));
+      livePreviewToggle.textContent = livePreviewEnabled ? "プレビューを閉じる" : "プレビューを表示";
+      clearTimeout(livePreviewTimer);
+      if (livePreviewEnabled) renderLivePreview();
+    }
+
+    function applyMarkdownCommand(action) {
+      const edit = createMarkdownEdit(sourceText.value, sourceText.selectionStart, sourceText.selectionEnd, action);
+      const previous = sourceText.value;
+      const expected = previous.slice(0, edit.rangeStart) + edit.text + previous.slice(edit.rangeEnd);
+      const scrollTop = sourceText.scrollTop;
+      sourceText.focus({ preventScroll: true });
+      sourceText.setSelectionRange(edit.rangeStart, edit.rangeEnd);
+      // 対応環境では、ボタンからの挿入もブラウザーの「元に戻す」に含める。
+      try { document.execCommand("insertText", false, edit.text); } catch (error) { /* 下の標準APIへフォールバック。 */ }
+      if (sourceText.value !== expected) {
+        sourceText.value = previous;
+        sourceText.setRangeText(edit.text, edit.rangeStart, edit.rangeEnd, "end");
+      }
+      sourceText.setSelectionRange(edit.selectionStart, edit.selectionEnd);
+      sourceText.scrollTop = scrollTop;
+      sourceText.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    function confirmContentReplacement(label) {
+      return !(titleInput.value.trim() || sourceText.value.trim()) || window.confirm(label + "を読み込むと、現在のタイトルと文章が置き換わります。読み込みますか？");
+    }
+
+    function rememberContentReplacement() {
+      replacementSnapshot = {
+        title: titleInput.value, source: sourceText.value,
+        selectionStart: sourceText.selectionStart, selectionEnd: sourceText.selectionEnd
+      };
+    }
+
+    function finishContentReplacement() {
+      replacementSnapshot.nextTitle = titleInput.value;
+      replacementSnapshot.nextSource = sourceText.value;
+      restoreContentPanel.classList.toggle("hidden", !(replacementSnapshot.title || replacementSnapshot.source));
+      sourceText.setSelectionRange(0, 0);
+      sourceText.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    function restoreReplacedContent() {
+      if (!replacementSnapshot) return;
+      const changed = titleInput.value !== replacementSnapshot.nextTitle || sourceText.value !== replacementSnapshot.nextSource;
+      if (changed && !window.confirm("元に戻すと、置き換え後に編集した内容は消えます。置き換え前の文章に戻しますか？")) return;
+      titleInput.value = replacementSnapshot.title;
+      sourceText.value = replacementSnapshot.source;
+      sourceText.focus({ preventScroll: true });
+      sourceText.setSelectionRange(replacementSnapshot.selectionStart, replacementSnapshot.selectionEnd);
+      replacementSnapshot = null;
+      restoreContentPanel.classList.add("hidden");
+      sourceText.dispatchEvent(new Event("input", { bubbles: true }));
+      showStatus("置き換え前の文章に戻しました。");
+    }
+
+    function buildViewerOutline() {
+      const headings = Array.from(viewContent.querySelectorAll("h1,h2,h3"));
+      viewerOutlineList.replaceChildren();
+      viewerOutline.classList.toggle("hidden", headings.length < 2);
+      viewerOutlineSummary.textContent = "このページの目次（" + headings.length + "項目）";
+      headings.forEach(function (heading, index) {
+        heading.id = "doc-section-" + (index + 1);
+        heading.tabIndex = -1;
+        const item = document.createElement("li");
+        item.dataset.depth = heading.tagName.slice(1);
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = heading.textContent;
+        button.addEventListener("click", function () {
+          const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          heading.scrollIntoView({ block: "start", behavior: reducedMotion ? "auto" : "smooth" });
+          heading.focus({ preventScroll: true });
+        });
+        item.appendChild(button);
+        viewerOutlineList.appendChild(item);
+      });
+    }
+
     function applyMarkdownTitle() {
       if (titleInput.value.trim()) return;
       const normalized = sourceText.value.replace(/\r\n?/g, "\n");
@@ -1660,7 +1985,15 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
       status.classList.toggle("error", Boolean(isError));
     }
 
-    function updateCount() { charCount.textContent = sourceText.value.length.toLocaleString("ja-JP") + "文字"; }
+    function updateCount() {
+      const text = sourceText.value;
+      const characters = Array.from(text).length;
+      charCount.textContent = characters.toLocaleString("ja-JP") + "文字";
+      editorMetrics.textContent = text.trim()
+        ? text.split("\n").length.toLocaleString("ja-JP") + "行 · 読了目安 約" + Math.max(1, Math.ceil(characters / 500)) + "分"
+        : "本文なし";
+      scheduleLivePreview();
+    }
 
     function hideViewerQrCode() {
       viewerQrPanel.classList.add("hidden");
@@ -1735,9 +2068,12 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
     function showEditor() {
       viewerMode.classList.add("hidden");
       editorMode.classList.remove("hidden");
-      document.title = "Markdownから閲覧用サイトを作成";
+      document.title = "Markdownから読みやすいページを作成";
       updateCount();
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      const returnToWriting = viewerOpenedFromEditor;
+      viewerOpenedFromEditor = false;
+      if (returnToWriting) sourceText.focus({ preventScroll: true });
+      window.scrollTo({ top: returnToWriting ? lastEditorScrollY : 0, behavior: "auto" });
     }
 
     function addCodeBlockControls() {
@@ -1788,6 +2124,7 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
       viewTitle.textContent = title;
       viewContent.innerHTML = parseTextToHtml(source);
       addCodeBlockControls();
+      buildViewerOutline();
       const savedData = initialData;
       viewMeta.replaceChildren();
       if (noteText.value.trim()) {
@@ -1806,10 +2143,15 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
       printLine.id = "printTimestamp";
       printLine.textContent = "印刷日時：" + formatJapaneseDateTime(new Date());
       viewMeta.appendChild(printLine);
+      if (!editorMode.classList.contains("hidden")) {
+        lastEditorScrollY = window.scrollY;
+        viewerOpenedFromEditor = true;
+      }
       editorMode.classList.add("hidden");
       viewerMode.classList.remove("hidden");
       document.title = title;
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({ top: 0, behavior: "auto" });
+      viewTitle.focus({ preventScroll: true });
       return true;
     }
 
@@ -2020,6 +2362,7 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
         images: images.map(function (image) { return { id: image.id, fileName: image.fileName, dataUrl: image.dataUrl, width: image.width, height: image.height }; })
       };
       dataNode.textContent = encodeStoredText(JSON.stringify(data));
+      dataNode.dataset.storageEncoding = "json-safe";
       clone.querySelector("#editorMode").classList.add("hidden");
       clone.querySelector("#viewerMode").classList.remove("hidden");
       clone.querySelector("#pageTitle").value = "";
@@ -2028,6 +2371,27 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
       const clonedPasswordInput = clone.querySelector("#savePassword");
       if (clonedPasswordInput) { clonedPasswordInput.value = ""; clonedPasswordInput.setAttribute("value", ""); clonedPasswordInput.type = "password"; }
       clone.querySelector("#imageList").replaceChildren();
+      clone.querySelector("#livePreviewContent").replaceChildren();
+      clone.querySelector("#livePreviewPanel").classList.add("hidden");
+      clone.querySelector("#writingWorkspace").dataset.preview = "false";
+      clone.querySelector("#editorMode").dataset.livePreview = "false";
+      const clonedPreviewToggle = clone.querySelector("#livePreviewToggle");
+      clonedPreviewToggle.setAttribute("aria-expanded", "false");
+      clonedPreviewToggle.textContent = "プレビューを表示";
+      clone.querySelector("#restoreContentPanel").classList.add("hidden");
+      clone.querySelector("#charCount").textContent = "0文字";
+      clone.querySelector("#editorMetrics").textContent = "本文なし";
+      clone.querySelector("#basicSaveOptions").removeAttribute("open");
+      clone.querySelector("#viewerOutline").classList.add("hidden");
+      clone.querySelector("#viewerOutlineList").replaceChildren();
+      clone.querySelector("#viewerOutline details").removeAttribute("open");
+      clone.querySelector("#viewContent").replaceChildren();
+      clone.querySelector("#viewTitle").textContent = "";
+      clone.querySelector("#viewMeta").replaceChildren();
+      const clonedPasswordVisibility = clone.querySelector("#passwordVisibilityButton");
+      clonedPasswordVisibility.setAttribute("aria-pressed", "false");
+      clonedPasswordVisibility.setAttribute("aria-label", "パスワードを表示");
+      clonedPasswordVisibility.textContent = "表示";
       const clonedSizePanelBody = clone.querySelector("#sizePanelBody");
       const clonedSizePanelToggle = clone.querySelector("#sizePanelToggle");
       if (clonedSizePanelBody) clonedSizePanelBody.classList.add("hidden");
@@ -2127,6 +2491,20 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
     });
     copyShareUrlButton.addEventListener("click", function () { copyShareUrl(copyShareUrlButton); });
     document.getElementById("viewButton").addEventListener("click", showViewer);
+    livePreviewToggle.addEventListener("click", function () { setLivePreview(!livePreviewEnabled); });
+    restoreContentButton.addEventListener("click", restoreReplacedContent);
+    document.getElementById("printButton").addEventListener("click", function () { window.print(); });
+    document.querySelectorAll("[data-markdown-action]").forEach(function (button) {
+      button.addEventListener("mousedown", function (event) { if (event.button === 0) event.preventDefault(); });
+      button.addEventListener("click", function () { applyMarkdownCommand(button.dataset.markdownAction); });
+    });
+    sourceText.addEventListener("keydown", function (event) {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey || event.isComposing) return;
+      const key = event.key.toLowerCase();
+      if (key !== "b" && key !== "i") return;
+      event.preventDefault();
+      applyMarkdownCommand(key === "b" ? "bold" : "italic");
+    });
     document.getElementById("helpSiteButton").addEventListener("click", function () {
       const targetUrl = "https://uni928.github.io/Uni928PublicHTMLs/index80exp1.html";
       const hashIndex = targetUrl.indexOf("#");
@@ -2212,9 +2590,18 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
       }
     });
 
+    function setPasswordVisibility(visible) {
+      savePasswordInput.type = visible ? "text" : "password";
+      passwordVisibilityButton.setAttribute("aria-pressed", String(visible));
+      passwordVisibilityButton.setAttribute("aria-label", visible ? "パスワードを隠す" : "パスワードを表示");
+      passwordVisibilityButton.textContent = visible ? "隠す" : "表示";
+    }
+    passwordVisibilityButton.addEventListener("click", function () {
+      setPasswordVisibility(savePasswordInput.type === "password");
+    });
     randomPasswordButton.addEventListener("click", function () {
       savePasswordInput.value = randomBase64Password32();
-      savePasswordInput.type = "text";
+      setPasswordVisibility(true);
       savePasswordInput.focus();
       savePasswordInput.select();
       scheduleUrlSaveAvailabilityUpdate();
@@ -2278,15 +2665,23 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
         return;
       }
       file.text().then(function (text) {
+        if (!confirmContentReplacement("「" + file.name + "」")) {
+          markdownFileStatus.textContent = "読み込みをキャンセルしました。現在の文章を保持しています。";
+          return;
+        }
+        rememberContentReplacement();
+        titleInput.value = "";
         sourceText.value = text.replace(/^\uFEFF/, "");
         applyMarkdownTitle();
+        if (!titleInput.value.trim()) titleInput.value = file.name.replace(/\.md$/i, "");
         updateCount();
         scheduleUrlSaveAvailabilityUpdate();
         markdownFileStatus.classList.remove("error");
         markdownFileStatus.textContent = file.name + "を読み込みました。";
-        sourceText.dispatchEvent(new Event("input", { bubbles: true }));
+        finishContentReplacement();
         markdownFileDialog.close();
         sourceText.focus();
+        showStatus(file.name + "を読み込みました。" + (restoreContentPanel.classList.contains("hidden") ? "" : "置き換え前の文章は「元に戻す」で復元できます。"));
       }).catch(function () {
         markdownFileStatus.textContent = "ファイルを読み込めませんでした。別のファイルをお試しください。";
         markdownFileStatus.classList.add("error");
@@ -2344,11 +2739,14 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
     });
 
     document.getElementById("sampleButton").addEventListener("click", function () {
-      titleInput.value = "旅行の予定";
-      sourceText.value = "## 集合場所\n\n東京駅の丸の内南口に、午前9時までに集合します。\n\n## 持ち物\n\n- スマートフォン\n- 充電器\n- 飲み物\n- 折りたたみ傘\n\n> 雨天の場合は予定を変更します。\n\n参考：[JR東日本](https://www.jreast.co.jp/)";
+      if (!confirmContentReplacement("入力例")) return;
+      rememberContentReplacement();
+      titleInput.value = "チームの作業メモ";
+      sourceText.value = "## 今日のゴール\n\n大切な情報を **読みやすく** 整理して、チームに共有しましょう。\n\n## チェックリスト\n\n- [x] タイトルを決める\n- [ ] 本文を書く\n- [ ] プレビューで確認する\n- [ ] 閲覧用HTMLを保存する\n\n## 共有の予定\n\n| 項目 | 担当 | 期限 |\n| --- | --- | --- |\n| 下書き | 田中 | 10:00 |\n| 内容の確認 | 佐藤 | 14:00 |\n| 公開 | 全員 | 17:00 |\n\n> 編集を続けたい場合は「編集用HTML」を保存してください。\n\n## コードの例\n\n```javascript\nconst message = \"Hello!\";\nconsole.log(message);\n```";
+      finishContentReplacement();
       updateCount();
       scheduleUrlSaveAvailabilityUpdate();
-      showStatus("入力例を入れました。");
+      showStatus("入力例を入れました。「プレビューを表示」で仕上がりを確認できます。");
     });
 
     document.getElementById("clearButton").addEventListener("click", function () {
@@ -2379,13 +2777,22 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
       sourceText.addEventListener(eventName, rememberSourceSelection);
     });
     sourceText.addEventListener("input", function () { updateCount(); scheduleUrlSaveAvailabilityUpdate(); });
-    titleInput.addEventListener("input", scheduleUrlSaveAvailabilityUpdate);
+    titleInput.addEventListener("input", function () { scheduleUrlSaveAvailabilityUpdate(); scheduleLivePreview(); });
     noteText.addEventListener("input", scheduleUrlSaveAvailabilityUpdate);
 
     document.addEventListener("keydown", function (event) {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+      if (event.isComposing || document.querySelector("dialog[open]")) return;
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "s") {
         event.preventDefault();
         if (!saveEditorPackedButton.disabled) saveEditorPackedButton.click();
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key === "Enter" && !editorMode.classList.contains("hidden")) {
+        event.preventDefault();
+        showViewer();
+      }
+      if (event.key === "Escape" && !viewerMode.classList.contains("hidden")) {
+        event.preventDefault();
+        showEditor();
       }
     });
 
@@ -2406,6 +2813,9 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
       noteEditButton.setAttribute("aria-expanded", "true");
     }
     updateCount();
+    setLivePreview(false);
+    restoreContentPanel.classList.add("hidden");
+    setPasswordVisibility(false);
     await updateUrlSaveAvailability();
 
     if (initialData.startMode !== "editor" && (initialData.title + initialData.source).length >= 1) showViewer();
