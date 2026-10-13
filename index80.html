@@ -580,7 +580,6 @@ async function initApp() {
     const XGD_ORIGINAL_URL_LIMIT = 10000;
     const PACKED_SAVE_BASE64_LIMIT = 1000000;
     const LONG_URL_BASE = "https://uni928.github.io/Uni928PublicHTMLs/index80.html";
-    const URL_SHARE_BASE = "https://uni928.github.io/ShareURL/?url=";
     let lastShortenedUrlPair = null;
     const URL_COMPRESSION_FORMATS = [
       { format: "brotli", hashKey: "br" },
@@ -1430,21 +1429,15 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
       }
     }
 
-    function buildShareUrl(targetUrl) {
-      const withoutProtocol = targetUrl.startsWith("https://") ? targetUrl.slice(8) : targetUrl.startsWith("http://") ? targetUrl.slice(7) : targetUrl;
-      return URL_SHARE_BASE + encodeURIComponent(withoutProtocol);
-    }
-
     async function copyShareUrl(button) {
       const originalText = button.textContent;
       try {
         button.disabled = true;
         button.textContent = "Discode共有リンクを作成中…";
         const result = await createSavedUrl("auto");
-        if (result.encodedLength >= DISCORD_BASE64_LIMIT) throw new Error("圧縮後のBase64データが" + DISCORD_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため、共有に適したURLを作成できません。");
-        const shareUrl = buildShareUrl(result.copyUrl);
+        if (result.encodedLength >= DISCORD_BASE64_LIMIT) throw new Error("圧縮後のBase64データが" + DISCORD_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため、Discode共有リンクを作成できません。");
         const pageTitle = (titleInput.value.trim() || "閲覧用ページ").replace(/[\\[\]]/g, "\\$&");
-        await copyText("[" + pageTitle + "](<" + shareUrl + ">)");
+        await copyText("[" + pageTitle + "](<" + result.copyUrl + ">)");
         if (result.passwordId && result.password) await saveSuccessfulPassword(result.passwordId, result.password);
         button.textContent = "Discode共有リンクをコピーしました";
         showStatus("Discode共有リンクをクリップボードへコピーしました。圧縮形式：" + result.format + "、圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字");
