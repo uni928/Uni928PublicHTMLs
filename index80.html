@@ -224,7 +224,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
 }
 @layer viewer{
 /* 選択中のフォント候補を閲覧部分へ適用。 */
-.document{position:relative;padding:clamp(24px,4.5vw,42px);border-radius:18px;box-shadow:0 14px 36px rgba(30,41,59,.08);}
+.document{position:relative;padding:clamp(24px,4.5vw,42px);border-radius:18px;box-shadow:0 14px 36px rgba(30,41,59,.08);font-weight:440;}
+.document strong,.document b{font-weight:750;-webkit-text-stroke:.1px currentColor;}
 #viewerMode .document{font-family:var(--viewer-font-stack,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif);}
 .viewer-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:28px;padding-bottom:18px;border-bottom:1px solid var(--line);justify-content:flex-end;}
 .viewer-actions button{min-height:42px;}
