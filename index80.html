@@ -1788,7 +1788,7 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
       viewTitle.textContent = title;
       viewContent.innerHTML = parseTextToHtml(source);
       addCodeBlockControls();
-      const savedData = readInitialData();
+      const savedData = initialData;
       viewMeta.replaceChildren();
       if (noteText.value.trim()) {
         const noteLine = document.createElement("div");
