@@ -1,5 +1,5 @@
 <script>
-const version=24;
+const version=25;
 const D='index80B',S='pages',K=D+'-content-v'+version,B='./index80BBody.html';
 const clearVersionFragment=()=>{const p=new URLSearchParams(location.hash.slice(1));p.delete('ver');const h=p.toString();history.replaceState(null,'',location.pathname+location.search+(h?'#'+h:''))};
 const goBody=()=>{const u=new URL(B,location.href);u.search=location.search;u.hash='ver='+version;location.replace(u.href)};
