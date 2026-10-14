@@ -542,7 +542,7 @@ html{scroll-behavior:auto;}
         <textarea id="noteText" class="text-input" placeholder="例：編集者：〇〇"></textarea>
       </div>
 
-      <div class="helper">Ctrl / ⌘ + Sで「容量削減保存」の編集作業継続用HTMLを保存できます（一般公開用ではありません）。</div>
+      <div class="helper">Ctrl / ⌘ + Sで「容量削減保存」の閲覧用サイトとして保存できます（一般公開用ではありません）。</div>
       <div id="status" class="status" aria-live="polite"></div>
 
       <section class="image-panel" aria-labelledby="imagePanelTitle">
@@ -1949,7 +1949,7 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
     function buildViewerOutline() {
       const headings = Array.from(viewContent.querySelectorAll("h1,h2,h3"));
       viewerOutlineList.replaceChildren();
-      viewerOutline.classList.toggle("hidden", headings.length < 2);
+      viewerOutline.classList.toggle("hidden", headings.length < 8 || sourceText.value.length < 3000);
       viewerOutlineSummary.textContent = "このページの目次（" + headings.length + "項目）";
       headings.forEach(function (heading, index) {
         heading.id = "doc-section-" + (index + 1);
@@ -2786,7 +2786,7 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
       if (event.isComposing || document.querySelector("dialog[open]")) return;
       if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "s") {
         event.preventDefault();
-        if (!saveEditorPackedButton.disabled) saveEditorPackedButton.click();
+        if (!saveViewerPackedButton.disabled) saveViewerPackedButton.click();
       }
       if ((event.ctrlKey || event.metaKey) && event.key === "Enter" && !editorMode.classList.contains("hidden")) {
         event.preventDefault();
