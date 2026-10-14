@@ -1453,18 +1453,21 @@ async function initApp() {
     }
 
     function makeUrlSaveData(startMode) {
-      return {
+      const data = {
         v: 1,
-        t: titleInput.value,
-        s: sourceText.value,
-        c: formatJapaneseDateTime(new Date()),
-        n: noteText.value,
-        p: savePasswordInput.value,
-        m: startMode === "editor" ? "editor" : "auto",
-        z: getViewerTextSize(),
-        f: getEnabledViewerFontIds(),
-        i: images.map(function (image) { return { id: image.id, fileName: image.fileName, dataUrl: image.dataUrl, width: image.width, height: image.height }; })
+        c: formatJapaneseDateTime(new Date())
       };
+      if (titleInput.value) data.t = titleInput.value;
+      if (sourceText.value) data.s = sourceText.value;
+      if (noteText.value) data.n = noteText.value;
+      if (savePasswordInput.value) data.p = savePasswordInput.value;
+      if (startMode === "editor") data.m = "editor";
+      const textSize = getViewerTextSize();
+      if (textSize !== "small") data.z = textSize;
+      const fonts = getEnabledViewerFontIds();
+      if (fonts.length !== Object.keys(VIEWER_FONT_CHOICES).length) data.f = fonts;
+      if (images.length) data.i = images.map(function (image) { return { id: image.id, fileName: image.fileName, dataUrl: image.dataUrl, width: image.width, height: image.height }; });
+      return data;
     }
 
     async function getUrlCompressionCandidates(bytes) {
