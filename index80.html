@@ -523,7 +523,7 @@ html{scroll-behavior:auto;}
       <section id="urlSavePanel" class="url-save-panel hidden" aria-labelledby="urlSaveTitle">
         <h2 id="urlSaveTitle">URLとして保存</h2>
         <p class="url-save-description">
-          現在の内容を圧縮してURL内に保存します。コピーしたURLへアクセスすると、このページで内容を開くことができます。
+          現在の内容を圧縮してURL内に保存します。コピーしたURLへアクセスすると、このページで内容を開くことができます。Discord共有用の2種類は、1リンク1920文字以内になるよう、見出しの区切りを優先して分割し、連番付きのリンクを改行でまとめてコピーします。複数のリンクはDiscordへ1行ずつ送信してください。
         </p>
         <div class="url-save-actions">
           <button id="copyViewerUrlButton" class="primary-button" type="button">「閲覧用サイトとして保存」<br>のURLをコピー</button>
@@ -1499,10 +1499,19 @@ async function initApp() {
     }
 
     async function encodeUrlSaveData(startMode) {
-      const bytes = new TextEncoder().encode(JSON.stringify(makeUrlSaveData(startMode)));
+      return encodeUrlData(makeUrlSaveData(startMode));
+    }
+
+    async function encodeUrlData(data, measureOnly) {
+      const bytes = new TextEncoder().encode(JSON.stringify(data));
       const candidate = (await getUrlCompressionCandidates(bytes))[0];
-      const password = savePasswordInput.value;
+      const password = data.p || "";
       if (!password) return candidate;
+      if (measureOnly) {
+        // AES-GCM adds 61 bytes (version, ID, salt, IV and authentication tag).
+        const byteLength = base64UrlToBytes(candidate.encoded).length + 61;
+        return { format: candidate.format, hashKey: "e" + candidate.hashKey, encoded: "A".repeat(Math.ceil(byteLength * 4 / 3)) };
+      }
       const encrypted = await encryptBytes(base64UrlToBytes(candidate.encoded), password);
       return { format: candidate.format, hashKey: "e" + candidate.hashKey, encoded: encrypted.encoded, encrypted: true, passwordId: encrypted.id, password: password };
     }
@@ -1631,18 +1640,183 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
       }
     }
 
-    async function copyDiscordSavedLink(button) {
+    // Record complete Markdown headings outside fenced code, including Setext headings.
+    function discordHeadingRanges(text) {
+      const lines = text.match(/[^\n]*\n|[^\n]+$/g) || [];
+      const ranges = [];
+      let offset = 0;
+      let fence = null;
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const marker = line.match(/^ {0,3}(\x60{3,}|~{3,})/);
+        const atx = !fence && /^ {0,3}#{1,6}(?:[ \t]+|\r?\n?$)/.test(line);
+        const setext = !fence && !marker && !atx && line.trim() && i + 1 < lines.length &&
+          /^ {0,3}(?:=+|-+)[ \t]*\r?\n?$/.test(lines[i + 1]);
+        if (atx || setext) {
+          const length = line.length + (setext ? lines[i + 1].length : 0);
+          ranges.push({ start: offset, end: offset + length });
+          if (setext) { offset += length; i++; continue; }
+        }
+        if (marker) {
+          if (!fence) fence = marker[1];
+          else if (marker[1][0] === fence[0] && marker[1].length >= fence.length && /^ {0,3}[\x60~]+\s*$/.test(line)) fence = null;
+        }
+        offset += line.length;
+      }
+      return ranges;
+    }
+
+    function discordHeadingGroups(text) {
+      const groups = [];
+      for (const heading of discordHeadingRanges(text)) {
+        const previous = groups[groups.length - 1];
+        // A parent heading and its following subheading belong with the same body.
+        if (previous && !text.slice(previous.end, heading.start).trim()) previous.end = heading.end;
+        else groups.push({ start: heading.start, end: heading.end });
+      }
+      return groups;
+    }
+
+    function discordSectionParts(text) {
+      const parts = [];
+      let start = 0;
+      for (const heading of discordHeadingGroups(text)) {
+        if (text.slice(start, heading.start).trim()) {
+          parts.push(text.slice(start, heading.start));
+          start = heading.start;
+        }
+      }
+      if (start < text.length) parts.push(text.slice(start));
+      return parts;
+    }
+
+    function discordSafeSplitEnd(text, end) {
+      for (const heading of discordHeadingGroups(text)) {
+        const whitespace = text.slice(heading.end).match(/^\s*/)[0].length;
+        // Never cut a heading itself, or leave it behind without any following body.
+        if (end > heading.start && end <= heading.end + whitespace) return heading.start;
+      }
+      return end;
+    }
+
+    function discordLinkText(label, url) {
+      return "[" + label.replace(/[\\[\]]/g, "\\$&") + "](<" + url + ">)";
+    }
+
+    async function createDiscordLinks(label) {
+      applyMarkdownTitle();
+      if (!sourceText.value.length && !titleInput.value.length) throw new Error("文章またはタイトルを1文字以上入力してください。");
+      // Snapshot the document so editing while compression runs cannot mix versions.
+      const data = makeUrlSaveData("auto");
+      const whole = await encodeUrlData(data, true);
+      const fits = function (payload, linkLabel) {
+        return payload.encoded.length <= DISCORD_BASE64_LIMIT &&
+          discordLinkText(linkLabel, buildUrlWithPayload(payload)).length <= DISCORD_BASE64_LIMIT;
+      };
+      let documents;
+      if (fits(whole, label)) {
+        documents = [data];
+      } else {
+        // Reserve enough digits for every possible part before measuring any URL.
+        const numberedLabel = label + String((data.s || "").length + (data.n || "").length + 1);
+        const empty = Object.assign({}, data);
+        delete empty.s;
+        delete empty.n;
+        if (!fits(await encodeUrlData(empty, true), numberedLabel)) {
+          throw new Error("タイトル・画像・設定だけで1リンクの上限を超えています。タイトルを短くするか、画像を減らしてから分割コピーしてください。");
+        }
+        const units = [];
+        for (const field of ["s", "n"]) {
+          for (const text of discordSectionParts(data[field] || "")) units.push({ field: field, text: text });
+        }
+        documents = [];
+        let current = Object.assign({}, empty);
+        let hasText = false;
+        async function accepts(candidate) {
+          return fits(await encodeUrlData(candidate, true), numberedLabel);
+        }
+        function append(base, field, text) {
+          const candidate = Object.assign({}, base);
+          candidate[field] = (candidate[field] || "") + text;
+          return candidate;
+        }
+        for (const unit of units) {
+          const candidate = append(current, unit.field, unit.text);
+          if (await accepts(candidate)) { current = candidate; hasText = true; continue; }
+          // Prefer a section boundary even when there is a little space left.
+          if (hasText) { documents.push(current); current = Object.assign({}, empty); hasText = false; }
+          let remaining = unit.text;
+          while (remaining) {
+            const complete = append(current, unit.field, remaining);
+            if (await accepts(complete)) { current = complete; hasText = true; break; }
+            // Find a large fitting Unicode prefix, then prefer paragraphs, lines or sentences.
+            const characters = Array.from(remaining);
+            let low = 0;
+            let high = characters.length;
+            while (low + 1 < high) {
+              const mid = Math.floor((low + high) / 2);
+              if (await accepts(append(current, unit.field, characters.slice(0, mid).join("")))) low = mid;
+              else high = mid;
+            }
+            if (!low) throw new Error("設定を含めると本文を1文字も格納できません。タイトル・画像・設定を減らしてください。");
+            const fittingPrefix = characters.slice(0, low).join("");
+            let prefix = remaining.slice(0, discordSafeSplitEnd(remaining, fittingPrefix.length));
+            if (!prefix.trim()) throw new Error("見出しと本文を同じリンクに収められません。見出し・タイトル・画像・設定を短くしてからコピーしてください。");
+            const minimum = Math.floor(prefix.length * 0.6);
+            for (const pattern of [/\n[ \t]*\n/g, /\n/g, /[。！？.!?][ \t]*/g, /[ \t]+/g]) {
+              let boundary = 0;
+              for (const match of prefix.matchAll(pattern)) {
+                const end = discordSafeSplitEnd(remaining, match.index + match[0].length);
+                if (end >= minimum) boundary = end;
+              }
+              if (boundary && await accepts(append(current, unit.field, prefix.slice(0, boundary)))) {
+                prefix = prefix.slice(0, boundary); break;
+              }
+            }
+            documents.push(append(current, unit.field, prefix));
+            remaining = remaining.slice(prefix.length);
+            current = Object.assign({}, empty);
+            hasText = false;
+          }
+        }
+        if (hasText) documents.push(current);
+        // Recheck neighbours after splitting oversized sections to avoid needless links.
+        for (let i = 0; i + 1 < documents.length;) {
+          const combined = Object.assign({}, empty);
+          for (const field of ["s", "n"]) {
+            const value = (documents[i][field] || "") + (documents[i + 1][field] || "");
+            if (value) combined[field] = value;
+          }
+          if (await accepts(combined)) documents.splice(i, 2, combined);
+          else i++;
+        }
+      }
+      const results = [];
+      for (let i = 0; i < documents.length; i++) {
+        const payload = await encodeUrlData(documents[i]);
+        const partLabel = label + (documents.length > 1 ? String(i + 1) : "");
+        if (!fits(payload, partLabel)) throw new Error("分割後のリンクが上限を超えています。タイトル・画像・設定を減らしてください。");
+        results.push({ payload: payload, text: discordLinkText(partLabel, buildUrlWithPayload(payload)) });
+      }
+      return results;
+    }
+
+    async function copyDiscordLinks(button, usePageTitle) {
       const originalText = button.textContent;
       try {
         button.disabled = true;
-        button.textContent = "リンクを作成中…";
-        const result = await createSavedUrl("auto");
-        if (result.encodedLength >= DISCORD_BASE64_LIMIT) throw new Error("圧縮後のBase64データが" + DISCORD_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため、Discord共有用リンクを作成できません。");
-        const discordLink = "[資料はこちら](<" + result.copyUrl + ">)";
-        await copyText(discordLink);
-        if (result.passwordId && result.password) await saveSuccessfulPassword(result.passwordId, result.password);
-        button.textContent = "リンクをコピーしました";
-        showStatus("Discord共有用の「資料はこちら」リンクをクリップボードへコピーしました。圧縮形式：" + result.format + "、圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字");
+        button.textContent = "Discord共有リンクを作成中…";
+        applyMarkdownTitle();
+        const label = usePageTitle ? (titleInput.value.trim() || "閲覧用ページ") : "資料はこちら";
+        const results = await createDiscordLinks(label);
+        await copyText(results.map(function (result) { return result.text; }).join("\n\n"));
+        for (const result of results) {
+          if (result.payload.passwordId && result.payload.password) await saveSuccessfulPassword(result.payload.passwordId, result.payload.password);
+        }
+        button.textContent = results.length > 1 ? results.length + "件のリンクをコピーしました" : "リンクをコピーしました";
+        showStatus(results.length > 1
+          ? "Discord共有リンクを" + results.length + "件に分割してコピーしました。各リンクは1920文字以内です。Discordには1行ずつ送信してください。"
+          : "Discord共有リンクをクリップボードへコピーしました。");
       } catch (error) {
         button.textContent = "コピーできませんでした";
         showStatus(error && error.message ? error.message : "共有用リンクの作成に失敗しました。", true);
@@ -1651,24 +1825,12 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
       }
     }
 
+    async function copyDiscordSavedLink(button) {
+      return copyDiscordLinks(button, false);
+    }
+
     async function copyShareUrl(button) {
-      const originalText = button.textContent;
-      try {
-        button.disabled = true;
-        button.textContent = "Discord共有リンクを作成中…";
-        const result = await createSavedUrl("auto");
-        if (result.encodedLength >= DISCORD_BASE64_LIMIT) throw new Error("圧縮後のBase64データが" + DISCORD_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため、Discord共有リンクを作成できません。");
-        const pageTitle = (titleInput.value.trim() || "閲覧用ページ").replace(/[\\[\]]/g, "\\$&");
-        await copyText("[" + pageTitle + "](<" + result.copyUrl + ">)");
-        if (result.passwordId && result.password) await saveSuccessfulPassword(result.passwordId, result.password);
-        button.textContent = "Discord共有リンクをコピーしました";
-        showStatus("Discord共有リンクをクリップボードへコピーしました。圧縮形式：" + result.format + "、圧縮後Base64：" + result.encodedLength.toLocaleString("ja-JP") + "文字");
-      } catch (error) {
-        button.textContent = "コピーできませんでした";
-        showStatus(error && error.message ? error.message : "共有用URLの作成に失敗しました。", true);
-      } finally {
-        setTimeout(function () { button.textContent = originalText; button.disabled = false; }, 1600);
-      }
+      return copyDiscordLinks(button, true);
     }
 
     async function updateUrlSaveAvailability() {
@@ -1689,21 +1851,18 @@ if (!confirm("短縮URLは、URLを適当に入力した人にも表示される
         if (serial !== urlSizeUpdateSerial) return;
         const payload = viewerPayload.encoded.length >= editorPayload.encoded.length ? viewerPayload : editorPayload;
         const urlTooLarge = payload.encoded.length >= URL_BASE64_LIMIT;
-        const discordTooLarge = viewerPayload.encoded.length >= DISCORD_BASE64_LIMIT;
+        const discordTooLarge = viewerPayload.encoded.length > DISCORD_BASE64_LIMIT;
         const viewerUrlLength = buildUrlWithPayload(viewerPayload).length;
         const xgdUrlTooLarge = viewerUrlLength > XGD_ORIGINAL_URL_LIMIT;
         const packedTooLarge = payload.encoded.length >= PACKED_SAVE_BASE64_LIMIT;
-        urlSaveButton.classList.toggle("hidden", urlTooLarge);
-        copyDiscordLinkButton.classList.toggle("hidden", discordTooLarge);
+        urlSaveButton.classList.remove("hidden");
+        copyViewerUrlButton.classList.toggle("hidden", urlTooLarge);
+        copyDiscordLinkButton.classList.remove("hidden");
         copyViewerShortUrlButton.classList.toggle("hidden", xgdUrlTooLarge);
-        copyShareUrlButton.classList.toggle("hidden", discordTooLarge);
+        copyShareUrlButton.classList.remove("hidden");
         viewerQrButton.classList.toggle("hidden", discordTooLarge);
-        if (urlTooLarge) {
-          urlSavePanel.classList.add("hidden");
-          urlSaveButton.setAttribute("aria-expanded", "false");
-        }
         packedSaveGroup.classList.toggle("hidden", packedTooLarge);
-        urlSizeInfo.textContent = "現在の最短形式（" + viewerPayload.format + "）の圧縮後Base64：" + viewerPayload.encoded.length.toLocaleString("ja-JP") + "文字 / URL保存上限 " + URL_BASE64_LIMIT.toLocaleString("ja-JP") + "文字 / 閲覧用URL：" + viewerUrlLength.toLocaleString("ja-JP") + "文字" + (xgdUrlTooLarge ? "（X.gd短縮は元URLが" + XGD_ORIGINAL_URL_LIMIT.toLocaleString("ja-JP") + "文字を超えるため非表示）" : "") + (discordTooLarge ? "（Discord共有用リンク・共有に適したURLは" + DISCORD_BASE64_LIMIT.toLocaleString("ja-JP") + "文字以上のため非表示）" : "");
+        urlSizeInfo.textContent = "現在の最短形式（" + viewerPayload.format + "）の圧縮後Base64：" + viewerPayload.encoded.length.toLocaleString("ja-JP") + "文字 / URL保存上限 " + URL_BASE64_LIMIT.toLocaleString("ja-JP") + "文字 / 閲覧用URL：" + viewerUrlLength.toLocaleString("ja-JP") + "文字" + (xgdUrlTooLarge ? "（X.gd短縮は元URLが" + XGD_ORIGINAL_URL_LIMIT.toLocaleString("ja-JP") + "文字を超えるため非表示）" : "") + (discordTooLarge ? "（Discord共有リンクは必要に応じて分割コピーします。QRコードは非表示）" : "");
         packedSaveSizeInfo.textContent = "現在の最短形式（" + payload.format + "）の圧縮後Base64：" + payload.encoded.length.toLocaleString("ja-JP") + " / " + PACKED_SAVE_BASE64_LIMIT.toLocaleString("ja-JP") + "文字";
       } catch (error) {
         if (serial !== urlSizeUpdateSerial) return;
